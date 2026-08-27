@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const previewName = "操作・判定結果ではない確認用直方体の3Dプレビュー";
+const previewName = "積荷を選択・床面移動できる3Dプレビュー";
 
 async function addCargo(page: Page, name: string) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
@@ -68,7 +68,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
     placementPanel.getByText("この候補に配置された積荷はありません。"),
   ).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中: 合成配置候補A。配置0件。適合判定は未実施です。",
+    "選択中の候補: 合成配置候補A。配置0件。積荷は未選択です。適合判定は未実施です。",
   );
 
   await placementPanel.getByRole("button", { name: "配置編集をキャンセル" }).click();
@@ -98,13 +98,13 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await expect(sceneSelect).toBeEnabled();
   await expect(placementPanel.getByText("最小角 X -1000000・Y 1000000・Z -1 mm / WLH")).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中: 合成配置候補A。配置1件。適合判定は未実施です。",
+    "選択中の候補: 合成配置候補A。配置1件。積荷は未選択です。適合判定は未実施です。",
   );
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
 
   await sceneSelect.selectOption("container-2");
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中: 合成配置候補B。配置0件。適合判定は未実施です。",
+    "選択中の候補: 合成配置候補B。配置0件。積荷は未選択です。適合判定は未実施です。",
   );
   await expect(placementPanel.getByText("未配置の積荷はありません。")).toBeVisible();
   await expect(placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" })).toHaveCount(0);
@@ -130,7 +130,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await expect(placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" })).toBeFocused();
   await expect(placementPanel.getByText("積荷は未配置一覧へ戻りました。")).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中: 合成配置候補A。配置0件。適合判定は未実施です。",
+    "選択中の候補: 合成配置候補A。配置0件。積荷は未選択です。適合判定は未実施です。",
   );
 });
 

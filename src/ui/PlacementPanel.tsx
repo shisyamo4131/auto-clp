@@ -11,9 +11,12 @@ import type { Orientation, Placement, Project } from "../domain/model";
 import type { ValidationIssue } from "../domain/validation";
 
 interface PlacementPanelProps {
+  readonly externalInteractionActive: boolean;
   readonly onInteractionChange: (active: boolean) => void;
   readonly onProjectChange: (project: Project) => void;
+  readonly onSelectedCargoChange: (cargoId?: string) => void;
   readonly project: Project;
+  readonly selectedCargoId?: string;
   readonly selectedContainerId?: string;
 }
 
@@ -121,9 +124,12 @@ function PositionField({
 }
 
 export function PlacementPanel({
+  externalInteractionActive,
   onInteractionChange,
   onProjectChange,
+  onSelectedCargoChange,
   project,
+  selectedCargoId,
   selectedContainerId,
 }: PlacementPanelProps) {
   const [editor, setEditor] = useState<PlacementEditor>();
@@ -134,6 +140,7 @@ export function PlacementPanel({
   const formRef = useRef<HTMLFormElement>(null);
   const previousSelectedContainerId = useRef(selectedContainerId);
   const interactionActive = editor !== undefined || deleteTarget !== undefined;
+  const controlsDisabled = interactionActive || externalInteractionActive;
   const placedCargoIds = new Set(project.placements.map((placement) => placement.cargoId));
   const unplacedCargoes = project.cargoes.filter((cargo) => !placedCargoIds.has(cargo.id));
   const selectedPlacements =
@@ -268,6 +275,7 @@ export function PlacementPanel({
   };
 
   const beginEdit = (placement: Placement) => {
+    onSelectedCargoChange(placement.cargoId);
     setEditor({
       kind: "edit",
       cargoId: placement.cargoId,
@@ -329,6 +337,9 @@ export function PlacementPanel({
     const returnId = `placement-edit-${editor.cargoId}`;
     const wasNew = editor.kind === "new";
     onProjectChange(result.project);
+    if (!wasNew) {
+      onSelectedCargoChange(editor.cargoId);
+    }
     closeInteraction();
     setStatus(
       wasNew
@@ -356,6 +367,7 @@ export function PlacementPanel({
   };
 
   const beginDelete = (placement: Placement) => {
+    onSelectedCargoChange(placement.cargoId);
     setDeleteTarget({
       cargoId: placement.cargoId,
       containerId: placement.containerId,
@@ -386,6 +398,9 @@ export function PlacementPanel({
     }
     const cargoId = deleteTarget.cargoId;
     onProjectChange(result.project);
+    if (selectedCargoId === cargoId) {
+      onSelectedCargoChange(undefined);
+    }
     closeInteraction();
     setStatus("配置を削除しました。積荷は未配置一覧へ戻りました。");
     focusPreferredOrPanel(`placement-add-${cargoId}`);
@@ -443,7 +458,7 @@ export function PlacementPanel({
                     <button
                       id={`placement-add-${cargo.id}`}
                       type="button"
-                      disabled={interactionActive}
+                      disabled={controlsDisabled}
                       onClick={() => beginAdd(cargo.id)}
                     >
                       配置を追加: {cargo.name}
@@ -466,7 +481,17 @@ export function PlacementPanel({
                   );
                   const cargoName = cargo?.name ?? "不明な積荷";
                   return (
-                    <li key={placement.cargoId}>
+                    <li
+                      key={placement.cargoId}
+                      className={
+                        selectedCargoId === placement.cargoId
+                          ? "placement-list__item--selected"
+                          : undefined
+                      }
+                      aria-current={
+                        selectedCargoId === placement.cargoId ? "true" : undefined
+                      }
+                    >
                       <div>
                         <strong>{cargoName}</strong>
                         <span>
@@ -477,7 +502,7 @@ export function PlacementPanel({
                         <button
                           id={`placement-edit-${placement.cargoId}`}
                           type="button"
-                          disabled={interactionActive || cargo === undefined}
+                          disabled={controlsDisabled || cargo === undefined}
                           onClick={() => beginEdit(placement)}
                         >
                           編集: {cargoName}
@@ -485,7 +510,7 @@ export function PlacementPanel({
                         <button
                           id={`placement-delete-${placement.cargoId}`}
                           type="button"
-                          disabled={interactionActive}
+                          disabled={controlsDisabled}
                           onClick={() => beginDelete(placement)}
                         >
                           配置を削除: {cargoName}

@@ -116,6 +116,32 @@ export function domainDimensionsToScene(
   };
 }
 
+function roundHalfAwayFromZero(value: number): number {
+  const rounded = value < 0 ? Math.ceil(value - 0.5) : Math.floor(value + 0.5);
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+/**
+ * Converts a floor-parallel scene preview delta back to a canonical placement.
+ * The caller remains responsible for passing the returned value through the
+ * application command boundary before changing Project state.
+ */
+export function sceneFloorDragPositionMm(
+  start: PositionMm,
+  deltaScene: Pick<SceneVector3, "x" | "z">,
+): PositionMm {
+  const normalizedStartZ = Object.is(start.zMm, -0) ? 0 : start.zMm;
+  return {
+    xMm: roundHalfAwayFromZero(
+      start.xMm + deltaScene.x / MM_TO_SCENE_UNIT,
+    ),
+    yMm: roundHalfAwayFromZero(
+      start.yMm - deltaScene.z / MM_TO_SCENE_UNIT,
+    ),
+    zMm: normalizedStartZ,
+  };
+}
+
 function centerFromBounds(
   min: PositionMm,
   dimensions: OrientedDimensionsMm,

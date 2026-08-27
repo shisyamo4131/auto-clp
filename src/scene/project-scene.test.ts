@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { updatePlacement } from "../application/project-command";
 import { PROJECT_SCHEMA_VERSION, type Project } from "../domain/model";
 import {
   domainDimensionsToScene,
   domainPointToScene,
   MM_TO_SCENE_UNIT,
   projectContainerToScene,
+  sceneFloorDragPositionMm,
   sceneProjectionBounds,
   type ProjectSceneProjection,
   type SceneVector3,
@@ -192,6 +194,94 @@ describe("project scene coordinate adapter", () => {
       },
     });
     expect(missingCargo).toEqual(original);
+  });
+});
+
+describe("sceneFloorDragPositionMm", () => {
+  it("maps scene floor deltas to the approved domain axis signs without changing Z", () => {
+    const start = { xMm: 120, yMm: -340, zMm: 56 };
+    const original = structuredClone(start);
+
+    const moved = sceneFloorDragPositionMm(start, { x: 0.125, z: -0.075 });
+
+    expect(moved).toEqual({ xMm: 245, yMm: -265, zMm: 56 });
+    expect(start).toEqual(original);
+  });
+
+  it.each([
+    [{ x: 0.0005, z: 0 }, { xMm: 1, yMm: 0, zMm: 7 }],
+    [{ x: -0.0005, z: 0 }, { xMm: -1, yMm: 0, zMm: 7 }],
+    [{ x: 0, z: 0.0005 }, { xMm: 0, yMm: -1, zMm: 7 }],
+    [{ x: 0, z: -0.0005 }, { xMm: 0, yMm: 1, zMm: 7 }],
+    [{ x: 0.000499, z: -0.000499 }, { xMm: 0, yMm: 0, zMm: 7 }],
+    [{ x: 0.001499, z: -0.001499 }, { xMm: 1, yMm: 1, zMm: 7 }],
+    [{ x: 0.0015, z: -0.0015 }, { xMm: 2, yMm: 2, zMm: 7 }],
+  ])(
+    "rounds each signed scene delta to the nearest millimetre with half away from zero",
+    (deltaScene, expected) => {
+      expect(
+        sceneFloorDragPositionMm({ xMm: 0, yMm: 0, zMm: 7 }, deltaScene),
+      ).toEqual(expected);
+    },
+  );
+
+  it("normalizes negative zero and leaves a no-movement input unchanged", () => {
+    const result = sceneFloorDragPositionMm(
+      { xMm: -0, yMm: -0, zMm: -0 },
+      { x: -0, z: 0 },
+    );
+
+    expect(result).toEqual({ xMm: 0, yMm: 0, zMm: 0 });
+    expect(Object.is(result.xMm, -0)).toBe(false);
+    expect(Object.is(result.yMm, -0)).toBe(false);
+    expect(Object.is(result.zMm, -0)).toBe(false);
+  });
+
+  it("allows negative and container-outside coordinates without clamping", () => {
+    expect(
+      sceneFloorDragPositionMm(
+        { xMm: -999_999, yMm: 999_999, zMm: -25 },
+        { x: -0.002, z: -0.002 },
+      ),
+    ).toEqual({ xMm: -1_000_001, yMm: 1_000_001, zMm: -25 });
+  });
+
+  it("delegates canonical range rejection to the existing placement command", () => {
+    const project = projectFixture();
+    const original = structuredClone(project);
+    const placement = project.placements[0]!;
+    const draggedPosition = sceneFloorDragPositionMm(placement.positionMm, {
+      x: -1_000,
+      z: 0,
+    });
+
+    const result = updatePlacement(
+      project,
+      placement.cargoId,
+      placement.containerId,
+      {
+        xMm: String(draggedPosition.xMm),
+        yMm: String(draggedPosition.yMm),
+        zMm: String(draggedPosition.zMm),
+        orientation: placement.orientation,
+      },
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.project).toBe(project);
+      expect(result.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "input.mm-range",
+            path: "/placements/0/positionMm/xMm",
+          }),
+        ]),
+      );
+    }
+    expect(project).toEqual(original);
+    expect(project.placements[0]?.positionMm.zMm).toBe(-13);
+    expect(project.placements[0]?.orientation).toBe("LWH");
   });
 });
 

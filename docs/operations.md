@@ -2,15 +2,15 @@
 
 ## Current Availability
 
-- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置のThree.js描画、型・lint・単体・ブラウザ・ビルド検証。
-- Planned: File・端末保存とJSON入出力UI、canvas上の直接選択・dragと視点操作・undo/redo、矩形開口・許可回転・幾何支持・総耐荷重の制約再計算、自動提案。
-- Unavailable: 入力内容の再起動後保持、canvasからの直接配置、物理適合判定、保存・JSON入出力、デプロイ、クラウド保存、外部API、実運用サポート。
+- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置のThree.js描画、canvas積荷選択、fine pointerによる床面方向drag・視点操作、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
+- Planned: File・端末保存とJSON入出力UI、undo/redo、矩形開口・許可回転・幾何支持・総耐荷重の制約再計算、自動提案。
+- Unavailable: 入力内容の再起動後保持、canvas上のZ移動・向き変更・取り外し、undo/redo、物理適合判定、保存・JSON入出力、デプロイ、クラウド保存、外部API、実運用サポート。
 
 未実装機能を利用可能として案内してはならない。
 
 Phase 1の計画済み判定は、完全な搬入経路、積荷別上載荷重、重心、軸重、床荷重、荷崩れ、固縛、動荷重を保証しない。これらは実装後も「未確認」として利用者へ区別して表示する。
 
-配置座標はADR 0010のコンテナ局所右手座標を使い、`positionMm` は向き適用後の積荷直方体の最小角とする。正規値は整数mmを維持し、描画用中心、scene縮尺、camera、候補選択を案件へ保存しない。Project→scene投影とフォームによる配置追加・移動・許可向き変更・取り外しは実装済みで、負座標・外側配置を含む全表示範囲へcameraを合わせる。適合判定、canvas上の直接選択・drag、視点操作、undo/redoは未実装である。
+配置座標はADR 0010のコンテナ局所右手座標を使い、`positionMm` は向き適用後の積荷直方体の最小角とする。正規値は整数mmを維持し、描画用中心、scene縮尺、camera、候補・積荷選択を案件へ保存しない。Project→scene投影、フォームによる配置追加・移動・許可向き変更・取り外し、canvas上の積荷選択とfine pointerによるX/Y床面方向drag、回転・平行移動・拡大縮小・視点resetを実装済みである。touch/coarse pointerは積荷選択だけを行い、canvas上の縦scrollを保持して、正確な移動・向きにはキーボード操作可能なフォームを使う。drag中はProjectを変更せず、release時に正規開始位置とscene差分から最近接1 mmのX/Yを作り、Zと向きを保持して既存commandが成功した場合だけ保存する。負座標・外側配置はclampせず、適合判定、canvas上のZ移動・向き変更・取り外し、undo/redoは未実装である。
 
 ## Preparation
 
@@ -133,7 +133,7 @@ corepack pnpm run build
 - 現在の成果物は本リポジトリ内の文書、設定、ローカルWebアプリ、入力編集UIである。
 - 案件データの機械可読な設計契約は `schemas/project-0.1.0.schema.json`、意味契約は `docs/data-model.md` である。構造・意味検証、検証済み書出し、取引的読込、案件・隙間・積荷・候補の入力編集UIは実装済みだが、File・端末保存・JSON入出力UIは未実装である。
 - アプリのビルド出力は `dist/` であり、Git管理対象外とする。
-- 現在のビルドはJavaScript chunkがViteの500 kB推奨値を超える警告を出す。入力機能のゲートではないが、3D案件表示の接続時に分割と初期読込性能を再評価する。
+- 現在のビルドはJavaScript chunkがViteの500 kB推奨値を超える警告を出す。現チェックポイントのゲートではないが、Phase 1の利用者受入または公開検討前の性能チェックポイントで分割と初期読込性能を再評価する。
 - 成功は、要求された成果物、仕様・ロードマップ・ADR・変更履歴の整合、独立した必須検証の成功、残リスクの報告で確認する。
 
 ## Errors and Recovery

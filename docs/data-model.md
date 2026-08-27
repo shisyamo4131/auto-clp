@@ -8,7 +8,7 @@
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置追加・整数mm移動・許可向き変更・取り外しは実装済みである。端末保存と利用者向けJSON入出力UI、canvas上の直接配置操作は未実装であり、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作は実装済みである。端末保存と利用者向けJSON入出力UI、undo/redoは未実装であり、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
 
 仕様版 `0.4.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
@@ -60,6 +60,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 - `positionMm` は、`orientation` 適用後の軸整列積荷直方体の最小X・Y・Z角である。向き適用後の寸法を `(dx, dy, dz)` とすると、占有範囲は `[x, x + dx] × [y, y + dy] × [z, z + dz]` になる。
 - 向き変更時は既定で最小角を保持し、暗黙の平行移動や丸めを行わない。床置きは `z = 0` である。
 - 正規データと判定は整数mmを維持する。Three.js表示では派生値だけを `1 mm = 0.001 scene unit` で変換し、mesh中心を最小角と向き適用後寸法から計算する。0.5mmの表示中心を正規案件へ逆流させない。
+- canvas dragは正規最小角を開始値として保持し、scene上のpointer差分をdomain X/Y差分へ写像して最近接1 mmへ正負対称に量子化する。mesh中心やtransformを保存値として読まず、Z・向きを保持し、既存application commandが成功した場合だけProjectを置換する。
 - 負座標や外側配置は修正途中の状態として保存できる。将来の境界判定では不適合となるが、scene投影は適合性を判定または保証しない。
 
 検証済みserializerと、座標値を生成する配置UI・application commandは実装済みである。利用者向けJSON入出力UIと端末保存はまだ存在しない。座標契約の採択時点ではSchema `0.1.0` の初回意味確定としてJSONの形と版を変更せず、その後の配置実装も同じ契約を維持している。既存外部データが後から判明した場合は意味を推測して再解釈せず、新Schema版と明示的な移行を設計する。
@@ -103,11 +104,11 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計。計画: 境界、隙間、開口通過、支持、耐荷重 | React、Three.js、I/O |
 | `application/project-import`、`application/project-command` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド。計画: undo/redo | DOM、Three.jsオブジェクトの所有 |
 | `persistence/project-json` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し。計画: File・端末保存アダプター | 3D描画、直接UI更新 |
-| `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置への純粋投影、Three.js描画、全投影範囲へ適応するcamera。計画: canvas picking・drag、視点操作 | 判定規則の再実装、永続データ型の変更 |
-| `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認、非永続の3D候補選択、配置追加・整数座標・許可向き・取り外しフォーム。計画: canvas直接操作、undo/redo、保存、JSON入出力 | 幾何・制約計算と正規入力変換の再実装 |
+| `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置への純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointerによる床面方向drag・視点操作。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
+| `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認、非永続の3D候補・積荷選択、配置追加・整数座標・許可向き・取り外しフォーム、canvas直接操作と正確な移動・向きのキーボード対応フォームfallback。計画: undo/redo、保存、JSON入出力 | 幾何・制約計算と正規入力変換の再実装 |
 | `workers` | 後続の重い探索処理 | DOM、React状態の直接操作 |
 
-実装済みの依存は、UIからapplicationとdomainの型へ、applicationからdomainとpersistenceの検証境界へ、persistenceからdomainへ向かう。scene adapterはdomainの整数mmからThree非依存の表示値を一方向に導出し、rendererはその表示値だけを受け取る。sceneのfloat、camera、候補選択をProjectへ戻さず、domainから外側へは依存させない。読込ユースケースではapplicationがpersistence境界を呼び、入力編集ではapplication commandがraw draftを正規mm・gへ変換してSchema・意味検証を呼ぶ。domain関数は入力から新しい値または理由を返す純粋関数とし、引数を変更しない。
+実装済みの依存は、UIからapplicationとdomainの型へ、applicationからdomainとpersistenceの検証境界へ、persistenceからdomainへ向かう。scene adapterはdomainの整数mmからThree非依存の表示値を一方向に導出し、rendererはその表示値だけを受け取る。sceneのmesh transform、camera、候補・積荷選択をProjectへ戻さず、canvas dragは正規開始位置とpointer差分から純粋adapterで整数mm入力を作り、application commandを通す。読込ユースケースではapplicationがpersistence境界を呼び、入力編集ではapplication commandがraw draftを正規mm・gへ変換してSchema・意味検証を呼ぶ。domain関数は入力から新しい値または理由を返す純粋関数とし、引数を変更しない。
 
 ## Pure Contracts
 
@@ -131,4 +132,4 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - 読込失敗時に既存状態が変わらないことを確認する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 
-[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、scene軸変換、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、WebGL非対応時の配置、狭幅表示を含む。物理制約、canvas直接操作、undo/redo、端末保存に対する検証は引き続き必要である。
+[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、狭幅表示を含む。物理制約、undo/redo、端末保存に対する検証は引き続き必要である。

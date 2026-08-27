@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { updatePlacement } from "../application/project-command";
 import type { Project } from "../domain/model";
 import { PlacementPanel } from "../ui/PlacementPanel";
-import { projectContainerToScene } from "./project-scene";
-import { ThreeViewport } from "./ThreeViewport";
+import {
+  projectContainerToScene,
+  sceneFloorDragPositionMm,
+  type SceneVector3,
+} from "./project-scene";
+import { ThreeViewport, type CargoDragCommitResult } from "./ThreeViewport";
 
 interface SceneWorkspaceProps {
   readonly forceInitialRenderError?: boolean;
@@ -31,6 +36,9 @@ export function SceneWorkspace({
 }: SceneWorkspaceProps) {
   const [selectedContainerId, setSelectedContainerId] = useState<string>();
   const [placementInteractionActive, setPlacementInteractionActive] = useState(false);
+  const [canvasDragActive, setCanvasDragActive] = useState(false);
+  const [selectedCargoId, setSelectedCargoId] = useState<string>();
+  const [canvasStatus, setCanvasStatus] = useState("");
   const selectedContainer = project.containers.find(
     (container) => container.id === selectedContainerId,
   );
@@ -72,6 +80,95 @@ export function SceneWorkspace({
       : project.placements.filter(
           (placement) => placement.containerId === effectiveContainerId,
         ).length;
+  const selectedCargo = project.cargoes.find((cargo) => cargo.id === selectedCargoId);
+  const interactionActive = placementInteractionActive || canvasDragActive;
+
+  useEffect(() => {
+    const selectionStillVisible =
+      selectedCargoId === undefined ||
+      project.placements.some(
+        (placement) =>
+          placement.cargoId === selectedCargoId &&
+          placement.containerId === effectiveContainerId,
+      );
+    if (selectionStillVisible) {
+      return;
+    }
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setSelectedCargoId(undefined);
+        setCanvasStatus("");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveContainerId, project.placements, selectedCargoId]);
+
+  const handleCargoSelectionChange = useCallback(
+    (cargoId?: string) => {
+      setSelectedCargoId(cargoId);
+      if (cargoId === undefined) {
+        setCanvasStatus("3D表示の積荷選択を解除しました。");
+        return;
+      }
+      const cargoName =
+        project.cargoes.find((cargo) => cargo.id === cargoId)?.name ?? "不明な積荷";
+      setCanvasStatus(`${cargoName}を3D表示で選択しました。`);
+    },
+    [project.cargoes],
+  );
+
+  const handleCargoDragStateChange = useCallback((active: boolean) => {
+    setCanvasDragActive(active);
+    if (active) {
+      setCanvasStatus("床面に平行な配置移動をプレビュー中です。離すと1 mm単位で保存します。");
+    }
+  }, []);
+
+  const handleCargoDragCancel = useCallback((message: string) => {
+    setCanvasDragActive(false);
+    setCanvasStatus(message);
+  }, []);
+
+  const handleCargoDragCommit = useCallback(
+    (
+      cargoId: string,
+      deltaScene: Pick<SceneVector3, "x" | "z">,
+    ): CargoDragCommitResult => {
+      const placement = project.placements.find(
+        (candidate) =>
+          candidate.cargoId === cargoId &&
+          candidate.containerId === effectiveContainerId,
+      );
+      if (placement === undefined || effectiveContainerId === undefined) {
+        return {
+          ok: false,
+          message: "対象の配置が最新の案件に見つからないため、移動を保存せず元に戻しました。",
+        };
+      }
+      const nextPosition = sceneFloorDragPositionMm(placement.positionMm, deltaScene);
+      const result = updatePlacement(project, cargoId, effectiveContainerId, {
+        xMm: String(nextPosition.xMm),
+        yMm: String(nextPosition.yMm),
+        zMm: String(nextPosition.zMm),
+        orientation: placement.orientation,
+      });
+      if (!result.ok) {
+        return {
+          ok: false,
+          message: "移動後の座標が保存可能な範囲にないか対象が変わったため、配置を元に戻しました。",
+        };
+      }
+      onProjectChange(result.project);
+      setCanvasStatus(
+        `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動しました。適合判定は未実施です。`,
+      );
+      return { ok: true, message: "" };
+    },
+    [effectiveContainerId, onProjectChange, project],
+  );
 
   return (
     <section className="scene-workspace" aria-labelledby="scene-workspace-title">
@@ -91,13 +188,15 @@ export function SceneWorkspace({
             <select
               id="scene-container-select"
               value={effectiveContainerId}
-              disabled={placementInteractionActive}
+              disabled={interactionActive}
               aria-describedby={
-                placementInteractionActive ? "scene-container-select-lock" : undefined
+                interactionActive ? "scene-container-select-lock" : undefined
               }
               onChange={(event) => {
-                if (!placementInteractionActive) {
+                if (!interactionActive) {
                   setSelectedContainerId(event.target.value);
+                  setSelectedCargoId(undefined);
+                  setCanvasStatus("");
                 }
               }}
             >
@@ -107,9 +206,9 @@ export function SceneWorkspace({
                 </option>
               ))}
             </select>
-            {placementInteractionActive ? (
+            {interactionActive ? (
               <span className="field__help" id="scene-container-select-lock">
-                配置の編集中または削除確認中です。保存かキャンセルの後に候補を切り替えられます。
+                配置の編集・削除確認・3D移動中です。操作完了後に候補を切り替えられます。
               </span>
             ) : null}
           </div>
@@ -123,13 +222,22 @@ export function SceneWorkspace({
         >
           {effectiveContainerId === undefined
             ? "候補0件、配置0件。適合判定は未実施です。"
-            : `選択中: ${project.containers.find((container) => container.id === effectiveContainerId)?.name ?? "不明な候補"}。配置${placementCount}件。適合判定は未実施です。`}
+            : `選択中の候補: ${project.containers.find((container) => container.id === effectiveContainerId)?.name ?? "不明な候補"}。配置${placementCount}件。${selectedCargo === undefined ? "積荷は未選択です。" : `選択中の積荷: ${selectedCargo.name}。`}適合判定は未実施です。${canvasStatus === "" ? "" : ` ${canvasStatus}`}`}
+        </p>
+
+        <p id="scene-workspace-interaction-help" className="scene-workspace__status">
+          {rendererMounted
+            ? "3Dでは積荷をクリックまたはタップして選択できます。細かいポインターで積荷をドラッグすると床面方向へ移動し、空白の左ドラッグで回転、右ドラッグで平行移動、ホイールで拡大・縮小します。正確な座標と向きは下のフォームで編集できます。"
+            : "3D表示を利用できない場合も、下のフォームで座標と向きを編集できます。"}
         </p>
 
         <PlacementPanel
+          externalInteractionActive={canvasDragActive}
           onInteractionChange={setPlacementInteractionActive}
           onProjectChange={onProjectChange}
+          onSelectedCargoChange={setSelectedCargoId}
           project={project}
+          selectedCargoId={selectedCargoId}
           selectedContainerId={effectiveContainerId}
         />
 
@@ -147,10 +255,16 @@ export function SceneWorkspace({
       {rendererMounted ? (
         <ThreeViewport
           forceInitialRenderError={forceInitialRenderError}
+          interactionDisabled={placementInteractionActive}
+          onCargoDragCancel={handleCargoDragCancel}
+          onCargoDragCommit={handleCargoDragCommit}
+          onCargoDragStateChange={handleCargoDragStateChange}
+          onCargoSelectionChange={handleCargoSelectionChange}
           onRendererError={onRendererError}
           onRendererReady={onRendererReady}
           projection={projection}
-          statusDescriptionId="scene-workspace-status"
+          selectedCargoId={selectedCargoId}
+          statusDescriptionId="scene-workspace-status scene-workspace-interaction-help"
         />
       ) : null}
     </section>
