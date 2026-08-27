@@ -1,0 +1,45 @@
+# Documentation Map
+
+- Status: Active
+- Last verified: 2026-08-27
+- Authority: この文書は案内専用です。確定要件は `specification.md`、検証済み進捗は `roadmaps/` を正とします。
+
+## How to Start Work
+
+1. ルートの `AGENTS.md` を読む。
+2. `../governance/project-rules.md` を読む。
+3. 下表から作業種別を選ぶ。
+4. 関連ロードマップとADRを読む。
+5. 変更前に関連コード、テスト、証拠を確認する。
+
+## Work Routing
+
+| Work type | Required documents | Additional implementation or evidence |
+| --- | --- | --- |
+| 要件・仕様 | [仕様](specification.md)、[ロードマップ](roadmaps/auto-clp.md)、関連[ADR](decisions/README.md) | 影響する実装、テスト、運用、変更履歴 |
+| 3D表示・操作 | [仕様](specification.md)、[ADR 0001](decisions/0001-local-first-web-architecture.md)、[ADR 0002](decisions/0002-cuboid-model.md) | 実装後の3Dコード、単体テスト、ブラウザ証拠 |
+| 積載制約 | [仕様](specification.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0003](decisions/0003-loading-constraints.md) | 実装後の計算コード、境界・失敗系テスト |
+| 自動提案 | [仕様](specification.md)、[ADR 0004](decisions/0004-optimization-objective.md)、[ロードマップ](roadmaps/auto-clp.md) | 決定性、性能、最適性評価の証拠 |
+| テスト・レビュー | [仕様](specification.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 対象差分、独立した終了コード、UI証拠 |
+| ガバナンス・Git・引き継ぎ | [プロジェクト規則](../governance/project-rules.md)、[運用](operations.md) | 管理ハッシュ、Git差分、タスク状態 |
+
+## Document Authority
+
+| Document | Authoritative content |
+| --- | --- |
+| `../governance/common-governance.md` | 管理されたプロジェクト横断ガバナンス。直接編集禁止 |
+| `../governance/project-rules.md` | プロジェクト固有の指示、所有権、安全、承認境界 |
+| `specification.md` | 現在の確定要件と明確に分離した未決定事項 |
+| `roadmaps/` | 目標、残作業、完了条件、検証済み進捗 |
+| `decisions/` | 重要判断の状態と根拠 |
+| `operations.md` | 実装済み、計画済み、利用不可の運用 |
+| `../CHANGELOG.md` | 仕様・利用者・安全・運用に見える変更 |
+
+## Documentation Completion Criteria
+
+- 重要文書が本マップまたは関連索引から到達可能である。
+- ロードマップの進捗値と索引が一致し、各マイルストーンが主要証拠へリンクする。
+- 確定、提案、証拠、履歴が区別されている。
+- ADR索引の状態と本文が一致する。
+- 相対リンク、索引網羅性、ロードマップ計算、エージェントTOMLが `../scripts/check-project.ps1` に合格する。
+- 必須検証は個別のコマンド、結果、終了コードを残す。まとめる場合は失敗を非ゼロで返す検証済みランナーだけを使い、診断バッチや状態を隠すコマンド連結を完了証拠にしない。

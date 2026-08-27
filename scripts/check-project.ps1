@@ -1,0 +1,189 @@
+[CmdletBinding()]
+param(
+    [string]$ProjectPath = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+)
+
+$ErrorActionPreference = 'Stop'
+$resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
+
+$requiredFiles = @(
+    'AGENTS.md',
+    'README.md',
+    'CHANGELOG.md',
+    'INITIAL_PROMPT.md',
+    'governance/common-governance.md',
+    'governance/project-rules.md',
+    'governance/governance.lock.toml',
+    'docs/README.md',
+    'docs/specification.md',
+    'docs/operations.md',
+    'docs/roadmaps/README.md',
+    'docs/roadmaps/auto-clp.md',
+    'docs/decisions/README.md',
+    '.codex/config.toml',
+    '.codex/agents/developer.toml',
+    '.codex/agents/tester.toml',
+    '.codex/agents/code-explorer.toml',
+    '.codex/agents/docs-researcher.toml',
+    '.codex/agents/reviewer.toml',
+    '.codex/agents/ui-tester.toml',
+    'scripts/render-governance.ps1',
+    'scripts/check-governance.ps1',
+    'scripts/check-project.ps1',
+    'scripts/check-codex-session-size.ps1'
+)
+
+foreach ($relativePath in $requiredFiles) {
+    $fullPath = Join-Path $resolvedProject $relativePath
+    if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+        throw "Required project file is missing: $relativePath"
+    }
+}
+
+$markdownFiles = Get-ChildItem -LiteralPath $resolvedProject -Recurse -File -Filter '*.md' |
+    Where-Object { $_.FullName -notmatch '[\\/]node_modules[\\/]' }
+$linkPattern = '\[[^\]]*\]\((?<target>[^)]+)\)'
+$brokenLinks = @()
+foreach ($markdownFile in $markdownFiles) {
+    $content = [IO.File]::ReadAllText($markdownFile.FullName)
+    foreach ($match in [regex]::Matches($content, $linkPattern)) {
+        $target = $match.Groups['target'].Value.Trim()
+        if ($target -match '^(https?://|mailto:|#)') {
+            continue
+        }
+        $pathPart = ($target -split '#', 2)[0]
+        if (-not $pathPart) {
+            continue
+        }
+        $decodedPath = [Uri]::UnescapeDataString($pathPart).Replace('/', [IO.Path]::DirectorySeparatorChar)
+        $candidate = [IO.Path]::GetFullPath((Join-Path $markdownFile.DirectoryName $decodedPath))
+        if (-not $candidate.StartsWith($resolvedProject, [StringComparison]::OrdinalIgnoreCase)) {
+            $brokenLinks += "$($markdownFile.FullName): link escapes project: $target"
+            continue
+        }
+        if (-not (Test-Path -LiteralPath $candidate)) {
+            $brokenLinks += "$($markdownFile.FullName): missing target: $target"
+        }
+    }
+}
+if ($brokenLinks.Count -gt 0) {
+    throw "Broken Markdown links:`n$($brokenLinks -join "`n")"
+}
+
+$docsIndex = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/README.md'))
+$indexedDocuments = @(
+    'specification.md',
+    'operations.md',
+    'roadmaps/auto-clp.md',
+    'decisions/README.md',
+    '../CHANGELOG.md'
+)
+foreach ($document in $indexedDocuments) {
+    if (-not $docsIndex.Contains($document)) {
+        throw "docs/README.md does not index: $document"
+    }
+}
+
+$decisionIndex = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/decisions/README.md'))
+$decisionFiles = Get-ChildItem -LiteralPath (Join-Path $resolvedProject 'docs/decisions') -File -Filter '*.md' |
+    Where-Object { $_.Name -match '^\d{4}-.+\.md$' }
+foreach ($decisionFile in $decisionFiles) {
+    $decisionContent = [IO.File]::ReadAllText($decisionFile.FullName)
+    $statusMatch = [regex]::Match($decisionContent, '(?m)^- Status:\s*(Proposed|Accepted|Rejected|Superseded)\s*$')
+    if (-not $statusMatch.Success) {
+        throw "ADR status is missing or invalid: $($decisionFile.Name)"
+    }
+    $status = $statusMatch.Groups[1].Value
+    $indexPattern = '\(' + [regex]::Escape($decisionFile.Name) + '\)\s*\|[^\r\n]*\|\s*' + [regex]::Escape($status) + '\s*\|'
+    if (-not [regex]::IsMatch($decisionIndex, $indexPattern)) {
+        throw "ADR index status or link does not match: $($decisionFile.Name) ($status)"
+    }
+}
+
+$roadmapPath = Join-Path $resolvedProject 'docs/roadmaps/auto-clp.md'
+$roadmap = [IO.File]::ReadAllText($roadmapPath)
+$progressMatch = [regex]::Match($roadmap, '(?m)^- Current progress:\s*(\d+)%\s*$')
+if (-not $progressMatch.Success) {
+    throw 'Roadmap current progress is missing.'
+}
+$currentProgress = [int]$progressMatch.Groups[1].Value
+$weightTotal = 0
+$earnedTotal = 0
+foreach ($line in ($roadmap -split "`r?`n")) {
+    $row = [regex]::Match($line, '^\|\s*[^|*][^|]*\|\s*(\d+)\s*\|\s*(\d+)\s*\|')
+    if ($row.Success) {
+        $weightTotal += [int]$row.Groups[1].Value
+        $earnedTotal += [int]$row.Groups[2].Value
+    }
+}
+if ($weightTotal -ne 100) {
+    throw "Roadmap milestone weights total $weightTotal instead of 100."
+}
+if ($earnedTotal -ne $currentProgress) {
+    throw "Roadmap earned points $earnedTotal do not match current progress $currentProgress%."
+}
+$roadmapIndex = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/roadmaps/README.md'))
+if (-not $roadmapIndex.Contains("| Auto CLP | $currentProgress% |")) {
+    throw "Roadmap index does not match Auto CLP progress $currentProgress%."
+}
+
+$config = [IO.File]::ReadAllText((Join-Path $resolvedProject '.codex/config.toml'))
+if ($config -notmatch '(?m)^enabled\s*=\s*true\s*$' -or
+    $config -notmatch '(?m)^max_concurrent_threads_per_session\s*=\s*4\s*$') {
+    throw '.codex/config.toml does not contain the approved agent settings.'
+}
+
+$expectedModes = [ordered]@{
+    'developer.toml' = 'workspace-write'
+    'tester.toml' = 'workspace-write'
+    'code-explorer.toml' = 'read-only'
+    'docs-researcher.toml' = 'read-only'
+    'reviewer.toml' = 'read-only'
+    'ui-tester.toml' = 'read-only'
+}
+$agentNames = @()
+foreach ($entry in $expectedModes.GetEnumerator()) {
+    $agentPath = Join-Path $resolvedProject ".codex/agents/$($entry.Key)"
+    $agent = [IO.File]::ReadAllText($agentPath)
+    $nameMatch = [regex]::Match($agent, '(?m)^name\s*=\s*"([^"]+)"\s*$')
+    if (-not $nameMatch.Success -or
+        $agent -notmatch '(?m)^description\s*=\s*"[^"]+"\s*$' -or
+        $agent -notmatch '(?ms)^developer_instructions\s*=\s*""".+"""\s*$') {
+        throw "Agent TOML is missing required fields: $($entry.Key)"
+    }
+    $agentNames += $nameMatch.Groups[1].Value
+    $modePattern = '(?m)^sandbox_mode\s*=\s*"' + [regex]::Escape($entry.Value) + '"\s*$'
+    if ($agent -notmatch $modePattern) {
+        throw "Agent sandbox mode is not approved: $($entry.Key) expected $($entry.Value)"
+    }
+}
+if (@($agentNames | Select-Object -Unique).Count -ne $agentNames.Count) {
+    throw 'Agent names must be unique.'
+}
+
+$datedFiles = @(
+    'docs/README.md',
+    'docs/specification.md',
+    'docs/roadmaps/README.md',
+    'docs/roadmaps/auto-clp.md'
+)
+foreach ($relativePath in $datedFiles) {
+    $content = [IO.File]::ReadAllText((Join-Path $resolvedProject $relativePath))
+    if ($content -match 'YYYY-MM-DD') {
+        throw "Unresolved date placeholder remains: $relativePath"
+    }
+}
+
+[pscustomobject]@{
+    project_path = $resolvedProject
+    required_files = $requiredFiles.Count
+    markdown_files = @($markdownFiles).Count
+    relative_links_valid = $true
+    indexed_documents_valid = $true
+    adr_count = @($decisionFiles).Count
+    adr_statuses_valid = $true
+    roadmap_weight = $weightTotal
+    roadmap_progress = $currentProgress
+    agent_count = $agentNames.Count
+    agent_permissions_valid = $true
+}

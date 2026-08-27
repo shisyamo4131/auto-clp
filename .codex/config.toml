@@ -1,0 +1,8 @@
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 4
+interrupt_message = true
+
+# Project-owned hybrid configuration.
+# Models are intentionally unpinned. Network and external writes require
+# explicit user approval under governance/project-rules.md.
