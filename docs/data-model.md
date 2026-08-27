@@ -114,6 +114,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | `domain/model` | 実装済み: 版、向き、寸法、隙間、積荷、候補、配置、案件のreadonly型 | React、Three.js、ブラウザ保存API |
 | `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間、矩形開口寸法と許可向き抽出、支持面のXY矩形和集合による100%被覆、床・完全一致Z接触・段積み可を合成する幾何支持 | UI、描画、永続化 |
 | `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計、計算可否を区別する総質量・耐荷重評価、対象コンテナへの配置抽出、境界、隙間、開口、支持、耐荷重の独立理由と集約状態、計算不能結果 | React、Three.js、I/O |
+| `domain/automatic-proposal` | 実装済み: Schema・意味検証済みProjectだけを受ける、一候補完全案の決定的DFS、目的関数順位、向き重複排除、最大2,048点の遅延列挙、候補10,000・要求1,000,000 attempt境界、cutoff/no-complete-plan、未確認理由付き完全案。現在配置を入力anchorにせず変更もしない | Schema検証、Worker、取消、stale、UI、Projectへの適用、外部通信 |
 | `application/project-import`、`application/project-command` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド | DOM、Three.jsオブジェクトの所有 |
 | `application/project-history` | 実装済み: 検証済みProject参照の最大100件履歴、stale base拒否、no-op除外、undo/redo、分岐時のredo破棄 | DOM、Three.jsオブジェクト、I/O、Projectの再検証 |
 | `application/project-persistence` | 実装済み: 永続化用の検証済み直列化、読込失敗段階の固定code化、全候補preflight後だけの案件準備 | DOM、Three.jsオブジェクト、直接IndexedDB操作 |

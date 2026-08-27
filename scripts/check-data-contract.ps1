@@ -17,6 +17,8 @@ $persistenceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0013-manua
 $floorPenetrationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0014-dedicated-floor-penetration-diagnostic.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
+$automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
+$automaticProposalTestPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.test.ts'
 
 foreach ($path in @(
     $schemaPath,
@@ -30,7 +32,9 @@ foreach ($path in @(
     $persistenceDecisionPath,
     $floorPenetrationDecisionPath,
     $optimizationDecisionPath,
-    $acceptancePath
+    $acceptancePath,
+    $automaticProposalPath,
+    $automaticProposalTestPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
@@ -306,7 +310,8 @@ foreach ($requiredText in @(
 
 
 foreach ($requiredText in @(
-    '自動提案は未実装',
+    '自動提案の純粋domain探索だけが実装済み',
+    '利用者向けWorker、preview、取消、適用は未実装',
     'preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在案件を保持',
     '目的関数上の最良として案内してはならない'
 )) {
@@ -361,4 +366,5 @@ foreach ($requiredText in @(
     floor_penetration_decision_0014_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
+    automatic_proposal_domain_implemented = $true
 }
