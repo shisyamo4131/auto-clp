@@ -15,6 +15,11 @@ export interface PlacementBoundsMm {
   readonly max: PositionMm;
 }
 
+export interface GeometricSupportCandidateMm {
+  readonly bounds: PlacementBoundsMm;
+  readonly canSupportCargo: boolean;
+}
+
 export interface RectangleBoundsMm {
   readonly min: Pick<PositionMm, "xMm" | "yMm">;
   readonly max: Pick<PositionMm, "xMm" | "yMm">;
@@ -193,6 +198,59 @@ function hasPositiveAxisLengths(bounds: PlacementBoundsMm): boolean {
     bounds.min.xMm < bounds.max.xMm &&
     bounds.min.yMm < bounds.max.yMm &&
     bounds.min.zMm < bounds.max.zMm
+  );
+}
+
+function hasValidPlacementBounds(bounds: PlacementBoundsMm): boolean {
+  return (
+    Number.isSafeInteger(bounds.min.xMm) &&
+    Number.isSafeInteger(bounds.min.yMm) &&
+    Number.isSafeInteger(bounds.min.zMm) &&
+    Number.isSafeInteger(bounds.max.xMm) &&
+    Number.isSafeInteger(bounds.max.yMm) &&
+    Number.isSafeInteger(bounds.max.zMm) &&
+    hasPositiveAxisLengths(bounds)
+  );
+}
+
+export function hasFullGeometricSupport(
+  target: PlacementBoundsMm,
+  candidates: readonly GeometricSupportCandidateMm[],
+): boolean {
+  if (!hasValidPlacementBounds(target) || target.min.zMm < 0) {
+    return false;
+  }
+  if (target.min.zMm === 0) {
+    return true;
+  }
+  if (candidates.some((candidate) => !hasValidPlacementBounds(candidate.bounds))) {
+    return false;
+  }
+
+  const targetRectangle: RectangleBoundsMm = {
+    min: { xMm: target.min.xMm, yMm: target.min.yMm },
+    max: { xMm: target.max.xMm, yMm: target.max.yMm },
+  };
+  const supportingRectangles = candidates
+    .filter(
+      (candidate) =>
+        candidate.canSupportCargo === true &&
+        candidate.bounds.max.zMm === target.min.zMm,
+    )
+    .map<RectangleBoundsMm>((candidate) => ({
+      min: {
+        xMm: candidate.bounds.min.xMm,
+        yMm: candidate.bounds.min.yMm,
+      },
+      max: {
+        xMm: candidate.bounds.max.xMm,
+        yMm: candidate.bounds.max.yMm,
+      },
+    }));
+
+  return isRectangleFullyCoveredByUnion(
+    targetRectangle,
+    supportingRectangles,
   );
 }
 

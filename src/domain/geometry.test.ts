@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   fittingOpeningOrientations,
   fitsRectangularOpening,
+  hasFullGeometricSupport,
   hasPositiveVolumeOverlap,
   hasRequiredAxisClearance,
   isRectangleFullyCoveredByUnion,
@@ -11,7 +12,11 @@ import {
   orientedDimensions,
   placementBounds,
 } from "./geometry";
-import type { PlacementBoundsMm, RectangleBoundsMm } from "./geometry";
+import type {
+  GeometricSupportCandidateMm,
+  PlacementBoundsMm,
+  RectangleBoundsMm,
+} from "./geometry";
 import type {
   Cargo,
   ClearancesMm,
@@ -1129,5 +1134,331 @@ describe("isRectangleFullyCoveredByUnion", () => {
 
     expect(mutableTarget).toEqual(originalTarget);
     expect(coverings).toEqual(originalCoverings);
+  });
+});
+
+describe("hasFullGeometricSupport", () => {
+  const supportTarget = bounds(
+    { xMm: 0, yMm: 0, zMm: 10 },
+    { xMm: 10, yMm: 10, zMm: 20 },
+  );
+  const floorTarget = bounds(
+    { xMm: 0, yMm: 0, zMm: 0 },
+    { xMm: 10, yMm: 10, zMm: 10 },
+  );
+  const candidate = (
+    candidateBounds: PlacementBoundsMm,
+    canSupportCargo = true,
+  ): GeometricSupportCandidateMm => ({
+    bounds: candidateBounds,
+    canSupportCargo,
+  });
+  const exactSupport = candidate(
+    bounds(
+      { xMm: 0, yMm: 0, zMm: 0 },
+      { xMm: 10, yMm: 10, zMm: 10 },
+    ),
+  );
+  const leftSupport = candidate(
+    bounds(
+      { xMm: 0, yMm: 0, zMm: 0 },
+      { xMm: 5, yMm: 10, zMm: 10 },
+    ),
+  );
+  const rightSupport = candidate(
+    bounds(
+      { xMm: 5, yMm: 0, zMm: 0 },
+      { xMm: 10, yMm: 10, zMm: 10 },
+    ),
+  );
+
+  it.each([
+    [
+      "zero X extent on the floor",
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 0 },
+        { xMm: 0, yMm: 10, zMm: 10 },
+      ),
+    ],
+    [
+      "inverted X extent on the floor",
+      bounds(
+        { xMm: 10, yMm: 0, zMm: 0 },
+        { xMm: 0, yMm: 10, zMm: 10 },
+      ),
+    ],
+    [
+      "zero Y extent",
+      bounds(
+        { xMm: 0, yMm: 5, zMm: 10 },
+        { xMm: 10, yMm: 5, zMm: 20 },
+      ),
+    ],
+    [
+      "inverted Y extent",
+      bounds(
+        { xMm: 0, yMm: 10, zMm: 10 },
+        { xMm: 10, yMm: 0, zMm: 20 },
+      ),
+    ],
+    [
+      "zero Z extent on the floor",
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 0 },
+        { xMm: 10, yMm: 10, zMm: 0 },
+      ),
+    ],
+    [
+      "inverted Z extent",
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 20 },
+        { xMm: 10, yMm: 10, zMm: 10 },
+      ),
+    ],
+    [
+      "fractional coordinate",
+      bounds(
+        { xMm: 0.5, yMm: 0, zMm: 10 },
+        { xMm: 10, yMm: 10, zMm: 20 },
+      ),
+    ],
+    [
+      "unsafe coordinate",
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 10 },
+        { xMm: Number.MAX_SAFE_INTEGER + 1, yMm: 10, zMm: 20 },
+      ),
+    ],
+    [
+      "non-finite coordinate",
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 10 },
+        { xMm: 10, yMm: Number.POSITIVE_INFINITY, zMm: 20 },
+      ),
+    ],
+  ] as const)("rejects a target with %s", (_label, invalidTarget) => {
+    expect(hasFullGeometricSupport(invalidTarget, [exactSupport])).toBe(false);
+  });
+
+  it("accepts a valid floor target without candidates", () => {
+    expect(hasFullGeometricSupport(floorTarget, [])).toBe(true);
+  });
+
+  it("accepts a valid floor target before inspecting malformed candidates", () => {
+    const malformed = candidate(
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 0 },
+        { xMm: 0, yMm: 10, zMm: 10 },
+      ),
+    );
+
+    expect(hasFullGeometricSupport(floorTarget, [malformed])).toBe(true);
+  });
+
+  it("rejects a positive-volume target whose minimum Z is below the floor", () => {
+    const belowFloorTarget = bounds(
+      { xMm: 0, yMm: 0, zMm: -1 },
+      { xMm: 10, yMm: 10, zMm: 9 },
+    );
+    const touchingCandidate = candidate(
+      bounds(
+        { xMm: 0, yMm: 0, zMm: -11 },
+        { xMm: 10, yMm: 10, zMm: -1 },
+      ),
+    );
+
+    expect(hasFullGeometricSupport(belowFloorTarget, [touchingCandidate])).toBe(
+      false,
+    );
+  });
+
+  it("rejects an elevated target without candidates", () => {
+    expect(hasFullGeometricSupport(supportTarget, [])).toBe(false);
+  });
+
+  it("accepts one exact full support", () => {
+    expect(hasFullGeometricSupport(supportTarget, [exactSupport])).toBe(true);
+  });
+
+  it("accepts two edge-joined supports bridged along X", () => {
+    expect(
+      hasFullGeometricSupport(supportTarget, [leftSupport, rightSupport]),
+    ).toBe(true);
+  });
+
+  it.each([
+    [
+      "1 mm below",
+      candidate(
+        bounds(
+          { xMm: 0, yMm: 0, zMm: 0 },
+          { xMm: 10, yMm: 10, zMm: 9 },
+        ),
+      ),
+    ],
+    [
+      "1 mm above",
+      candidate(
+        bounds(
+          { xMm: 0, yMm: 0, zMm: 0 },
+          { xMm: 10, yMm: 10, zMm: 11 },
+        ),
+      ),
+    ],
+  ] as const)("rejects a full-XY candidate ending %s the target base", (_label, support) => {
+    expect(hasFullGeometricSupport(supportTarget, [support])).toBe(false);
+  });
+
+  it("uses only the exact-height members of mixed-height candidates", () => {
+    const lowerRight = candidate(
+      bounds(
+        { xMm: 5, yMm: 0, zMm: 0 },
+        { xMm: 10, yMm: 10, zMm: 9 },
+      ),
+    );
+    const upperRight = candidate(
+      bounds(
+        { xMm: 5, yMm: 0, zMm: 0 },
+        { xMm: 10, yMm: 10, zMm: 11 },
+      ),
+    );
+
+    expect(
+      hasFullGeometricSupport(supportTarget, [
+        leftSupport,
+        lowerRight,
+        upperRight,
+      ]),
+    ).toBe(false);
+    expect(
+      hasFullGeometricSupport(supportTarget, [
+        leftSupport,
+        lowerRight,
+        rightSupport,
+        upperRight,
+      ]),
+    ).toBe(true);
+  });
+
+  it("does not count candidates whose cargo cannot support stacking", () => {
+    const disallowedFull = { ...exactSupport, canSupportCargo: false };
+    const disallowedRight = { ...rightSupport, canSupportCargo: false };
+
+    expect(hasFullGeometricSupport(supportTarget, [disallowedFull])).toBe(false);
+    expect(
+      hasFullGeometricSupport(supportTarget, [leftSupport, disallowedRight]),
+    ).toBe(false);
+  });
+
+  it.each([
+    [
+      "far away",
+      candidate(
+        bounds(
+          { xMm: 20, yMm: 20, zMm: 0 },
+          { xMm: 30, yMm: 30, zMm: 10 },
+        ),
+      ),
+    ],
+    [
+      "overlapping the target volume",
+      candidate(
+        bounds(
+          { xMm: 0, yMm: 0, zMm: 9 },
+          { xMm: 10, yMm: 10, zMm: 11 },
+        ),
+      ),
+    ],
+    [
+      "at the wrong height",
+      candidate(
+        bounds(
+          { xMm: 0, yMm: 0, zMm: 0 },
+          { xMm: 10, yMm: 10, zMm: 9 },
+        ),
+      ),
+    ],
+  ] as const)("ignores a valid candidate %s", (_label, irrelevant) => {
+    expect(hasFullGeometricSupport(supportTarget, [irrelevant])).toBe(false);
+    expect(
+      hasFullGeometricSupport(supportTarget, [irrelevant, exactSupport]),
+    ).toBe(true);
+  });
+
+  it("keeps an eligible support when mixed with a permission-false candidate", () => {
+    expect(
+      hasFullGeometricSupport(supportTarget, [
+        { ...exactSupport, canSupportCargo: false },
+        exactSupport,
+      ]),
+    ).toBe(true);
+  });
+
+  it.each([
+    [
+      "first",
+      [
+        candidate(
+          bounds(
+            { xMm: 0, yMm: 0, zMm: 0 },
+            { xMm: 0, yMm: 10, zMm: 10 },
+          ),
+        ),
+        exactSupport,
+      ],
+    ],
+    [
+      "middle even when permission-false",
+      [
+        exactSupport,
+        candidate(
+          bounds(
+            { xMm: 0, yMm: 0, zMm: 0 },
+            { xMm: 10, yMm: 10, zMm: 9.5 },
+          ),
+          false,
+        ),
+        exactSupport,
+      ],
+    ],
+    [
+      "last",
+      [
+        exactSupport,
+        candidate(
+          bounds(
+            { xMm: 10, yMm: 0, zMm: 0 },
+            { xMm: 0, yMm: 10, zMm: 10 },
+          ),
+        ),
+      ],
+    ],
+  ] as const)("rejects an invalid above-floor candidate in the %s position", (_label, candidates) => {
+    expect(hasFullGeometricSupport(supportTarget, candidates)).toBe(false);
+  });
+
+  it("allows a valid below-floor candidate whose top exactly supports the target", () => {
+    const belowFloorSupport = candidate(
+      bounds(
+        { xMm: 0, yMm: 0, zMm: -1 },
+        { xMm: 10, yMm: 10, zMm: 10 },
+      ),
+    );
+
+    expect(hasFullGeometricSupport(supportTarget, [belowFloorSupport])).toBe(
+      true,
+    );
+  });
+
+  it("does not mutate the target or candidate list", () => {
+    const mutableTarget = structuredClone(supportTarget);
+    const candidates = [structuredClone(leftSupport), structuredClone(rightSupport)];
+    const originalTarget = structuredClone(mutableTarget);
+    const originalCandidates = structuredClone(candidates);
+
+    hasFullGeometricSupport(mutableTarget, candidates);
+
+    expect(mutableTarget).toEqual(originalTarget);
+    expect(candidates).toEqual(originalCandidates);
   });
 });
