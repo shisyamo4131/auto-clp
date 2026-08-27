@@ -230,6 +230,129 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.placement-panel {
+  min-width: 0;
+  margin-top: 0.4rem;
+  padding: clamp(0.8rem, 2.5vw, 1.25rem);
+  border: 1px solid rgba(132, 172, 195, 0.26);
+  border-radius: 0.75rem;
+  background: rgba(7, 17, 31, 0.72);
+}
+
+.placement-panel__heading {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.placement-panel__heading h4,
+.placement-panel__heading p,
+.placement-panel__group h5 {
+  margin-bottom: 0;
+}
+
+.placement-panel__heading h4 {
+  font-size: 1.15rem;
+}
+
+.placement-panel__heading p,
+.placement-list span {
+  color: #a8bdcf;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.placement-panel__group {
+  min-width: 0;
+  margin-top: 1rem;
+}
+
+.placement-panel__group h5 {
+  font-size: 1rem;
+}
+
+.placement-list {
+  display: grid;
+  min-width: 0;
+  gap: 0.65rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.placement-list > li {
+  display: grid;
+  min-width: 0;
+  gap: 0.65rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(132, 172, 195, 0.2);
+  border-radius: 0.65rem;
+  overflow-wrap: anywhere;
+}
+
+.placement-list > li > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 0.3rem;
+}
+
+.placement-errors {
+  min-width: 0;
+  margin: 0.75rem 0;
+  padding: 0.8rem;
+  border: 1px solid #ff8c84;
+  border-radius: 0.65rem;
+  color: #ffd0cd;
+  background: rgba(92, 25, 28, 0.45);
+  overflow-wrap: anywhere;
+}
+
+.placement-errors ul {
+  margin-bottom: 0;
+  padding-left: 1.25rem;
+}
+
+.placement-form {
+  min-width: 0;
+  margin-top: 1rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(132, 172, 195, 0.2);
+}
+
+.placement-coordinate-grid {
+  display: grid;
+  min-width: 0;
+  gap: 0.8rem;
+}
+
+.placement-orientation-field {
+  display: grid;
+  min-width: 0;
+  gap: 0.4rem;
+}
+
+.placement-orientation-field label {
+  font-weight: 650;
+}
+
+.placement-orientation-field select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #6f879c;
+  border-radius: 0.45rem;
+  color: #edf7ff;
+  background: #07111f;
+}
+
+.placement-orientation-field select[aria-invalid="true"] {
+  border-color: #ff8c84;
+  box-shadow: inset 0 0 0 1px #ff8c84;
+}
+
 .viewport canvas {
   display: block;
   width: 100%;
@@ -532,7 +655,8 @@ legend {
 }
 
 @media (min-width: 800px) {
-  .dimension-grid {
+  .dimension-grid,
+  .placement-coordinate-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -559,6 +683,7 @@ legend {
 
   .capability__copy,
   .scene-workspace__controls,
+  .placement-panel,
   .editor-card,
   fieldset {
     padding: 0.8rem;

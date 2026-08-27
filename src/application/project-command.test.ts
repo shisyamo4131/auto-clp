@@ -3,16 +3,21 @@ import { describe, expect, it } from "vitest";
 import type { Cargo, Container, Placement, Project } from "../domain/model";
 import { createInitialProject } from "./project-factory";
 import {
+  addPlacement,
+  deletePlacement,
   deleteCargo,
   deleteContainer,
   parseClearanceMm,
   parseDimensionMm,
   parseKilogramsToGrams,
+  parsePositionMm,
   saveCargo,
   saveContainer,
+  updatePlacement,
   updateProjectSettings,
   type CargoDraft,
   type ContainerDraft,
+  type PlacementDraft,
 } from "./project-command";
 
 const cargoDraft: CargoDraft = {
@@ -56,14 +61,21 @@ function container(id = "container-1"): Container {
   };
 }
 
-function placement(): Placement {
+function placement(cargoId = "cargo-1", containerId = "container-1"): Placement {
   return {
-    cargoId: "cargo-1",
-    containerId: "container-1",
+    cargoId,
+    containerId,
     positionMm: { xMm: 0, yMm: 0, zMm: 0 },
     orientation: "LWH",
   };
 }
+
+const placementDraft: PlacementDraft = {
+  xMm: "0",
+  yMm: "0",
+  zMm: "0",
+  orientation: "LWH",
+};
 
 function placedProject(): Project {
   return {
@@ -184,6 +196,49 @@ describe("input parsers", () => {
       value: 100_000_000,
     });
     expect(parseKilogramsToGrams("100000.001").ok).toBe(false);
+  });
+
+  it.each([
+    ["-1000000", -1_000_000],
+    ["1000000", 1_000_000],
+    ["-1", -1],
+    ["0", 0],
+    ["-0", 0],
+  ])("parses canonical placement coordinate %s", (raw, expected) => {
+    const result = parsePositionMm(raw);
+    expect(result).toEqual({ ok: true, value: expected });
+    if (result.ok && raw === "-0") {
+      expect(Object.is(result.value, -0)).toBe(false);
+    }
+  });
+
+  it.each(["-1000001", "1000001"])(
+    "rejects placement coordinate outside the schema range: %s",
+    (raw) => {
+      expect(parsePositionMm(raw)).toEqual({
+        ok: false,
+        issue: { code: "input.mm-range", path: "/positionMm" },
+      });
+    },
+  );
+
+  it.each(["+1", "1.5", "1e3", "1,000", "", " ", "NaN", "Infinity"])(
+    "rejects non-canonical placement coordinate format: %s",
+    (raw) => {
+      expect(parsePositionMm(raw)).toEqual({
+        ok: false,
+        issue: { code: "input.mm-format", path: "/positionMm" },
+      });
+    },
+  );
+
+  it("rejects huge placement text and excessive zeroes before BigInt conversion", () => {
+    for (const raw of ["9".repeat(10_000), "0".repeat(10_000), `-${"0".repeat(10_000)}`]) {
+      expect(parsePositionMm(raw)).toEqual({
+        ok: false,
+        issue: { code: "input.mm-length", path: "/positionMm" },
+      });
+    }
   });
 });
 
@@ -416,5 +471,321 @@ describe("project commands", () => {
     const withoutContainer = deleteContainer(withoutCargo.project, "container-1");
     expect(withoutContainer.ok).toBe(true);
     if (withoutContainer.ok) expect(withoutContainer.project.containers).toEqual([]);
+  });
+});
+
+describe("placement commands", () => {
+  it("adds a placement at the minimum corner origin using the first allowed orientation", () => {
+    const current = deepFreeze<Project>({
+      ...placedProject(),
+      cargoes: [{ ...cargo(), allowedOrientations: ["HWL", "LWH"] }],
+      placements: [],
+    });
+    const original = structuredClone(current);
+
+    const result = addPlacement(current, "cargo-1", "container-1");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.placements).toEqual([
+        {
+          cargoId: "cargo-1",
+          containerId: "container-1",
+          positionMm: { xMm: 0, yMm: 0, zMm: 0 },
+          orientation: "HWL",
+        },
+      ]);
+      expect(result.project.cargoes).toBe(current.cargoes);
+      expect(result.project.containers).toBe(current.containers);
+    }
+    expect(current).toEqual(original);
+  });
+
+  it("adds an explicit signed draft atomically without changing the input Project", () => {
+    const current = deepFreeze<Project>({ ...placedProject(), placements: [] });
+    const original = structuredClone(current);
+
+    const result = addPlacement(current, "cargo-1", "container-1", {
+      xMm: "-1000000",
+      yMm: "1000000",
+      zMm: "-0",
+      orientation: "WLH",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.placements).toEqual([
+        {
+          cargoId: "cargo-1",
+          containerId: "container-1",
+          positionMm: { xMm: -1_000_000, yMm: 1_000_000, zMm: 0 },
+          orientation: "WLH",
+        },
+      ]);
+    }
+    expect(current).toEqual(original);
+  });
+
+  it("rejects an invalid new-placement draft without changing the current Project", () => {
+    const current = deepFreeze<Project>({ ...placedProject(), placements: [] });
+
+    const result = addPlacement(current, "cargo-1", "container-1", {
+      xMm: "1.5",
+      yMm: "1000001",
+      zMm: " ",
+      orientation: "WLH",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      project: current,
+      issues: [
+        { code: "input.mm-format", path: "/placements/0/positionMm/xMm" },
+        { code: "input.mm-range", path: "/placements/0/positionMm/yMm" },
+        { code: "input.mm-format", path: "/placements/0/positionMm/zMm" },
+      ],
+    });
+  });
+
+  it.each([
+    ["missing cargo", "missing-cargo", "container-1", "command.cargo-not-found", "/cargoes"],
+    [
+      "missing container",
+      "cargo-1",
+      "missing-container",
+      "command.container-not-found",
+      "/containers",
+    ],
+  ])("rejects %s without changing the current project", (_name, cargoId, containerId, code, path) => {
+    const current = { ...placedProject(), placements: [] };
+
+    expect(addPlacement(current, cargoId, containerId)).toEqual({
+      ok: false,
+      project: current,
+      issues: [{ code, path }],
+    });
+  });
+
+  it("rejects a cargo already placed in another container", () => {
+    const current: Project = {
+      ...placedProject(),
+      containers: [container(), container("container-2")],
+      placements: [placement("cargo-1", "container-2")],
+    };
+
+    expect(addPlacement(current, "cargo-1", "container-1")).toEqual({
+      ok: false,
+      project: current,
+      issues: [{ code: "command.cargo-already-placed", path: "/placements" }],
+    });
+  });
+
+  it("defensively rejects cargoes with no allowed orientation", () => {
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [{ ...cargo(), allowedOrientations: [] }],
+      placements: [],
+    };
+
+    expect(addPlacement(current, "cargo-1", "container-1")).toEqual({
+      ok: false,
+      project: current,
+      issues: [
+        { code: "input.orientation-required", path: "/cargoes/allowedOrientations" },
+      ],
+    });
+  });
+
+  it("returns the current project when adding would exceed the placement schema limit", () => {
+    const current: Project = {
+      ...placedProject(),
+      placements: Array.from({ length: 1_000 }, (_, index) =>
+        placement(`missing-cargo-${index}`, "container-1"),
+      ),
+    };
+
+    const result = addPlacement(current, "cargo-1", "container-1");
+
+    expect(result.ok).toBe(false);
+    expect(result.project).toBe(current);
+    expect(result).toMatchObject({
+      issues: [{ code: "schema.maxItems", path: "/placements" }],
+    });
+  });
+
+  it.each(["LWH", "WLH", "LHW", "HLW", "WHL", "HWL"] as const)(
+    "updates to allowed orientation %s",
+    (orientation) => {
+      const current: Project = {
+        ...placedProject(),
+        cargoes: [
+          {
+            ...cargo(),
+            allowedOrientations: ["LWH", "WLH", "LHW", "HLW", "WHL", "HWL"],
+          },
+        ],
+      };
+
+      const result = updatePlacement(current, "cargo-1", "container-1", {
+        xMm: "-7",
+        yMm: "11",
+        zMm: "13",
+        orientation,
+      });
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.project.placements[0]).toMatchObject({
+          cargoId: "cargo-1",
+          containerId: "container-1",
+          positionMm: { xMm: -7, yMm: 11, zMm: 13 },
+          orientation,
+        });
+      }
+    },
+  );
+
+  it("rejects a disallowed orientation semantically and returns the same Project", () => {
+    const current = placedProject();
+
+    const result = updatePlacement(current, "cargo-1", "container-1", {
+      ...placementDraft,
+      orientation: "LHW",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.project).toBe(current);
+    expect(result).toMatchObject({
+      issues: [
+        { code: "semantic.disallowed-orientation", path: "/placements/0/orientation" },
+      ],
+    });
+  });
+
+  it("saves signed outside coordinates and keeps the draft minimum corner on rotation", () => {
+    const current = placedProject();
+
+    const result = updatePlacement(current, "cargo-1", "container-1", {
+      xMm: "-1000000",
+      yMm: "1000000",
+      zMm: "-0",
+      orientation: "WLH",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.placements[0]).toEqual({
+        cargoId: "cargo-1",
+        containerId: "container-1",
+        positionMm: { xMm: -1_000_000, yMm: 1_000_000, zMm: 0 },
+        orientation: "WLH",
+      });
+    }
+  });
+
+  it("collects coordinate errors atomically without changing any Project state", () => {
+    const current = deepFreeze(placedProject());
+    const original = structuredClone(current);
+
+    const result = updatePlacement(current, "cargo-1", "container-1", {
+      xMm: "1.5",
+      yMm: "1000001",
+      zMm: " ",
+      orientation: "WLH",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      project: current,
+      issues: [
+        { code: "input.mm-format", path: "/placements/0/positionMm/xMm" },
+        { code: "input.mm-range", path: "/placements/0/positionMm/yMm" },
+        { code: "input.mm-format", path: "/placements/0/positionMm/zMm" },
+      ],
+    });
+    expect(current).toEqual(original);
+  });
+
+  it.each([
+    ["missing placement", placedProject(), "cargo-1", "container-2"],
+    [
+      "missing cargo reference",
+      { ...placedProject(), cargoes: [] },
+      "cargo-1",
+      "container-1",
+    ],
+    [
+      "missing container reference",
+      { ...placedProject(), containers: [] },
+      "cargo-1",
+      "container-1",
+    ],
+  ] as const)("rejects a stale %s", (_name, current, cargoId, containerId) => {
+    const result = updatePlacement(current, cargoId, containerId, placementDraft);
+
+    expect(result).toEqual({
+      ok: false,
+      project: current,
+      issues: [{ code: "command.placement-not-found", path: "/placements" }],
+    });
+  });
+
+  it("updates exactly one placement and preserves definitions and the other placement", () => {
+    const otherCargo = cargo("cargo-2");
+    const otherContainer = container("container-2");
+    const otherPlacement = placement("cargo-2", "container-2");
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [cargo(), otherCargo],
+      containers: [container(), otherContainer],
+      placements: [placement(), otherPlacement],
+    };
+
+    const result = updatePlacement(current, "cargo-1", "container-1", {
+      xMm: "7",
+      yMm: "11",
+      zMm: "13",
+      orientation: "WLH",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.cargoes).toBe(current.cargoes);
+      expect(result.project.containers).toBe(current.containers);
+      expect(result.project.placements).not.toBe(current.placements);
+      expect(result.project.placements[1]).toBe(otherPlacement);
+      expect(result.project.placements[0]?.positionMm).toEqual({ xMm: 7, yMm: 11, zMm: 13 });
+    }
+  });
+
+  it("deletes exactly one placement and preserves all other state", () => {
+    const otherPlacement = placement("cargo-2", "container-2");
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [cargo(), cargo("cargo-2")],
+      containers: [container(), container("container-2")],
+      placements: [placement(), otherPlacement],
+    };
+
+    const result = deletePlacement(current, "cargo-1", "container-1");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.placements).toEqual([otherPlacement]);
+      expect(result.project.placements[0]).toBe(otherPlacement);
+      expect(result.project.cargoes).toBe(current.cargoes);
+      expect(result.project.containers).toBe(current.containers);
+    }
+    expect(current.placements).toHaveLength(2);
+  });
+
+  it("returns the same Project when deleting a stale placement target", () => {
+    const current = placedProject();
+
+    expect(deletePlacement(current, "cargo-1", "container-2")).toEqual({
+      ok: false,
+      project: current,
+      issues: [{ code: "command.placement-not-found", path: "/placements" }],
+    });
   });
 });

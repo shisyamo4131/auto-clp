@@ -1,4 +1,10 @@
-import type { Cargo, Container, Orientation, Project } from "../domain/model";
+import type {
+  Cargo,
+  Container,
+  Orientation,
+  Placement,
+  Project,
+} from "../domain/model";
 import type { ValidationIssue } from "../domain/validation";
 import { validateProjectReferences } from "../domain/validation";
 import { validateProjectJsonSchema } from "../persistence/project-json-schema";
@@ -10,9 +16,13 @@ const CLEARANCE_MIN = 0n;
 const CLEARANCE_MAX = 10_000n;
 const MASS_MIN_GRAMS = 1n;
 const MASS_MAX_GRAMS = 100_000_000n;
+const POSITION_MIN_MM = -1_000_000n;
+const POSITION_MAX_MM = 1_000_000n;
 const CARGO_LIMIT = 1_000;
 const CONTAINER_LIMIT = 100;
 const MAX_KILOGRAM_INPUT_LENGTH = 10;
+const MAX_POSITION_DIGITS = POSITION_MAX_MM.toString().length;
+const MAX_POSITION_INPUT_LENGTH = POSITION_MAX_MM.toString().length + 1;
 
 export interface ProjectSettingsDraft {
   readonly name: string;
@@ -39,6 +49,13 @@ export interface ContainerDraft {
   readonly openingWidthMm: string;
   readonly openingHeightMm: string;
   readonly payloadCapacityKg: string;
+}
+
+export interface PlacementDraft {
+  readonly xMm: string;
+  readonly yMm: string;
+  readonly zMm: string;
+  readonly orientation: Orientation;
 }
 
 export type ParsedIntegerResult =
@@ -78,6 +95,28 @@ export function parseDimensionMm(raw: string, path = "/dimensionMm"): ParsedInte
 
 export function parseClearanceMm(raw: string, path = "/clearanceMm"): ParsedIntegerResult {
   return parseIntegerRange(raw, path, CLEARANCE_MIN, CLEARANCE_MAX);
+}
+
+export function parsePositionMm(
+  raw: string,
+  path = "/positionMm",
+): ParsedIntegerResult {
+  if (raw.length > MAX_POSITION_INPUT_LENGTH) {
+    return { ok: false, issue: { code: "input.mm-length", path } };
+  }
+  if (!/^-?[0-9]+$/.test(raw)) {
+    return { ok: false, issue: { code: "input.mm-format", path } };
+  }
+  const digitLength = raw.startsWith("-") ? raw.length - 1 : raw.length;
+  if (digitLength > MAX_POSITION_DIGITS) {
+    return { ok: false, issue: { code: "input.mm-length", path } };
+  }
+
+  const parsed = BigInt(raw);
+  if (parsed < POSITION_MIN_MM || parsed > POSITION_MAX_MM) {
+    return { ok: false, issue: { code: "input.mm-range", path } };
+  }
+  return { ok: true, value: Number(parsed) };
 }
 
 export function parseKilogramsToGrams(
@@ -133,6 +172,34 @@ function parsedValues(
     return failure(current, ...issues);
   }
   return { ok: true, values: results.map((result) => (result.ok ? result.value : 0)) };
+}
+
+function parsePlacementDraft(
+  current: Project,
+  draft: PlacementDraft,
+  placementIndex: number,
+):
+  | {
+      readonly ok: true;
+      readonly placementData: Pick<Placement, "orientation" | "positionMm">;
+    }
+  | ProjectCommandFailure {
+  const parsed = parsedValues(current, [
+    parsePositionMm(draft.xMm, `/placements/${placementIndex}/positionMm/xMm`),
+    parsePositionMm(draft.yMm, `/placements/${placementIndex}/positionMm/yMm`),
+    parsePositionMm(draft.zMm, `/placements/${placementIndex}/positionMm/zMm`),
+  ]);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const [xMm = 0, yMm = 0, zMm = 0] = parsed.values;
+  return {
+    ok: true,
+    placementData: {
+      positionMm: { xMm, yMm, zMm },
+      orientation: draft.orientation,
+    },
+  };
 }
 
 export function updateProjectSettings(
@@ -250,6 +317,113 @@ export function saveContainer(
           index === existingIndex ? container : existing,
         );
   return validateCandidate(current, { ...current, containers });
+}
+
+export function addPlacement(
+  current: Project,
+  cargoId: string,
+  containerId: string,
+  draft?: PlacementDraft,
+): ProjectCommandResult {
+  const cargo = current.cargoes.find((candidate) => candidate.id === cargoId);
+  if (cargo === undefined) {
+    return failure(current, { code: "command.cargo-not-found", path: "/cargoes" });
+  }
+  if (!current.containers.some((candidate) => candidate.id === containerId)) {
+    return failure(current, {
+      code: "command.container-not-found",
+      path: "/containers",
+    });
+  }
+  if (current.placements.some((placement) => placement.cargoId === cargoId)) {
+    return failure(current, {
+      code: "command.cargo-already-placed",
+      path: "/placements",
+    });
+  }
+
+  const orientation = cargo.allowedOrientations[0];
+  if (orientation === undefined) {
+    return failure(current, {
+      code: "input.orientation-required",
+      path: "/cargoes/allowedOrientations",
+    });
+  }
+  const parsed = parsePlacementDraft(
+    current,
+    draft ?? { xMm: "0", yMm: "0", zMm: "0", orientation },
+    current.placements.length,
+  );
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const placement: Placement = {
+    cargoId,
+    containerId,
+    ...parsed.placementData,
+  };
+  return validateCandidate(current, {
+    ...current,
+    placements: [...current.placements, placement],
+  });
+}
+
+export function updatePlacement(
+  current: Project,
+  cargoId: string,
+  expectedContainerId: string,
+  draft: PlacementDraft,
+): ProjectCommandResult {
+  const placementIndex = current.placements.findIndex(
+    (placement) =>
+      placement.cargoId === cargoId &&
+      placement.containerId === expectedContainerId,
+  );
+  const referencesExist =
+    current.cargoes.some((cargo) => cargo.id === cargoId) &&
+    current.containers.some((container) => container.id === expectedContainerId);
+  if (placementIndex < 0 || !referencesExist) {
+    return failure(current, {
+      code: "command.placement-not-found",
+      path: "/placements",
+    });
+  }
+
+  const parsed = parsePlacementDraft(current, draft, placementIndex);
+  if (!parsed.ok) {
+    return parsed;
+  }
+  const placements = current.placements.map((placement, index) =>
+    index === placementIndex
+      ? {
+          ...placement,
+          ...parsed.placementData,
+        }
+      : placement,
+  );
+  return validateCandidate(current, { ...current, placements });
+}
+
+export function deletePlacement(
+  current: Project,
+  cargoId: string,
+  expectedContainerId: string,
+): ProjectCommandResult {
+  const placementIndex = current.placements.findIndex(
+    (placement) =>
+      placement.cargoId === cargoId &&
+      placement.containerId === expectedContainerId,
+  );
+  if (placementIndex < 0) {
+    return failure(current, {
+      code: "command.placement-not-found",
+      path: "/placements",
+    });
+  }
+  return validateCandidate(current, {
+    ...current,
+    placements: current.placements.filter((_, index) => index !== placementIndex),
+  });
 }
 
 export function deleteCargo(current: Project, cargoId: string): ProjectCommandResult {

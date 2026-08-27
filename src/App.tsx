@@ -98,6 +98,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           forceInitialRenderError={forceInitialRenderError}
           onRendererError={handleRendererError}
           onRendererReady={handleRendererReady}
+          onProjectChange={setProject}
           project={project}
           rendererMounted={rendererMounted}
         />

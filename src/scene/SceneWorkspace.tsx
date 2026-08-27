@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { Project } from "../domain/model";
+import { PlacementPanel } from "../ui/PlacementPanel";
 import { projectContainerToScene } from "./project-scene";
 import { ThreeViewport } from "./ThreeViewport";
 
@@ -8,6 +9,7 @@ interface SceneWorkspaceProps {
   readonly forceInitialRenderError?: boolean;
   readonly onRendererError: () => void;
   readonly onRendererReady: () => void;
+  readonly onProjectChange: (project: Project) => void;
   readonly project: Project;
   readonly rendererMounted: boolean;
 }
@@ -23,10 +25,12 @@ export function SceneWorkspace({
   forceInitialRenderError = false,
   onRendererError,
   onRendererReady,
+  onProjectChange,
   project,
   rendererMounted,
 }: SceneWorkspaceProps) {
   const [selectedContainerId, setSelectedContainerId] = useState<string>();
+  const [placementInteractionActive, setPlacementInteractionActive] = useState(false);
   const selectedContainer = project.containers.find(
     (container) => container.id === selectedContainerId,
   );
@@ -87,7 +91,15 @@ export function SceneWorkspace({
             <select
               id="scene-container-select"
               value={effectiveContainerId}
-              onChange={(event) => setSelectedContainerId(event.target.value)}
+              disabled={placementInteractionActive}
+              aria-describedby={
+                placementInteractionActive ? "scene-container-select-lock" : undefined
+              }
+              onChange={(event) => {
+                if (!placementInteractionActive) {
+                  setSelectedContainerId(event.target.value);
+                }
+              }}
             >
               {project.containers.map((container) => (
                 <option key={container.id} value={container.id}>
@@ -95,6 +107,11 @@ export function SceneWorkspace({
                 </option>
               ))}
             </select>
+            {placementInteractionActive ? (
+              <span className="field__help" id="scene-container-select-lock">
+                配置の編集中または削除確認中です。保存かキャンセルの後に候補を切り替えられます。
+              </span>
+            ) : null}
           </div>
         )}
 
@@ -108,6 +125,13 @@ export function SceneWorkspace({
             ? "候補0件、配置0件。適合判定は未実施です。"
             : `選択中: ${project.containers.find((container) => container.id === effectiveContainerId)?.name ?? "不明な候補"}。配置${placementCount}件。適合判定は未実施です。`}
         </p>
+
+        <PlacementPanel
+          onInteractionChange={setPlacementInteractionActive}
+          onProjectChange={onProjectChange}
+          project={project}
+          selectedContainerId={effectiveContainerId}
+        />
 
         {projectionResult !== undefined && !projectionResult.ok ? (
           <p className="scene-workspace__error" role="alert">
