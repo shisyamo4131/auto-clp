@@ -19,7 +19,7 @@
 | 要件・仕様 | [仕様](specification.md)、[ロードマップ](roadmaps/auto-clp.md)、関連[ADR](decisions/README.md) | 影響する実装、テスト、運用、変更履歴 |
 | データ・保存 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md) | JSON Schema、意味検証、座標意味、往復・失敗時保持テスト |
 | 3D表示・操作 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0001](decisions/0001-local-first-web-architecture.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md) | 実装後の3Dコード、座標adapter、単体テスト、ブラウザ証拠 |
-| 積載制約 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0003](decisions/0003-loading-constraints.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md) | 実装後の計算コード、境界・失敗系テスト |
+| 積載制約 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0003](decisions/0003-loading-constraints.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md) | 実装後の計算コード、境界・失敗系テスト |
 | 自動提案 | [仕様](specification.md)、[ADR 0004](decisions/0004-optimization-objective.md)、[ロードマップ](roadmaps/auto-clp.md) | 決定性、性能、最適性評価の証拠 |
 | テスト・レビュー | [仕様](specification.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 対象差分、独立した終了コード、UI証拠 |
 | ガバナンス・Git・引き継ぎ | [プロジェクト規則](../governance/project-rules.md)、[運用](operations.md) | 管理ハッシュ、Git差分、タスク状態 |

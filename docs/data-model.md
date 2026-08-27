@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)
 
 ## Contract Scope
 
 この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作は実装済みである。端末保存と利用者向けJSON入出力UI、undo/redoは未実装であり、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
 
-仕様版 `0.4.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `0.5.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -65,6 +65,16 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 
 検証済みserializerと、座標値を生成する配置UI・application commandは実装済みである。利用者向けJSON入出力UIと端末保存はまだ存在しない。座標契約の採択時点ではSchema `0.1.0` の初回意味確定としてJSONの形と版を変更せず、その後の配置実装も同じ契約を維持している。既存外部データが後から判明した場合は意味を推測して再解釈せず、新Schema版と明示的な移行を設計する。
 
+## Axis Clearance Contract
+
+- `clearancesMm` は積荷ごとのhaloではなく、隣接する表面間に必要な実距離を軸別に表す。積荷間で設定値を2倍にせず、等値を合格とする。
+- 配置後の境界条件は `xMin >= cX`、`xMax <= L - cX`、`yMin >= cY`、`yMax <= W - cY`、`zMin >= 0`、`zMax <= H - cZ` とする。負X側開口面もX隙間の対象で、床だけはZ隙間を要求しない。
+- 支持関係ではない積荷ペアは、少なくとも一つの分離軸で表面間距離が対応する隙間以上なら合格とする。正体積重なりは常に不適合である。
+- 認定された支持面との完全一致接触ではZ隙間を要求せず、支持を構成するX・Y投影重なりへ積荷間隙間を適用しない。支持成立は100%被覆、同一高さ、段積み可否で別途判定する。
+- 開口断面は従来どおり `cargoY + 2 × cY <= openingWidth`、`cargoZ + cZ <= openingHeight` とし、X隙間を使わない。配置後境界と搬入断面を混同しない。
+
+この意味はADR 0011で初めて確定した。物理判定、端末保存、利用者向けJSON入出力はまだ公開されていないためSchema `0.1.0` を据え置く。実装後は保存値から毎回再計算し、判定結果や隙間包絡をJSONへ保存しない。
+
 ## Stored and Derived State
 
 保存するのは利用者入力と配置だけである。次は常に再計算し、JSONへ保存しない。
@@ -118,8 +128,8 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - `hasPositiveVolumeOverlap(first, second)` — 実装済み。全3軸で正の長さを共有する場合だけ重なりとし、面・辺・角だけの接触は重なりとしない。隙間と支持接触は扱わない。
 - `validateProjectReferences(project)` — 実装済み。ID、参照、単一配置、許可向き、開口と内部寸法、安全な質量合計を検証する。
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
-- `validateBounds(container, cargo, placement, clearances)` — 積載空間境界を判定する。
-- `validateOverlap(placements, cargoes, clearances)` — 接触と軸別隙間を含む重なりを判定する。
+- `validateBounds(container, cargo, placement, clearances)` — 計画。開口面・奥壁・Y両側壁・天井へ片側ずつ軸別実距離を要求し、床Zを例外として積載空間境界を判定する。
+- `validateOverlap(placements, cargoes, clearances)` — 計画。正体積重なりを拒否し、非支持ペアはいずれか一つの分離軸で設定実距離を満たすか判定する。支持接触は別の合成規則で扱う。
 - `validateOpeningFit(container, cargo, clearances)` — 許可向きごとの矩形開口適合を判定する。
 - `validateSupport(placements, cargoes)` — 同一高さの100%幾何支持を判定する。
 - `validatePayload(container, placements, cargoes)` — 安全な整数合計と総耐荷重を判定する。

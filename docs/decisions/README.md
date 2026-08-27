@@ -21,5 +21,6 @@
 | [0008](0008-stacking-support-and-load.md) | Phase 1の支持と荷重判定 | Accepted | 2026-08-27 |
 | [0009](0009-versioned-project-data-contract.md) | 版付き案件JSONとモジュール境界 | Accepted | 2026-08-27 |
 | [0010](0010-container-coordinate-and-placement-anchor.md) | コンテナ局所座標と配置アンカー | Accepted | 2026-08-27 |
+| [0011](0011-axis-clearance-semantics.md) | 軸別固定隙間の意味と適用面 | Accepted | 2026-08-27 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。
