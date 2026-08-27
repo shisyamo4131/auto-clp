@@ -62,6 +62,7 @@ button:disabled {
 
 button:focus-visible,
 input:focus-visible,
+select:focus-visible,
 [tabindex="-1"]:focus-visible {
   outline: 3px solid #72eadc;
   outline-offset: 3px;
@@ -160,6 +161,73 @@ h1 {
   height: clamp(280px, 46vw, 510px);
   border-top: 1px solid rgba(132, 172, 195, 0.16);
   background: #07111f;
+}
+
+.scene-workspace {
+  min-width: 0;
+  border-top: 1px solid rgba(132, 172, 195, 0.16);
+}
+
+.scene-workspace__controls {
+  display: grid;
+  min-width: 0;
+  gap: 0.8rem;
+  padding: clamp(1rem, 3vw, 1.5rem) clamp(1.25rem, 3vw, 2rem);
+}
+
+.scene-workspace__controls h3,
+.scene-workspace__controls p {
+  margin-bottom: 0;
+}
+
+.scene-workspace__controls h3 {
+  font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+}
+
+.scene-workspace__field {
+  display: grid;
+  min-width: 0;
+  gap: 0.4rem;
+}
+
+.scene-workspace__field label {
+  font-weight: 650;
+}
+
+.scene-workspace__field select {
+  width: min(100%, 32rem);
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #6f879c;
+  border-radius: 0.45rem;
+  color: #edf7ff;
+  background: #07111f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scene-workspace__empty,
+.scene-workspace__status,
+.scene-workspace__notice {
+  color: #a8bdcf;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.scene-workspace__notice {
+  padding-left: 0.75rem;
+  border-left: 3px solid #edb852;
+  color: #ffe2b3;
+}
+
+.scene-workspace__error {
+  padding: 0.8rem;
+  border: 1px solid #ff8c84;
+  border-radius: 0.65rem;
+  color: #ffd0cd;
+  background: rgba(92, 25, 28, 0.45);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .viewport canvas {
@@ -490,6 +558,7 @@ legend {
   }
 
   .capability__copy,
+  .scene-workspace__controls,
   .editor-card,
   fieldset {
     padding: 0.8rem;

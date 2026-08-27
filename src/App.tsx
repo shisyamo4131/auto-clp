@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { createInitialProject } from "./application/project-factory";
 import type { WebGL2CapabilityCheck } from "./platform/webgl2";
-import { ThreeViewport } from "./scene/ThreeViewport";
+import { SceneWorkspace } from "./scene/SceneWorkspace";
 import { ProjectWorkspace } from "./ui/ProjectWorkspace";
 
 type AppState =
@@ -28,7 +28,7 @@ const stateCopy: Record<AppState, { readonly title: string; readonly detail: str
   },
   supported: {
     title: "3D表示を利用できます",
-    detail: "案件入力は3D表示とは独立して利用できます。現在の3D表示は操作・判定結果ではない確認用プレビューです。",
+    detail: "選択した候補と登録済み配置を表示します。案件入力は3D表示とは独立して利用できます。",
   },
   unsupported: {
     title: "3D表示を利用できません",
@@ -80,25 +80,27 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
 
       <section
         className={`capability capability--${state}`}
-        role="status"
-        aria-live="polite"
-        aria-labelledby="capability-title"
-        data-capability-state={state}
       >
-        <div className="capability__copy">
+        <div
+          className="capability__copy"
+          role="status"
+          aria-live="polite"
+          aria-labelledby="capability-title"
+          data-capability-state={state}
+        >
           <span className="status-dot" aria-hidden="true" />
           <div>
             <h2 id="capability-title">{copy.title}</h2>
             <p>{copy.detail}</p>
           </div>
         </div>
-        {rendererMounted ? (
-          <ThreeViewport
-            forceInitialRenderError={forceInitialRenderError}
-            onRendererError={handleRendererError}
-            onRendererReady={handleRendererReady}
-          />
-        ) : null}
+        <SceneWorkspace
+          forceInitialRenderError={forceInitialRenderError}
+          onRendererError={handleRendererError}
+          onRendererReady={handleRendererReady}
+          project={project}
+          rendererMounted={rendererMounted}
+        />
       </section>
 
       <aside className="safety-note" aria-label="現在の制限">

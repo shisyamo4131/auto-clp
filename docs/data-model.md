@@ -8,7 +8,7 @@
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き適用、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、案件・隙間・積荷・候補の入力編集UIは実装済みである。端末保存と利用者向けJSON入出力UIは未実装であり、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影は実装済みである。端末保存と利用者向けJSON入出力UI、配置作成・操作は未実装であり、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
 
 仕様版 `0.4.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
@@ -99,20 +99,20 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | Planned module | Responsibility | Forbidden dependencies |
 | --- | --- | --- |
 | `domain/model` | 実装済み: 版、向き、寸法、隙間、積荷、候補、配置、案件のreadonly型 | React、Three.js、ブラウザ保存API |
-| `domain/geometry` | 実装済み: 向き適用。計画: 直方体、交差、矩形和集合 | UI、描画、永続化 |
+| `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲。計画: 交差、矩形和集合 | UI、描画、永続化 |
 | `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計。計画: 境界、隙間、開口通過、支持、耐荷重 | React、Three.js、I/O |
 | `application/project-import`、`application/project-command` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補だけを原子的に反映する不変コマンド。計画: undo/redo、選択 | DOM、Three.jsオブジェクトの所有 |
 | `persistence/project-json` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し。計画: File・端末保存アダプター | 3D描画、直接UI更新 |
-| `scene` | 実装済み: 能力確認用のThree.js描画。計画: domainの派生結果を表示へ変換 | 判定規則の再実装、永続データ型の変更 |
-| `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認。計画: 配置、保存、JSON入出力 | 幾何・制約計算と正規入力変換の再実装 |
+| `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置への純粋投影、Three.js描画、全投影範囲へ適応するcamera。計画: 配置操作 | 判定規則の再実装、永続データ型の変更 |
+| `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認、非永続の3D候補選択。計画: 配置、保存、JSON入出力 | 幾何・制約計算と正規入力変換の再実装 |
 | `workers` | 後続の重い探索処理 | DOM、React状態の直接操作 |
 
-実装済みの依存は、UIからapplicationとdomainの型へ、applicationからdomainとpersistenceの検証境界へ、persistenceからdomainへ向かう。sceneはdomain由来の表示値だけを受け取る計画とし、domainから外側へは向けない。読込ユースケースではapplicationがpersistence境界を呼び、入力編集ではapplication commandがraw draftを正規mm・gへ変換してSchema・意味検証を呼ぶ。domain関数は入力から新しい値または理由を返す純粋関数とし、引数を変更しない。
+実装済みの依存は、UIからapplicationとdomainの型へ、applicationからdomainとpersistenceの検証境界へ、persistenceからdomainへ向かう。scene adapterはdomainの整数mmからThree非依存の表示値を一方向に導出し、rendererはその表示値だけを受け取る。sceneのfloat、camera、候補選択をProjectへ戻さず、domainから外側へは依存させない。読込ユースケースではapplicationがpersistence境界を呼び、入力編集ではapplication commandがraw draftを正規mm・gへ変換してSchema・意味検証を呼ぶ。domain関数は入力から新しい値または理由を返す純粋関数とし、引数を変更しない。
 
 ## Pure Contracts
 
 - `orientedDimensions(cargo, orientation)` — 実装済み。コンテナ局所軸の寸法を返し、入力を変更しない。整数・値域が検証済みであることまでは型だけで保証しない。
-- `placementBounds(cargo, placement)` — 計画。最小角の `positionMm` と向き適用後寸法から、整数mmの軸整列占有範囲を返す。
+- `placementBounds(cargo, placement)` — 実装済み。最小角の `positionMm` と向き適用後寸法から、整数mmの軸整列占有範囲を返し、入力を変更しない。
 - `validateProjectReferences(project)` — 実装済み。ID、参照、単一配置、許可向き、開口と内部寸法、安全な質量合計を検証する。
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
 - `validateBounds(container, cargo, placement, clearances)` — 積載空間境界を判定する。
@@ -131,4 +131,4 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - 読込失敗時に既存状態が変わらないことを確認する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 
-[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力コマンドの原子性を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、WebGL非対応時の入力、狭幅表示を含む。物理制約、3D案件接続、端末保存に対する検証は引き続き必要である。
+[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力コマンドの原子性、6向きの配置範囲、scene軸変換、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、WebGL非対応時の入力、狭幅表示を含む。物理制約、配置操作、端末保存に対する検証は引き続き必要である。

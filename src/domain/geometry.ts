@@ -1,4 +1,16 @@
-import type { Cargo, Orientation, OrientedDimensionsMm } from "./model";
+import type {
+  Cargo,
+  Orientation,
+  OrientedDimensionsMm,
+  Placement,
+  PositionMm,
+} from "./model";
+
+export interface PlacementBoundsMm {
+  readonly min: PositionMm;
+  readonly dimensions: OrientedDimensionsMm;
+  readonly max: PositionMm;
+}
 
 export function orientedDimensions(
   cargo: Pick<Cargo, "dimensionsMm">,
@@ -20,4 +32,22 @@ export function orientedDimensions(
     case "HWL":
       return { xMm: heightMm, yMm: widthMm, zMm: lengthMm };
   }
+}
+
+export function placementBounds(
+  cargo: Pick<Cargo, "dimensionsMm">,
+  placement: Pick<Placement, "orientation" | "positionMm">,
+): PlacementBoundsMm {
+  const dimensions = orientedDimensions(cargo, placement.orientation);
+  const min = { ...placement.positionMm };
+
+  return {
+    min,
+    dimensions,
+    max: {
+      xMm: min.xMm + dimensions.xMm,
+      yMm: min.yMm + dimensions.yMm,
+      zMm: min.zMm + dimensions.zMm,
+    },
+  };
 }
