@@ -2,7 +2,7 @@
 
 ## Current Availability
 
-- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、プロジェクトエージェント設定、ガバナンス検証。
+- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、データ契約チェック、プロジェクトエージェント設定、ガバナンス検証。
 - Planned: 整数mm・gの正規データ、ローカルWebアプリ、3D手動配置、矩形開口・許可回転・幾何支持・総耐荷重の制約判定、JSON保存、自動提案。
 - Unavailable: アプリの起動、ビルド、アプリテスト、デプロイ、クラウド保存、外部API、実運用サポート。
 
@@ -19,6 +19,12 @@ Phase 1の計画済み判定は、完全な搬入経路、積荷別上載荷重�
 ## Normal Operation
 
 以下は現在検証対象となる独立コマンドである。それぞれを別に実行し、結果と終了コードを記録する。
+
+```powershell
+& .\scripts\check-data-contract.ps1 -ProjectPath $PWD.Path
+```
+
+案件JSON Schemaが解析でき、スキーマ版、値域、個数上限、向き列挙、データ契約、ADRが承認値と一致することを検証する。
 
 ```powershell
 & .\scripts\render-governance.ps1 -ProjectPath $PWD.Path -Check
@@ -88,6 +94,7 @@ Phase 1の計画済み判定は、完全な搬入経路、積荷別上載荷重�
 ## Outputs
 
 - 現在の成果物は本リポジトリ内の文書と設定である。
+- 案件データの機械可読な設計契約は `schemas/project-0.1.0.schema.json`、意味契約は `docs/data-model.md` である。アプリが未実装のため、現在は実案件の保存・読込には使用できない。
 - 将来のアプリビルド出力場所は実装時に決定し、本書と `.gitignore` を更新する。
 - 成功は、要求された成果物、仕様・ロードマップ・ADR・変更履歴の整合、独立した必須検証の成功、残リスクの報告で確認する。
 

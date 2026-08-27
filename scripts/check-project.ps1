@@ -16,6 +16,7 @@ $requiredFiles = @(
     'governance/governance.lock.toml',
     'docs/README.md',
     'docs/specification.md',
+    'docs/data-model.md',
     'docs/operations.md',
     'docs/roadmaps/README.md',
     'docs/roadmaps/auto-clp.md',
@@ -30,7 +31,9 @@ $requiredFiles = @(
     'scripts/render-governance.ps1',
     'scripts/check-governance.ps1',
     'scripts/check-project.ps1',
-    'scripts/check-codex-session-size.ps1'
+    'scripts/check-data-contract.ps1',
+    'scripts/check-codex-session-size.ps1',
+    'schemas/project-0.1.0.schema.json'
 )
 
 foreach ($relativePath in $requiredFiles) {
@@ -73,6 +76,7 @@ if ($brokenLinks.Count -gt 0) {
 $docsIndex = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/README.md'))
 $indexedDocuments = @(
     'specification.md',
+    'data-model.md',
     'operations.md',
     'roadmaps/auto-clp.md',
     'decisions/README.md',

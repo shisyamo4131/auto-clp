@@ -1,0 +1,101 @@
+[CmdletBinding()]
+param(
+    [string]$ProjectPath = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+)
+
+$ErrorActionPreference = 'Stop'
+$resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
+$schemaPath = Join-Path $resolvedProject 'schemas/project-0.1.0.schema.json'
+$dataModelPath = Join-Path $resolvedProject 'docs/data-model.md'
+$decisionPath = Join-Path $resolvedProject 'docs/decisions/0009-versioned-project-data-contract.md'
+
+foreach ($path in @($schemaPath, $dataModelPath, $decisionPath)) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Required data-contract file is missing: $path"
+    }
+}
+
+$schemaText = [IO.File]::ReadAllText($schemaPath)
+$schema = $schemaText | ConvertFrom-Json -Depth 100
+
+function Assert-Equal {
+    param(
+        [object]$Actual,
+        [object]$Expected,
+        [string]$Label
+    )
+
+    if ($Actual -ne $Expected) {
+        throw "$Label expected '$Expected' but found '$Actual'."
+    }
+}
+
+Assert-Equal $schema.'$schema' 'https://json-schema.org/draft/2020-12/schema' 'JSON Schema dialect'
+Assert-Equal $schema.properties.schemaVersion.const '0.1.0' 'Project schema version'
+Assert-Equal $schema.additionalProperties $false 'Root additionalProperties'
+Assert-Equal $schema.properties.cargoes.maxItems 1000 'Cargo limit'
+Assert-Equal $schema.properties.containers.maxItems 100 'Container limit'
+Assert-Equal $schema.properties.placements.maxItems 1000 'Placement limit'
+Assert-Equal $schema.'$defs'.dimensionMm.minimum 1 'Minimum dimension'
+Assert-Equal $schema.'$defs'.dimensionMm.maximum 100000 'Maximum dimension'
+Assert-Equal $schema.'$defs'.massGrams.maximum 100000000 'Maximum mass'
+Assert-Equal $schema.'$defs'.clearanceMm.maximum 10000 'Maximum clearance'
+Assert-Equal $schema.'$defs'.coordinateMm.minimum -1000000 'Minimum coordinate'
+Assert-Equal $schema.'$defs'.coordinateMm.maximum 1000000 'Maximum coordinate'
+
+$expectedRootFields = @(
+    'schemaVersion',
+    'projectId',
+    'name',
+    'clearancesMm',
+    'cargoes',
+    'containers',
+    'placements'
+)
+$rootFields = @($schema.required)
+if (($rootFields.Count -ne $expectedRootFields.Count) -or
+    (@(Compare-Object -ReferenceObject $expectedRootFields -DifferenceObject $rootFields).Count -ne 0)) {
+    throw "Root required fields do not match: $($rootFields -join ', ')"
+}
+
+$expectedOrientations = @('LWH', 'WLH', 'LHW', 'HLW', 'WHL', 'HWL')
+$orientations = @($schema.'$defs'.orientation.enum)
+if (($orientations.Count -ne $expectedOrientations.Count) -or
+    (@(Compare-Object -ReferenceObject $expectedOrientations -DifferenceObject $orientations).Count -ne 0)) {
+    throw "Orientation values do not match: $($orientations -join ', ')"
+}
+
+$defaultOrientations = @($schema.'$defs'.cargo.properties.allowedOrientations.default)
+if (($defaultOrientations.Count -ne 2) -or
+    (@(Compare-Object -ReferenceObject @('LWH', 'WLH') -DifferenceObject $defaultOrientations).Count -ne 0)) {
+    throw "Default orientations do not match: $($defaultOrientations -join ', ')"
+}
+
+$dataModel = [IO.File]::ReadAllText($dataModelPath)
+if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
+    -not $dataModel.Contains('仕様版 `0.3.0`') -or
+    -not $dataModel.Contains('../schemas/project-0.1.0.schema.json') -or
+    -not $dataModel.Contains('5 MiB（5,242,880 bytes）')) {
+    throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
+}
+
+$decision = [IO.File]::ReadAllText($decisionPath)
+if ($decision -notmatch '(?m)^- Status:\s*Accepted\s*$' -or
+    -not $decision.Contains('schemas/project-0.1.0.schema.json')) {
+    throw 'ADR 0009 does not accept the approved schema file.'
+}
+
+[pscustomobject]@{
+    project_path = $resolvedProject
+    schema_path = $schemaPath
+    schema_parsed = $true
+    schema_dialect = $schema.'$schema'
+    project_schema_version = $schema.properties.schemaVersion.const
+    root_required_fields = $rootFields.Count
+    orientation_count = $orientations.Count
+    cargo_limit = $schema.properties.cargoes.maxItems
+    container_limit = $schema.properties.containers.maxItems
+    placement_limit = $schema.properties.placements.maxItems
+    documentation_current = $true
+    decision_accepted = $true
+}

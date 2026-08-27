@@ -17,6 +17,7 @@
 | Work type | Required documents | Additional implementation or evidence |
 | --- | --- | --- |
 | 要件・仕様 | [仕様](specification.md)、[ロードマップ](roadmaps/auto-clp.md)、関連[ADR](decisions/README.md) | 影響する実装、テスト、運用、変更履歴 |
+| データ・保存 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0009](decisions/0009-versioned-project-data-contract.md) | JSON Schema、意味検証、往復・失敗時保持テスト |
 | 3D表示・操作 | [仕様](specification.md)、[ADR 0001](decisions/0001-local-first-web-architecture.md)、[ADR 0002](decisions/0002-cuboid-model.md) | 実装後の3Dコード、単体テスト、ブラウザ証拠 |
 | 積載制約 | [仕様](specification.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0003](decisions/0003-loading-constraints.md) | 実装後の計算コード、境界・失敗系テスト |
 | 自動提案 | [仕様](specification.md)、[ADR 0004](decisions/0004-optimization-objective.md)、[ロードマップ](roadmaps/auto-clp.md) | 決定性、性能、最適性評価の証拠 |
@@ -30,6 +31,7 @@
 | `../governance/common-governance.md` | 管理されたプロジェクト横断ガバナンス。直接編集禁止 |
 | `../governance/project-rules.md` | プロジェクト固有の指示、所有権、安全、承認境界 |
 | `specification.md` | 現在の確定要件と明確に分離した未決定事項 |
+| `data-model.md` | 案件JSONの意味契約、参照整合性、予定モジュール境界 |
 | `roadmaps/` | 目標、残作業、完了条件、検証済み進捗 |
 | `decisions/` | 重要判断の状態と根拠 |
 | `operations.md` | 実装済み、計画済み、利用不可の運用 |
