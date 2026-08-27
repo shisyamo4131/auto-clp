@@ -30,6 +30,7 @@ import {
 } from "./persistence/project-store";
 import type { WebGL2CapabilityCheck } from "./platform/webgl2";
 import { SceneWorkspace } from "./scene/SceneWorkspace";
+import { AutomaticProposalPanel } from "./ui/AutomaticProposalPanel";
 import { ProjectHistoryControls } from "./ui/ProjectHistoryControls";
 import { ProjectPersistencePanel } from "./ui/ProjectPersistencePanel";
 import { ProjectWorkspace } from "./ui/ProjectWorkspace";
@@ -111,9 +112,18 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   const persistenceInteractionRef = useRef(false);
   const [persistenceOperationActive, setPersistenceOperationActive] = useState(false);
   const persistenceOperationRef = useRef(false);
+  const [projectInteractionGeneration, setProjectInteractionGeneration] =
+    useState(0);
   const projectInteractionGenerationRef = useRef(0);
   const busyRef = useRef(false);
   const project = history.present;
+
+  const bumpProjectInteractionGeneration = useCallback(() => {
+    const next = projectInteractionGenerationRef.current + 1;
+    projectInteractionGenerationRef.current = next;
+    setProjectInteractionGeneration(next);
+    return next;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,7 +156,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       }
       const next = { ...current, [source]: busy };
       busySourcesRef.current = next;
-      projectInteractionGenerationRef.current += 1;
+      bumpProjectInteractionGeneration();
       busyRef.current =
         next.project ||
         next.scene ||
@@ -154,7 +164,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         persistenceOperationRef.current;
       setBusySources(next);
     },
-    [],
+    [bumpProjectInteractionGeneration],
   );
   const handleSceneBusyChange = useCallback(
     (busy: boolean) => handleBusyChange("scene", busy),
@@ -164,20 +174,29 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     (busy: boolean) => handleBusyChange("project", busy),
     [handleBusyChange],
   );
-  const handlePersistenceInteractionChange = useCallback((active: boolean) => {
-    persistenceInteractionRef.current = active;
-    busyRef.current =
-      busySourcesRef.current.project ||
-      busySourcesRef.current.scene ||
-      active ||
-      persistenceOperationRef.current;
-    setPersistenceInteractionActive(active);
-  }, []);
+  const handlePersistenceInteractionChange = useCallback(
+    (active: boolean) => {
+      if (persistenceInteractionRef.current === active) {
+        return;
+      }
+      persistenceInteractionRef.current = active;
+      if (!persistenceOperationRef.current) {
+        bumpProjectInteractionGeneration();
+      }
+      busyRef.current =
+        busySourcesRef.current.project ||
+        busySourcesRef.current.scene ||
+        active ||
+        persistenceOperationRef.current;
+      setPersistenceInteractionActive(active);
+    },
+    [bumpProjectInteractionGeneration],
+  );
 
   const handleProjectCommit = useCallback(
     (commit: ProjectHistoryCommit): ProjectHistoryTransition => {
       if (persistenceOperationRef.current) {
-        projectInteractionGenerationRef.current += 1;
+        bumpProjectInteractionGeneration();
         return {
           ok: false,
           code: "history.stale-base",
@@ -187,12 +206,13 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       const transition = commitProjectHistory(historyRef.current, commit);
       if (transition.ok && transition.changed) {
         historyRef.current = transition.state;
+        bumpProjectInteractionGeneration();
         setHistory(transition.state);
         setHistoryCommitRevision((current) => current + 1);
       }
       return transition;
     },
-    [],
+    [bumpProjectInteractionGeneration],
   );
 
   const navigateHistory = useCallback(
@@ -208,11 +228,12 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         return false;
       }
       historyRef.current = transition.state;
+      bumpProjectInteractionGeneration();
       setHistory(transition.state);
       setHistoryRevision((current) => current + 1);
       return true;
     },
-    [],
+    [bumpProjectInteractionGeneration],
   );
   const handleUndo = useCallback(() => navigateHistory("undo"), [navigateHistory]);
   const handleRedo = useCallback(() => navigateHistory("redo"), [navigateHistory]);
@@ -230,9 +251,9 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         return { ok: false, code: "persistence.stale-base" };
       }
 
-      const interactionGeneration = projectInteractionGenerationRef.current;
       persistenceOperationRef.current = true;
       busyRef.current = true;
+      const interactionGeneration = bumpProjectInteractionGeneration();
       setPersistenceOperationActive(true);
       try {
         const outcome = await operation();
@@ -251,6 +272,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           }
           const nextHistory = createProjectHistory(outcome.replacement);
           historyRef.current = nextHistory;
+          bumpProjectInteractionGeneration();
           setHistory(nextHistory);
           setHistoryRevision((current) => current + 1);
           setHistoryCommitRevision((current) => current + 1);
@@ -268,6 +290,19 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         setPersistenceOperationActive(false);
       }
     },
+    [bumpProjectInteractionGeneration],
+  );
+
+  const readAutomaticProposalContext = useCallback(
+    () => ({
+      project: historyRef.current.present,
+      interactionGeneration: projectInteractionGenerationRef.current,
+      startBlocked:
+        busySourcesRef.current.project ||
+        busySourcesRef.current.scene ||
+        persistenceInteractionRef.current ||
+        persistenceOperationRef.current,
+    }),
     [],
   );
 
@@ -387,6 +422,13 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         onLoadDevice={handleLoadDevice}
         onSaveDevice={handleSaveDevice}
         project={project}
+      />
+
+      <AutomaticProposalPanel
+        interactionGeneration={projectInteractionGeneration}
+        project={project}
+        readContext={readAutomaticProposalContext}
+        startBlocked={historyBusy}
       />
 
       <section

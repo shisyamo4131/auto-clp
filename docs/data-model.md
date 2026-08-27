@@ -8,7 +8,7 @@
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、案件操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定は実装済みである。操作履歴、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、案件操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定、Projectを変更しない自動提案探索とpreview UIは実装済みである。操作履歴、UI状態、Three.jsオブジェクト、物理判定と自動提案の結果は本契約へ保存しない。
 
 仕様版 `0.10.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
@@ -123,8 +123,8 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | `persistence/project-import-preflight-client`、`workers/project-import-preflight` | 実装済み: one-shot module Workerで全候補を置換前に判定し、応答検証後に必ずWorkerを終了 | DOM、IndexedDB、同期fallback、理由の保存 |
 | `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置への純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointerによる床面方向drag・視点操作。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
 | `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認、非永続の3D候補・積荷選択、配置追加・整数座標・許可向き・取り外しフォーム、canvas直接操作と正確な移動・向きのキーボード対応フォームfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、案件履歴ボタン・ショートカット・状態通知・入力中lock、手動端末保存・読込・削除、JSON入出力、固定code状態・削除focus管理 | 幾何・制約計算と正規入力変換の再実装 |
-| `ui/automatic-proposal-session`、`ui/automatic-proposal-view` | 実装済み・未接続: Project参照とinteraction generationを捕捉するReact非依存セッション、取消・stale・retry・遅延結果mask、source ProjectとのID再相関、固定安全copy、25件単位の候補・配置・未確認理由view | Project/history変更、物理再計算、React DOM、適用、永続化 |
-| `workers` | 実装済み: 物理判定のローカルmodule Worker。自動提案は正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答maskまで実装。計画: App/Reactへのclient・session配線、preview DOM・適用 | DOM、React状態の直接操作、外部通信 |
+| `ui/automatic-proposal-session`、`ui/automatic-proposal-view`、`ui/useAutomaticProposalSession`、`ui/AutomaticProposalPanel` | 実装済み: Project参照とinteraction generationを捕捉するセッション、取消・stale・retry・遅延結果mask、source ProjectとのID再相関、React hook、固定安全copy、25件単位の候補・配置・未確認理由preview。AppはProject/scene/persistenceのbusyと変更を接続する。計画: 確認付き一括適用 | 探索だけでのProject/history変更、物理再計算、永続化 |
+| `workers` | 実装済み: 物理判定のローカルmodule Worker。自動提案は正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答mask、Appからの実Worker接続まで実装 | DOM、React状態の直接操作、外部通信 |
 
 実装済みの依存は、UIからapplicationとdomainの型へ、applicationからdomainとpersistenceの検証境界へ、persistenceからdomainへ向かう。scene adapterはdomainの整数mmからThree非依存の表示値を一方向に導出し、rendererはその表示値だけを受け取る。sceneのmesh transform、camera、候補・積荷選択をProjectへ戻さず、canvas dragは正規開始位置とpointer差分から純粋adapterで整数mm入力を作り、application commandを通す。読込ユースケースではapplicationがpersistence境界を呼び、入力編集ではapplication commandがraw draftを正規mm・gへ変換してSchema・意味検証を呼ぶ。domain関数は入力から新しい値または理由を返す純粋関数とし、引数を変更しない。
 

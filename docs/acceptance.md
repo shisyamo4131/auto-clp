@@ -94,7 +94,7 @@
 - AC-02: `tests/browser/acceptance.spec.ts` が正確な合成データで完全支持、Xを1 mmずらした支持不足、undo復元を実行する。
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` が履歴、IndexedDB、固定JSON往復、WebGL非対応fallbackを分担して実行する。
-- 2026-08-28時点の統合証拠は全単体628件、全ブラウザ51件、型、lint、build、データ契約、文書、ガバナンス検証の成功である。開発チーム内試用と実務利用者試用の証拠ではない。
+- 2026-08-28時点の統合証拠は全単体803件、全ブラウザ58件、型、lint、build、データ契約、文書、ガバナンス検証の成功である。開発チーム内試用と実務利用者試用の証拠ではない。
 
 ## Observation Record Template
 
@@ -109,7 +109,7 @@
 
 ## Automatic Proposal Synthetic Cases
 
-自動提案の実装後は、以下を実務利用者受入とは分けた技術受入として追加する。
+自動提案は、以下を実務利用者受入とは分けた技術受入として段階的に検証する。純粋探索から未適用previewまでは実装済みで、確認付き適用とAP-08代表規模の実時間測定は未完了である。
 
 - AP-01 Candidate objective: 共通して隙間0、積荷1個 `50×50×50 mm`、1,000 g、`LWH` のみを使う。容積比較は `small=200×100×100` が `large=300×100×100` に勝つ。同容積比較は `floor-small=100×100×200` が `floor-large=200×100×100` に勝つ。同容積・床面積比較は `length-small=100×200×100` が `length-large=200×100×100` に勝つ。同寸法比較は入力配列と表示名を入れ替えても `container-a` が `container-b` に勝つ。各候補の開口と耐荷重は積荷を許容する値とする。
 - AP-02 Complete plan only: 隙間0、候補 `200×100×100 mm`、開口 `100×100 mm`、耐荷重2,000 g、積荷 `cargo-a` と `cargo-b` を各 `100×100×100 mm`、1,000 g、`LWH` のみとする。期待案は `(0,0,0)` と `(100,0,0)` に各積荷を一度ずつ置く。同じ出力から一方欠落、重複、未知ID、候補混在を作り、適用境界ですべて拒否する。候補長さを199 mmにした派生fixtureでは部分案を適用不可とする。
@@ -121,5 +121,12 @@
 - AP-08 Worker and performance: 隙間0、`200×200×200 mm`、1,000 g、`LWH` の積荷20個と、候補 `1,000×800×1,000 mm`、開口 `800×1,000 mm`、十分な耐荷重を代表fixtureとする。記録環境でcold 1回とwarm 3回を各5秒以内、取消要求からWorker終了・idle観測まで250 ms以内とする。main timer/rAF、WebGL非対応、キーボード、305/320/375 pxを別行で検証する。別の純粋候補点fixtureでは1,000配置相当から各軸を重複排除・昇順化し、Z→X→Yの期待順で2,048点以下だけを生成して停止し、直積全体を中間配列へ展開しないことを検証する。
 
 空入力fixtureは、積荷0・候補ありと両方0を `no-cargo`、積荷あり・候補0を `no-candidates` とし、attempt 0、previewなし、適用不可、履歴変更なしを期待する。
+
+### Automatic Proposal Automated Mapping
+
+- AP-01、AP-02、AP-03、AP-04、AP-05、AP-07: domain、Worker protocol/client、session/viewの単体試験が目的順位、完全案、未確認理由、cutoff、完全案なし、決定性と入力順非依存を検証する。
+- AP-06 preview部分: `tests/browser/automatic-proposal.spec.ts` が実Workerの完全案、未適用表示、Project・履歴の非変更、通常編集・Undo/Redo・未保存入力・保存・JSON置換によるstale、遅延結果破棄を検証する。確認付き適用と適用後のUndo/Redoは未実装である。
+- AP-08部分証拠: 同browser試験がcontrolled Workerの取消要求から `terminate()` 呼出しと取消表示を250 ms以内、late response mask、WebGL非対応、keyboard、305/320/375 pxを検証する。20積荷の実Worker cold/warm、main timer/rAF、実Worker終了の性能記録は未実施である。
+- 空入力: 同browser試験が実Workerの `no-cargo` と `no-candidates`、attempt 0相当の固定表示、Project・履歴の非変更を検証する。
 
 AP-04の上限試験は、`1..N` の順序付きattempt記述子を生成して指定ordinalだけを成功させられる純粋なtest infrastructureを使う。これはProjectの設定や利用者入力へ公開しない。AP-08の記録にはcommit SHA、algorithm・Schema版、browser/Playwright/OS、CPU、logical processor数、RAM、電源状態、cold/warmと反復番号、viewport、WebGL状態、積荷・候補数、選択候補、候補別・要求attempt数、結果・cutoff源、配置・不適合・未確認件数、結果hash、開始・完了・経過、取消・Worker終了・取消遅延、timer/rAF回数と最大遅延、console warning/error、合否、備考を含める。

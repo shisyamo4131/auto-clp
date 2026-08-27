@@ -25,6 +25,10 @@ $automaticProposalWorkerPath = Join-Path $resolvedProject 'src/workers/automatic
 $automaticProposalClientPath = Join-Path $resolvedProject 'src/ui/automatic-proposal-worker-client.ts'
 $automaticProposalSessionPath = Join-Path $resolvedProject 'src/ui/automatic-proposal-session.ts'
 $automaticProposalViewPath = Join-Path $resolvedProject 'src/ui/automatic-proposal-view.ts'
+$automaticProposalHookPath = Join-Path $resolvedProject 'src/ui/useAutomaticProposalSession.ts'
+$automaticProposalPanelPath = Join-Path $resolvedProject 'src/ui/AutomaticProposalPanel.tsx'
+$automaticProposalBrowserTestPath = Join-Path $resolvedProject 'tests/browser/automatic-proposal.spec.ts'
+$appPath = Join-Path $resolvedProject 'src/App.tsx'
 
 foreach ($path in @(
     $schemaPath,
@@ -46,7 +50,11 @@ foreach ($path in @(
     $automaticProposalWorkerPath,
     $automaticProposalClientPath,
     $automaticProposalSessionPath,
-    $automaticProposalViewPath
+    $automaticProposalViewPath,
+    $automaticProposalHookPath,
+    $automaticProposalPanelPath,
+    $automaticProposalBrowserTestPath,
+    $appPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
@@ -322,13 +330,31 @@ foreach ($requiredText in @(
 
 
 foreach ($requiredText in @(
-    '自動提案の純粋domain探索、Worker transport、React非依存session/viewだけが実装済み',
-    '利用者向けReact panel、Appでのbusy・generation配線、適用は未実装',
-    'preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在案件を保持',
+    '自動提案の純粋domain探索、Worker transport、session/view、利用者向けReact panel',
+    'Appでのbusy・generation配線、実Workerの開始・取消・retry、非永続preview DOMは実装済み',
+    '適用は未実装',
+    'preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在案件と履歴を保持',
     '目的関数上の最良として案内してはならない'
 )) {
     if (-not $operations.Contains($requiredText)) {
         throw "Operations does not contain the approved automatic-proposal boundary text: $requiredText"
+    }
+}
+
+$automaticProposalHook = [IO.File]::ReadAllText($automaticProposalHookPath)
+$automaticProposalPanel = [IO.File]::ReadAllText($automaticProposalPanelPath)
+$automaticProposalBrowserTest = [IO.File]::ReadAllText($automaticProposalBrowserTestPath)
+$app = [IO.File]::ReadAllText($appPath)
+foreach ($contract in @(
+    @{ Name = 'React hook'; Text = $automaticProposalHook; Required = @('useSyncExternalStore', 'visibleSnapshot', 'interactionGeneration') },
+    @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '探索を中止', '提案配置（未適用）') },
+    @{ Name = 'App integration'; Text = $app; Required = @('readAutomaticProposalContext', '<AutomaticProposalPanel', 'persistenceOperationRef.current') },
+    @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '__proposalTerminatedCount', 'forceWebgl2=unsupported') }
+)) {
+    foreach ($requiredText in $contract.Required) {
+        if (-not $contract.Text.Contains($requiredText)) {
+            throw "$($contract.Name) does not contain the required automatic-proposal integration marker: $requiredText"
+        }
     }
 }
 
@@ -381,4 +407,6 @@ foreach ($requiredText in @(
     automatic_proposal_domain_implemented = $true
     automatic_proposal_worker_transport_implemented = $true
     automatic_proposal_session_view_implemented = $true
+    automatic_proposal_react_preview_implemented = $true
+    automatic_proposal_browser_integration_tested = $true
 }

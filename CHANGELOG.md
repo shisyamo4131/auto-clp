@@ -46,6 +46,8 @@
 - 検証済みProject用の純粋な自動提案DFS、目的順位、向き・候補点列挙、決定的attempt予算、cutoff集約、未確認理由保持と31件の専用単体試験。
 - 正本Schema・意味検証付きone-shot自動提案Worker、厳格な応答guard、固定code client、即時terminate取消・遅延応答maskと80件の専用単体試験。
 - Project参照・interaction generationのstale判定、取消・retry race、source ID相関、固定安全copy、25件pageを持つReact非依存の自動提案session/viewと64件の専用単体試験。
+- WebGL非対応時も使える自動提案React panel、AppのProject/interaction generationとbusy gate、実Worker開始・取消・再試行、未適用preview、候補・配置・未確認事項の25件page。
+- 実Workerの空・完全案、Project・履歴の非変更、編集・Undo/Redo・保存・JSON置換によるstale、controlled Worker終了250 ms、遅延結果破棄、ARIA、305〜375pxを覆う7件のブラウザ回帰。
 
 ### Changed
 
@@ -81,6 +83,7 @@
 - 純粋な自動提案domain探索と境界試験の検証に基づき、Auto CLPロードマップ進捗を81%から85%へ更新。Worker、preview、適用は未実装。
 - 未接続の自動提案Worker transportと取消・応答maskの検証に基づき、Auto CLPロードマップ進捗を85%から87%へ更新。App接続、preview、適用は未実装。
 - 未接続の自動提案session/viewの検証に基づき、Auto CLPロードマップ進捗を87%から88%へ更新。React/App接続、preview DOM、適用は未実装。
+- 自動提案のReact/App接続と実Worker previewの検証に基づき、Auto CLPロードマップ進捗を88%から91%へ更新。確認付き適用、Undo、AP-08代表規模の実時間性能は未実装または未検証。
 
 ### Fixed
 
