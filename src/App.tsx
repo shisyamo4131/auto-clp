@@ -32,7 +32,7 @@ const stateCopy: Record<AppState, { readonly title: string; readonly detail: str
   },
   unsupported: {
     title: "3D表示を利用できません",
-    detail: "WebGL 2対応の現行デスクトップブラウザとGPU設定を確認してください。積載可否は判定していません。",
+    detail: "WebGL 2対応の現行デスクトップブラウザとGPU設定を確認してください。3D表示を利用できない場合も、保存済み配置の物理判定は利用できます。",
   },
   "renderer-error": {
     title: "3D表示で問題が発生しました",
@@ -107,7 +107,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       <aside className="safety-note" aria-label="現在の制限">
         <strong>現在の段階</strong>
         <span>
-          入力が有効でも積載可能・安全とは限りません。物理的安全性、開口部の完全な通過経路、支持・荷重、法令適合性、荷崩れ防止は未確認です。
+          実装済みの物理判定に適合しても、完全な搬入経路、構造・安定性、重心、軸重、床面強度、荷崩れ、固縛、動荷重、法令適合性や実積載の安全性は未確認です。
         </span>
       </aside>
 

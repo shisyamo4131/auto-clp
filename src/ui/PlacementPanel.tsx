@@ -269,7 +269,7 @@ export function PlacementPanel({
     setEditor({ kind: "new", cargoId, containerId: selectedContainerId });
     setDraft({ xMm: "0", yMm: "0", zMm: "0", orientation });
     setIssues([]);
-    setStatus("新しい配置を入力中です。配置を保存するまで案件と3D表示へ反映しません。");
+    setStatus("新しい配置を入力中です。配置を保存するまで案件、3D表示、物理判定へ反映しません。");
     onInteractionChange(true);
     focusElement("placement-xMm");
   };
@@ -343,8 +343,8 @@ export function PlacementPanel({
     closeInteraction();
     setStatus(
       wasNew
-        ? "新しい配置を保存しました。適合判定は未実施です。"
-        : "配置を保存しました。適合判定は未実施です。",
+        ? "新しい配置を保存し、物理判定の再計算を開始しました。"
+        : "配置を保存し、物理判定の再計算を開始しました。",
     );
     focusPreferredOrPanel(returnId);
   };
@@ -530,7 +530,7 @@ export function PlacementPanel({
                   {editor.kind === "new" ? "新しい配置" : "配置を編集"}: {editedCargo?.name ?? "不明な積荷"}
                 </legend>
                 <p className="field-help warning-copy">
-                  座標は向き適用後の直方体の最小角です。負座標や候補外も修正途中として保存できますが、適合性と安全性は未判定です。
+                  座標は向き適用後の直方体の最小角です。負座標や候補外も修正途中として保存できます。未保存の入力は物理判定へ反映されず、保存後に判定を更新します。
                 </p>
                 <div className="placement-coordinate-grid">
                   <PositionField

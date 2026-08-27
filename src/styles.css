@@ -333,6 +333,174 @@ h1 {
   padding-left: 1.25rem;
 }
 
+.physical-validation {
+  min-width: 0;
+  margin-top: 0.4rem;
+  padding: clamp(0.8rem, 2.5vw, 1.25rem);
+  border: 1px solid rgba(132, 172, 195, 0.26);
+  border-radius: 0.75rem;
+  background: rgba(7, 17, 31, 0.72);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.physical-validation__heading {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.physical-validation__heading h4,
+.physical-validation__group h5,
+.physical-validation__summary,
+.physical-validation__target,
+.physical-validation__reason p,
+.physical-validation__reason dl,
+.physical-validation__reason dd,
+.physical-validation__disclaimer {
+  margin-bottom: 0;
+}
+
+.physical-validation__heading h4 {
+  font-size: 1.15rem;
+}
+
+.physical-validation__badge,
+.physical-validation__reason-status {
+  display: inline-block;
+  width: fit-content;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.physical-validation__badge--valid {
+  color: #8ce9dc;
+}
+
+.physical-validation__badge--invalid,
+.physical-validation__reason--invalid .physical-validation__reason-status {
+  color: #ffaaa4;
+}
+
+.physical-validation__badge--unverified,
+.physical-validation__reason--unverified .physical-validation__reason-status {
+  color: #ffe2b3;
+}
+
+.physical-validation__badge--unavailable,
+.physical-validation__badge--none {
+  color: #c7d7e5;
+}
+
+.physical-validation__badge--loading {
+  color: #8ec9f2;
+}
+
+.physical-validation__summary,
+.physical-validation__target {
+  margin-top: 0.75rem;
+  color: #d9e8f4;
+  line-height: 1.55;
+}
+
+.physical-validation__group {
+  min-width: 0;
+  margin-top: 1rem;
+}
+
+.physical-validation__page-loading {
+  margin: 0.65rem 0 0;
+  color: #a8bdcf;
+  line-height: 1.5;
+}
+
+.physical-validation > .secondary-button {
+  margin-top: 0.75rem;
+}
+
+.physical-validation__reasons {
+  display: grid;
+  min-width: 0;
+  gap: 0.65rem;
+  margin: 0.65rem 0 0;
+  padding-left: 1.65rem;
+}
+
+.physical-validation__reason {
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid rgba(132, 172, 195, 0.24);
+  border-radius: 0.65rem;
+  background: rgba(9, 24, 39, 0.76);
+}
+
+.physical-validation__reason--invalid {
+  border-left: 3px solid #ff8c84;
+}
+
+.physical-validation__reason--unverified {
+  border-left: 3px solid #edb852;
+}
+
+.physical-validation__reason p {
+  margin-top: 0.55rem;
+  line-height: 1.55;
+}
+
+.physical-validation__reason dl {
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+  color: #a8bdcf;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.physical-validation__reason dl > div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.physical-validation__reason dt {
+  color: #d9e8f4;
+  font-weight: 650;
+}
+
+.physical-validation__reason dd {
+  min-width: 0;
+}
+
+.physical-validation__pagination {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  color: #a8bdcf;
+  font-size: 0.88rem;
+}
+
+.physical-validation__disclaimer {
+  margin-top: 1rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid #edb852;
+  color: #ffe2b3;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 .placement-form {
   min-width: 0;
   margin-top: 1rem;
@@ -703,6 +871,7 @@ legend {
   .capability__copy,
   .scene-workspace__controls,
   .placement-panel,
+  .physical-validation,
   .editor-card,
   fieldset {
     padding: 0.8rem;

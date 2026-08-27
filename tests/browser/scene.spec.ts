@@ -24,6 +24,43 @@ async function addInteractiveCargo(page: Page, name: string) {
   await page.getByRole("button", { name: "積荷を保存" }).click();
 }
 
+async function addValidationCargo(
+  page: Page,
+  name: string,
+  options: {
+    readonly lengthMm?: string;
+    readonly widthMm?: string;
+    readonly heightMm?: string;
+    readonly canSupportCargo?: boolean;
+  } = {},
+) {
+  await page.getByRole("button", { name: "積荷を追加" }).click();
+  await page.getByLabel("積荷名").fill(name);
+  await page.getByLabel("長さ", { exact: true }).fill(options.lengthMm ?? "100");
+  await page.getByLabel("幅", { exact: true }).fill(options.widthMm ?? "100");
+  await page.getByLabel("高さ", { exact: true }).fill(options.heightMm ?? "100");
+  await page.getByLabel("重量").fill("1");
+  if (options.canSupportCargo === true) {
+    await page
+      .getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる")
+      .check();
+  }
+  await page.getByRole("button", { name: "積荷を保存" }).click();
+}
+
+async function placeCargo(
+  page: Page,
+  cargoName: string,
+  position: { readonly xMm?: string; readonly yMm?: string; readonly zMm?: string } = {},
+) {
+  const panel = page.locator(".placement-panel");
+  await panel.getByRole("button", { name: `配置を追加: ${cargoName}` }).click();
+  await page.getByLabel("X最小角").fill(position.xMm ?? "0");
+  await page.getByLabel("Y最小角").fill(position.yMm ?? "0");
+  await page.getByLabel("Z最小角").fill(position.zMm ?? "0");
+  await panel.getByRole("button", { name: "配置を保存" }).click();
+}
+
 async function createInteractiveScene(page: Page) {
   await addInteractiveCargo(page, "合成canvas積荷");
   await addContainer(page, "合成canvas候補");
@@ -48,6 +85,7 @@ async function selectCargoOnCanvas(
   canvas: Locator,
   row: Locator,
 ) {
+  await canvas.scrollIntoViewIfNeeded();
   const bounds = await canvas.boundingBox();
   if (bounds === null) {
     throw new Error("3D canvas has no bounding box");
@@ -99,7 +137,21 @@ test("shows an empty unjudged scene with a supported canvas", async ({ page }) =
     "supported",
   );
   await expect(page.getByText("表示する候補がありません。案件入力でコンテナ・車両候補を追加してください。")).toBeVisible();
-  await expect(page.getByText("候補0件、配置0件。適合判定は未実施です。")).toBeVisible();
+  await expect(page.getByText("候補0件、配置0件。物理判定の対象はありません。")).toBeVisible();
+  const physicalPanel = page.locator(".physical-validation");
+  await expect(physicalPanel.getByRole("heading", { name: "物理判定" })).toBeVisible();
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
+    "判定対象なし：候補コンテナを追加してください。",
+  );
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveAttribute(
+    "aria-live",
+    "polite",
+  );
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveAttribute(
+    "aria-atomic",
+    "true",
+  );
+  await expect(physicalPanel.getByRole("status")).toHaveCount(0);
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
 });
 
@@ -113,8 +165,10 @@ test("keeps scene selection stable across add, edit, switch, and delete", async 
 
   await addContainer(page, "合成候補A");
   const sceneSelect = page.getByLabel("表示する候補");
+  const physicalSummary = page.locator(".physical-validation__summary");
   await expect(sceneSelect).toHaveValue("container-1");
-  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。積荷は未選択です。適合判定は未実施です。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。")).toBeVisible();
+  await expect(physicalSummary).toHaveText("適合：この候補には配置済みの積荷がありません。");
 
   await addContainer(page, "合成候補B", "7001");
   await expect(sceneSelect).toHaveValue("container-1");
@@ -125,21 +179,22 @@ test("keeps scene selection stable across add, edit, switch, and delete", async 
   await expect(capabilityStatus.getByRole("img", { name: previewName })).toHaveCount(0);
   const capabilityCopy = await capabilityStatus.textContent();
   await sceneSelect.selectOption({ label: "合成候補B" });
-  await expect(sceneStatus).toHaveText("選択中の候補: 合成候補B。配置0件。積荷は未選択です。適合判定は未実施です。");
+  await expect(sceneStatus).toHaveText("選択中の候補: 合成候補B。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。");
   await expect(capabilityStatus).toHaveText(capabilityCopy ?? "");
+  await expect(physicalSummary).toHaveText("適合：この候補には配置済みの積荷がありません。");
 
   await page.getByRole("button", { name: "編集: 合成候補B" }).click();
   await page.getByLabel("候補名").fill("合成候補B更新");
   await page.getByLabel("内部長さ").fill("8001");
   await page.getByRole("button", { name: "候補の変更を保存: 合成候補B" }).click();
   await expect(sceneSelect).toHaveValue("container-2");
-  await expect(page.getByText("選択中の候補: 合成候補B更新。配置0件。積荷は未選択です。適合判定は未実施です。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 合成候補B更新。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。")).toBeVisible();
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
 
   await page.getByRole("button", { name: "削除: 合成候補B更新" }).click();
   await page.getByRole("button", { name: "削除を確定: 合成候補B更新" }).click();
   await expect(sceneSelect).toHaveValue("container-1");
-  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。積荷は未選択です。適合判定は未実施です。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。")).toBeVisible();
 });
 
 test("selects cargo, clears on blank space, and keeps clicks and camera controls non-mutating", async ({
@@ -275,6 +330,10 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   expect(movedSummary).toMatch(/^最小角 X -?\d+・Y -?\d+・Z 250 mm \/ WLH$/);
   const statusText = (await status.textContent()) ?? "";
   expect(statusText.match(/移動しました/g)).toHaveLength(1);
+  await expect(status).toContainText("物理判定の再計算を開始しました");
+  await expect(page.locator(".physical-validation__summary")).toHaveText(
+    "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
+  );
 
   const match = movedSummary.match(/X (-?\d+)・Y (-?\d+)・Z (-?\d+) mm \/ (\w+)/);
   expect(match).not.toBeNull();
@@ -362,6 +421,8 @@ test("rolls an active drag back and unlocks the form when the WebGL context is l
 
   await expect(capabilityStatus).toHaveAttribute("data-capability-state", "renderer-error");
   await expect(page.getByRole("heading", { name: "3D表示で問題が発生しました" })).toBeVisible();
+  await expect(page.locator(".physical-validation")).toBeVisible();
+  await expect(page.locator(".physical-validation__summary")).toContainText("不適合：");
   await expect(canvas).toHaveCount(0);
   await expect(sceneSelect).toBeEnabled();
   await expect(editButton).toBeEnabled();
@@ -380,8 +441,123 @@ test("keeps scene input available without WebGL and does not mount a canvas", as
   await expect(page.getByRole("img", { name: previewName })).toHaveCount(0);
   await addContainer(page, "非対応時の合成候補");
   await expect(page.getByLabel("表示する候補")).toHaveValue("container-1");
-  await expect(page.getByText("選択中の候補: 非対応時の合成候補。配置0件。積荷は未選択です。適合判定は未実施です。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 非対応時の合成候補。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。")).toBeVisible();
+  await expect(page.locator(".physical-validation__summary")).toHaveText(
+    "適合：この候補には配置済みの積荷がありません。",
+  );
   await expect(page.getByRole("img", { name: previewName })).toHaveCount(0);
+});
+
+test("keeps the physical panel visible after an initial renderer error", async ({ page }) => {
+  await page.goto("/?forceRenderer=initial-render-error");
+
+  await expect(page.getByRole("status")).toHaveAttribute(
+    "data-capability-state",
+    "renderer-error",
+  );
+  await expect(page.getByRole("img", { name: previewName })).toHaveCount(0);
+  await expect(page.locator(".physical-validation")).toBeVisible();
+  await expect(page.locator(".physical-validation__summary")).toHaveText(
+    "判定対象なし：候補コンテナを追加してください。",
+  );
+});
+
+test("shows named overlap relations and a fully supported stack without dropping warnings", async ({
+  page,
+}) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  await addValidationCargo(page, "重なり積荷A");
+  await addValidationCargo(page, "重なり積荷B");
+  await addValidationCargo(page, "支持積荷", { canSupportCargo: true });
+  await addValidationCargo(page, "上段積荷");
+  await addContainer(page, "物理理由候補");
+
+  await placeCargo(page, "重なり積荷A");
+  await placeCargo(page, "重なり積荷B");
+  await placeCargo(page, "支持積荷", { xMm: "1000" });
+  await placeCargo(page, "上段積荷", { xMm: "1000", zMm: "100" });
+
+  const physicalPanel = page.locator(".physical-validation");
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
+    "不適合：修正が必要な理由が1件あります。未確認事項5件も保持して表示します。",
+  );
+  const invalidGroup = physicalPanel.getByRole("region", { name: "不適合理由" });
+  await expect(invalidGroup.getByRole("list")).toBeVisible();
+  const overlapReason = invalidGroup.getByRole("listitem");
+  await expect(overlapReason).toContainText("積荷同士が立体的に重なっています。");
+  await expect(overlapReason).toContainText("重なり積荷A（ID: cargo-1）");
+  await expect(overlapReason).toContainText("重なり積荷B（ID: cargo-2）");
+
+  const unverifiedGroup = physicalPanel.getByRole("region", { name: "未確認理由" });
+  await expect(unverifiedGroup.getByRole("list")).toBeVisible();
+  const structureReason = unverifiedGroup
+    .getByRole("listitem")
+    .filter({ hasText: "構造強度と安定性は未確認です。" });
+  await expect(structureReason).toHaveCount(1);
+  await expect(structureReason).toContainText("上段積荷（ID: cargo-4）");
+  await expect(structureReason).toContainText("支持積荷（ID: cargo-3）");
+  await expect(physicalPanel.getByText("床にない積荷の底面が", { exact: false })).toHaveCount(0);
+  await expect(physicalPanel.getByText("軸別隙間が不足", { exact: false })).toHaveCount(0);
+});
+
+test("paginates a representative large reason set, caps the DOM, and resets after a saved result change", async ({
+  page,
+}) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  const cargoNames = Array.from({ length: 9 }, (_, index) => `多理由積荷${index + 1}`);
+  for (const cargoName of cargoNames) {
+    await addValidationCargo(page, cargoName);
+  }
+  await addContainer(page, "多理由候補");
+  for (const cargoName of cargoNames) {
+    await placeCargo(page, cargoName);
+  }
+
+  const physicalPanel = page.locator(".physical-validation");
+  const invalidGroup = physicalPanel.getByRole("region", { name: "不適合理由" });
+  await expect(invalidGroup.getByRole("heading", { name: "不適合理由（36件）" })).toBeVisible();
+  await expect(invalidGroup.getByRole("listitem")).toHaveCount(25);
+  await expect(invalidGroup.getByText("1〜25 / 36件")).toBeVisible();
+  const nextButton = invalidGroup.getByRole("button", { name: "次の不適合理由" });
+  await nextButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(invalidGroup.getByText("26〜36 / 36件")).toBeVisible();
+  await expect(invalidGroup.getByRole("listitem")).toHaveCount(11);
+  await expect(invalidGroup.getByRole("button", { name: "前の不適合理由" })).toBeEnabled();
+  await expect(nextButton).toBeDisabled();
+
+  const placementPanel = page.locator(".placement-panel");
+  await placementPanel.getByRole("button", { name: "編集: 多理由積荷9" }).click();
+  await page.getByLabel("X最小角").fill("-1000");
+  await placementPanel.getByRole("button", { name: "配置を保存" }).click();
+
+  await expect(invalidGroup.getByRole("heading", { name: "不適合理由（29件）" })).toBeVisible();
+  await expect(invalidGroup.getByText("1〜25 / 29件")).toBeVisible();
+  await expect(invalidGroup.getByRole("listitem")).toHaveCount(25);
+  await expect(invalidGroup.getByRole("button", { name: "前の不適合理由" })).toBeDisabled();
+});
+
+test("keeps maximum names and multiple physical reasons within narrow viewports", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 305, height: 900 });
+  await page.goto("/?forceWebgl2=unsupported");
+  const firstName = `甲${"長".repeat(119)}`;
+  const secondName = `乙${"幅".repeat(119)}`;
+  await addValidationCargo(page, firstName);
+  await addValidationCargo(page, secondName);
+  await addContainer(page, `候${"補".repeat(119)}`);
+  await placeCargo(page, firstName);
+  await placeCargo(page, secondName);
+
+  const physicalPanel = page.locator(".physical-validation");
+  await expect(physicalPanel.getByRole("heading", { name: "不適合理由（1件）" })).toBeVisible();
+  await expect(physicalPanel.getByRole("heading", { name: "未確認理由（2件）" })).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectNoHorizontalOverflow(page);
+  }
 });
 
 test("keeps the scene workspace within 305, 320, and 375 pixel viewports", async ({

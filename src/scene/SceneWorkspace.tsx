@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { updatePlacement } from "../application/project-command";
 import type { Project } from "../domain/model";
+import { PhysicalValidationPanel } from "../ui/PhysicalValidationPanel";
 import { PlacementPanel } from "../ui/PlacementPanel";
 import {
   projectContainerToScene,
@@ -163,7 +164,7 @@ export function SceneWorkspace({
       }
       onProjectChange(result.project);
       setCanvasStatus(
-        `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動しました。適合判定は未実施です。`,
+        `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動しました。物理判定の再計算を開始しました。`,
       );
       return { ok: true, message: "" };
     },
@@ -221,8 +222,8 @@ export function SceneWorkspace({
           aria-atomic="true"
         >
           {effectiveContainerId === undefined
-            ? "候補0件、配置0件。適合判定は未実施です。"
-            : `選択中の候補: ${project.containers.find((container) => container.id === effectiveContainerId)?.name ?? "不明な候補"}。配置${placementCount}件。${selectedCargo === undefined ? "積荷は未選択です。" : `選択中の積荷: ${selectedCargo.name}。`}適合判定は未実施です。${canvasStatus === "" ? "" : ` ${canvasStatus}`}`}
+            ? "候補0件、配置0件。物理判定の対象はありません。"
+            : `選択中の候補: ${project.containers.find((container) => container.id === effectiveContainerId)?.name ?? "不明な候補"}。配置${placementCount}件。${selectedCargo === undefined ? "積荷は未選択です。" : `選択中の積荷: ${selectedCargo.name}。`}物理判定は保存済み配置から自動更新されます。${canvasStatus === "" ? "" : ` ${canvasStatus}`}`}
         </p>
 
         <p id="scene-workspace-interaction-help" className="scene-workspace__status">
@@ -239,6 +240,11 @@ export function SceneWorkspace({
           project={project}
           selectedCargoId={selectedCargoId}
           selectedContainerId={effectiveContainerId}
+        />
+
+        <PhysicalValidationPanel
+          containerId={effectiveContainerId}
+          project={project}
         />
 
         {projectionResult !== undefined && !projectionResult.ok ? (

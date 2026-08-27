@@ -174,7 +174,9 @@ test("keeps input available without WebGL and shows permanent safety notices", a
   await expect(page.getByRole("status")).toHaveAttribute("data-capability-state", "unsupported");
   await expect(page.getByRole("heading", { name: "案件入力" })).toBeVisible();
   await expect(page.getByLabel("入力データの注意")).toContainText("実在する顧客名");
-  await expect(page.getByLabel("現在の制限")).toContainText("入力が有効でも積載可能・安全とは限りません");
+  await expect(page.getByLabel("現在の制限")).toContainText(
+    /実装済みの物理判定に適合しても、完全な搬入経路.*実積載の安全性は未確認です。/,
+  );
 
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await fillCargo(page, "非対応時の合成積荷");

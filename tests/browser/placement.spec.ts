@@ -52,6 +52,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
 
   const sceneSelect = page.getByLabel("表示する候補");
   const placementPanel = page.locator(".placement-panel");
+  const physicalPanel = page.locator(".physical-validation");
   const placementStatus = placementPanel.locator(".action-status");
   await expect(sceneSelect).toHaveValue("container-1");
   await expect(placementStatus).toHaveAttribute("aria-live", "polite");
@@ -68,7 +69,10 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
     placementPanel.getByText("この候補に配置された積荷はありません。"),
   ).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補A。配置0件。積荷は未選択です。適合判定は未実施です。",
+    "選択中の候補: 合成配置候補A。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。",
+  );
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
+    "適合：この候補には配置済みの積荷がありません。",
   );
 
   await placementPanel.getByRole("button", { name: "配置編集をキャンセル" }).click();
@@ -80,6 +84,10 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await expect(page.locator("#scene-workspace-status")).toContainText("配置0件");
 
   await placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" }).click();
+  await page.getByLabel("X最小角").fill("-1000000");
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
+    "適合：この候補には配置済みの積荷がありません。",
+  );
 
   await page.getByLabel("X最小角").fill("1.5");
   await placementPanel.getByRole("button", { name: "配置を保存" }).click();
@@ -98,13 +106,28 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await expect(sceneSelect).toBeEnabled();
   await expect(placementPanel.getByText("最小角 X -1000000・Y 1000000・Z -1 mm / WLH")).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補A。配置1件。積荷は未選択です。適合判定は未実施です。",
+    "選択中の候補: 合成配置候補A。配置1件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。",
   );
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
+    "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
+  );
+  await expect(physicalPanel.getByRole("heading", { name: "不適合理由（1件）" })).toBeVisible();
+  await expect(physicalPanel.locator(".physical-validation__reason").first()).toContainText(
+    "積荷が床またはコンテナ内部の境界を越えています。",
+  );
+  await expect(physicalPanel.getByText("opening-path-unverified")).toHaveCount(0);
+  await expect(physicalPanel.getByText("床にない積荷の底面が", { exact: false })).toHaveCount(0);
+  await expect(physicalPanel.getByText("軸別隙間が不足", { exact: false })).toHaveCount(0);
+  await expect(physicalPanel.getByRole("heading", { name: "未確認理由（1件）" })).toBeVisible();
+  await expect(physicalPanel).toContainText("完全な搬入経路は未確認です");
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
 
   await sceneSelect.selectOption("container-2");
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補B。配置0件。積荷は未選択です。適合判定は未実施です。",
+    "選択中の候補: 合成配置候補B。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。",
+  );
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
+    "適合：この候補には配置済みの積荷がありません。",
   );
   await expect(placementPanel.getByText("未配置の積荷はありません。")).toBeVisible();
   await expect(placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" })).toHaveCount(0);
@@ -112,10 +135,16 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await sceneSelect.selectOption("container-1");
   await placementPanel.getByRole("button", { name: "編集: 合成配置積荷" }).click();
   await page.getByLabel("X最小角").fill("123");
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
+    "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
+  );
   await expect(sceneSelect).toBeDisabled();
   await placementPanel.getByRole("button", { name: "配置編集をキャンセル" }).click();
   await expect(placementPanel.getByRole("button", { name: "編集: 合成配置積荷" })).toBeFocused();
   await expect(placementPanel.getByText("最小角 X -1000000・Y 1000000・Z -1 mm / WLH")).toBeVisible();
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
+    "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
+  );
 
   await placementPanel.getByRole("button", { name: "配置を削除: 合成配置積荷" }).click();
   await expect(sceneSelect).toBeDisabled();
@@ -130,7 +159,10 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await expect(placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" })).toBeFocused();
   await expect(placementPanel.getByText("積荷は未配置一覧へ戻りました。")).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補A。配置0件。積荷は未選択です。適合判定は未実施です。",
+    "選択中の候補: 合成配置候補A。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。",
+  );
+  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
+    "適合：この候補には配置済みの積荷がありません。",
   );
 });
 
