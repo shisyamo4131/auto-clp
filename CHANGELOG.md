@@ -45,6 +45,7 @@
 - 全積荷を一候補へ配置する目的関数、DFS列挙、決定的attempt上限と境界、cutoff、preview、一括適用を定めるAccepted ADR 0004と数値入り合成受入AP-01〜08。
 - 検証済みProject用の純粋な自動提案DFS、目的順位、向き・候補点列挙、決定的attempt予算、cutoff集約、未確認理由保持と31件の専用単体試験。
 - 正本Schema・意味検証付きone-shot自動提案Worker、厳格な応答guard、固定code client、即時terminate取消・遅延応答maskと80件の専用単体試験。
+- Project参照・interaction generationのstale判定、取消・retry race、source ID相関、固定安全copy、25件pageを持つReact非依存の自動提案session/viewと64件の専用単体試験。
 
 ### Changed
 
@@ -79,6 +80,7 @@
 - 仕様を0.10.0へ更新し、自動提案の目的関数、探索上限、最適性非保証、打切り表示、適用境界を確定。設計ゲート完了に基づき進捗を79%から81%へ更新。
 - 純粋な自動提案domain探索と境界試験の検証に基づき、Auto CLPロードマップ進捗を81%から85%へ更新。Worker、preview、適用は未実装。
 - 未接続の自動提案Worker transportと取消・応答maskの検証に基づき、Auto CLPロードマップ進捗を85%から87%へ更新。App接続、preview、適用は未実装。
+- 未接続の自動提案session/viewの検証に基づき、Auto CLPロードマップ進捗を87%から88%へ更新。React/App接続、preview DOM、適用は未実装。
 
 ### Fixed
 
