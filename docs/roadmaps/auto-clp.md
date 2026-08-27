@@ -1,7 +1,7 @@
 # Auto CLP Roadmap
 
 - Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと配置案を得られるローカルWebアプリを完成させる。
-- Current progress: 53%
+- Current progress: 54%
 - Last reviewed: 2026-08-27
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
@@ -12,11 +12,11 @@
 | 基盤・データ契約 | 10 | 10 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly案件型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
 | 積荷・コンテナ入力モデル | 15 | 15 | Complete | 案件・隙間・積荷・候補の入力、一覧、編集、明示削除、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
 | 3D表示と手動配置 | 25 | 20 | In progress | 座標契約、候補・積荷選択、Project→scene投影・描画、投影範囲適応camera、フォーム配置編集、canvas床面方向drag、視点操作を実装。canvas上のZ移動・向き変更・取り外しとundo/redoは未実装 |
-| 物理制約の判定 | 20 | 8 | In progress | コンテナ包含、正体積AABB重なり、隙間込み境界、非支持ペア距離、矩形開口寸法・許可向き、safe integer総質量・耐荷重評価を純粋関数と境界テストで実装。対象配置の参照解決、経路状態、支持例外、理由コード、集約、段積み、UI表示は未実装 |
+| 物理制約の判定 | 20 | 9 | In progress | コンテナ包含、正体積AABB重なり、隙間込み境界、非支持ペア距離、矩形開口寸法・許可向き、支持面XY矩形和集合100%被覆、safe integer総質量・耐荷重評価を純粋関数と境界テストで実装。対象配置の参照解決、経路状態、Z接触・段積み可否・支持例外、理由コード、集約、UI表示は未実装 |
 | 保存・再読込・操作性 | 10 | 0 | Not started | 端末内保存、版付きJSON入出力、エラー復旧、利用者向け操作性 |
 | コンテナ・配置の自動提案 | 15 | 0 | Not started | 目的関数、探索、決定性、打切り、性能、提案説明 |
 | 実務利用者による受入 | 5 | 0 | Not started | 匿名化した代表ケース、試用、観察、合格記録 |
-| **Total** | **100** | **53** |  |  |
+| **Total** | **100** | **54** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
 
@@ -33,7 +33,7 @@
 | 基盤・データ契約 | [仕様](../specification.md)、[ADR索引](../decisions/README.md)、[データ契約](../data-model.md)、[JSON Schema](../../schemas/project-0.1.0.schema.json) | JSON Schema `0.1.0`、完全な案件型、構造・意味検証、検証済み書出し、取引的読込、TypeScript/React/Three.js/Vite骨格、WebGL 2能力ゲート、向き適用関数 | データ契約・型・lint・単体88件・ブラウザ4件・ビルド・ガバナンス検証 |
 | 積荷・コンテナ入力モデル | [仕様](../specification.md)、[ADR 0005](../decisions/0005-canonical-units-and-ranges.md)、[ADR 0007](../decisions/0007-cargo-orientation-policy.md) | 検証済みProject command、案件・隙間・積荷・候補の入力編集UI | 型・lint・単体147件・ブラウザ11件・実UIレビュー（305/320/375pxを含む） |
 | 3D表示と手動配置 | [ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md) | 座標契約、純粋な配置範囲・scene/drag adapter、非永続の候補・積荷選択、コンテナ内部・中央開口・登録済み配置の描画、全投影範囲camera、原子的なフォーム配置編集、canvas床面方向drag、視点操作 | 型・lint・単体212件・ブラウザ23件・ビルド・Chromium実UI試験・独立コードレビュー |
-| 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md) | コンテナ内部への包含、正体積AABB重なり、隙間込み境界、非支持ペア軸別隙間、矩形開口寸法・許可向き抽出、総質量・耐荷重数学評価の低レベル純粋関数。参照解決、経路状態、支持例外を含む高位判定とUIは未実装 | geometry170件、validation31件、全単体391件で、軸境界、開口式、許可向き、空・等値・1 g超過・safe integer・overflow、非変異を検証し独立レビュー合格 |
+| 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md) | コンテナ内部への包含、正体積AABB重なり、隙間込み境界、非支持ペア軸別隙間、矩形開口寸法・許可向き抽出、支持面XY矩形和集合100%被覆、総質量・耐荷重数学評価の低レベル純粋関数。参照解決、経路状態、Z接触・段積み可否・支持例外を含む高位判定とUIは未実装 | geometry205件、validation31件、全単体426件で、軸境界、開口式、許可向き、支持面の完全被覆・1 mm欠け・重複・clip・無効入力、質量の等値・1 g超過・safe integer・overflow、非変異を検証し独立レビュー合格 |
 | 保存・再読込・操作性 | [仕様](../specification.md) | 未実装 | 未実施 |
 | コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md) | 未実装 | 未実施 |
 | 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria) | 未実装 | 受入ケースと記録は未作成 |
@@ -71,3 +71,4 @@
 | 2026-08-27 | 50% | +2 | 隙間込み5面境界と床例外、非支持ペアの共有表面間距離・複数分離軸を純粋関数として実装し、geometry145件・全単体343件と独立レビューで検証 |
 | 2026-08-27 | 52% | +2 | 矩形開口の2Y・1Z寸法式と許可向き抽出を純粋関数として実装し、全6向き・等値・±1 mm・X非依存をgeometry170件・全単体368件と独立レビューで検証 |
 | 2026-08-27 | 53% | +1 | 非負safe integerの積荷質量をoverflowなく合計し、耐荷重の等値・1 g超過・計算不能を区別する純粋評価をvalidation31件・全単体391件と独立レビューで検証 |
+| 2026-08-27 | 54% | +1 | 同一高さ支持の後段判定に使うXY矩形和集合100%被覆を純粋関数として実装し、1 mm欠け・複数支持・重複・外側clip・無効入力をgeometry205件・全単体426件と独立レビューで検証 |

@@ -5,12 +5,13 @@ import {
   fitsRectangularOpening,
   hasPositiveVolumeOverlap,
   hasRequiredAxisClearance,
+  isRectangleFullyCoveredByUnion,
   isPlacementWithinContainer,
   isPlacementWithinContainerWithClearance,
   orientedDimensions,
   placementBounds,
 } from "./geometry";
-import type { PlacementBoundsMm } from "./geometry";
+import type { PlacementBoundsMm, RectangleBoundsMm } from "./geometry";
 import type {
   Cargo,
   ClearancesMm,
@@ -921,5 +922,212 @@ describe("fittingOpeningOrientations", () => {
     expect(openingCargo).toEqual(originalCargo);
     expect(opening).toEqual(originalOpening);
     expect(clearances).toEqual(originalClearances);
+  });
+});
+
+describe("isRectangleFullyCoveredByUnion", () => {
+  const rectangle = (
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+  ): RectangleBoundsMm => ({
+    min: { xMm: minX, yMm: minY },
+    max: { xMm: maxX, yMm: maxY },
+  });
+  const target = rectangle(0, 0, 10, 10);
+
+  it("returns false for no covering rectangles", () => {
+    expect(isRectangleFullyCoveredByUnion(target, [])).toBe(false);
+  });
+
+  it.each([
+    ["an exact rectangle", rectangle(0, 0, 10, 10), true],
+    ["a superset", rectangle(-1, -1, 11, 11), true],
+    ["a missing 1 mm right strip", rectangle(0, 0, 9, 10), false],
+    ["a strict interior rectangle", rectangle(1, 1, 9, 9), false],
+  ] as const)("handles %s", (_label, covering, expected) => {
+    expect(isRectangleFullyCoveredByUnion(target, [covering])).toBe(expected);
+  });
+
+  it.each([
+    [
+      "two vertical halves",
+      [rectangle(0, 0, 5, 10), rectangle(5, 0, 10, 10)],
+    ],
+    [
+      "two horizontal halves",
+      [rectangle(0, 0, 10, 5), rectangle(0, 5, 10, 10)],
+    ],
+    [
+      "four edge-joined quadrants",
+      [
+        rectangle(0, 0, 5, 5),
+        rectangle(5, 0, 10, 5),
+        rectangle(0, 5, 5, 10),
+        rectangle(5, 5, 10, 10),
+      ],
+    ],
+    [
+      "three unequal edge-joined columns",
+      [
+        rectangle(0, 0, 2, 10),
+        rectangle(2, 0, 7, 10),
+        rectangle(7, 0, 10, 10),
+      ],
+    ],
+  ] as const)("accepts full coverage bridged by %s", (_label, coverings) => {
+    expect(isRectangleFullyCoveredByUnion(target, coverings)).toBe(true);
+  });
+
+  it.each([
+    [
+      "a 1 mm vertical strip",
+      [rectangle(0, 0, 4, 10), rectangle(5, 0, 10, 10)],
+    ],
+    [
+      "a 1 mm horizontal strip",
+      [rectangle(0, 0, 10, 6), rectangle(0, 7, 10, 10)],
+    ],
+    [
+      "an interior 1 mm square",
+      [
+        rectangle(0, 0, 10, 4),
+        rectangle(0, 5, 10, 10),
+        rectangle(0, 4, 4, 5),
+        rectangle(5, 4, 10, 5),
+      ],
+    ],
+  ] as const)("rejects coverage with %s uncovered", (_label, coverings) => {
+    expect(isRectangleFullyCoveredByUnion(target, coverings)).toBe(false);
+  });
+
+  it("accepts the former interior hole when a final 1 mm square closes it", () => {
+    const coverings = [
+      rectangle(0, 0, 10, 4),
+      rectangle(0, 5, 10, 10),
+      rectangle(0, 4, 4, 5),
+      rectangle(5, 4, 10, 5),
+      rectangle(4, 4, 5, 5),
+    ];
+
+    expect(isRectangleFullyCoveredByUnion(target, coverings)).toBe(true);
+  });
+
+  it("accepts overlapping rectangles whose union covers the target", () => {
+    expect(
+      isRectangleFullyCoveredByUnion(target, [
+        rectangle(0, 0, 6, 10),
+        rectangle(4, 0, 10, 10),
+      ]),
+    ).toBe(true);
+  });
+
+  it("rejects duplicate partial rectangles despite their summed area", () => {
+    expect(
+      isRectangleFullyCoveredByUnion(target, [
+        rectangle(0, 0, 6, 10),
+        rectangle(0, 0, 6, 10),
+      ]),
+    ).toBe(false);
+  });
+
+  it("clips supports to the target before combining their coverage", () => {
+    expect(
+      isRectangleFullyCoveredByUnion(target, [
+        rectangle(-10, -10, 5, 20),
+        rectangle(5, -10, 20, 20),
+      ]),
+    ).toBe(true);
+  });
+
+  it.each([
+    ["outside", rectangle(11, 0, 20, 10)],
+    ["touching only an edge", rectangle(-10, 0, 0, 10)],
+    ["touching only a corner", rectangle(-10, -10, 0, 0)],
+  ] as const)("does not count a rectangle %s as target coverage", (_label, outside) => {
+    expect(isRectangleFullyCoveredByUnion(target, [outside])).toBe(false);
+  });
+
+  it("is independent of covering order and duplicate entries", () => {
+    const left = rectangle(0, 0, 5, 10);
+    const right = rectangle(5, 0, 10, 10);
+
+    expect(isRectangleFullyCoveredByUnion(target, [left, right])).toBe(true);
+    expect(isRectangleFullyCoveredByUnion(target, [right, left])).toBe(true);
+    expect(isRectangleFullyCoveredByUnion(target, [right, left, right])).toBe(
+      true,
+    );
+  });
+
+  it("supports negative target coordinates and detects a 1 mm gap", () => {
+    const negativeTarget = rectangle(-10, -10, 0, 0);
+
+    expect(
+      isRectangleFullyCoveredByUnion(negativeTarget, [
+        rectangle(-10, -10, -5, 0),
+        rectangle(-5, -10, 0, 0),
+      ]),
+    ).toBe(true);
+    expect(
+      isRectangleFullyCoveredByUnion(negativeTarget, [
+        rectangle(-10, -10, -6, 0),
+        rectangle(-5, -10, 0, 0),
+      ]),
+    ).toBe(false);
+  });
+
+  it("handles translated rectangles at the validated position and dimension limits", () => {
+    const minimumTarget = rectangle(-1_000_000, -1_000_000, -900_000, -900_000);
+    const maximumTarget = rectangle(1_000_000, 1_000_000, 1_100_000, 1_100_000);
+
+    expect(
+      isRectangleFullyCoveredByUnion(minimumTarget, [
+        rectangle(-1_000_000, -1_000_000, -950_000, -900_000),
+        rectangle(-950_000, -1_000_000, -900_000, -900_000),
+      ]),
+    ).toBe(true);
+    expect(
+      isRectangleFullyCoveredByUnion(maximumTarget, [
+        rectangle(1_000_000, 1_000_000, 1_049_999, 1_100_000),
+        rectangle(1_050_000, 1_000_000, 1_100_000, 1_100_000),
+      ]),
+    ).toBe(false);
+  });
+
+  it.each([
+    ["zero width", rectangle(0, 0, 0, 10)],
+    ["zero height", rectangle(0, 0, 10, 0)],
+    ["inverted X", rectangle(10, 0, 0, 10)],
+    ["inverted Y", rectangle(0, 10, 10, 0)],
+    ["a fractional coordinate", rectangle(0, 0, 9.5, 10)],
+    ["a non-finite coordinate", rectangle(0, 0, 10, Number.POSITIVE_INFINITY)],
+  ] as const)("rejects an invalid target with %s", (_label, invalidTarget) => {
+    expect(
+      isRectangleFullyCoveredByUnion(invalidTarget, [rectangle(0, 0, 10, 10)]),
+    ).toBe(false);
+  });
+
+  it.each([
+    ["first", [rectangle(0, 0, 0, 10), target]],
+    ["middle", [target, rectangle(5, 5, 4, 6), target]],
+    ["last", [target, rectangle(0, 0, 10, 0)]],
+    ["fractional", [rectangle(0, 0, 10, 9.5), target]],
+    ["unsafe-integer", [target, rectangle(0, 0, Number.MAX_SAFE_INTEGER + 1, 10)]],
+    ["non-finite", [target, rectangle(0, 0, 10, Number.NaN)]],
+  ] as const)("rejects an invalid support in the %s position", (_label, coverings) => {
+    expect(isRectangleFullyCoveredByUnion(target, coverings)).toBe(false);
+  });
+
+  it("does not mutate the target or covering rectangles", () => {
+    const mutableTarget = rectangle(0, 0, 10, 10);
+    const coverings = [rectangle(-1, -1, 5, 11), rectangle(5, -1, 11, 11)];
+    const originalTarget = structuredClone(mutableTarget);
+    const originalCoverings = structuredClone(coverings);
+
+    isRectangleFullyCoveredByUnion(mutableTarget, coverings);
+
+    expect(mutableTarget).toEqual(originalTarget);
+    expect(coverings).toEqual(originalCoverings);
   });
 });

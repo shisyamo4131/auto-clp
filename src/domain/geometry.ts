@@ -15,6 +15,179 @@ export interface PlacementBoundsMm {
   readonly max: PositionMm;
 }
 
+export interface RectangleBoundsMm {
+  readonly min: Pick<PositionMm, "xMm" | "yMm">;
+  readonly max: Pick<PositionMm, "xMm" | "yMm">;
+}
+
+interface ClippedRectangleMm {
+  readonly minXmm: number;
+  readonly maxXmm: number;
+  readonly minYmm: number;
+  readonly maxYmm: number;
+}
+
+interface RectangleSweepEvent {
+  readonly xMm: number;
+  readonly minYIndex: number;
+  readonly maxYIndex: number;
+  readonly delta: 1 | -1;
+}
+
+function isValidRectangle(rectangle: RectangleBoundsMm): boolean {
+  return (
+    Number.isSafeInteger(rectangle.min.xMm) &&
+    Number.isSafeInteger(rectangle.min.yMm) &&
+    Number.isSafeInteger(rectangle.max.xMm) &&
+    Number.isSafeInteger(rectangle.max.yMm) &&
+    rectangle.min.xMm < rectangle.max.xMm &&
+    rectangle.min.yMm < rectangle.max.yMm
+  );
+}
+
+function addCoverageRange(
+  minimumCoverage: number[],
+  pendingAddition: number[],
+  nodeIndex: number,
+  nodeStart: number,
+  nodeEnd: number,
+  rangeStart: number,
+  rangeEnd: number,
+  delta: 1 | -1,
+): void {
+  if (rangeStart <= nodeStart && nodeEnd <= rangeEnd) {
+    minimumCoverage[nodeIndex] = minimumCoverage[nodeIndex]! + delta;
+    pendingAddition[nodeIndex] = pendingAddition[nodeIndex]! + delta;
+    return;
+  }
+
+  const nodeMiddle = Math.floor((nodeStart + nodeEnd) / 2);
+  if (rangeStart <= nodeMiddle) {
+    addCoverageRange(
+      minimumCoverage,
+      pendingAddition,
+      nodeIndex * 2,
+      nodeStart,
+      nodeMiddle,
+      rangeStart,
+      rangeEnd,
+      delta,
+    );
+  }
+  if (rangeEnd > nodeMiddle) {
+    addCoverageRange(
+      minimumCoverage,
+      pendingAddition,
+      nodeIndex * 2 + 1,
+      nodeMiddle + 1,
+      nodeEnd,
+      rangeStart,
+      rangeEnd,
+      delta,
+    );
+  }
+
+  minimumCoverage[nodeIndex] =
+    pendingAddition[nodeIndex]! +
+    Math.min(
+      minimumCoverage[nodeIndex * 2]!,
+      minimumCoverage[nodeIndex * 2 + 1]!,
+    );
+}
+
+export function isRectangleFullyCoveredByUnion(
+  target: RectangleBoundsMm,
+  coveringRectangles: readonly RectangleBoundsMm[],
+): boolean {
+  if (
+    !isValidRectangle(target) ||
+    coveringRectangles.length === 0 ||
+    coveringRectangles.some((rectangle) => !isValidRectangle(rectangle))
+  ) {
+    return false;
+  }
+
+  const clippedRectangles: ClippedRectangleMm[] = [];
+  const yCoordinates = [target.min.yMm, target.max.yMm];
+
+  for (const rectangle of coveringRectangles) {
+    const minXmm = Math.max(target.min.xMm, rectangle.min.xMm);
+    const maxXmm = Math.min(target.max.xMm, rectangle.max.xMm);
+    const minYmm = Math.max(target.min.yMm, rectangle.min.yMm);
+    const maxYmm = Math.min(target.max.yMm, rectangle.max.yMm);
+
+    if (minXmm < maxXmm && minYmm < maxYmm) {
+      clippedRectangles.push({ minXmm, maxXmm, minYmm, maxYmm });
+      yCoordinates.push(minYmm, maxYmm);
+    }
+  }
+
+  if (clippedRectangles.length === 0) {
+    return false;
+  }
+
+  yCoordinates.sort((first, second) =>
+    first < second ? -1 : first > second ? 1 : 0,
+  );
+  const uniqueYCoordinates = yCoordinates.filter(
+    (coordinate, index) =>
+      index === 0 || coordinate !== yCoordinates[index - 1]!,
+  );
+  const yIndexByCoordinate = new Map(
+    uniqueYCoordinates.map((coordinate, index) => [coordinate, index]),
+  );
+  const events: RectangleSweepEvent[] = [];
+
+  for (const rectangle of clippedRectangles) {
+    const minYIndex = yIndexByCoordinate.get(rectangle.minYmm);
+    const maxYIndex = yIndexByCoordinate.get(rectangle.maxYmm);
+    if (minYIndex === undefined || maxYIndex === undefined) {
+      return false;
+    }
+    events.push(
+      { xMm: rectangle.minXmm, minYIndex, maxYIndex, delta: 1 },
+      { xMm: rectangle.maxXmm, minYIndex, maxYIndex, delta: -1 },
+    );
+  }
+
+  events.sort((first, second) =>
+    first.xMm < second.xMm ? -1 : first.xMm > second.xMm ? 1 : 0,
+  );
+  const segmentCount = uniqueYCoordinates.length - 1;
+  const minimumCoverage = new Array<number>(segmentCount * 4).fill(0);
+  const pendingAddition = new Array<number>(segmentCount * 4).fill(0);
+  let previousXmm = target.min.xMm;
+  let eventIndex = 0;
+
+  while (eventIndex < events.length) {
+    const eventXmm = events[eventIndex]!.xMm;
+    if (eventXmm > previousXmm && minimumCoverage[1] === 0) {
+      return false;
+    }
+
+    while (
+      eventIndex < events.length &&
+      events[eventIndex]!.xMm === eventXmm
+    ) {
+      const event = events[eventIndex]!;
+      addCoverageRange(
+        minimumCoverage,
+        pendingAddition,
+        1,
+        0,
+        segmentCount - 1,
+        event.minYIndex,
+        event.maxYIndex - 1,
+        event.delta,
+      );
+      eventIndex += 1;
+    }
+    previousXmm = eventXmm;
+  }
+
+  return previousXmm >= target.max.xMm || minimumCoverage[1]! > 0;
+}
+
 function hasPositiveAxisLengths(bounds: PlacementBoundsMm): boolean {
   return (
     bounds.min.xMm < bounds.max.xMm &&
