@@ -50,6 +50,7 @@
 - 実Workerの空・完全案、Project・履歴の非変更、編集・Undo/Redo・保存・JSON置換によるstale、controlled Worker終了250 ms、遅延結果破棄、ARIA、305〜375pxを覆う7件のブラウザ回帰。
 - 自動提案をSchema・意味・正本物理判定で再検証し、配置だけを深いcopyで一括置換する純粋な適用境界、identityを一度だけ取得する確認、同一案no-op、適用済み・変更なし表示。
 - `自動提案の一括適用` を一件だけ記録するUndo/Redoと、AP-02/AP-03、改ざん拒否、警告保持、stale・busy・二重適用、狭幅・WebGL非依存を覆う36件の追加単体・4件の追加ブラウザ回帰。
+- production module Workerを使うAP-08匿名20積荷性能回帰と、cold/warm、決定的result hash、main timer/rAF、native取消、console、実行環境を保存する技術証拠。
 
 ### Changed
 
@@ -87,6 +88,7 @@
 - 未接続の自動提案session/viewの検証に基づき、Auto CLPロードマップ進捗を87%から88%へ更新。React/App接続、preview DOM、適用は未実装。
 - 自動提案のReact/App接続と実Worker previewの検証に基づき、Auto CLPロードマップ進捗を88%から91%へ更新。確認付き適用、Undo、AP-08代表規模の実時間性能は未実装または未検証。
 - 自動提案の確認付き一括適用と一回のUndo/Redoの検証に基づき、Auto CLPロードマップ進捗を91%から93%へ更新。AP-08代表規模の実時間性能は未検証。
+- 記録環境でのAP-08実Worker性能・決定性・取消の検証に基づき、自動提案マイルストーンを完了し、Auto CLPロードマップ進捗を93%から94%へ更新。一般端末SLA、最低GPU、実務利用者受入は未検証。
 
 ### Fixed
 

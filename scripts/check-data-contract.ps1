@@ -6,6 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
 $schemaPath = Join-Path $resolvedProject 'schemas/project-0.1.0.schema.json'
+$readmePath = Join-Path $resolvedProject 'README.md'
 $specificationPath = Join-Path $resolvedProject 'docs/specification.md'
 $dataModelPath = Join-Path $resolvedProject 'docs/data-model.md'
 $operationsPath = Join-Path $resolvedProject 'docs/operations.md'
@@ -30,10 +31,14 @@ $automaticProposalViewPath = Join-Path $resolvedProject 'src/ui/automatic-propos
 $automaticProposalHookPath = Join-Path $resolvedProject 'src/ui/useAutomaticProposalSession.ts'
 $automaticProposalPanelPath = Join-Path $resolvedProject 'src/ui/AutomaticProposalPanel.tsx'
 $automaticProposalBrowserTestPath = Join-Path $resolvedProject 'tests/browser/automatic-proposal.spec.ts'
+$automaticProposalPerformanceTestPath = Join-Path $resolvedProject 'tests/browser/automatic-proposal-performance.spec.ts'
+$automaticProposalEvidenceIndexPath = Join-Path $resolvedProject 'docs/evidence/README.md'
+$automaticProposalEvidencePath = Join-Path $resolvedProject 'docs/evidence/automatic-proposal-ap08-1226b082.md'
 $appPath = Join-Path $resolvedProject 'src/App.tsx'
 
 foreach ($path in @(
     $schemaPath,
+    $readmePath,
     $specificationPath,
     $dataModelPath,
     $operationsPath,
@@ -58,6 +63,9 @@ foreach ($path in @(
     $automaticProposalHookPath,
     $automaticProposalPanelPath,
     $automaticProposalBrowserTestPath,
+    $automaticProposalPerformanceTestPath,
+    $automaticProposalEvidenceIndexPath,
+    $automaticProposalEvidencePath,
     $appPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -129,12 +137,26 @@ if (($defaultOrientations.Count -ne 2) -or
 }
 
 $specification = [IO.File]::ReadAllText($specificationPath)
+$readme = [IO.File]::ReadAllText($readmePath)
 $specificationVersionMatch = [regex]::Match(
     $specification,
     '(?m)^- Specification version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$'
 )
 if (-not $specificationVersionMatch.Success) {
     throw 'Specification does not contain a parseable specification version.'
+}
+
+foreach ($requiredText in @(
+    'AP-08代表規模の実Worker性能記録はWindows/headless Chromiumの記録環境で完了',
+    '一般端末SLA、最低GPU、実務受入、安全保証ではありません'
+)) {
+    if (-not $readme.Contains($requiredText)) {
+        throw "Root README does not contain the current AP-08 status marker: $requiredText"
+    }
+}
+
+if ($readme.Contains('AP-08代表規模の実Worker性能記録は未完了')) {
+    throw 'Root README still reports AP-08 performance evidence as incomplete.'
 }
 
 $dataModel = [IO.File]::ReadAllText($dataModelPath)
@@ -349,6 +371,9 @@ foreach ($requiredText in @(
 $automaticProposalHook = [IO.File]::ReadAllText($automaticProposalHookPath)
 $automaticProposalPanel = [IO.File]::ReadAllText($automaticProposalPanelPath)
 $automaticProposalBrowserTest = [IO.File]::ReadAllText($automaticProposalBrowserTestPath)
+$automaticProposalPerformanceTest = [IO.File]::ReadAllText($automaticProposalPerformanceTestPath)
+$automaticProposalEvidenceIndex = [IO.File]::ReadAllText($automaticProposalEvidenceIndexPath)
+$automaticProposalEvidence = [IO.File]::ReadAllText($automaticProposalEvidencePath)
 $automaticProposalApply = [IO.File]::ReadAllText($automaticProposalApplyPath)
 $automaticProposalApplyTest = [IO.File]::ReadAllText($automaticProposalApplyTestPath)
 $app = [IO.File]::ReadAllText($appPath)
@@ -359,11 +384,38 @@ foreach ($contract in @(
     @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '提案を適用', '配置が変わる場合は、1回の取り消しで元へ戻せます。') },
     @{ Name = 'App integration'; Text = $app; Required = @('handleAutomaticProposalApply', 'automatic-proposal.apply', 'persistenceOperationRef.current') },
     @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '自動提案の一括適用', 'forceWebgl2=unsupported') }
+    @{ Name = 'AP-08 performance test'; Text = $automaticProposalPerformanceTest; Required = @('automatic-proposal.worker.ts', 'cold-1', 'warm-${iteration - 1}', 'expectedAttemptCount = 210', 'AP08_EVIDENCE_JSON=', 'terminateLatencyMs', '/^[0-9a-f]{40}$/') }
 )) {
     foreach ($requiredText in $contract.Required) {
         if (-not $contract.Text.Contains($requiredText)) {
             throw "$($contract.Name) does not contain the required automatic-proposal integration marker: $requiredText"
         }
+    }
+}
+
+foreach ($requiredText in @(
+    'automatic-proposal-ap08-1226b082.md',
+    '一般端末SLA、実務受入、安全保証ではない'
+)) {
+    if (-not $automaticProposalEvidenceIndex.Contains($requiredText)) {
+        throw "Automatic-proposal evidence index does not contain the required AP-08 marker: $requiredText"
+    }
+}
+
+foreach ($requiredText in @(
+    'CP-AUTO-PROPOSAL-AP08-TEST-001',
+    '1226b082a7bd20bc1e7fcf07af7f793f64163148',
+    '59.7 ms',
+    '48.7 ms',
+    '50.9 ms',
+    '714e9806c35e5965de7a38850e86e950f5b94b4f9dc22aa72db203cb09f5f341',
+    'candidateAttemptCount',
+    'requestAttemptCount',
+    '"pass":true',
+    '一般端末SLAではない'
+)) {
+    if (-not $automaticProposalEvidence.Contains($requiredText)) {
+        throw "Automatic-proposal AP-08 evidence does not contain the required marker: $requiredText"
     }
 }
 
@@ -420,4 +472,6 @@ foreach ($requiredText in @(
     automatic_proposal_browser_integration_tested = $true
     automatic_proposal_apply_implemented = $true
     automatic_proposal_apply_undo_tested = $true
+    automatic_proposal_ap08_performance_tested = $true
+    automatic_proposal_ap08_evidence_recorded = $true
 }

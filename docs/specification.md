@@ -104,7 +104,7 @@
 
 ### Automatic Proposal
 
-- 実装状態: 純粋探索、Worker transport、session/view、React panel、Appのbusy・generation配線、実Workerによる開始・取消・再試行、Projectを変更しないpreview DOM、適用直前のSchema・意味・物理再検証、確認付き一括適用とその一回のUndo/Redoを実装済み。通常編集、Undo/Redo、未保存入力、3D操作、保存・読込との競合では旧探索または確認をstaleとして破棄する。AP-08代表規模の実時間性能は未検証である。
+- 実装状態: 純粋探索、Worker transport、session/view、React panel、Appのbusy・generation配線、実Workerによる開始・取消・再試行、Projectを変更しないpreview DOM、適用直前のSchema・意味・物理再検証、確認付き一括適用とその一回のUndo/Redoを実装済み。通常編集、Undo/Redo、未保存入力、3D操作、保存・読込との競合では旧探索または確認をstaleとして破棄する。AP-08代表規模はWindows/headless Chromiumの記録環境でcold 1回・warm 3回、決定性、main timer/rAF進行、取消を初期性能gate内で検証済みである。これは一般端末SLA、最低GPU要件、実務受入、安全保証ではない。
 - v1は、案件の全積荷をちょうど一度ずつ、一つの登録済み候補コンテナへ配置する完全案を、全候補から自動提案する。複数コンテナ同時利用、台数、部分積載、固定anchor、搬出順は扱わない。
 - 提案は現在の手動配置を探索条件にせず、正規案件を変更しない派生previewとする。適用時だけ全配置を完全案へ一括置換し、一回の履歴操作としてUndo可能にする。
 - 完全案は正本の構造・意味検証と物理判定で不適合理由0件とする。搬入経路や構造・安定性の未確認理由は許容して表示し、安全性または実積載可能性を保証しない。

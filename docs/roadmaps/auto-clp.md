@@ -1,7 +1,7 @@
 # Auto CLP Roadmap
 
 - Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと配置案を得られるローカルWebアプリを完成させる。
-- Current progress: 93%
+- Current progress: 94%
 - Last reviewed: 2026-08-28
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
@@ -14,17 +14,17 @@
 | 3D表示と手動配置 | 25 | 22 | In progress | 座標契約、候補・積荷選択、Project→scene投影・描画、投影範囲適応camera、フォーム配置編集、canvas床面方向drag、視点操作、最大100件の案件undo/redoを実装。canvas上のZ移動・向き変更・取り外しは必要性を未検証 |
 | 物理制約の判定 | 20 | 20 | Complete | 低レベルgeometry・耐荷重評価、高位集約、境界違反のカスケード抑制、100%支持時だけの隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL非依存UI、許可上限1,000配置の応答性を実装・検証 |
 | 保存・再読込・操作性 | 10 | 10 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、focus・狭幅を実装・検証 |
-| コンテナ・配置の自動提案 | 15 | 14 | In progress | 決定的探索、Worker、session/view、React panel、Appのbusy・generation gate、取消・retry、非永続preview、再検証付き一括適用、一回のUndo/Redoを実装・検証。AP-08代表規模の実時間性能は未検証 |
+| コンテナ・配置の自動提案 | 15 | 15 | Complete | 決定的探索、Worker、session/view、React panel、Appのbusy・generation gate、取消・retry、非永続preview、再検証付き一括適用、一回のUndo/Redoを実装・検証。AP-08代表規模の実Worker性能・決定性・main timer/rAF・native取消を記録環境で検証 |
 | 実務利用者による受入 | 5 | 2 | In progress | 4本の匿名合成ケース、合格基準、観察様式、自動証拠の対応付けと実行を完了。開発チーム内試用、実務利用者試用は未完了 |
-| **Total** | **100** | **93** |  |  |
+| **Total** | **100** | **94** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
 
 ## Next Work
 
-1. AP-08の20積荷代表fixtureで、実Workerのcold/warm探索、取消、main timer/rAF、結果hashを記録する。
-2. 匿名合成受入ケースを開発チーム内で実機試用し、操作補助なしの完了可否と誤認し得る表示を観察記録へ残す。
-3. 開発チーム内試用と後続の実務試用で、canvas上のZ移動・向き変更・取り外しが必要か観察し、必要な範囲だけ追加する。
+1. 匿名合成受入ケースを開発チーム内で実機試用し、操作補助なしの完了可否と誤認し得る表示を観察記録へ残す。
+2. 開発チーム内試用と後続の実務試用で、canvas上のZ移動・向き変更・取り外しが必要か観察し、必要な範囲だけ追加する。
+3. 実務利用者試用の評価担当、日程、合否記録を決め、匿名の観察記録として実施する。
 
 ## Deliverables and Verification Evidence
 
@@ -35,7 +35,7 @@
 | 3D表示と手動配置 | [仕様](../specification.md)、[ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md) | 座標契約、純粋な配置範囲・scene/drag adapter、非永続の候補・積荷選択、コンテナ内部・中央開口・登録済み配置の描画、全投影範囲camera、原子的なフォーム配置編集、canvas床面方向drag、視点操作、最大100件のProject参照履歴と案件undo/redo UI | 型・lint・全単体567件・全ブラウザ37件・ビルド・305/320/375px Chromium実UI試験・独立コードレビュー |
 | 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md) | 低レベルgeometry・耐荷重評価、高位独立診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体551件・全ブラウザ31件。1,000同一bounds配置で499,500不適合理由と1,000未確認理由を打切りなく保持し、summaryは件数だけ、先頭・中間・末尾を各25件取得しながらmain timer/rAFが進むことを実Workerで検証。305/320/375px実UIと独立レビュー合格 |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、固定code UI | 全単体623件・全ブラウザ48件。実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL非依存、305/320/375px、1,000配置・100候補の実Worker応答性、独立レビュー合格 |
-| コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md)、[合成受入AP-01〜08](../acceptance.md#automatic-proposal-synthetic-cases) | 純粋探索・Worker・session/view、React hook/panel、Project/generationとbusy gate、実Worker開始・取消・retry、非永続preview、適用直前再検証、確認付き一括適用、同一案no-op、一回のUndo/Redo、25件pageを実装 | domain31件、Worker80件、apply21件を含む全単体839件・全ブラウザ62件。実Worker AP-02/AP-03、Project/history非変更、stale、正常JSON置換、controlled取消250 ms、late mask、適用・no-op・Undo/Redo、警告保持、WebGL非依存、ARIA、305/320/375px、独立レビュー合格。AP-08実時間は未実施 |
+| コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md)、[合成受入AP-01〜08](../acceptance.md#automatic-proposal-synthetic-cases) | 純粋探索・Worker・session/view、React hook/panel、Project/generationとbusy gate、実Worker開始・取消・retry、非永続preview、適用直前再検証、確認付き一括適用、同一案no-op、一回のUndo/Redo、25件pageを実装 | domain31件、Worker80件、apply21件を含む全単体839件・全ブラウザ63件。実Worker AP-02/AP-03、Project/history非変更、stale、正常JSON置換、適用・no-op・Undo/Redo、警告保持、WebGL非依存、ARIA、305/320/375px、独立レビュー合格。AP-08は[記録環境の技術証拠](../evidence/automatic-proposal-ap08-1226b082.md)でcold 59.7 ms、warm 48.7〜50.9 ms、各210 attempts・同一hash、native取消0 ms・UI 0.5 ms、console 0件を確認。一般端末SLAではない |
 | 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | 全単体628件・全ブラウザ51件、型・lint・build、文書・データ・ガバナンス検証、独立レビュー合格。開発チーム内試用と実務利用者試用は未実施 |
 
 ## Unresolved Problems and Decisions
@@ -84,3 +84,4 @@
 | 2026-08-28 | 88% | +1 | React非依存の自動提案session/viewを追加。Project参照・generation stale、取消・retry race、source ID相関、固定安全copy、25件pageを専用64件・全単体803件・独立レビューで検証。App接続は未実施 |
 | 2026-08-28 | 91% | +3 | 自動提案をReact hook/panelとAppへ接続し、実Worker開始・取消・retry、Project/interaction generation stale、非永続preview、25件pageを全単体803件・全ブラウザ58件、305/320/375px、独立レビューで検証。適用、Undo、AP-08代表規模の実時間性能は未実施 |
 | 2026-08-28 | 93% | +2 | 自動提案の適用直前再検証、常時確認、配置だけの一括置換、同一案no-op、一履歴操作のUndo/Redoを実装。全単体839件・全ブラウザ62件でAP-02/AP-03、警告保持、stale・busy・二重適用、狭幅・WebGL非依存を検証。AP-08実時間性能は未実施 |
+| 2026-08-28 | 94% | +1 | AP-08の匿名20積荷fixtureをproduction module Workerで測定。記録環境でcold 59.7 ms、warm 48.7〜50.9 ms、全4回210 attempts・同一hash、main timer/rAF進行、native取消0 ms・UI 0.5 ms、console 0件を検証し、自動提案マイルストーンを完了。一般端末SLA、最低GPU、実務受入ではない |

@@ -4,7 +4,7 @@ Auto CLP は、精密機器運送業者が積荷とコンテナまたは車両�
 
 ## Status
 
-案件・積荷・コンテナ候補の入力、3D表示と手動配置、物理判定、最大100件のUndo/Redo、IndexedDBへの手動保存、JSON入出力を実装済みです。自動提案は、現在案件を変更しないローカルWorker探索、取消・再試行、未適用preview、再検証付きの一括適用とそのUndo/Redoまで利用できます。AP-08代表規模の実Worker性能記録は未完了です。
+案件・積荷・コンテナ候補の入力、3D表示と手動配置、物理判定、最大100件のUndo/Redo、IndexedDBへの手動保存、JSON入出力を実装済みです。自動提案は、現在案件を変更しないローカルWorker探索、取消・再試行、未適用preview、再検証付きの一括適用とそのUndo/Redoまで利用できます。AP-08代表規模の実Worker性能記録はWindows/headless Chromiumの記録環境で完了しましたが、一般端末SLA、最低GPU、実務受入、安全保証ではありません。
 
 ## Documentation
 
