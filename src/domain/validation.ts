@@ -26,6 +26,43 @@ export function safeIntegerSum(values: readonly number[]): SafeIntegerSumResult 
   return { valid: true, sum };
 }
 
+export type PayloadCapacityEvaluation =
+  | {
+      calculable: true;
+      totalMassGrams: number;
+      withinCapacity: boolean;
+    }
+  | { calculable: false };
+
+export function evaluatePayloadCapacity(
+  massesGrams: readonly number[],
+  payloadCapacityGrams: number,
+): PayloadCapacityEvaluation {
+  if (
+    !Number.isSafeInteger(payloadCapacityGrams) ||
+    payloadCapacityGrams < 0
+  ) {
+    return { calculable: false };
+  }
+
+  for (const massGrams of massesGrams) {
+    if (!Number.isSafeInteger(massGrams) || massGrams < 0) {
+      return { calculable: false };
+    }
+  }
+
+  const total = safeIntegerSum(massesGrams);
+  if (!total.valid) {
+    return { calculable: false };
+  }
+
+  return {
+    calculable: true,
+    totalMassGrams: total.sum,
+    withinCapacity: total.sum <= payloadCapacityGrams,
+  };
+}
+
 export function validateProjectReferences(project: Project): readonly ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const cargoesById = new Map<string, Project["cargoes"][number]>();

@@ -111,7 +111,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | --- | --- | --- |
 | `domain/model` | 実装済み: 版、向き、寸法、隙間、積荷、候補、配置、案件のreadonly型 | React、Three.js、ブラウザ保存API |
 | `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間、矩形開口寸法と許可向き抽出。計画: 支持例外を含む高位判定、矩形和集合 | UI、描画、永続化 |
-| `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計。計画: 境界、隙間、開口通過、支持、耐荷重 | React、Three.js、I/O |
+| `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計、計算可否を区別する総質量・耐荷重評価。計画: 対象コンテナへの配置抽出、境界、隙間、開口通過、支持、理由集約 | React、Three.js、I/O |
 | `application/project-import`、`application/project-command` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド。計画: undo/redo | DOM、Three.jsオブジェクトの所有 |
 | `persistence/project-json` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し。計画: File・端末保存アダプター | 3D描画、直接UI更新 |
 | `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置への純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointerによる床面方向drag・視点操作。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
@@ -132,11 +132,12 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - `fittingOpeningOrientations(cargo, openingMm, clearancesMm)` — 実装済み。積荷の許可向きだけを入力順で評価し、矩形断面へ寸法上収まる向きの新しい配列を返す。経路状態と理由は扱わない。
 - `validateProjectReferences(project)` — 実装済み。ID、参照、単一配置、許可向き、開口と内部寸法、安全な質量合計を検証する。
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
+- `evaluatePayloadCapacity(massesGrams, payloadCapacityGrams)` — 実装済み。非負safe integerの質量だけをoverflowなく合計し、計算可能なら総質量と耐荷重以内かを返す。等値は合格、超過は不合格とし、案件内の配置・参照選択と理由は扱わない。
 - `validateBounds(container, cargo, placement, clearances)` — 計画。開口面・奥壁・Y両側壁・天井へ片側ずつ軸別実距離を要求し、床Zを例外として積載空間境界を判定する。
 - `validateOverlap(placements, cargoes, clearances)` — 計画。正体積重なりを拒否し、非支持ペアはいずれか一つの分離軸で設定実距離を満たすか判定する。支持接触は別の合成規則で扱う。
 - `validateOpeningFit(container, cargo, clearances)` — 許可向きごとの矩形開口適合を判定する。
 - `validateSupport(placements, cargoes)` — 同一高さの100%幾何支持を判定する。
-- `validatePayload(container, placements, cargoes)` — 安全な整数合計と総耐荷重を判定する。
+- `validatePayload(container, placements, cargoes)` — 計画。対象コンテナへ配置された積荷を参照解決し、実装済み総質量評価へ渡して対象IDと理由を付ける。
 - `validatePlacementSet(project, containerId)` — 個別理由を保持した集約結果を返す。
 
 各結果は対象ID、安定した理由コード、`valid`、`invalid`、`unverified` の状態を持つ。利用者向け文言はUI層で理由コードから生成する。
@@ -148,4 +149,4 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - 読込失敗時に既存状態が変わらないことを確認する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 
-[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、狭幅表示を含む。経路未確認状態、支持例外・理由コードを含む物理制約の集約とUI、undo/redo、端末保存に対する検証は引き続き必要である。
+[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、総質量の空・等値・1 g超過・safe integer・overflow、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、狭幅表示を含む。対象コンテナへの配置抽出、経路未確認状態、支持例外・理由コードを含む物理制約の集約とUI、undo/redo、端末保存に対する検証は引き続き必要である。

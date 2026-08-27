@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import type { Project } from "./model";
 import { PROJECT_SCHEMA_VERSION } from "./model";
-import { safeIntegerSum, validateProjectReferences } from "./validation";
+import {
+  evaluatePayloadCapacity,
+  safeIntegerSum,
+  validateProjectReferences,
+} from "./validation";
 
 function richProject(): Project {
   return {
@@ -54,6 +58,108 @@ describe("safeIntegerSum", () => {
 
   it("rejects an unsafe input value", () => {
     expect(safeIntegerSum([Number.MAX_SAFE_INTEGER + 1])).toEqual({ valid: false });
+  });
+});
+
+describe("evaluatePayloadCapacity", () => {
+  it.each([
+    { label: "zero capacity", capacity: 0 },
+    { label: "positive capacity", capacity: 10_000 },
+  ])("treats an empty mass list as total zero within $label", ({ capacity }) => {
+    expect(evaluatePayloadCapacity([], capacity)).toEqual({
+      calculable: true,
+      totalMassGrams: 0,
+      withinCapacity: true,
+    });
+  });
+
+  it.each([
+    { label: "single mass below capacity", masses: [999], capacity: 1_000, total: 999 },
+    {
+      label: "multiple masses below capacity",
+      masses: [100, 200, 300],
+      capacity: 1_000,
+      total: 600,
+    },
+    {
+      label: "mass zero mathematical boundary",
+      masses: [0, 100],
+      capacity: 100,
+      total: 100,
+    },
+  ])("calculates $label", ({ masses, capacity, total }) => {
+    expect(evaluatePayloadCapacity(masses, capacity)).toEqual({
+      calculable: true,
+      totalMassGrams: total,
+      withinCapacity: true,
+    });
+  });
+
+  it("accepts exact payload equality", () => {
+    expect(evaluatePayloadCapacity([400, 600], 1_000)).toEqual({
+      calculable: true,
+      totalMassGrams: 1_000,
+      withinCapacity: true,
+    });
+  });
+
+  it("reports exactly 1 gram over capacity without losing the total", () => {
+    expect(evaluatePayloadCapacity([400, 601], 1_000)).toEqual({
+      calculable: true,
+      totalMassGrams: 1_001,
+      withinCapacity: false,
+    });
+  });
+
+  it("is independent of input mass order", () => {
+    const ascending = evaluatePayloadCapacity([100, 200, 300], 1_000);
+    const shuffled = evaluatePayloadCapacity([300, 100, 200], 1_000);
+
+    expect(shuffled).toEqual(ascending);
+  });
+
+  it("accepts the maximum safe integer as both mass and capacity", () => {
+    expect(
+      evaluatePayloadCapacity([Number.MAX_SAFE_INTEGER], Number.MAX_SAFE_INTEGER),
+    ).toEqual({
+      calculable: true,
+      totalMassGrams: Number.MAX_SAFE_INTEGER,
+      withinCapacity: true,
+    });
+  });
+
+  it.each([
+    { label: "negative mass", masses: [-1] },
+    { label: "noninteger mass", masses: [0.5] },
+    { label: "NaN mass", masses: [Number.NaN] },
+    { label: "positive infinity mass", masses: [Number.POSITIVE_INFINITY] },
+    { label: "negative infinity mass", masses: [Number.NEGATIVE_INFINITY] },
+    { label: "unsafe mass", masses: [Number.MAX_SAFE_INTEGER + 1] },
+    { label: "overflowing sum", masses: [Number.MAX_SAFE_INTEGER, 1] },
+  ])("rejects $label as uncalculable", ({ masses }) => {
+    expect(evaluatePayloadCapacity(masses, Number.MAX_SAFE_INTEGER)).toEqual({
+      calculable: false,
+    });
+  });
+
+  it.each([
+    { label: "negative capacity", capacity: -1 },
+    { label: "noninteger capacity", capacity: 0.5 },
+    { label: "NaN capacity", capacity: Number.NaN },
+    { label: "positive infinity capacity", capacity: Number.POSITIVE_INFINITY },
+    { label: "negative infinity capacity", capacity: Number.NEGATIVE_INFINITY },
+    { label: "unsafe capacity", capacity: Number.MAX_SAFE_INTEGER + 1 },
+  ])("rejects $label as uncalculable", ({ capacity }) => {
+    expect(evaluatePayloadCapacity([0], capacity)).toEqual({ calculable: false });
+  });
+
+  it("does not mutate the mass list", () => {
+    const masses = [300, 100, 200] as const;
+    const original = structuredClone(masses);
+
+    evaluatePayloadCapacity(masses, 1_000);
+
+    expect(masses).toEqual(original);
   });
 });
 
