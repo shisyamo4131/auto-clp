@@ -44,7 +44,9 @@ foreach ($relativePath in $requiredFiles) {
 }
 
 $markdownFiles = Get-ChildItem -LiteralPath $resolvedProject -Recurse -File -Filter '*.md' |
-    Where-Object { $_.FullName -notmatch '[\\/]node_modules[\\/]' }
+    Where-Object {
+        $_.FullName -notmatch '[\\/](?:\.git|node_modules|dist|test-results)[\\/]'
+    }
 $linkPattern = '\[[^\]]*\]\((?<target>[^)]+)\)'
 $brokenLinks = @()
 foreach ($markdownFile in $markdownFiles) {
