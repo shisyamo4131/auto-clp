@@ -113,7 +113,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   );
   await expect(physicalPanel.getByRole("heading", { name: "不適合理由（1件）" })).toBeVisible();
   await expect(physicalPanel.locator(".physical-validation__reason").first()).toContainText(
-    "積荷が床またはコンテナ内部の境界を越えています。",
+    "積荷が床より下へ貫通しています。Z座標を0以上に修正してください。",
   );
   await expect(physicalPanel.getByText("opening-path-unverified")).toHaveCount(0);
   await expect(physicalPanel.getByText("床にない積荷の底面が", { exact: false })).toHaveCount(0);

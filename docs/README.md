@@ -22,6 +22,7 @@
 | 積載制約 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0003](decisions/0003-loading-constraints.md)、[ADR 0006](decisions/0006-rectangular-opening-model.md)、[ADR 0008](decisions/0008-stacking-support-and-load.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md) | 実装後の計算コード、境界・失敗系テスト |
 | 自動提案 | [仕様](specification.md)、[ADR 0004](decisions/0004-optimization-objective.md)、[ロードマップ](roadmaps/auto-clp.md) | 決定性、性能、最適性評価の証拠 |
 | テスト・レビュー | [仕様](specification.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 対象差分、独立した終了コード、UI証拠 |
+| 合成受入・実務試用 | [仕様](specification.md)、[Phase 1合成受入契約](acceptance.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 匿名データ、自動証拠、観察記録、実務試用との区別 |
 | ガバナンス・Git・引き継ぎ | [プロジェクト規則](../governance/project-rules.md)、[運用](operations.md) | 管理ハッシュ、Git差分、タスク状態 |
 
 ## Document Authority
@@ -35,6 +36,7 @@
 | `roadmaps/` | 目標、残作業、完了条件、検証済み進捗 |
 | `decisions/` | 重要判断の状態と根拠 |
 | `operations.md` | 実装済み、計画済み、利用不可の運用 |
+| `acceptance.md` | Phase 1の匿名合成受入ケース、合格基準、観察記録 |
 | `../CHANGELOG.md` | 仕様・利用者・安全・運用に見える変更 |
 
 ## Documentation Completion Criteria

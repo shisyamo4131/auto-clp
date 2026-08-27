@@ -547,7 +547,9 @@ test("re-evaluates the restored Project and ignores a delayed pre-undo Worker re
   await expect(physicalSummary).toHaveText(
     "不適合：修正が必要な理由が1件あります。未確認事項0件も保持して表示します。",
   );
-  await expect(panel.getByText("積荷が床またはコンテナ内部の境界を越えています。")).toBeVisible();
+  await expect(
+    panel.getByText("積荷がコンテナの壁または天井の境界を越えています。"),
+  ).toBeVisible();
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(physicalSummary).toHaveText(
     "適合：現在の保存済み配置は、実装済みの物理制約に適合しています。",

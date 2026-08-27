@@ -20,6 +20,7 @@ export interface ValidationIssue {
 export type PhysicalValidationStatus = "valid" | "invalid" | "unverified";
 
 export type InvalidPhysicalReasonCode =
+  | "floor-penetration"
   | "outside-container"
   | "container-clearance-not-met"
   | "positive-volume-overlap"
@@ -523,7 +524,14 @@ export function validatePlacementSet(
 
   for (const selected of selectedPlacements) {
     const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
-    if (!selected.rawInside) {
+    if (selected.bounds.min.zMm < 0) {
+      appendReason({
+        status: "invalid",
+        code: "floor-penetration",
+        target,
+        relatedCargoIds: [],
+      });
+    } else if (!selected.rawInside) {
       appendReason({
         status: "invalid",
         code: "outside-container",

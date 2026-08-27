@@ -509,6 +509,47 @@ describe("validatePlacementSet", () => {
     });
   });
 
+  it("uses only floor penetration for simultaneous negative X and Z while suppressing coordinate cascades", () => {
+    const project = physicalProject({
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b")],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: -1, yMm: 0, zMm: -1 },
+        }),
+        physicalPlacement("cargo-b"),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("floor-penetration", "cargo-a"),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+      ],
+    });
+  });
+
+  it("treats zMin 0 as the exact valid floor boundary", () => {
+    const project = physicalProject({
+      cargoes: [physicalCargo("cargo-a")],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 0 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "unverified",
+      reasons: [pathReason("cargo-a")],
+    });
+  });
+
   it.each([
     {
       label: "1 mm positive overlap",
@@ -762,7 +803,7 @@ describe("validatePlacementSet", () => {
       containerId: "container-1",
       status: "invalid",
       reasons: [
-        invalidCargoReason("outside-container", "cargo-a"),
+        invalidCargoReason("floor-penetration", "cargo-a"),
         pathReason("cargo-a"),
         pathReason("cargo-b"),
         unverifiedCargoReason(
@@ -933,32 +974,42 @@ describe("validatePlacementSet", () => {
     });
   });
 
-  it("retains independent invalid and unverified reasons with invalid precedence", () => {
+  it("prioritizes 1 mm floor penetration while retaining independent opening, payload, and exact support diagnostics", () => {
     const project = physicalProject({
       cargoes: [
-        physicalCargo("cargo-a", { massGrams: 100 }),
-        physicalCargo("cargo-b", { massGrams: 100 }),
+        physicalCargo("cargo-a", {
+          dimensionsMm: { lengthMm: 20, widthMm: 20, heightMm: 10 },
+          massGrams: 100,
+        }),
+        physicalCargo("cargo-b", {
+          dimensionsMm: { lengthMm: 10, widthMm: 10, heightMm: 10 },
+          massGrams: 100,
+        }),
       ],
       containers: [
-        physicalContainer("container-1", { payloadCapacityGrams: 199 }),
+        physicalContainer("container-1", {
+          openingMm: { widthMm: 15, heightMm: 100 },
+          payloadCapacityGrams: 199,
+        }),
       ],
       placements: [
         physicalPlacement("cargo-a", {
-          positionMm: { xMm: 0, yMm: 0, zMm: -1 },
+          positionMm: { xMm: 5, yMm: 5, zMm: -1 },
         }),
         physicalPlacement("cargo-b", {
-          positionMm: { xMm: 0, yMm: 0, zMm: 9 },
+          positionMm: { xMm: 5, yMm: 5, zMm: 9 },
         }),
       ],
     });
+    const original = structuredClone(project);
 
     expect(validatePlacementSet(project, "container-1")).toEqual({
       kind: "evaluated",
       containerId: "container-1",
       status: "invalid",
       reasons: [
-        invalidCargoReason("outside-container", "cargo-a"),
-        pathReason("cargo-a"),
+        invalidCargoReason("floor-penetration", "cargo-a"),
+        invalidCargoReason("opening-no-fitting-orientation", "cargo-a"),
         pathReason("cargo-b"),
         unverifiedCargoReason(
           "structure-stability-unverified",
@@ -968,6 +1019,7 @@ describe("validatePlacementSet", () => {
         payloadExceededReason("container-1", ["cargo-a", "cargo-b"]),
       ],
     });
+    expect(project).toEqual(original);
   });
 
   it("returns deterministic deduplicated ordering without mutating input", () => {

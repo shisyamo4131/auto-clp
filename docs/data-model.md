@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)
 
 ## Contract Scope
 
 この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、案件操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定は実装済みである。操作履歴、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
 
-仕様版 `0.8.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `0.9.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -73,7 +73,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 - 認定された支持面との完全一致接触ではZ隙間を要求せず、支持を構成するX・Y投影重なりへ積荷間隙間を適用しない。支持成立は100%被覆、同一高さ、段積み可否で別途判定する。
 - 開口断面は従来どおり `cargoY + 2 × cY <= openingWidth`、`cargoZ + cZ <= openingHeight` とし、X隙間を使わない。配置後境界と搬入断面を混同しない。
 
-この意味はADR 0011で初めて確定した。物理判定と理由表示UI、手動端末保存、利用者向けJSON入出力UIは実装済みである。判定は保存値からローカルWorker内で毎回再計算する派生結果であり、JSONの形や意味を変えないためSchema `0.1.0` を据え置き、判定結果や隙間包絡をJSONへ保存しない。
+この意味はADR 0011で初めて確定した。物理判定と理由表示UI、手動端末保存、利用者向けJSON入出力UIは実装済みである。床下配置の `floor-penetration` を含む判定理由は保存値からローカルWorker内で毎回再計算する派生結果であり、JSONの形や意味を変えないためSchema `0.1.0` を据え置き、判定結果や隙間包絡をJSONへ保存しない。
 
 ## Stored and Derived State
 

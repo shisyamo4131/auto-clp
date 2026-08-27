@@ -76,8 +76,12 @@ function evaluated(
 
 const invalidCopies = [
   [
+    "floor-penetration",
+    "積荷が床より下へ貫通しています。Z座標を0以上に修正してください。",
+  ],
+  [
     "outside-container",
-    "積荷が床またはコンテナ内部の境界を越えています。座標を先に修正してください。",
+    "積荷がコンテナの壁または天井の境界を越えています。座標を先に修正してください。",
   ],
   [
     "container-clearance-not-met",
@@ -125,6 +129,27 @@ describe("toPhysicalValidationView", () => {
         invalidReasons: [{ statusLabel: "不適合", message }],
         unverifiedReasons: [],
       });
+  });
+
+  it("keeps floor penetration copy actionable without reflecting names, ids, or coordinates", () => {
+    const reason: PhysicalValidationReason = {
+      status: "invalid",
+      code: "floor-penetration",
+      target: { kind: "cargo", id: "cargo-known" },
+      relatedCargoIds: [],
+    };
+
+    const message = toPhysicalValidationView(
+      projectFixture(),
+      evaluated("invalid", [reason]),
+    ).invalidReasons[0]?.message;
+
+    expect(message).toBe(
+      "積荷が床より下へ貫通しています。Z座標を0以上に修正してください。",
+    );
+    expect(message).not.toContain("既知積荷");
+    expect(message).not.toContain("cargo-known");
+    expect(message).not.toContain("-1");
   });
 
   it.each(unverifiedCopies)("maps unverified code %s to its exact copy", (code, message) => {

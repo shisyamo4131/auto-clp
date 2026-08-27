@@ -84,6 +84,7 @@ export type PhysicalValidationWorkerResponse =
   | PhysicalValidationWorkerFailedResponse;
 
 const INVALID_REASON_CODES = new Set([
+  "floor-penetration",
   "outside-container",
   "container-clearance-not-met",
   "positive-volume-overlap",

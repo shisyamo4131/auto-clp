@@ -14,6 +14,8 @@ $coordinateDecisionPath = Join-Path $resolvedProject 'docs/decisions/0010-contai
 $clearanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0011-axis-clearance-semantics.md'
 $physicalValidationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0012-independent-physical-validation-diagnostics.md'
 $persistenceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0013-manual-local-persistence-and-json-files.md'
+$floorPenetrationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0014-dedicated-floor-penetration-diagnostic.md'
+$acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 
 foreach ($path in @(
     $schemaPath,
@@ -24,7 +26,9 @@ foreach ($path in @(
     $coordinateDecisionPath,
     $clearanceDecisionPath,
     $physicalValidationDecisionPath,
-    $persistenceDecisionPath
+    $persistenceDecisionPath,
+    $floorPenetrationDecisionPath,
+    $acceptancePath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
@@ -115,7 +119,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.8.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.9.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -160,7 +164,8 @@ if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
     -not $dataModel.Contains('decisions/0010-container-coordinate-and-placement-anchor.md') -or
     -not $dataModel.Contains('decisions/0011-axis-clearance-semantics.md') -or
     -not $dataModel.Contains('decisions/0012-independent-physical-validation-diagnostics.md') -or
-    -not $dataModel.Contains('decisions/0013-manual-local-persistence-and-json-files.md')) {
+    -not $dataModel.Contains('decisions/0013-manual-local-persistence-and-json-files.md') -or
+    -not $dataModel.Contains('decisions/0014-dedicated-floor-penetration-diagnostic.md')) {
     throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
 }
 
@@ -211,6 +216,36 @@ if ($persistenceDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0013 does not have Accepted status.'
 }
 
+$floorPenetrationDecision = [IO.File]::ReadAllText($floorPenetrationDecisionPath)
+if ($floorPenetrationDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0014 does not have Accepted status.'
+}
+
+foreach ($requiredText in @(
+    'floor-penetration',
+    '最小Zが0 mm未満',
+    'outside-container',
+    '総耐荷重',
+    '移行不要'
+)) {
+    if (-not $floorPenetrationDecision.Contains($requiredText)) {
+        throw "ADR 0014 does not contain the approved floor-penetration contract text: $requiredText"
+    }
+}
+
+$acceptance = [IO.File]::ReadAllText($acceptancePath)
+foreach ($requiredText in @(
+    'AC-01 Floor Layout and Manual Editing',
+    'AC-02 Exact Stack and 1 mm Support Failure',
+    'AC-03 Independent Floor Penetration Diagnostics',
+    'AC-04 Recovery, Portability, and No-WebGL Fallback',
+    '実務利用者試用'
+)) {
+    if (-not $acceptance.Contains($requiredText)) {
+        throw "Acceptance contract does not contain the approved case text: $requiredText"
+    }
+}
+
 foreach ($requiredText in @(
     'current-project',
     '自動保存と起動時自動読込は行わない',
@@ -254,4 +289,6 @@ foreach ($requiredText in @(
     clearance_decision_0011_accepted = $true
     physical_validation_decision_0012_accepted = $true
     persistence_decision_0013_accepted = $true
+    floor_penetration_decision_0014_accepted = $true
+    synthetic_acceptance_contract_current = $true
 }

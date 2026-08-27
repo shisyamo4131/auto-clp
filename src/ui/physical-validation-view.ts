@@ -40,8 +40,10 @@ export interface PhysicalValidationLabelMaps {
 }
 
 const INVALID_REASON_COPY = {
+  "floor-penetration":
+    "積荷が床より下へ貫通しています。Z座標を0以上に修正してください。",
   "outside-container":
-    "積荷が床またはコンテナ内部の境界を越えています。座標を先に修正してください。",
+    "積荷がコンテナの壁または天井の境界を越えています。座標を先に修正してください。",
   "container-clearance-not-met":
     "積荷とコンテナ面の間に必要な軸別隙間がありません。座標を調整してください。",
   "positive-volume-overlap":
