@@ -23,5 +23,6 @@
 | [0010](0010-container-coordinate-and-placement-anchor.md) | コンテナ局所座標と配置アンカー | Accepted | 2026-08-27 |
 | [0011](0011-axis-clearance-semantics.md) | 軸別固定隙間の意味と適用面 | Accepted | 2026-08-27 |
 | [0012](0012-independent-physical-validation-diagnostics.md) | 物理制約の独立診断と集約 | Accepted | 2026-08-27 |
+| [0013](0013-manual-local-persistence-and-json-files.md) | 手動の端末内保存とJSONファイル入出力 | Accepted | 2026-08-28 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

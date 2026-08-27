@@ -36,6 +36,10 @@
 - 正確なmm・kg入力境界、積荷別許可向き、参照を壊さない不変コマンド、キーボード・フォーカス・単位説明、305〜375pxの狭幅表示に対する検証。
 - 案件設定・積荷・候補・配置・1回の3D床面dragを最大100件取り消し・やり直しできる、Project参照を構造共有する非永続履歴とアクセシブルな操作UI。
 - stale/no-op/分岐、未保存入力中のlock、native入力履歴と独自入力コンポーネントの保護、WebGL非依存、305〜375px表示を覆う履歴回帰。
+- IndexedDB `current-project` 単一手動枠のtransaction完了後保存・読込・確認削除と、固定名 `auto-clp-project-0.1.0.json` の標準file input/download。
+- 全候補を置換前に再判定するone-shot module Worker、履歴barrier、非同期interaction generation、固定code失敗表示、削除確認focus管理。
+- 実IndexedDB reload/delete、download/reimport、全JSON失敗段階、blocked/abort/破損、遅延競合、WebGL非依存、狭幅、1,000配置・100候補Worker応答性を覆う回帰。
+- 手動の端末内保存、保持・削除、JSONファイル、競合・rollback境界を定めるADR 0013。
 
 ### Changed
 
@@ -63,6 +67,8 @@
 - 検証済みの理由表示UI、ブラウザ統合、1,000配置の実Worker性能ゲートに基づき物理制約マイルストーンを完了し、Auto CLPロードマップ進捗を59%から65%へ更新。
 - 仕様を0.7.0へ更新し、案件操作履歴の対象、上限、除外状態、ショートカット、非永続境界を確定。
 - 検証済みの案件undo/redoに基づきAuto CLPロードマップ進捗を65%から67%へ更新。
+- 仕様を0.8.0へ更新し、単一手動端末保存、JSONファイル入出力、全候補事前判定、履歴barrier、保持・削除・競合規則を確定。
+- 検証済みの端末保存・JSON入出力に基づき保存・再読込・操作性マイルストーンを完了し、Auto CLPロードマップ進捗を67%から77%へ更新。
 
 ### Fixed
 

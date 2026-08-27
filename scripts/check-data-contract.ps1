@@ -8,19 +8,23 @@ $resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
 $schemaPath = Join-Path $resolvedProject 'schemas/project-0.1.0.schema.json'
 $specificationPath = Join-Path $resolvedProject 'docs/specification.md'
 $dataModelPath = Join-Path $resolvedProject 'docs/data-model.md'
+$operationsPath = Join-Path $resolvedProject 'docs/operations.md'
 $decisionPath = Join-Path $resolvedProject 'docs/decisions/0009-versioned-project-data-contract.md'
 $coordinateDecisionPath = Join-Path $resolvedProject 'docs/decisions/0010-container-coordinate-and-placement-anchor.md'
 $clearanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0011-axis-clearance-semantics.md'
 $physicalValidationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0012-independent-physical-validation-diagnostics.md'
+$persistenceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0013-manual-local-persistence-and-json-files.md'
 
 foreach ($path in @(
     $schemaPath,
     $specificationPath,
     $dataModelPath,
+    $operationsPath,
     $decisionPath,
     $coordinateDecisionPath,
     $clearanceDecisionPath,
-    $physicalValidationDecisionPath
+    $physicalValidationDecisionPath,
+    $persistenceDecisionPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
@@ -100,6 +104,7 @@ if (-not $specificationVersionMatch.Success) {
 }
 
 $dataModel = [IO.File]::ReadAllText($dataModelPath)
+$operations = [IO.File]::ReadAllText($operationsPath)
 $dataModelVersionMatch = [regex]::Match(
     $dataModel,
     '仕様版 `([0-9]+\.[0-9]+\.[0-9]+)`'
@@ -110,8 +115,20 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.7.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.8.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
+
+foreach ($staleText in @(
+    '利用者向けJSON入出力UIと端末保存はまだ存在しない',
+    '端末保存と利用者向けJSON入出力UIはまだ公開されていない',
+    '将来の端末保存には含めない'
+)) {
+    if ($dataModel.Contains($staleText) -or
+        $specification.Contains($staleText) -or
+        $operations.Contains($staleText)) {
+        throw "Current documentation still contains a retired persistence statement: $staleText"
+    }
+}
 
 foreach ($requiredText in @(
     '最大100件まで取り消し・やり直し',
@@ -125,12 +142,25 @@ foreach ($requiredText in @(
     }
 }
 
+foreach ($requiredText in @(
+    'IndexedDBの単一手動枠 `current-project`',
+    '自動保存と起動時自動読込を行わない',
+    'auto-clp-project-0.1.0.json',
+    '全候補の物理判定をmodule Workerで再計算',
+    '現在案件、履歴、入力を保持'
+)) {
+    if (-not $specification.Contains($requiredText)) {
+        throw "Specification does not contain the approved persistence contract text: $requiredText"
+    }
+}
+
 if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
     -not $dataModel.Contains('../schemas/project-0.1.0.schema.json') -or
     -not $dataModel.Contains('5 MiB（5,242,880 bytes）') -or
     -not $dataModel.Contains('decisions/0010-container-coordinate-and-placement-anchor.md') -or
     -not $dataModel.Contains('decisions/0011-axis-clearance-semantics.md') -or
-    -not $dataModel.Contains('decisions/0012-independent-physical-validation-diagnostics.md')) {
+    -not $dataModel.Contains('decisions/0012-independent-physical-validation-diagnostics.md') -or
+    -not $dataModel.Contains('decisions/0013-manual-local-persistence-and-json-files.md')) {
     throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
 }
 
@@ -176,6 +206,24 @@ if ($physicalValidationDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0012 does not have Accepted status.'
 }
 
+$persistenceDecision = [IO.File]::ReadAllText($persistenceDecisionPath)
+if ($persistenceDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0013 does not have Accepted status.'
+}
+
+foreach ($requiredText in @(
+    'current-project',
+    '自動保存と起動時自動読込は行わない',
+    'transaction完了後だけ成功',
+    'auto-clp-project-0.1.0.json',
+    'one-shot module Worker',
+    '履歴barrier'
+)) {
+    if (-not $persistenceDecision.Contains($requiredText)) {
+        throw "ADR 0013 does not contain the approved persistence contract text: $requiredText"
+    }
+}
+
 foreach ($requiredText in @(
     '境界不適合を取り消さず',
     '支持不足または隙間不足を連鎖させない',
@@ -205,4 +253,5 @@ foreach ($requiredText in @(
     coordinate_decision_0010_accepted = $true
     clearance_decision_0011_accepted = $true
     physical_validation_decision_0012_accepted = $true
+    persistence_decision_0013_accepted = $true
 }

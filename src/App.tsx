@@ -9,9 +9,29 @@ import {
   type ProjectHistoryCommit,
   type ProjectHistoryTransition,
 } from "./application/project-history";
+import {
+  prepareProjectImport,
+  serializeProjectForPersistence,
+  type ProjectPersistenceActionResult,
+  type ProjectPersistenceFailureCode,
+} from "./application/project-persistence";
+import type { Project } from "./domain/model";
+import {
+  downloadProjectJson,
+  projectJsonSourceFromFile,
+} from "./persistence/project-file";
+import { preflightImportedProject } from "./persistence/project-import-preflight-client";
+import type { ProjectJsonSource } from "./persistence/project-json";
+import {
+  deleteProjectJsonFromDevice,
+  loadProjectJsonFromDevice,
+  saveProjectJsonToDevice,
+  type ProjectStoreFailureCode,
+} from "./persistence/project-store";
 import type { WebGL2CapabilityCheck } from "./platform/webgl2";
 import { SceneWorkspace } from "./scene/SceneWorkspace";
 import { ProjectHistoryControls } from "./ui/ProjectHistoryControls";
+import { ProjectPersistencePanel } from "./ui/ProjectPersistencePanel";
 import { ProjectWorkspace } from "./ui/ProjectWorkspace";
 
 type AppState =
@@ -24,6 +44,32 @@ type AppState =
 interface AppProps {
   readonly capabilityCheck: WebGL2CapabilityCheck;
   readonly forceInitialRenderError?: boolean;
+}
+
+type PersistenceOperationOutcome =
+  | { readonly ok: true; readonly replacement?: Project }
+  | { readonly ok: false; readonly code: ProjectPersistenceFailureCode };
+
+const persistenceTextEncoder = new TextEncoder();
+
+function storeFailure(code: ProjectStoreFailureCode): ProjectPersistenceActionResult {
+  const mapped = {
+    "project-store.unavailable": "persistence.device-unavailable",
+    "project-store.open-failed": "persistence.device-open-failed",
+    "project-store.read-failed": "persistence.device-read-failed",
+    "project-store.write-failed": "persistence.device-write-failed",
+    "project-store.delete-failed": "persistence.device-delete-failed",
+    "project-store.not-found": "persistence.device-not-found",
+    "project-store.data-invalid": "persistence.device-data-invalid",
+  } as const satisfies Record<ProjectStoreFailureCode, ProjectPersistenceFailureCode>;
+  return { ok: false, code: mapped[code] };
+}
+
+function sourceFromStoredJson(json: string): ProjectJsonSource {
+  return {
+    sizeBytes: persistenceTextEncoder.encode(json).byteLength,
+    readText: async () => json,
+  };
 }
 
 const stateCopy: Record<AppState, { readonly title: string; readonly detail: string }> = {
@@ -57,8 +103,15 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   const historyRef = useRef(history);
   const [historyRevision, setHistoryRevision] = useState(0);
   const [historyCommitRevision, setHistoryCommitRevision] = useState(0);
+  const [projectBarrierRevision, setProjectBarrierRevision] = useState(0);
   const [busySources, setBusySources] = useState({ project: false, scene: false });
   const busySourcesRef = useRef(busySources);
+  const [persistenceInteractionActive, setPersistenceInteractionActive] =
+    useState(false);
+  const persistenceInteractionRef = useRef(false);
+  const [persistenceOperationActive, setPersistenceOperationActive] = useState(false);
+  const persistenceOperationRef = useRef(false);
+  const projectInteractionGenerationRef = useRef(0);
   const busyRef = useRef(false);
   const project = history.present;
 
@@ -93,7 +146,12 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       }
       const next = { ...current, [source]: busy };
       busySourcesRef.current = next;
-      busyRef.current = next.project || next.scene;
+      projectInteractionGenerationRef.current += 1;
+      busyRef.current =
+        next.project ||
+        next.scene ||
+        persistenceInteractionRef.current ||
+        persistenceOperationRef.current;
       setBusySources(next);
     },
     [],
@@ -106,9 +164,26 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     (busy: boolean) => handleBusyChange("project", busy),
     [handleBusyChange],
   );
+  const handlePersistenceInteractionChange = useCallback((active: boolean) => {
+    persistenceInteractionRef.current = active;
+    busyRef.current =
+      busySourcesRef.current.project ||
+      busySourcesRef.current.scene ||
+      active ||
+      persistenceOperationRef.current;
+    setPersistenceInteractionActive(active);
+  }, []);
 
   const handleProjectCommit = useCallback(
     (commit: ProjectHistoryCommit): ProjectHistoryTransition => {
+      if (persistenceOperationRef.current) {
+        projectInteractionGenerationRef.current += 1;
+        return {
+          ok: false,
+          code: "history.stale-base",
+          state: historyRef.current,
+        };
+      }
       const transition = commitProjectHistory(historyRef.current, commit);
       if (transition.ok && transition.changed) {
         historyRef.current = transition.state;
@@ -142,9 +217,147 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   const handleUndo = useCallback(() => navigateHistory("undo"), [navigateHistory]);
   const handleRedo = useCallback(() => navigateHistory("redo"), [navigateHistory]);
 
+  const runPersistenceOperation = useCallback(
+    async (
+      baseProject: Project,
+      operation: () => Promise<PersistenceOperationOutcome>,
+    ): Promise<ProjectPersistenceActionResult> => {
+      const sources = busySourcesRef.current;
+      if (sources.project || sources.scene || persistenceOperationRef.current) {
+        return { ok: false, code: "persistence.operation-busy" };
+      }
+      if (historyRef.current.present !== baseProject) {
+        return { ok: false, code: "persistence.stale-base" };
+      }
+
+      const interactionGeneration = projectInteractionGenerationRef.current;
+      persistenceOperationRef.current = true;
+      busyRef.current = true;
+      setPersistenceOperationActive(true);
+      try {
+        const outcome = await operation();
+        if (!outcome.ok) {
+          return outcome;
+        }
+        if (outcome.replacement !== undefined) {
+          const currentSources = busySourcesRef.current;
+          if (
+            historyRef.current.present !== baseProject ||
+            currentSources.project ||
+            currentSources.scene ||
+            projectInteractionGenerationRef.current !== interactionGeneration
+          ) {
+            return { ok: false, code: "persistence.stale-base" };
+          }
+          const nextHistory = createProjectHistory(outcome.replacement);
+          historyRef.current = nextHistory;
+          setHistory(nextHistory);
+          setHistoryRevision((current) => current + 1);
+          setHistoryCommitRevision((current) => current + 1);
+          setProjectBarrierRevision((current) => current + 1);
+        }
+        return { ok: true };
+      } catch {
+        return { ok: false, code: "persistence.unexpected-failure" };
+      } finally {
+        persistenceOperationRef.current = false;
+        busyRef.current =
+          busySourcesRef.current.project ||
+          busySourcesRef.current.scene ||
+          persistenceInteractionRef.current;
+        setPersistenceOperationActive(false);
+      }
+    },
+    [],
+  );
+
+  const handleSaveDevice = useCallback(
+    (baseProject: Project) =>
+      runPersistenceOperation(baseProject, async () => {
+        const serialized = serializeProjectForPersistence(baseProject);
+        if (!serialized.ok) {
+          return serialized;
+        }
+        const saved = await saveProjectJsonToDevice(serialized.json);
+        return saved.ok ? { ok: true } : storeFailure(saved.code);
+      }),
+    [runPersistenceOperation],
+  );
+
+  const handleLoadDevice = useCallback(
+    (baseProject: Project) =>
+      runPersistenceOperation(baseProject, async () => {
+        const stored = await loadProjectJsonFromDevice();
+        if (!stored.ok) {
+          return storeFailure(stored.code);
+        }
+        const prepared = await prepareProjectImport(
+          baseProject,
+          sourceFromStoredJson(stored.value),
+          preflightImportedProject,
+        );
+        return prepared.ok
+          ? { ok: true, replacement: prepared.project }
+          : prepared;
+      }),
+    [runPersistenceOperation],
+  );
+
+  const handleDeleteDevice = useCallback(
+    (baseProject: Project) =>
+      runPersistenceOperation(baseProject, async () => {
+        const deleted = await deleteProjectJsonFromDevice();
+        return deleted.ok ? { ok: true } : storeFailure(deleted.code);
+      }),
+    [runPersistenceOperation],
+  );
+
+  const handleExportFile = useCallback(
+    (baseProject: Project) =>
+      runPersistenceOperation(baseProject, async () => {
+        const serialized = serializeProjectForPersistence(baseProject);
+        if (!serialized.ok) {
+          return serialized;
+        }
+        const downloaded = downloadProjectJson(serialized.json);
+        if (downloaded.ok) {
+          return { ok: true };
+        }
+        return {
+          ok: false,
+          code:
+            downloaded.code === "project-file.export-unavailable"
+              ? "persistence.file-export-unavailable"
+              : "persistence.file-download-failed",
+        };
+      }),
+    [runPersistenceOperation],
+  );
+
+  const handleImportFile = useCallback(
+    (baseProject: Project, file: File) =>
+      runPersistenceOperation(baseProject, async () => {
+        const source = projectJsonSourceFromFile(file);
+        if (source === undefined) {
+          return { ok: false, code: "persistence.file-import-unavailable" };
+        }
+        const prepared = await prepareProjectImport(
+          baseProject,
+          source,
+          preflightImportedProject,
+        );
+        return prepared.ok
+          ? { ok: true, replacement: prepared.project }
+          : prepared;
+      }),
+    [runPersistenceOperation],
+  );
+
   const copy = stateCopy[state];
   const rendererMounted = state === "renderer-checking" || state === "supported";
-  const historyBusy = busySources.project || busySources.scene;
+  const externalPersistenceBusy =
+    busySources.project || busySources.scene || persistenceOperationActive;
+  const historyBusy = externalPersistenceBusy || persistenceInteractionActive;
 
   return (
     <main className="app-shell">
@@ -165,6 +378,17 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         onUndo={handleUndo}
       />
 
+      <ProjectPersistencePanel
+        busy={externalPersistenceBusy}
+        onDeleteDevice={handleDeleteDevice}
+        onExportFile={handleExportFile}
+        onImportFile={handleImportFile}
+        onInteractionChange={handlePersistenceInteractionChange}
+        onLoadDevice={handleLoadDevice}
+        onSaveDevice={handleSaveDevice}
+        project={project}
+      />
+
       <section
         className={`capability capability--${state}`}
       >
@@ -182,6 +406,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           </div>
         </div>
         <SceneWorkspace
+          key={`scene-${projectBarrierRevision}`}
           forceInitialRenderError={forceInitialRenderError}
           onRendererError={handleRendererError}
           onRendererReady={handleRendererReady}
@@ -201,6 +426,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       </aside>
 
       <ProjectWorkspace
+        key={`project-${projectBarrierRevision}`}
         historyRevision={historyRevision}
         onBusyChange={handleProjectBusyChange}
         onProjectCommit={handleProjectCommit}

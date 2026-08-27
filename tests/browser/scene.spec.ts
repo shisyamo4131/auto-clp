@@ -324,6 +324,8 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   await expect(editButton).toBeDisabled();
   await expect(undo).toBeDisabled();
   await expect(redo).toBeDisabled();
+  await expect(page.getByRole("button", { name: "端末へ保存" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "JSONを書き出す" })).toBeDisabled();
   expect(await placementSummary(row)).toBe(originalSummary);
   await page.mouse.up();
 
@@ -358,6 +360,126 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   await expect(sceneSelect).toBeEnabled();
 });
 
+test("rejects a canvas commit while import is active and rolls the preview back", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    type WorkerConstructor = new (
+      scriptUrl: string | URL,
+      options?: { readonly type?: string },
+    ) => object;
+    interface PendingRequest {
+      readonly requestId: number;
+      readonly worker: ControlledPreflightWorker;
+    }
+    const browserGlobal = globalThis as unknown as {
+      Worker: WorkerConstructor;
+      __hasPendingProjectImportPreflight: () => boolean;
+      __releaseProjectImportPreflight: () => void;
+    };
+    const NativeWorker = browserGlobal.Worker;
+    let pending: PendingRequest | undefined;
+    class ControlledPreflightWorker {
+      onmessage: ((event: { readonly data: unknown }) => void) | null = null;
+      onerror: (() => void) | null = null;
+      onmessageerror: (() => void) | null = null;
+      private terminated = false;
+
+      postMessage(request: { readonly requestId: number }) {
+        pending = { requestId: request.requestId, worker: this };
+      }
+
+      release(requestId: number) {
+        if (!this.terminated) {
+          this.onmessage?.({
+            data: {
+              type: "project-import-preflight-ready",
+              requestId,
+            },
+          });
+        }
+      }
+
+      terminate() {
+        this.terminated = true;
+        if (pending?.worker === this) {
+          pending = undefined;
+        }
+      }
+    }
+    class RoutingWorker {
+      constructor(scriptUrl: string | URL, options?: { readonly type?: string }) {
+        if (String(scriptUrl).includes("project-import-preflight.worker")) {
+          return new ControlledPreflightWorker();
+        }
+        return new NativeWorker(scriptUrl, options);
+      }
+    }
+    browserGlobal.__hasPendingProjectImportPreflight = () => pending !== undefined;
+    browserGlobal.__releaseProjectImportPreflight = () => {
+      const current = pending;
+      pending = undefined;
+      current?.worker.release(current.requestId);
+    };
+    browserGlobal.Worker = RoutingWorker as unknown as WorkerConstructor;
+  });
+  await page.goto("/");
+  const { canvas, row, status } = await createInteractiveScene(page);
+  const originalSummary = await placementSummary(row);
+  const historySummary = page.locator(".project-history__summary");
+  const historyBefore = await historySummary.textContent();
+  const cargoPoint = await selectCargoOnCanvas(page, canvas, row);
+  const persistenceStatus = page.locator(".project-persistence__status");
+
+  await page.locator("input[type='file']").setInputFiles({
+    name: "anonymous-project.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        schemaVersion: "0.1.0",
+        projectId: "scene-import",
+        name: "置換を拒否する案件",
+        clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
+        cargoes: [],
+        containers: [],
+        placements: [],
+      }),
+    ),
+  });
+  await expect(persistenceStatus).toContainText("処理中です");
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const browserGlobal = globalThis as unknown as {
+          __hasPendingProjectImportPreflight: () => boolean;
+        };
+        return browserGlobal.__hasPendingProjectImportPreflight();
+      }),
+    )
+    .toBe(true);
+  await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
+
+  await page.mouse.move(cargoPoint.x, cargoPoint.y);
+  await page.mouse.down();
+  await page.mouse.move(cargoPoint.x + 70, cargoPoint.y + 24, { steps: 4 });
+  await expect(status).toContainText("床面に平行な配置移動をプレビュー中です");
+  await expect(persistenceStatus).toContainText("処理中です");
+  await page.mouse.up();
+
+  await expect(status).toContainText("案件が更新されたため移動を保存できませんでした");
+  expect(await placementSummary(row)).toBe(originalSummary);
+  await page.evaluate(() => {
+    const browserGlobal = globalThis as unknown as {
+      __releaseProjectImportPreflight: () => void;
+    };
+    browserGlobal.__releaseProjectImportPreflight();
+  });
+  await expect(persistenceStatus).toContainText("操作中に案件が更新されたため");
+  expect(await historySummary.textContent()).toBe(historyBefore);
+  await expect(page.getByTestId("canonical-project-settings")).toContainText("新規案件");
+  await expect(page.getByText("置換を拒否する案件")).toHaveCount(0);
+});
+
 test("rolls an active canvas drag back on Escape, pointer cancellation, and window blur", async ({
   page,
 }) => {
@@ -374,6 +496,7 @@ test("rolls an active canvas drag back on Escape, pointer cancellation, and wind
   await page.mouse.move(cargoPoint.x + 60, cargoPoint.y + 20, { steps: 3 });
   await expect(sceneSelect).toBeDisabled();
   await expect(undo).toBeDisabled();
+  await expect(page.getByRole("button", { name: "端末へ保存" })).toBeDisabled();
   await page.keyboard.press("Escape");
   await page.mouse.up();
   await expect(sceneSelect).toBeEnabled();

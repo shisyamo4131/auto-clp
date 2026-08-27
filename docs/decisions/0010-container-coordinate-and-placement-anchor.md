@@ -41,7 +41,7 @@
 
 ## Compatibility and Migration
 
-本ADR採択時点では検証済みserializerは存在したが、座標値を生成する配置UIまたはapplication command、利用者向けJSON入出力UI、端末保存、リリース済み保存データは存在しなかった。このため、未定義だったSchema `0.1.0` の意味を最初の座標値生成機能の実装前に確定し、Schema版は据え置いた。現在は同じSchemaと座標契約に基づくフォーム配置command/UIとcanvas drag入力を実装済みだが、利用者向けJSON入出力UIと端末保存は未実装である。
+本ADR採択時点では検証済みserializerは存在したが、座標値を生成する配置UIまたはapplication command、利用者向けJSON入出力UI、端末保存、リリース済み保存データは存在しなかった。このため、未定義だったSchema `0.1.0` の意味を最初の座標値生成機能の実装前に確定し、Schema版は据え置いた。その後も同じSchemaと座標契約に基づき、フォーム配置command/UI、canvas drag入力、利用者向けJSON入出力UI、端末保存を実装している。
 
 既存外部生成データが後から判明した場合、その座標意味を推測して読み込まない。新しいSchema版と、元アンカーが明示された移行経路を設計する。中心から最小角への変換で半mmが生じる場合は、暗黙に丸めず拒否または明示方針を必要とする。
 

@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、案件操作のundo/redoは実装済みである。端末保存と利用者向けJSON入出力UIは未実装であり、操作履歴、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、案件操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定は実装済みである。操作履歴、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
 
-仕様版 `0.7.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `0.8.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -63,7 +63,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 - canvas dragは正規最小角を開始値として保持し、scene上のpointer差分をdomain X/Y差分へ写像して最近接1 mmへ正負対称に量子化する。mesh中心やtransformを保存値として読まず、Z・向きを保持し、既存application commandが成功した場合だけProjectを置換する。
 - 負座標や外側配置は修正途中の状態として保存できる。将来の境界判定では不適合となるが、scene投影は適合性を判定または保証しない。
 
-検証済みserializerと、座標値を生成する配置UI・application commandは実装済みである。利用者向けJSON入出力UIと端末保存はまだ存在しない。座標契約の採択時点ではSchema `0.1.0` の初回意味確定としてJSONの形と版を変更せず、その後の配置実装も同じ契約を維持している。既存外部データが後から判明した場合は意味を推測して再解釈せず、新Schema版と明示的な移行を設計する。
+検証済みserializer、座標値を生成する配置UI・application command、利用者向けJSON入出力UI、手動端末保存は実装済みである。座標契約の採択時点ではSchema `0.1.0` の初回意味確定としてJSONの形と版を変更せず、その後の配置・保存実装も同じ契約を維持している。既存外部データが後から判明した場合は意味を推測して再解釈せず、新Schema版と明示的な移行を設計する。
 
 ## Axis Clearance Contract
 
@@ -73,7 +73,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 - 認定された支持面との完全一致接触ではZ隙間を要求せず、支持を構成するX・Y投影重なりへ積荷間隙間を適用しない。支持成立は100%被覆、同一高さ、段積み可否で別途判定する。
 - 開口断面は従来どおり `cargoY + 2 × cY <= openingWidth`、`cargoZ + cZ <= openingHeight` とし、X隙間を使わない。配置後境界と搬入断面を混同しない。
 
-この意味はADR 0011で初めて確定した。物理判定と理由表示UIは実装済みである。判定は保存値からローカルWorker内で毎回再計算する派生結果であり、JSONの形や意味を変えないためSchema `0.1.0` を据え置き、判定結果や隙間包絡をJSONへ保存しない。端末保存と利用者向けJSON入出力UIはまだ公開されていない。
+この意味はADR 0011で初めて確定した。物理判定と理由表示UI、手動端末保存、利用者向けJSON入出力UIは実装済みである。判定は保存値からローカルWorker内で毎回再計算する派生結果であり、JSONの形や意味を変えないためSchema `0.1.0` を据え置き、判定結果や隙間包絡をJSONへ保存しない。
 
 ## Stored and Derived State
 
@@ -98,16 +98,16 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 3. `schemaVersion` が対応版か確認する。
 4. JSON Schemaで型、必須項目、追加項目、個数、値域を確認する。
 5. ID一意性、参照、許可向き、開口寸法、安全な整数合計を意味検証する。
-6. 配置判定を新しい一時状態に対して再計算する。
-7. 全検証と再計算の成功後にだけ、新しい案件状態へ一括置換する。
+6. one-shot module Workerで全候補コンテナの配置判定を新しい一時状態に対して再計算する。不適合・未確認は計算成功、判定不能・Worker失敗・不正応答は失敗とする。
+7. 全検証と再計算が成功し、読込開始後に現在Project参照とProject/scene入力generationが変わっていない場合だけ、新しい案件状態へ一括置換する。
 
-どの段階で失敗しても現在案件を保持し、ファイル名、秘密情報、入力全体をログへ出さず、利用者が修正できる理由を示す。
+どの段階で失敗しても現在案件、履歴、未保存入力を保持し、ファイル名、秘密情報、入力全体をログへ出さず、利用者が修正できる固定理由を示す。読込成功時は旧案件の履歴、draft、選択、camera、drag preview、Worker結果を再利用しない。
 
 実装は申告サイズと読取後のUTF-8実サイズをともに確認し、構造エラーを入力値や未知プロパティ名を反射しない安定したcode/pathへ正規化する。構造エラーは決定的な順序で重複を除き、最大50件を返す。書出しも明示的な保存対象だけへ射影した後、同じ構造・意味検証に合格した場合だけJSONを生成する。
 
 ## Module Boundaries
 
-以下は実装済み部分と計画部分を含む依存方向である。案件契約、取引的読込、入力編集UI、対象コンテナの物理制約集約と理由表示UIは実装済みだが、端末保存とJSON入出力UIは計画段階である。
+以下は実装済み部分と計画部分を含む依存方向である。案件契約、取引的読込、端末保存、JSON入出力、入力編集UI、対象コンテナの物理制約集約と理由表示UIは実装済みである。
 
 | Planned module | Responsibility | Forbidden dependencies |
 | --- | --- | --- |
@@ -116,9 +116,12 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計、計算可否を区別する総質量・耐荷重評価、対象コンテナへの配置抽出、境界、隙間、開口、支持、耐荷重の独立理由と集約状態、計算不能結果 | React、Three.js、I/O |
 | `application/project-import`、`application/project-command` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド | DOM、Three.jsオブジェクトの所有 |
 | `application/project-history` | 実装済み: 検証済みProject参照の最大100件履歴、stale base拒否、no-op除外、undo/redo、分岐時のredo破棄 | DOM、Three.jsオブジェクト、I/O、Projectの再検証 |
-| `persistence/project-json` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し。計画: File・端末保存アダプター | 3D描画、直接UI更新 |
+| `application/project-persistence` | 実装済み: 永続化用の検証済み直列化、読込失敗段階の固定code化、全候補preflight後だけの案件準備 | DOM、Three.jsオブジェクト、直接IndexedDB操作 |
+| `persistence/project-json`、`persistence/project-file` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し、標準File読込source、固定名Blob download | 3D描画、直接UI更新、案件名のファイル名反映 |
+| `persistence/project-store` | 実装済み: IndexedDB `current-project` 単一枠のtransaction完了後save、load、delete、未対応・open・read・write・delete失敗 | 自動保存、Project解釈、UI更新、外部通信 |
+| `persistence/project-import-preflight-client`、`workers/project-import-preflight` | 実装済み: one-shot module Workerで全候補を置換前に判定し、応答検証後に必ずWorkerを終了 | DOM、IndexedDB、同期fallback、理由の保存 |
 | `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置への純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointerによる床面方向drag・視点操作。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
-| `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認、非永続の3D候補・積荷選択、配置追加・整数座標・許可向き・取り外しフォーム、canvas直接操作と正確な移動・向きのキーボード対応フォームfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、案件履歴ボタン・ショートカット・状態通知・入力中lock。計画: 保存、JSON入出力 | 幾何・制約計算と正規入力変換の再実装 |
+| `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認、非永続の3D候補・積荷選択、配置追加・整数座標・許可向き・取り外しフォーム、canvas直接操作と正確な移動・向きのキーボード対応フォームfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、案件履歴ボタン・ショートカット・状態通知・入力中lock、手動端末保存・読込・削除、JSON入出力、固定code状態・削除focus管理 | 幾何・制約計算と正規入力変換の再実装 |
 | `workers` | 実装済み: 物理判定をメインスレッド外で評価し、集約状態と理由件数だけを初回応答し、要求された理由を25件ずつ返すローカルmodule Worker。計画: 後続の重い自動提案探索 | DOM、React状態の直接操作、外部通信 |
 
 実装済みの依存は、UIからapplicationとdomainの型へ、applicationからdomainとpersistenceの検証境界へ、persistenceからdomainへ向かう。scene adapterはdomainの整数mmからThree非依存の表示値を一方向に導出し、rendererはその表示値だけを受け取る。sceneのmesh transform、camera、候補・積荷選択をProjectへ戻さず、canvas dragは正規開始位置とpointer差分から純粋adapterで整数mm入力を作り、application commandを通す。読込ユースケースではapplicationがpersistence境界を呼び、入力編集ではapplication commandがraw draftを正規mm・gへ変換してSchema・意味検証を呼ぶ。domain関数は入力から新しい値または理由を返す純粋関数とし、引数を変更しない。
@@ -150,4 +153,4 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - 読込失敗時に既存状態が変わらないことを確認する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 
-[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、支持面矩形和集合の完全被覆・1 mm欠け・重複・外側clip・無効入力、床支持・完全一致Z接触・段積み可候補だけの支持合成、総質量の空・等値・1 g超過・safe integer・overflow、対象コンテナ抽出、境界違反のカスケード抑制、100%支持時だけの隙間例外、独立理由保持、安定した理由順・ID、幾何・耐荷重の計算不能、Worker集約・25件理由ページ・遅延応答破棄・手動再試行、非変異、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲、履歴の参照同一性・非変異・stale/no-op拒否・100件上限・分岐を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、物理理由の優先・併記・ページ表示・狭幅表示、1,000配置の実Worker応答性、案件CRUD・3D dragのundo/redo、入力中lock、native入力履歴の保護、WebGL非依存、狭幅表示を含む。端末保存に対する検証は引き続き必要である。
+[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、支持面矩形和集合の完全被覆・1 mm欠け・重複・外側clip・無効入力、床支持・完全一致Z接触・段積み可候補だけの支持合成、総質量の空・等値・1 g超過・safe integer・overflow、対象コンテナ抽出、境界違反のカスケード抑制、100%支持時だけの隙間例外、独立理由保持、安定した理由順・ID、幾何・耐荷重の計算不能、Worker集約・25件理由ページ・遅延応答破棄・手動再試行、非変異、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲、履歴の参照同一性・非変異・stale/no-op拒否・100件上限・分岐、File size/readと固定名、preflight応答・終了、IndexedDB未対応・open・blocked・abort・error・not-found・破損・delete・往復を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、物理理由の優先・併記・ページ表示・狭幅表示、1,000配置の実Worker応答性、案件CRUD・3D dragのundo/redo、入力中lock、native入力履歴の保護、実IndexedDB reload/delete、download/reimport、全JSON失敗段階、履歴barrier、遅延競合、削除focus、305/320/375px、1,000配置・100候補の実preflight Worker応答性を含む。
