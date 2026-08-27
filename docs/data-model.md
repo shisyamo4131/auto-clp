@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作は実装済みである。端末保存と利用者向けJSON入出力UI、undo/redoは未実装であり、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作は実装済みである。物理判定のUI表示、端末保存と利用者向けJSON入出力UI、undo/redoは未実装であり、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
 
-仕様版 `0.5.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `0.6.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -73,7 +73,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 - 認定された支持面との完全一致接触ではZ隙間を要求せず、支持を構成するX・Y投影重なりへ積荷間隙間を適用しない。支持成立は100%被覆、同一高さ、段積み可否で別途判定する。
 - 開口断面は従来どおり `cargoY + 2 × cY <= openingWidth`、`cargoZ + cZ <= openingHeight` とし、X隙間を使わない。配置後境界と搬入断面を混同しない。
 
-この意味はADR 0011で初めて確定した。物理判定、端末保存、利用者向けJSON入出力はまだ公開されていないためSchema `0.1.0` を据え置く。実装後は保存値から毎回再計算し、判定結果や隙間包絡をJSONへ保存しない。
+この意味はADR 0011で初めて確定した。純粋な物理判定は実装済みだが、UI、端末保存、利用者向けJSON入出力はまだ公開されていない。判定は保存値から毎回再計算する派生結果であり、JSONの形や意味を変えないためSchema `0.1.0` を据え置き、判定結果や隙間包絡をJSONへ保存しない。
 
 ## Stored and Derived State
 
@@ -105,13 +105,13 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 
 ## Module Boundaries
 
-以下は実装済み部分と計画部分を含む依存方向である。案件契約、取引的読込、入力編集UIは実装済みだが、物理制約の完全な再計算、端末保存、JSON入出力UIは計画段階である。
+以下は実装済み部分と計画部分を含む依存方向である。案件契約、取引的読込、入力編集UI、対象コンテナの物理制約集約は実装済みだが、判定結果のUI接続、端末保存、JSON入出力UIは計画段階である。
 
 | Planned module | Responsibility | Forbidden dependencies |
 | --- | --- | --- |
 | `domain/model` | 実装済み: 版、向き、寸法、隙間、積荷、候補、配置、案件のreadonly型 | React、Three.js、ブラウザ保存API |
-| `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間、矩形開口寸法と許可向き抽出、支持面のXY矩形和集合による100%被覆、床・完全一致Z接触・段積み可を合成する幾何支持。計画: 参照・対象ID・理由・支持隙間例外を含む高位判定 | UI、描画、永続化 |
-| `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計、計算可否を区別する総質量・耐荷重評価。計画: 対象コンテナへの配置抽出、境界、隙間、開口通過、支持、理由集約 | React、Three.js、I/O |
+| `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間、矩形開口寸法と許可向き抽出、支持面のXY矩形和集合による100%被覆、床・完全一致Z接触・段積み可を合成する幾何支持 | UI、描画、永続化 |
+| `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計、計算可否を区別する総質量・耐荷重評価、対象コンテナへの配置抽出、境界、隙間、開口、支持、耐荷重の独立理由と集約状態、計算不能結果 | React、Three.js、I/O |
 | `application/project-import`、`application/project-command` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド。計画: undo/redo | DOM、Three.jsオブジェクトの所有 |
 | `persistence/project-json` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し。計画: File・端末保存アダプター | 3D描画、直接UI更新 |
 | `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置への純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointerによる床面方向drag・視点操作。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
@@ -127,7 +127,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - `isPlacementWithinContainer(bounds, internalDimensionsMm)` — 実装済み。正体積AABBが閉区間のコンテナ内部に全て含まれるかを判定し、境界等値を合格とする。隙間は扱わない。
 - `hasPositiveVolumeOverlap(first, second)` — 実装済み。全3軸で正の長さを共有する場合だけ重なりとし、面・辺・角だけの接触は重なりとしない。隙間と支持接触は扱わない。
 - `isPlacementWithinContainerWithClearance(bounds, internalDimensionsMm, clearancesMm)` — 実装済み。生の包含を前提に、開口面・奥壁・Y両側壁・天井へ軸別隙間を片側ずつ要求し、床Zを例外とする。
-- `hasRequiredAxisClearance(first, second, clearancesMm)` — 実装済み。正体積の非支持ペアについて、少なくとも一つの分離軸の共有表面間距離が対応する隙間以上かを判定する。支持関係の識別と例外適用は呼出側の計画機能である。
+- `hasRequiredAxisClearance(first, second, clearancesMm)` — 実装済み。正体積の非支持ペアについて、少なくとも一つの分離軸の共有表面間距離が対応する隙間以上かを判定する。支持関係の識別と例外適用は `validatePlacementSet` が行う。
 - `fitsRectangularOpening(orientedDimensionsMm, openingMm, clearancesMm)` — 実装済み。Y隙間を左右2面分、Z隙間を床例外後の上側1面分だけ加え、向き適用後のY・Z断面が矩形開口へ寸法上収まるかを判定する。X寸法とX隙間は使わない。
 - `fittingOpeningOrientations(cargo, openingMm, clearancesMm)` — 実装済み。積荷の許可向きだけを入力順で評価し、矩形断面へ寸法上収まる向きの新しい配列を返す。経路状態と理由は扱わない。
 - `validateProjectReferences(project)` — 実装済み。ID、参照、単一配置、許可向き、開口と内部寸法、安全な質量合計を検証する。
@@ -135,12 +135,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - `evaluatePayloadCapacity(massesGrams, payloadCapacityGrams)` — 実装済み。非負safe integerの質量だけをoverflowなく合計し、計算可能なら総質量と耐荷重以内かを返す。等値は合格、超過は不合格とし、案件内の配置・参照選択と理由は扱わない。
 - `isRectangleFullyCoveredByUnion(target, coveringRectangles)` — 実装済み。safe integerの正面積XY矩形だけを受け、対象外をclipした支持矩形の和集合が対象矩形を100%覆うかを整数端点の走査で決定的に判定する。Z接触、段積み可否、対象ID、理由、隙間例外は扱わない。
 - `hasFullGeometricSupport(target, candidates)` — 実装済み。床面に接する正体積AABBを支持済みとし、床以外では段積み許可かつ上面Zが底面Zへ完全一致する候補だけのXY和集合が底面を100%覆うかを判定する。コンテナ境界、正体積重なり、参照、対象ID、理由、隙間例外、構造・安定性は扱わない。
-- `validateBounds(container, cargo, placement, clearances)` — 計画。開口面・奥壁・Y両側壁・天井へ片側ずつ軸別実距離を要求し、床Zを例外として積載空間境界を判定する。
-- `validateOverlap(placements, cargoes, clearances)` — 計画。正体積重なりを拒否し、非支持ペアはいずれか一つの分離軸で設定実距離を満たすか判定する。支持接触は別の合成規則で扱う。
-- `validateOpeningFit(container, cargo, clearances)` — 許可向きごとの矩形開口適合を判定する。
-- `validateSupport(placements, cargoes)` — 同一高さの100%幾何支持を判定する。
-- `validatePayload(container, placements, cargoes)` — 計画。対象コンテナへ配置された積荷を参照解決し、実装済み総質量評価へ渡して対象IDと理由を付ける。
-- `validatePlacementSet(project, containerId)` — 個別理由を保持した集約結果を返す。
+- `validatePlacementSet(project, containerId)` — 実装済み。対象コンテナの配置だけを参照解決し、境界、重なり、隙間、許可向きの開口寸法、100%幾何支持、耐荷重を決定的な順序で評価する。境界違反を座標理由として優先し、その違反だけを原因とする支持・隙間理由は連鎖させず、開口、耐荷重、完全支持時の構造・安定性未確認など独立理由は保持する。入力や計算が安全に評価できない場合は物理的不適合と混同せず `unavailable` を返す。
 
 各結果は対象ID、安定した理由コード、`valid`、`invalid`、`unverified` の状態を持つ。利用者向け文言はUI層で理由コードから生成する。
 
@@ -151,4 +146,4 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - 読込失敗時に既存状態が変わらないことを確認する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 
-[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、支持面矩形和集合の完全被覆・1 mm欠け・重複・外側clip・無効入力、床支持・完全一致Z接触・段積み可候補だけの支持合成、総質量の空・等値・1 g超過・safe integer・overflow、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、狭幅表示を含む。対象コンテナへの配置抽出、経路未確認状態、支持対象ID・理由コード・隙間例外を含む物理制約の集約とUI、undo/redo、端末保存に対する検証は引き続き必要である。
+[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、支持面矩形和集合の完全被覆・1 mm欠け・重複・外側clip・無効入力、床支持・完全一致Z接触・段積み可候補だけの支持合成、総質量の空・等値・1 g超過・safe integer・overflow、対象コンテナ抽出、境界違反のカスケード抑制、100%支持時だけの隙間例外、独立理由保持、安定した理由順・ID、幾何・耐荷重の計算不能、非変異、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、狭幅表示を含む。物理制約の理由表示UI、undo/redo、端末保存に対する検証は引き続き必要である。

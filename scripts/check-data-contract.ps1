@@ -11,6 +11,7 @@ $dataModelPath = Join-Path $resolvedProject 'docs/data-model.md'
 $decisionPath = Join-Path $resolvedProject 'docs/decisions/0009-versioned-project-data-contract.md'
 $coordinateDecisionPath = Join-Path $resolvedProject 'docs/decisions/0010-container-coordinate-and-placement-anchor.md'
 $clearanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0011-axis-clearance-semantics.md'
+$physicalValidationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0012-independent-physical-validation-diagnostics.md'
 
 foreach ($path in @(
     $schemaPath,
@@ -18,7 +19,8 @@ foreach ($path in @(
     $dataModelPath,
     $decisionPath,
     $coordinateDecisionPath,
-    $clearanceDecisionPath
+    $clearanceDecisionPath,
+    $physicalValidationDecisionPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
@@ -108,14 +110,15 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.5.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.6.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
     -not $dataModel.Contains('../schemas/project-0.1.0.schema.json') -or
     -not $dataModel.Contains('5 MiB（5,242,880 bytes）') -or
     -not $dataModel.Contains('decisions/0010-container-coordinate-and-placement-anchor.md') -or
-    -not $dataModel.Contains('decisions/0011-axis-clearance-semantics.md')) {
+    -not $dataModel.Contains('decisions/0011-axis-clearance-semantics.md') -or
+    -not $dataModel.Contains('decisions/0012-independent-physical-validation-diagnostics.md')) {
     throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
 }
 
@@ -156,6 +159,23 @@ foreach ($requiredText in @(
     }
 }
 
+$physicalValidationDecision = [IO.File]::ReadAllText($physicalValidationDecisionPath)
+if ($physicalValidationDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0012 does not have Accepted status.'
+}
+
+foreach ($requiredText in @(
+    '境界不適合を取り消さず',
+    '支持不足または隙間不足を連鎖させない',
+    '開口寸法と総耐荷重は配置座標境界から独立して評価',
+    '不適合時も独立して得た未確認理由を削除しない',
+    '判定結果は派生状態'
+)) {
+    if (-not $physicalValidationDecision.Contains($requiredText)) {
+        throw "ADR 0012 does not contain the approved physical validation contract text: $requiredText"
+    }
+}
+
 [pscustomobject]@{
     project_path = $resolvedProject
     schema_path = $schemaPath
@@ -172,4 +192,5 @@ foreach ($requiredText in @(
     decision_0009_accepted = $true
     coordinate_decision_0010_accepted = $true
     clearance_decision_0011_accepted = $true
+    physical_validation_decision_0012_accepted = $true
 }

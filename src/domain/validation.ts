@@ -1,9 +1,85 @@
-import type { Project } from "./model";
+import { ORIENTATIONS, type Project } from "./model";
+import {
+  fittingOpeningOrientations,
+  hasFullGeometricSupport,
+  hasPositiveVolumeOverlap,
+  hasRequiredAxisClearance,
+  isPlacementWithinContainer,
+  isPlacementWithinContainerWithClearance,
+  orientedDimensions,
+  placementBounds,
+  type GeometricSupportCandidateMm,
+  type PlacementBoundsMm,
+} from "./geometry";
 
 export interface ValidationIssue {
   readonly code: string;
   readonly path: string;
 }
+
+export type PhysicalValidationStatus = "valid" | "invalid" | "unverified";
+
+export type InvalidPhysicalReasonCode =
+  | "outside-container"
+  | "container-clearance-not-met"
+  | "positive-volume-overlap"
+  | "axis-clearance-not-met"
+  | "opening-no-fitting-orientation"
+  | "support-not-full"
+  | "payload-capacity-exceeded";
+
+export type UnverifiedPhysicalReasonCode =
+  | "opening-path-unverified"
+  | "structure-stability-unverified";
+
+export type PhysicalTarget =
+  | { readonly kind: "container"; readonly id: string }
+  | { readonly kind: "cargo"; readonly id: string };
+
+export type PhysicalValidationReason =
+  | {
+      readonly status: "invalid";
+      readonly code: InvalidPhysicalReasonCode;
+      readonly target: PhysicalTarget;
+      readonly relatedCargoIds: readonly string[];
+    }
+  | {
+      readonly status: "unverified";
+      readonly code: UnverifiedPhysicalReasonCode;
+      readonly target: PhysicalTarget;
+      readonly relatedCargoIds: readonly string[];
+    };
+
+export type PlacementSetUnavailableReason =
+  | {
+      readonly code: "physical.semantic-input-invalid";
+      readonly issues: readonly ValidationIssue[];
+    }
+  | {
+      readonly code: "physical.container-not-found";
+      readonly target: { readonly kind: "container"; readonly id: string };
+    }
+  | {
+      readonly code: "physical.payload-calculation-unavailable";
+      readonly target: { readonly kind: "container"; readonly id: string };
+    }
+  | {
+      readonly code: "physical.geometry-calculation-unavailable";
+      readonly target: { readonly kind: "container"; readonly id: string };
+    };
+
+export type PlacementSetValidationResult =
+  | {
+      readonly kind: "unavailable";
+      readonly containerId: string;
+      readonly reason: PlacementSetUnavailableReason;
+    }
+  | {
+      readonly kind: "evaluated";
+      readonly containerId: string;
+      readonly status: PhysicalValidationStatus;
+      readonly reasons: readonly PhysicalValidationReason[];
+    };
 
 export type SafeIntegerSumResult =
   | { readonly valid: true; readonly sum: number }
@@ -148,4 +224,441 @@ export function validateProjectReferences(project: Project): readonly Validation
   }
 
   return issues;
+}
+
+interface SelectedPlacementEvaluation {
+  readonly cargo: Project["cargoes"][number];
+  readonly bounds: PlacementBoundsMm;
+  readonly rawInside: boolean;
+}
+
+interface SelectedPlacementInput {
+  readonly cargo: Project["cargoes"][number];
+  readonly placement: Project["placements"][number];
+}
+
+interface SupportAssessment {
+  readonly full: boolean;
+  readonly contributorIds: readonly string[];
+}
+
+function isPositiveSafeInteger(value: number): boolean {
+  return Number.isSafeInteger(value) && value > 0;
+}
+
+function isNonnegativeSafeInteger(value: number): boolean {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+function hasCalculableGeometryInputs(
+  container: Project["containers"][number],
+  clearancesMm: Project["clearancesMm"],
+  selectedInputs: readonly SelectedPlacementInput[],
+): boolean {
+  const { internalDimensionsMm, openingMm } = container;
+  if (
+    !isPositiveSafeInteger(internalDimensionsMm.lengthMm) ||
+    !isPositiveSafeInteger(internalDimensionsMm.widthMm) ||
+    !isPositiveSafeInteger(internalDimensionsMm.heightMm) ||
+    !isPositiveSafeInteger(openingMm.widthMm) ||
+    !isPositiveSafeInteger(openingMm.heightMm) ||
+    !isNonnegativeSafeInteger(clearancesMm.xMm) ||
+    !isNonnegativeSafeInteger(clearancesMm.yMm) ||
+    !isNonnegativeSafeInteger(clearancesMm.zMm)
+  ) {
+    return false;
+  }
+
+  const doubledYClearance = clearancesMm.yMm * 2;
+  if (
+    !Number.isSafeInteger(doubledYClearance) ||
+    !Number.isSafeInteger(
+      internalDimensionsMm.lengthMm - clearancesMm.xMm,
+    ) ||
+    !Number.isSafeInteger(
+      internalDimensionsMm.widthMm - clearancesMm.yMm,
+    ) ||
+    !Number.isSafeInteger(
+      internalDimensionsMm.heightMm - clearancesMm.zMm,
+    )
+  ) {
+    return false;
+  }
+
+  for (const { cargo, placement } of selectedInputs) {
+    if (
+      !isPositiveSafeInteger(cargo.dimensionsMm.lengthMm) ||
+      !isPositiveSafeInteger(cargo.dimensionsMm.widthMm) ||
+      !isPositiveSafeInteger(cargo.dimensionsMm.heightMm) ||
+      cargo.allowedOrientations.length === 0 ||
+      !cargo.allowedOrientations.every((orientation) =>
+        ORIENTATIONS.includes(orientation),
+      ) ||
+      !ORIENTATIONS.includes(placement.orientation) ||
+      !Number.isSafeInteger(placement.positionMm.xMm) ||
+      !Number.isSafeInteger(placement.positionMm.yMm) ||
+      !Number.isSafeInteger(placement.positionMm.zMm)
+    ) {
+      return false;
+    }
+
+    const placedDimensions = orientedDimensions(cargo, placement.orientation);
+    if (
+      !Number.isSafeInteger(
+        placement.positionMm.xMm + placedDimensions.xMm,
+      ) ||
+      !Number.isSafeInteger(
+        placement.positionMm.yMm + placedDimensions.yMm,
+      ) ||
+      !Number.isSafeInteger(
+        placement.positionMm.zMm + placedDimensions.zMm,
+      )
+    ) {
+      return false;
+    }
+
+    for (const orientation of cargo.allowedOrientations) {
+      const dimensions = orientedDimensions(cargo, orientation);
+      if (
+        !Number.isSafeInteger(dimensions.yMm + doubledYClearance) ||
+        !Number.isSafeInteger(dimensions.zMm + clearancesMm.zMm)
+      ) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function compareIds(first: string, second: string): number {
+  return first < second ? -1 : first > second ? 1 : 0;
+}
+
+function sortedUniqueCargoIds(ids: readonly string[]): readonly string[] {
+  return [...new Set(ids)].sort(compareIds);
+}
+
+function hasPositiveXyProjectionOverlap(
+  first: PlacementBoundsMm,
+  second: PlacementBoundsMm,
+): boolean {
+  return (
+    first.min.xMm < second.max.xMm &&
+    second.min.xMm < first.max.xMm &&
+    first.min.yMm < second.max.yMm &&
+    second.min.yMm < first.max.yMm
+  );
+}
+
+function computeSupportAssessments(
+  selectedPlacements: readonly SelectedPlacementEvaluation[],
+): ReadonlyMap<string, SupportAssessment> {
+  const assessments = new Map<string, SupportAssessment>();
+
+  for (const target of selectedPlacements) {
+    if (target.bounds.min.zMm <= 0) {
+      continue;
+    }
+
+    const candidates = selectedPlacements.filter(
+      (candidate) => candidate.cargo.id !== target.cargo.id,
+    );
+    const contributorIds = sortedUniqueCargoIds(
+      candidates
+        .filter(
+          (candidate) =>
+            candidate.cargo.canSupportCargo &&
+            candidate.bounds.max.zMm === target.bounds.min.zMm &&
+            hasPositiveXyProjectionOverlap(candidate.bounds, target.bounds),
+        )
+        .map((candidate) => candidate.cargo.id),
+    );
+    const geometryCandidates = candidates.map<GeometricSupportCandidateMm>(
+      (candidate) => ({
+        bounds: candidate.bounds,
+        canSupportCargo: candidate.cargo.canSupportCargo,
+      }),
+    );
+
+    assessments.set(target.cargo.id, {
+      full: hasFullGeometricSupport(target.bounds, geometryCandidates),
+      contributorIds,
+    });
+  }
+
+  return assessments;
+}
+
+function isFullSupportContributor(
+  lower: SelectedPlacementEvaluation,
+  upper: SelectedPlacementEvaluation,
+  supportAssessments: ReadonlyMap<string, SupportAssessment>,
+): boolean {
+  const assessment = supportAssessments.get(upper.cargo.id);
+  return (
+    assessment?.full === true &&
+    assessment.contributorIds.includes(lower.cargo.id)
+  );
+}
+
+function physicalReasonKey(reason: PhysicalValidationReason): string {
+  return JSON.stringify([
+    reason.status,
+    reason.code,
+    reason.target.kind,
+    reason.target.id,
+    reason.relatedCargoIds,
+  ]);
+}
+
+function appendPhysicalReason(
+  reasons: PhysicalValidationReason[],
+  reasonKeys: Set<string>,
+  reason: PhysicalValidationReason,
+): void {
+  const key = physicalReasonKey(reason);
+  if (!reasonKeys.has(key)) {
+    reasonKeys.add(key);
+    reasons.push(reason);
+  }
+}
+
+export function validatePlacementSet(
+  project: Project,
+  containerId: string,
+): PlacementSetValidationResult {
+  const semanticIssues = validateProjectReferences(project).filter(
+    (issue) => issue.code !== "semantic.mass-sum-unsafe",
+  );
+  if (semanticIssues.length > 0) {
+    return {
+      kind: "unavailable",
+      containerId,
+      reason: {
+        code: "physical.semantic-input-invalid",
+        issues: semanticIssues,
+      },
+    };
+  }
+
+  const container = project.containers.find(
+    (candidate) => candidate.id === containerId,
+  );
+  if (container === undefined) {
+    return {
+      kind: "unavailable",
+      containerId,
+      reason: {
+        code: "physical.container-not-found",
+        target: { kind: "container", id: containerId },
+      },
+    };
+  }
+
+  const cargoesById = new Map(project.cargoes.map((cargo) => [cargo.id, cargo]));
+  const selectedInputs = project.placements
+    .filter((placement) => placement.containerId === containerId)
+    .map(
+      (placement) =>
+        ({
+          cargo: cargoesById.get(placement.cargoId)!,
+          placement,
+        }) satisfies SelectedPlacementInput,
+    )
+    .sort((first, second) => compareIds(first.cargo.id, second.cargo.id));
+
+  if (!hasCalculableGeometryInputs(container, project.clearancesMm, selectedInputs)) {
+    return {
+      kind: "unavailable",
+      containerId,
+      reason: {
+        code: "physical.geometry-calculation-unavailable",
+        target: { kind: "container", id: containerId },
+      },
+    };
+  }
+
+  const payload = evaluatePayloadCapacity(
+    selectedInputs.map(({ cargo }) => cargo.massGrams),
+    container.payloadCapacityGrams,
+  );
+  if (!payload.calculable) {
+    return {
+      kind: "unavailable",
+      containerId,
+      reason: {
+        code: "physical.payload-calculation-unavailable",
+        target: { kind: "container", id: containerId },
+      },
+    };
+  }
+
+  if (selectedInputs.length === 0) {
+    return {
+      kind: "evaluated",
+      containerId,
+      status: "valid",
+      reasons: [],
+    };
+  }
+
+  const selectedPlacements = selectedInputs.map(({ cargo, placement }) => {
+    const bounds = placementBounds(cargo, placement);
+    return {
+      cargo,
+      bounds,
+      rawInside: isPlacementWithinContainer(
+        bounds,
+        container.internalDimensionsMm,
+      ),
+    } satisfies SelectedPlacementEvaluation;
+  });
+  const supportAssessments = computeSupportAssessments(selectedPlacements);
+
+  const reasons: PhysicalValidationReason[] = [];
+  const reasonKeys = new Set<string>();
+  const appendReason = (reason: PhysicalValidationReason): void =>
+    appendPhysicalReason(reasons, reasonKeys, reason);
+
+  for (const selected of selectedPlacements) {
+    const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
+    if (!selected.rawInside) {
+      appendReason({
+        status: "invalid",
+        code: "outside-container",
+        target,
+        relatedCargoIds: [],
+      });
+    } else if (
+      !isPlacementWithinContainerWithClearance(
+        selected.bounds,
+        container.internalDimensionsMm,
+        project.clearancesMm,
+      )
+    ) {
+      appendReason({
+        status: "invalid",
+        code: "container-clearance-not-met",
+        target,
+        relatedCargoIds: [],
+      });
+    }
+  }
+
+  for (let firstIndex = 0; firstIndex < selectedPlacements.length; firstIndex += 1) {
+    const first = selectedPlacements[firstIndex]!;
+    for (
+      let secondIndex = firstIndex + 1;
+      secondIndex < selectedPlacements.length;
+      secondIndex += 1
+    ) {
+      const second = selectedPlacements[secondIndex]!;
+      if (!first.rawInside || !second.rawInside) {
+        continue;
+      }
+
+      const target: PhysicalTarget = { kind: "cargo", id: first.cargo.id };
+      const relatedCargoIds = [second.cargo.id];
+      if (hasPositiveVolumeOverlap(first.bounds, second.bounds)) {
+        appendReason({
+          status: "invalid",
+          code: "positive-volume-overlap",
+          target,
+          relatedCargoIds,
+        });
+      } else if (
+        !isFullSupportContributor(first, second, supportAssessments) &&
+        !isFullSupportContributor(second, first, supportAssessments) &&
+        !hasRequiredAxisClearance(
+          first.bounds,
+          second.bounds,
+          project.clearancesMm,
+        )
+      ) {
+        appendReason({
+          status: "invalid",
+          code: "axis-clearance-not-met",
+          target,
+          relatedCargoIds,
+        });
+      }
+    }
+  }
+
+  for (const selected of selectedPlacements) {
+    const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
+    const fittingOrientations = fittingOpeningOrientations(
+      selected.cargo,
+      container.openingMm,
+      project.clearancesMm,
+    );
+    if (fittingOrientations.length === 0) {
+      appendReason({
+        status: "invalid",
+        code: "opening-no-fitting-orientation",
+        target,
+        relatedCargoIds: [],
+      });
+    } else {
+      appendReason({
+        status: "unverified",
+        code: "opening-path-unverified",
+        target,
+        relatedCargoIds: [],
+      });
+    }
+  }
+
+  for (const selected of selectedPlacements) {
+    if (selected.bounds.min.zMm <= 0) {
+      continue;
+    }
+
+    const assessment = supportAssessments.get(selected.cargo.id)!;
+    const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
+
+    if (assessment.full) {
+      appendReason({
+        status: "unverified",
+        code: "structure-stability-unverified",
+        target,
+        relatedCargoIds: assessment.contributorIds,
+      });
+    } else if (selected.rawInside) {
+      appendReason({
+        status: "invalid",
+        code: "support-not-full",
+        target,
+        relatedCargoIds: assessment.contributorIds,
+      });
+    }
+  }
+
+  const selectedCargoIds = sortedUniqueCargoIds(
+    selectedPlacements.map((selected) => selected.cargo.id),
+  );
+  if (!payload.withinCapacity) {
+    appendReason({
+      status: "invalid",
+      code: "payload-capacity-exceeded",
+      target: { kind: "container", id: containerId },
+      relatedCargoIds: selectedCargoIds,
+    });
+  }
+
+  const status: PhysicalValidationStatus = reasons.some(
+    (reason) => reason.status === "invalid",
+  )
+    ? "invalid"
+    : reasons.some((reason) => reason.status === "unverified")
+      ? "unverified"
+      : "valid";
+
+  return {
+    kind: "evaluated",
+    containerId,
+    status,
+    reasons,
+  };
 }

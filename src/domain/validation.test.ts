@@ -5,7 +5,13 @@ import { PROJECT_SCHEMA_VERSION } from "./model";
 import {
   evaluatePayloadCapacity,
   safeIntegerSum,
+  validatePlacementSet,
   validateProjectReferences,
+} from "./validation";
+import type {
+  InvalidPhysicalReasonCode,
+  PhysicalValidationReason,
+  UnverifiedPhysicalReasonCode,
 } from "./validation";
 
 function richProject(): Project {
@@ -271,5 +277,858 @@ describe("validateProjectReferences", () => {
       { code: "semantic.unknown-cargo-reference", path: "/placements/2/cargoId" },
       { code: "semantic.unknown-container-reference", path: "/placements/2/containerId" },
     ]);
+  });
+});
+
+type CargoFixture = Project["cargoes"][number];
+type ContainerFixture = Project["containers"][number];
+type PlacementFixture = Project["placements"][number];
+
+function physicalCargo(
+  id: string,
+  overrides: Partial<CargoFixture> = {},
+): CargoFixture {
+  return {
+    id,
+    name: `匿名積荷-${id}`,
+    dimensionsMm: { lengthMm: 10, widthMm: 10, heightMm: 10 },
+    massGrams: 100,
+    canSupportCargo: true,
+    allowedOrientations: ["LWH"],
+    ...overrides,
+  };
+}
+
+function physicalContainer(
+  id = "container-1",
+  overrides: Partial<ContainerFixture> = {},
+): ContainerFixture {
+  return {
+    id,
+    name: `匿名コンテナ-${id}`,
+    internalDimensionsMm: { lengthMm: 100, widthMm: 100, heightMm: 100 },
+    openingMm: { widthMm: 100, heightMm: 100 },
+    payloadCapacityGrams: 1_000,
+    ...overrides,
+  };
+}
+
+function physicalPlacement(
+  cargoId: string,
+  overrides: Partial<PlacementFixture> = {},
+): PlacementFixture {
+  return {
+    cargoId,
+    containerId: "container-1",
+    positionMm: { xMm: 0, yMm: 0, zMm: 0 },
+    orientation: "LWH",
+    ...overrides,
+  };
+}
+
+function physicalProject(
+  options: {
+    readonly clearancesMm?: Project["clearancesMm"];
+    readonly cargoes?: Project["cargoes"];
+    readonly containers?: Project["containers"];
+    readonly placements?: Project["placements"];
+  } = {},
+): Project {
+  return {
+    schemaVersion: PROJECT_SCHEMA_VERSION,
+    projectId: "physical-project",
+    name: "匿名物理判定案件",
+    clearancesMm: options.clearancesMm ?? { xMm: 0, yMm: 0, zMm: 0 },
+    cargoes: options.cargoes ?? [],
+    containers: options.containers ?? [physicalContainer()],
+    placements: options.placements ?? [],
+  };
+}
+
+function invalidCargoReason(
+  code: InvalidPhysicalReasonCode,
+  id: string,
+  relatedCargoIds: readonly string[] = [],
+): PhysicalValidationReason {
+  return {
+    status: "invalid",
+    code,
+    target: { kind: "cargo", id },
+    relatedCargoIds,
+  };
+}
+
+function unverifiedCargoReason(
+  code: UnverifiedPhysicalReasonCode,
+  id: string,
+  relatedCargoIds: readonly string[] = [],
+): PhysicalValidationReason {
+  return {
+    status: "unverified",
+    code,
+    target: { kind: "cargo", id },
+    relatedCargoIds,
+  };
+}
+
+function payloadExceededReason(
+  containerId: string,
+  relatedCargoIds: readonly string[],
+): PhysicalValidationReason {
+  return {
+    status: "invalid",
+    code: "payload-capacity-exceeded",
+    target: { kind: "container", id: containerId },
+    relatedCargoIds,
+  };
+}
+
+describe("validatePlacementSet", () => {
+  const pathReason = (id: string): PhysicalValidationReason =>
+    unverifiedCargoReason("opening-path-unverified", id);
+
+  it("returns valid for an empty selected container", () => {
+    expect(validatePlacementSet(physicalProject(), "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "valid",
+      reasons: [],
+    });
+  });
+
+  it("returns unavailable when the selected container does not exist", () => {
+    expect(validatePlacementSet(physicalProject(), "missing-container")).toEqual({
+      kind: "unavailable",
+      containerId: "missing-container",
+      reason: {
+        code: "physical.container-not-found",
+        target: { kind: "container", id: "missing-container" },
+      },
+    });
+  });
+
+  it("returns unavailable with exact semantic issues before physical evaluation", () => {
+    const project = physicalProject({
+      placements: [physicalPlacement("missing-cargo")],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "unavailable",
+      containerId: "container-1",
+      reason: {
+        code: "physical.semantic-input-invalid",
+        issues: [
+          {
+            code: "semantic.unknown-cargo-reference",
+            path: "/placements/0/cargoId",
+          },
+        ],
+      },
+    });
+  });
+
+  it("isolates placements, pairs, and payload to the selected container", () => {
+    const cargoA = physicalCargo("cargo-a", { massGrams: 100 });
+    const cargoB = physicalCargo("cargo-b", { massGrams: 50_000 });
+    const project = physicalProject({
+      cargoes: [cargoA, cargoB],
+      containers: [
+        physicalContainer("container-1", { payloadCapacityGrams: 100 }),
+        physicalContainer("container-2", { payloadCapacityGrams: 100_000 }),
+      ],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-b", {
+          containerId: "container-2",
+          positionMm: { xMm: -1, yMm: -1, zMm: -1 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "unverified",
+      reasons: [pathReason("cargo-a")],
+    });
+  });
+
+  it.each([
+    {
+      label: "raw outside",
+      xMm: -1,
+      expectedCode: "outside-container" as const,
+    },
+    {
+      label: "raw inside but below clearance",
+      xMm: 4,
+      expectedCode: "container-clearance-not-met" as const,
+    },
+  ])("distinguishes $label boundary failure", ({ xMm, expectedCode }) => {
+    const project = physicalProject({
+      clearancesMm: { xMm: 5, yMm: 5, zMm: 5 },
+      cargoes: [physicalCargo("cargo-a")],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm, yMm: 5, zMm: 0 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason(expectedCode, "cargo-a"),
+        pathReason("cargo-a"),
+      ],
+    });
+  });
+
+  it("suppresses pair overlap diagnostics involving a raw-outside placement", () => {
+    const project = physicalProject({
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b")],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: -1, yMm: 0, zMm: 0 },
+        }),
+        physicalPlacement("cargo-b"),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("outside-container", "cargo-a"),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+      ],
+    });
+  });
+
+  it.each([
+    {
+      label: "1 mm positive overlap",
+      secondXmm: 14,
+      expectedStatus: "invalid",
+      pairReason: invalidCargoReason(
+        "positive-volume-overlap",
+        "cargo-a",
+        ["cargo-b"],
+      ),
+    },
+    {
+      label: "exact X clearance",
+      secondXmm: 20,
+      expectedStatus: "unverified",
+      pairReason: undefined,
+    },
+    {
+      label: "clearance short by 1 mm",
+      secondXmm: 19,
+      expectedStatus: "invalid",
+      pairReason: invalidCargoReason(
+        "axis-clearance-not-met",
+        "cargo-a",
+        ["cargo-b"],
+      ),
+    },
+  ] as const)("evaluates pairwise $label", ({ secondXmm, expectedStatus, pairReason }) => {
+    const project = physicalProject({
+      clearancesMm: { xMm: 5, yMm: 5, zMm: 5 },
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b")],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: 5, yMm: 5, zMm: 0 },
+        }),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: secondXmm, yMm: 5, zMm: 0 },
+        }),
+      ],
+    });
+    const reasons = [
+      ...(pairReason === undefined ? [] : [pairReason]),
+      pathReason("cargo-a"),
+      pathReason("cargo-b"),
+    ];
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: expectedStatus,
+      reasons,
+    });
+  });
+
+  it("recognizes exact support contact as a clearance exception", () => {
+    const project = physicalProject({
+      clearancesMm: { xMm: 5, yMm: 5, zMm: 5 },
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b")],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: 5, yMm: 5, zMm: 0 },
+        }),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 5, yMm: 5, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "unverified",
+      reasons: [
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        unverifiedCargoReason(
+          "structure-stability-unverified",
+          "cargo-b",
+          ["cargo-a"],
+        ),
+      ],
+    });
+  });
+
+  it("reports unsupported elevated cargo without candidates", () => {
+    const project = physicalProject({
+      clearancesMm: { xMm: 5, yMm: 5, zMm: 5 },
+      cargoes: [physicalCargo("cargo-b")],
+      placements: [
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 5, yMm: 5, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        pathReason("cargo-b"),
+        invalidCargoReason("support-not-full", "cargo-b"),
+      ],
+    });
+  });
+
+  it("keeps pair clearance and support failures for a permission-false contact", () => {
+    const project = physicalProject({
+      clearancesMm: { xMm: 5, yMm: 5, zMm: 5 },
+      cargoes: [
+        physicalCargo("cargo-a", { canSupportCargo: false }),
+        physicalCargo("cargo-b"),
+      ],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: 5, yMm: 5, zMm: 0 },
+        }),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 5, yMm: 5, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-b"]),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        invalidCargoReason("support-not-full", "cargo-b"),
+      ],
+    });
+  });
+
+  it("reports pair clearance and incomplete support for one permitted partial support", () => {
+    const cargoUpper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
+    });
+    const project = physicalProject({
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 5 },
+      cargoes: [physicalCargo("cargo-a"), cargoUpper],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-u"]),
+        pathReason("cargo-a"),
+        pathReason("cargo-u"),
+        invalidCargoReason("support-not-full", "cargo-u", ["cargo-a"]),
+      ],
+    });
+  });
+
+  it("grants pair clearance exceptions only when two halves fully support the target", () => {
+    const cargoUpper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
+    });
+    const project = physicalProject({
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 5 },
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b"), cargoUpper],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 10, yMm: 0, zMm: 0 },
+        }),
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "unverified",
+      reasons: [
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        pathReason("cargo-u"),
+        unverifiedCargoReason(
+          "structure-stability-unverified",
+          "cargo-u",
+          ["cargo-a", "cargo-b"],
+        ),
+      ],
+    });
+  });
+
+  it("keeps pair clearance and support failures for a representative 1 mm union hole", () => {
+    const cargoUpper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 21, widthMm: 10, heightMm: 10 },
+    });
+    const project = physicalProject({
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 5 },
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b"), cargoUpper],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 11, yMm: 0, zMm: 0 },
+        }),
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-u"]),
+        invalidCargoReason("axis-clearance-not-met", "cargo-b", ["cargo-u"]),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        pathReason("cargo-u"),
+        invalidCargoReason("support-not-full", "cargo-u", [
+          "cargo-a",
+          "cargo-b",
+        ]),
+      ],
+    });
+  });
+
+  it("uses a 1 mm below-floor cargo as exact geometric support without cascades", () => {
+    const project = physicalProject({
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b")],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: 0, yMm: 0, zMm: -1 },
+        }),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 9 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("outside-container", "cargo-a"),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        unverifiedCargoReason(
+          "structure-stability-unverified",
+          "cargo-b",
+          ["cargo-a"],
+        ),
+      ],
+    });
+  });
+
+  it("retains structure warning for a raw-outside elevated target that is fully supported", () => {
+    const cargoUpper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 10, widthMm: 10, heightMm: 91 },
+    });
+    const project = physicalProject({
+      cargoes: [physicalCargo("cargo-a"), cargoUpper],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("outside-container", "cargo-u"),
+        pathReason("cargo-a"),
+        pathReason("cargo-u"),
+        unverifiedCargoReason(
+          "structure-stability-unverified",
+          "cargo-u",
+          ["cargo-a"],
+        ),
+      ],
+    });
+  });
+
+  it("suppresses support failure for a raw-outside elevated target without support", () => {
+    const cargoUpper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 10, widthMm: 10, heightMm: 91 },
+    });
+    const project = physicalProject({
+      cargoes: [cargoUpper],
+      placements: [
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("outside-container", "cargo-u"),
+        pathReason("cargo-u"),
+      ],
+    });
+  });
+
+  it("uses any allowed orientation for opening fit, not only the placement orientation", () => {
+    const cargo = physicalCargo("cargo-a", {
+      dimensionsMm: { lengthMm: 20, widthMm: 35, heightMm: 10 },
+      allowedOrientations: ["LWH", "WLH"],
+    });
+    const project = physicalProject({
+      cargoes: [cargo],
+      containers: [
+        physicalContainer("container-1", {
+          openingMm: { widthMm: 25, heightMm: 100 },
+        }),
+      ],
+      placements: [physicalPlacement("cargo-a", { orientation: "LWH" })],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "unverified",
+      reasons: [pathReason("cargo-a")],
+    });
+  });
+
+  it("returns opening invalid without a path warning when no allowed orientation fits", () => {
+    const cargo = physicalCargo("cargo-a", {
+      dimensionsMm: { lengthMm: 20, widthMm: 35, heightMm: 10 },
+      allowedOrientations: ["LWH", "WLH"],
+    });
+    const project = physicalProject({
+      cargoes: [cargo],
+      containers: [
+        physicalContainer("container-1", {
+          openingMm: { widthMm: 19, heightMm: 100 },
+        }),
+      ],
+      placements: [physicalPlacement("cargo-a")],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [invalidCargoReason("opening-no-fitting-orientation", "cargo-a")],
+    });
+  });
+
+  it("accepts payload equality using only selected-container placements", () => {
+    const cargoes = [
+      physicalCargo("cargo-a", { massGrams: 100 }),
+      physicalCargo("cargo-b", { massGrams: 100 }),
+      physicalCargo("cargo-c", { massGrams: 50_000 }),
+    ];
+    const project = physicalProject({
+      cargoes,
+      containers: [
+        physicalContainer("container-1", { payloadCapacityGrams: 200 }),
+        physicalContainer("container-2", { payloadCapacityGrams: 100_000 }),
+      ],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 20, yMm: 0, zMm: 0 },
+        }),
+        physicalPlacement("cargo-c", { containerId: "container-2" }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "unverified",
+      reasons: [pathReason("cargo-a"), pathReason("cargo-b")],
+    });
+  });
+
+  it("reports payload over capacity after per-cargo reasons", () => {
+    const project = physicalProject({
+      cargoes: [
+        physicalCargo("cargo-a", { massGrams: 100 }),
+        physicalCargo("cargo-b", { massGrams: 100 }),
+      ],
+      containers: [
+        physicalContainer("container-1", { payloadCapacityGrams: 199 }),
+      ],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 20, yMm: 0, zMm: 0 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        payloadExceededReason("container-1", ["cargo-a", "cargo-b"]),
+      ],
+    });
+  });
+
+  it("retains independent invalid and unverified reasons with invalid precedence", () => {
+    const project = physicalProject({
+      cargoes: [
+        physicalCargo("cargo-a", { massGrams: 100 }),
+        physicalCargo("cargo-b", { massGrams: 100 }),
+      ],
+      containers: [
+        physicalContainer("container-1", { payloadCapacityGrams: 199 }),
+      ],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: 0, yMm: 0, zMm: -1 },
+        }),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 9 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("outside-container", "cargo-a"),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        unverifiedCargoReason(
+          "structure-stability-unverified",
+          "cargo-b",
+          ["cargo-a"],
+        ),
+        payloadExceededReason("container-1", ["cargo-a", "cargo-b"]),
+      ],
+    });
+  });
+
+  it("returns deterministic deduplicated ordering without mutating input", () => {
+    const project = physicalProject({
+      cargoes: [physicalCargo("cargo-b"), physicalCargo("cargo-a")],
+      placements: [
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 9, yMm: 0, zMm: 0 },
+        }),
+        physicalPlacement("cargo-a"),
+      ],
+    });
+    const original = structuredClone(project);
+    const expected = {
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("positive-volume-overlap", "cargo-a", ["cargo-b"]),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+      ],
+    };
+
+    expect(validatePlacementSet(project, "container-1")).toEqual(expected);
+    expect(validatePlacementSet(project, "container-1")).toEqual(expected);
+    expect(project).toEqual(original);
+  });
+
+  it.each([
+    {
+      label: "a fractional position",
+      project: physicalProject({
+        cargoes: [physicalCargo("cargo-a")],
+        placements: [
+          physicalPlacement("cargo-a", {
+            positionMm: { xMm: 0.5, yMm: 0, zMm: 0 },
+          }),
+        ],
+      }),
+    },
+    {
+      label: "an unsafe position",
+      project: physicalProject({
+        cargoes: [physicalCargo("cargo-a")],
+        placements: [
+          physicalPlacement("cargo-a", {
+            positionMm: {
+              xMm: Number.MAX_SAFE_INTEGER + 1,
+              yMm: 0,
+              zMm: 0,
+            },
+          }),
+        ],
+      }),
+    },
+    {
+      label: "an unsafe derived maximum",
+      project: physicalProject({
+        cargoes: [physicalCargo("cargo-a")],
+        placements: [
+          physicalPlacement("cargo-a", {
+            positionMm: {
+              xMm: Number.MAX_SAFE_INTEGER - 5,
+              yMm: 0,
+              zMm: 0,
+            },
+          }),
+        ],
+      }),
+    },
+    {
+      label: "a nonpositive cargo dimension",
+      project: physicalProject({
+        cargoes: [
+          physicalCargo("cargo-a", {
+            dimensionsMm: { lengthMm: 0, widthMm: 10, heightMm: 10 },
+          }),
+        ],
+        placements: [physicalPlacement("cargo-a")],
+      }),
+    },
+    {
+      label: "overflowing clearance arithmetic",
+      project: physicalProject({
+        clearancesMm: {
+          xMm: 0,
+          yMm: Number.MAX_SAFE_INTEGER,
+          zMm: 0,
+        },
+        cargoes: [physicalCargo("cargo-a")],
+        placements: [physicalPlacement("cargo-a")],
+      }),
+    },
+    {
+      label: "an invalid opening dimension",
+      project: physicalProject({
+        cargoes: [physicalCargo("cargo-a")],
+        containers: [
+          physicalContainer("container-1", {
+            openingMm: { widthMm: 0, heightMm: 100 },
+          }),
+        ],
+        placements: [physicalPlacement("cargo-a")],
+      }),
+    },
+  ])("returns geometry unavailable for $label without mutation", ({ project }) => {
+    const original = structuredClone(project);
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "unavailable",
+      containerId: "container-1",
+      reason: {
+        code: "physical.geometry-calculation-unavailable",
+        target: { kind: "container", id: "container-1" },
+      },
+    });
+    expect(project).toEqual(original);
+  });
+
+  it.each([
+    {
+      label: "negative capacity",
+      project: physicalProject({
+        cargoes: [physicalCargo("cargo-a")],
+        containers: [
+          physicalContainer("container-1", { payloadCapacityGrams: -1 }),
+        ],
+        placements: [physicalPlacement("cargo-a")],
+      }),
+    },
+    {
+      label: "negative selected mass",
+      project: physicalProject({
+        cargoes: [physicalCargo("cargo-a", { massGrams: -1 })],
+        placements: [physicalPlacement("cargo-a")],
+      }),
+    },
+    {
+      label: "selected mass sum overflow",
+      project: physicalProject({
+        cargoes: [
+          physicalCargo("cargo-a", { massGrams: Number.MAX_SAFE_INTEGER }),
+          physicalCargo("cargo-b", { massGrams: 1 }),
+        ],
+        placements: [
+          physicalPlacement("cargo-a"),
+          physicalPlacement("cargo-b", {
+            positionMm: { xMm: 20, yMm: 0, zMm: 0 },
+          }),
+        ],
+      }),
+    },
+  ])("returns payload unavailable for $label", ({ project }) => {
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "unavailable",
+      containerId: "container-1",
+      reason: {
+        code: "physical.payload-calculation-unavailable",
+        target: { kind: "container", id: "container-1" },
+      },
+    });
   });
 });
