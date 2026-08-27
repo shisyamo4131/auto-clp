@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Project } from "../domain/model";
-import type { AutomaticProposalSessionContextReader } from "./automatic-proposal-session";
+import type {
+  AutomaticProposalApplyHandler,
+  AutomaticProposalSessionContextReader,
+} from "./automatic-proposal-session";
 import {
   AUTOMATIC_PROPOSAL_VIEW_PAGE_SIZE,
   automaticProposalView,
@@ -14,6 +17,7 @@ export interface AutomaticProposalPanelProps {
   readonly interactionGeneration: number;
   readonly startBlocked: boolean;
   readonly readContext: AutomaticProposalSessionContextReader;
+  readonly applyProposal: AutomaticProposalApplyHandler;
 }
 
 interface PageSelection {
@@ -69,12 +73,14 @@ export function AutomaticProposalPanel({
   interactionGeneration,
   startBlocked,
   readContext,
+  applyProposal,
 }: AutomaticProposalPanelProps) {
-  const { cancel, retry, snapshot, start } = useAutomaticProposalSession({
+  const { apply, cancel, retry, snapshot, start } = useAutomaticProposalSession({
     project,
     interactionGeneration,
     startBlocked,
     readContext,
+    applyProposal,
   });
   const readyIdentity = snapshot.phase === "ready" ? snapshot.identity : -1;
   const [pageSelection, setPageSelection] = useState<PageSelection>({
@@ -83,6 +89,10 @@ export function AutomaticProposalPanel({
     placementOffset: 0,
     unverifiedOffset: 0,
   });
+  const [confirmationIdentity, setConfirmationIdentity] = useState<number>();
+  const applyButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const summaryRef = useRef<HTMLParagraphElement>(null);
   const offsets =
     pageSelection.identity === readyIdentity
       ? pageSelection
@@ -101,6 +111,28 @@ export function AutomaticProposalPanel({
       }),
     [offsets.candidateOffset, offsets.placementOffset, offsets.unverifiedOffset, project, snapshot],
   );
+  const confirmationOpen =
+    snapshot.phase === "ready" &&
+    view.isApplicablePreview &&
+    confirmationIdentity === snapshot.identity &&
+    !startBlocked;
+  const applyTerminal =
+    snapshot.phase === "applied" ||
+    snapshot.phase === "unchanged" ||
+    snapshot.phase === "apply-failed" ||
+    snapshot.phase === "blocked";
+
+  useEffect(() => {
+    if (confirmationOpen) {
+      confirmButtonRef.current?.focus();
+    }
+  }, [confirmationOpen]);
+
+  useEffect(() => {
+    if (applyTerminal) {
+      summaryRef.current?.focus();
+    }
+  }, [applyTerminal]);
   const updateOffset = (
     key: "candidateOffset" | "placementOffset" | "unverifiedOffset",
     offset: number,
@@ -132,7 +164,7 @@ export function AutomaticProposalPanel({
     <section
       className="automatic-proposal"
       aria-labelledby="automatic-proposal-title"
-      aria-busy={snapshot.phase === "running"}
+      aria-busy={snapshot.phase === "running" || snapshot.phase === "applying"}
       data-automatic-proposal-phase={view.phase}
     >
       <div className="automatic-proposal__heading">
@@ -148,9 +180,11 @@ export function AutomaticProposalPanel({
       </div>
 
       <p
+        ref={summaryRef}
         className="automatic-proposal__summary"
         aria-live="polite"
         aria-atomic="true"
+        tabIndex={applyTerminal ? -1 : undefined}
       >
         {view.summary}
       </p>
@@ -174,6 +208,8 @@ export function AutomaticProposalPanel({
           </button>
         ) : null}
         {snapshot.phase === "failed" ||
+        snapshot.phase === "apply-failed" ||
+        snapshot.phase === "blocked" ||
         snapshot.phase === "cancelled" ||
         snapshot.phase === "stale" ? (
           <button
@@ -186,11 +222,77 @@ export function AutomaticProposalPanel({
             現在の案件で再試行
           </button>
         ) : null}
+        {snapshot.phase === "ready" &&
+        view.isApplicablePreview &&
+        !confirmationOpen ? (
+          <button
+            ref={applyButtonRef}
+            type="button"
+            className="primary-button"
+            disabled={startBlocked}
+            aria-describedby={
+              startBlocked ? "automatic-proposal-blocked" : undefined
+            }
+            onClick={() => setConfirmationIdentity(snapshot.identity)}
+          >
+            提案を適用
+          </button>
+        ) : null}
       </div>
       {startBlocked && snapshot.phase !== "running" ? (
         <p id="automatic-proposal-blocked" className="automatic-proposal__blocked">
           未保存入力、削除確認、3D移動、または保存処理を完了してから開始してください。
         </p>
+      ) : null}
+
+      {confirmationOpen ? (
+        <div
+          key={snapshot.identity}
+          className="confirm-panel automatic-proposal__confirmation"
+          role="alert"
+        >
+          <strong>提案を案件へ一括適用しますか？</strong>
+          <p>
+            {project.placements.length > 0
+              ? `現在の配置${project.placements.length}件を、${view.selectedContainerLabel ?? "提案候補"}への提案${view.metrics.proposalPlacementCount}件で一括置換します。`
+              : `${view.selectedContainerLabel ?? "提案候補"}への提案${view.metrics.proposalPlacementCount}件を追加します。`}
+            配置が変わる場合は、1回の取り消しで元へ戻せます。
+          </p>
+          {snapshot.result.status === "complete-with-cutoff" ? (
+            <p className="warning-copy">
+              より優先される候補の探索が上限に達したため、この案が目的関数上の最良とは確認できません。
+            </p>
+          ) : null}
+          {(view.metrics.unverifiedCount ?? 0) > 0 ? (
+            <p className="warning-copy">
+              未確認事項が{view.metrics.unverifiedCount}件あります。適用前に理由と安全上の制限を確認してください。
+            </p>
+          ) : null}
+          <div className="button-row">
+            <button
+              ref={confirmButtonRef}
+              type="button"
+              className="primary-button"
+              onClick={() => {
+                const identity = snapshot.identity;
+                setConfirmationIdentity(undefined);
+                apply(identity);
+              }}
+            >
+              提案を適用
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setConfirmationIdentity(undefined);
+                queueMicrotask(() => applyButtonRef.current?.focus());
+              }}
+            >
+              適用をやめる
+            </button>
+          </div>
+        </div>
       ) : null}
 
       {snapshot.phase === "ready" ? (

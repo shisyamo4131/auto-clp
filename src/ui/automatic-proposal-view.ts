@@ -70,6 +70,11 @@ export interface AutomaticProposalView {
     | "idle"
     | "running"
     | "ready"
+    | "applying"
+    | "applied"
+    | "unchanged"
+    | "apply-failed"
+    | "blocked"
     | "failed"
     | "cancelled"
     | "stale";
@@ -221,6 +226,71 @@ function genericFailure(project: Project): AutomaticProposalView {
     canCancel: false,
     canRetry: true,
   });
+}
+
+function applyFailure(project: Project): AutomaticProposalView {
+  return baseView(project, {
+    phase: "apply-failed",
+    tone: "error",
+    badge: "適用せず",
+    summary:
+      "提案を再検証できなかったため適用しませんでした。案件は変更していません。",
+    detail: "現在の案件で探索し直してください。",
+    canStart: false,
+    canCancel: false,
+    canRetry: true,
+  });
+}
+
+function completedApplyView(
+  snapshot: Extract<
+    AutomaticProposalSessionSnapshot,
+    { readonly phase: "applied" | "unchanged" }
+  >,
+  project: Project,
+): AutomaticProposalView {
+  if (snapshot.currentProject !== project) {
+    return baseView(project, {
+      phase: "idle",
+      tone: "neutral",
+      badge: "未実行",
+      summary: "自動提案はまだ実行していません。",
+      detail: "現在の案件を変更せず、別処理で完全案を探索します。",
+      canStart: true,
+      canCancel: false,
+      canRetry: false,
+    });
+  }
+  const container = project.containers.find(
+    ({ id }) => id === snapshot.summary.containerId,
+  );
+  if (container === undefined) {
+    return applyFailure(project);
+  }
+  const applied = snapshot.phase === "applied";
+  return {
+    ...baseView(project, {
+      phase: snapshot.phase,
+      tone: applied ? "success" : "neutral",
+      badge: applied ? "適用済み" : "変更なし",
+      summary: applied
+        ? `候補${container.name} (${container.id})へ${snapshot.summary.placementCount}件適用、1回の取り消しで元へ戻せます。`
+        : "提案は現在の配置と同じため、案件と操作履歴は変更していません。",
+      detail:
+        snapshot.summary.unverifiedReasonCount > 0
+          ? `未確認事項${snapshot.summary.unverifiedReasonCount}件を保持しています。安全上の制限を再確認してください。`
+          : "提案の適用後も、安全上の制限を確認してください。",
+      canStart: false,
+      canCancel: false,
+      canRetry: false,
+    }),
+    selectedContainerLabel: `${container.name} (${container.id})`,
+    metrics: {
+      currentPlacementCount: project.placements.length,
+      proposalPlacementCount: snapshot.summary.placementCount,
+      unverifiedCount: snapshot.summary.unverifiedReasonCount,
+    },
+  };
 }
 
 function resultMatchesProject(
@@ -408,8 +478,38 @@ export function automaticProposalView(
       canRetry: false,
     });
   }
+  if (snapshot.phase === "applying") {
+    return baseView(sourceProject, {
+      phase: "applying",
+      tone: "progress",
+      badge: "適用中",
+      summary: "提案を現在の案件へ一括適用しています。",
+      detail: "適用結果を確認しています。",
+      canStart: false,
+      canCancel: false,
+      canRetry: false,
+    });
+  }
+  if (snapshot.phase === "applied" || snapshot.phase === "unchanged") {
+    return completedApplyView(snapshot, sourceProject);
+  }
   if (snapshot.phase === "failed") {
     return genericFailure(sourceProject);
+  }
+  if (snapshot.phase === "apply-failed") {
+    return applyFailure(sourceProject);
+  }
+  if (snapshot.phase === "blocked") {
+    return baseView(sourceProject, {
+      phase: "blocked",
+      tone: "warning",
+      badge: "適用保留",
+      summary: "入力または別の操作中だったため、提案を適用しませんでした。",
+      detail: "現在の案件で自動提案を実行し直してください。",
+      canStart: true,
+      canCancel: false,
+      canRetry: true,
+    });
   }
   if (snapshot.phase === "cancelled") {
     return baseView(sourceProject, {

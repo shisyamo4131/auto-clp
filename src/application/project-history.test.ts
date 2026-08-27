@@ -375,4 +375,42 @@ describe("project history", () => {
     expect(redo.state.present).toBe(after);
     expect(redo.state.future).toEqual([]);
   });
+
+  it("treats automatic proposal apply as one capped undo and redo action", () => {
+    const initial = projectFixture("適用前");
+    let state = createProjectHistory(initial);
+    const projects = [initial];
+    for (let index = 1; index <= PROJECT_HISTORY_LIMIT + 1; index += 1) {
+      const next = nextProject(state.present, `適用${index}`);
+      projects.push(next);
+      state = commit(state, next, "automatic-proposal.apply");
+    }
+
+    expect(state.past).toHaveLength(PROJECT_HISTORY_LIMIT);
+    expect(state.past[0]).toEqual({
+      project: projects[1],
+      action: "automatic-proposal.apply",
+    });
+    const undone = undoProjectHistory(state);
+    expect(undone).toMatchObject({
+      ok: true,
+      changed: true,
+      action: "automatic-proposal.apply",
+    });
+    if (!undone.ok || !undone.changed) {
+      throw new Error("Expected automatic proposal undo");
+    }
+    expect(undone.state.present).toBe(projects[100]);
+
+    const redone = redoProjectHistory(undone.state);
+    expect(redone).toMatchObject({
+      ok: true,
+      changed: true,
+      action: "automatic-proposal.apply",
+    });
+    if (!redone.ok || !redone.changed) {
+      throw new Error("Expected automatic proposal redo");
+    }
+    expect(redone.state.present).toBe(projects[101]);
+  });
 });

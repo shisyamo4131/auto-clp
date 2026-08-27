@@ -1,5 +1,6 @@
 import type { AutomaticProposalResult } from "../domain/automatic-proposal";
 import type { Project } from "../domain/model";
+import type { AutomaticProposalApplySummary } from "../application/automatic-proposal-apply";
 import {
   startAutomaticProposalWorker,
   type AutomaticProposalWorkerClientFailureCode,
@@ -26,6 +27,39 @@ interface AutomaticProposalSessionSource {
   readonly identity: number;
 }
 
+export interface AutomaticProposalApplyRequest
+  extends AutomaticProposalSessionSource {
+  readonly result: AutomaticProposalResult;
+}
+
+export type AutomaticProposalApplyOutcome =
+  | {
+      readonly kind: "changed";
+      readonly project: Project;
+      readonly interactionGeneration: number;
+      readonly summary: AutomaticProposalApplySummary;
+    }
+  | {
+      readonly kind: "unchanged";
+      readonly project: Project;
+      readonly interactionGeneration: number;
+      readonly summary: AutomaticProposalApplySummary;
+    }
+  | { readonly kind: "stale" }
+  | { readonly kind: "blocked" }
+  | { readonly kind: "failed" };
+
+export type AutomaticProposalApplyHandler = (
+  request: AutomaticProposalApplyRequest,
+) => AutomaticProposalApplyOutcome;
+
+interface AutomaticProposalAppliedSource {
+  readonly currentProject: Project;
+  readonly interactionGeneration: number;
+  readonly identity: number;
+  readonly summary: AutomaticProposalApplySummary;
+}
+
 export type AutomaticProposalSessionFailureCode =
   | AutomaticProposalWorkerClientFailureCode
   | "automatic-proposal.session-start-failed";
@@ -37,10 +71,15 @@ export type AutomaticProposalSessionSnapshot =
       readonly phase: "ready";
       readonly result: AutomaticProposalResult;
     })
+  | (AutomaticProposalSessionSource & { readonly phase: "applying" })
+  | (AutomaticProposalAppliedSource & { readonly phase: "applied" })
+  | (AutomaticProposalAppliedSource & { readonly phase: "unchanged" })
   | {
       readonly phase: "failed";
       readonly code: AutomaticProposalSessionFailureCode;
     }
+  | { readonly phase: "apply-failed" }
+  | { readonly phase: "blocked" }
   | { readonly phase: "cancelled" }
   | { readonly phase: "stale" };
 
@@ -50,6 +89,7 @@ export interface AutomaticProposalSessionController {
   start(): boolean;
   retry(): boolean;
   cancel(): void;
+  apply(identity: number): boolean;
   sync(): void;
   dispose(): void;
 }
@@ -57,6 +97,7 @@ export interface AutomaticProposalSessionController {
 export interface AutomaticProposalSessionOptions {
   readonly readContext: AutomaticProposalSessionContextReader;
   readonly startWorker?: AutomaticProposalWorkerStarter;
+  readonly applyProposal?: AutomaticProposalApplyHandler;
 }
 
 interface ActiveAutomaticProposalRequest extends AutomaticProposalSessionSource {
@@ -241,11 +282,90 @@ export function createAutomaticProposalSession(
     stopBeforeEmit(handle, { phase: "cancelled" });
   };
 
-  const sync = () => {
+  const apply = (identity: number): boolean => {
     if (
       disposed ||
-      (snapshot.phase !== "running" && snapshot.phase !== "ready")
+      snapshot.phase !== "ready" ||
+      snapshot.identity !== identity
     ) {
+      return false;
+    }
+    const ready = snapshot;
+    const context = currentContext();
+    if (context === undefined) {
+      emit({ phase: "apply-failed" });
+      return false;
+    }
+    if (context.startBlocked) {
+      emit({ phase: "blocked" });
+      return false;
+    }
+    if (!matchesContext(ready, context)) {
+      emit({ phase: "stale" });
+      return false;
+    }
+
+    try {
+      emit({
+        phase: "applying",
+        sourceProject: ready.sourceProject,
+        interactionGeneration: ready.interactionGeneration,
+        identity: ready.identity,
+      });
+    } catch {
+      // The ready identity is already claimed; subscriber failures cannot retry it.
+    }
+
+    let outcome: AutomaticProposalApplyOutcome;
+    try {
+      outcome =
+        options.applyProposal?.({
+          sourceProject: ready.sourceProject,
+          interactionGeneration: ready.interactionGeneration,
+          identity: ready.identity,
+          result: ready.result,
+        }) ?? { kind: "failed" };
+    } catch {
+      outcome = { kind: "failed" };
+    }
+    if (outcome.kind === "stale") {
+      emit({ phase: "stale" });
+      return false;
+    }
+    if (outcome.kind === "blocked") {
+      emit({ phase: "blocked" });
+      return false;
+    }
+    if (outcome.kind === "failed") {
+      emit({ phase: "apply-failed" });
+      return false;
+    }
+    emit({
+      phase: outcome.kind === "changed" ? "applied" : "unchanged",
+      currentProject: outcome.project,
+      interactionGeneration: outcome.interactionGeneration,
+      identity: ready.identity,
+      summary: { ...outcome.summary },
+    });
+    return true;
+  };
+
+  const sync = () => {
+    if (disposed) {
+      return;
+    }
+    if (snapshot.phase === "applied" || snapshot.phase === "unchanged") {
+      const context = currentContext();
+      if (
+        context === undefined ||
+        snapshot.currentProject !== context.project ||
+        snapshot.interactionGeneration !== context.interactionGeneration
+      ) {
+        emit({ phase: "idle" });
+      }
+      return;
+    }
+    if (snapshot.phase !== "running" && snapshot.phase !== "ready") {
       return;
     }
     const context = currentContext();
@@ -272,6 +392,7 @@ export function createAutomaticProposalSession(
     start,
     retry: start,
     cancel,
+    apply,
     sync,
     dispose() {
       if (disposed) {

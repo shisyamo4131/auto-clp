@@ -13,7 +13,8 @@ export type ProjectHistoryAction =
   | "placement.add"
   | "placement.update"
   | "placement.delete"
-  | "placement.drag-xy";
+  | "placement.drag-xy"
+  | "automatic-proposal.apply";
 
 export interface ProjectHistoryFrame {
   readonly project: Project;

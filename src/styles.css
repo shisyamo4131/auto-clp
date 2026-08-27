@@ -418,6 +418,22 @@ h1 {
   min-width: 0;
 }
 
+.automatic-proposal__confirmation {
+  min-width: 0;
+}
+
+.automatic-proposal__confirmation > strong,
+.automatic-proposal__confirmation > p {
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.automatic-proposal__confirmation .button-row {
+  margin-top: 1rem;
+}
+
 .file-input-button {
   position: relative;
   display: inline-flex;

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Project } from "../domain/model";
 import {
   createAutomaticProposalSession,
+  type AutomaticProposalApplyHandler,
   type AutomaticProposalSessionContextReader,
   type AutomaticProposalSessionController,
   type AutomaticProposalSessionSnapshot,
@@ -13,6 +14,7 @@ export interface UseAutomaticProposalSessionInput {
   readonly interactionGeneration: number;
   readonly startBlocked: boolean;
   readonly readContext: AutomaticProposalSessionContextReader;
+  readonly applyProposal: AutomaticProposalApplyHandler;
 }
 
 export interface AutomaticProposalSessionBinding {
@@ -20,6 +22,7 @@ export interface AutomaticProposalSessionBinding {
   readonly start: () => boolean;
   readonly retry: () => boolean;
   readonly cancel: () => void;
+  readonly apply: (identity: number) => boolean;
 }
 
 export function useAutomaticProposalSession({
@@ -27,9 +30,10 @@ export function useAutomaticProposalSession({
   interactionGeneration,
   startBlocked,
   readContext,
+  applyProposal,
 }: UseAutomaticProposalSessionInput): AutomaticProposalSessionBinding {
   const [session] = useState<AutomaticProposalSessionController>(() =>
-    createAutomaticProposalSession({ readContext }),
+    createAutomaticProposalSession({ readContext, applyProposal }),
   );
   const snapshot = useSyncExternalStore(
     session.subscribe,
@@ -37,10 +41,16 @@ export function useAutomaticProposalSession({
     session.getSnapshot,
   );
   const visibleSnapshot =
-    (snapshot.phase === "running" || snapshot.phase === "ready") &&
+    (snapshot.phase === "running" ||
+      snapshot.phase === "ready" ||
+      snapshot.phase === "applying") &&
     (snapshot.sourceProject !== project ||
       snapshot.interactionGeneration !== interactionGeneration)
       ? ({ phase: "stale" } as const)
+      : (snapshot.phase === "applied" || snapshot.phase === "unchanged") &&
+          (snapshot.currentProject !== project ||
+            snapshot.interactionGeneration !== interactionGeneration)
+        ? ({ phase: "idle" } as const)
       : snapshot;
   const lifecycleRef = useRef(0);
 
@@ -66,5 +76,6 @@ export function useAutomaticProposalSession({
     start: session.start,
     retry: session.retry,
     cancel: session.cancel,
+    apply: session.apply,
   };
 }

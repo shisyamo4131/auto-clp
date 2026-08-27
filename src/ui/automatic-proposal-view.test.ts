@@ -603,3 +603,116 @@ describe("automaticProposalView pagination and purity", () => {
     expect(pages).toEqual({ candidateOffset: 0, placementOffset: 0, unverifiedOffset: 0 });
   });
 });
+
+describe("automaticProposalView apply phases", () => {
+  const summary = {
+    containerId: "container-b",
+    placementCount: 2,
+    replacedPlacementCount: 1,
+    unverifiedReasonCount: 3,
+  } as const;
+
+  it.each([
+    [
+      "applying",
+      {
+        phase: "applying",
+        sourceProject: projectFixture(),
+        interactionGeneration: 1,
+        identity: 1,
+      },
+      ["適用中", "提案を現在の案件へ一括適用しています。", "progress"],
+    ],
+    [
+      "apply-failed",
+      { phase: "apply-failed" },
+      [
+        "適用せず",
+        "提案を再検証できなかったため適用しませんでした。案件は変更していません。",
+        "error",
+      ],
+    ],
+    [
+      "blocked",
+      { phase: "blocked" },
+      [
+        "適用保留",
+        "入力または別の操作中だったため、提案を適用しませんでした。",
+        "warning",
+      ],
+    ],
+  ] as const)("maps %s to fixed non-reflective copy", (_label, snapshot, expected) => {
+    const project = projectFixture({ name: "marker-sensitive-name" });
+
+    const view = automaticProposalView(
+      snapshot as AutomaticProposalSessionSnapshot,
+      project,
+    );
+
+    expect([view.badge, view.summary, view.tone]).toEqual(expected);
+    expect(JSON.stringify(view)).not.toContain("marker-sensitive-name");
+  });
+
+  it.each([
+    [
+      "applied",
+      "適用済み",
+      "候補anonymous-container-b (container-b)へ2件適用、1回の取り消しで元へ戻せます。",
+      "success",
+    ],
+    [
+      "unchanged",
+      "変更なし",
+      "提案は現在の配置と同じため、案件と操作履歴は変更していません。",
+      "neutral",
+    ],
+  ] as const)("maps terminal %s with confirmation-relevant summary only", (phase, badge, copy, tone) => {
+    const project = projectFixture();
+    const snapshot = {
+      phase,
+      currentProject: project,
+      interactionGeneration: 2,
+      identity: 7,
+      summary,
+    } as AutomaticProposalSessionSnapshot;
+
+    const view = automaticProposalView(snapshot, project);
+
+    expect(view).toMatchObject({
+      phase,
+      badge,
+      summary: copy,
+      tone,
+      detail: "未確認事項3件を保持しています。安全上の制限を再確認してください。",
+      selectedContainerLabel: "anonymous-container-b (container-b)",
+      metrics: {
+        currentPlacementCount: project.placements.length,
+        proposalPlacementCount: 2,
+        unverifiedCount: 3,
+      },
+      isApplicablePreview: false,
+    });
+    expect(JSON.stringify(view)).not.toContain("algorithmVersion");
+  });
+
+  it("falls back to fixed apply failure when the applied container disappeared", () => {
+    const project = projectFixture({ containers: [container("container-a")] });
+
+    const view = automaticProposalView(
+      {
+        phase: "applied",
+        currentProject: project,
+        interactionGeneration: 1,
+        identity: 1,
+        summary,
+      },
+      project,
+    );
+
+    expect(view).toMatchObject({
+      phase: "apply-failed",
+      badge: "適用せず",
+      isApplicablePreview: false,
+    });
+  });
+});

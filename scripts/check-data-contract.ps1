@@ -19,6 +19,8 @@ $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-opti
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
 $automaticProposalTestPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.test.ts'
+$automaticProposalApplyPath = Join-Path $resolvedProject 'src/application/automatic-proposal-apply.ts'
+$automaticProposalApplyTestPath = Join-Path $resolvedProject 'src/application/automatic-proposal-apply.test.ts'
 $automaticProposalProtocolPath = Join-Path $resolvedProject 'src/workers/automatic-proposal-worker-protocol.ts'
 $automaticProposalEnginePath = Join-Path $resolvedProject 'src/workers/automatic-proposal-worker-engine.ts'
 $automaticProposalWorkerPath = Join-Path $resolvedProject 'src/workers/automatic-proposal.worker.ts'
@@ -45,6 +47,8 @@ foreach ($path in @(
     $acceptancePath,
     $automaticProposalPath,
     $automaticProposalTestPath,
+    $automaticProposalApplyPath,
+    $automaticProposalApplyTestPath,
     $automaticProposalProtocolPath,
     $automaticProposalEnginePath,
     $automaticProposalWorkerPath,
@@ -331,8 +335,9 @@ foreach ($requiredText in @(
 
 foreach ($requiredText in @(
     '自動提案の純粋domain探索、Worker transport、session/view、利用者向けReact panel',
-    'Appでのbusy・generation配線、実Workerの開始・取消・retry、非永続preview DOMは実装済み',
-    '適用は未実装',
+    '確認付き一括適用と一回のUndo/Redoは実装済み',
+    '完全案をSchema・意味・正本物理判定で再検証',
+    '同じ配置集合なら履歴を増やさず',
     'preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在案件と履歴を保持',
     '目的関数上の最良として案内してはならない'
 )) {
@@ -344,12 +349,16 @@ foreach ($requiredText in @(
 $automaticProposalHook = [IO.File]::ReadAllText($automaticProposalHookPath)
 $automaticProposalPanel = [IO.File]::ReadAllText($automaticProposalPanelPath)
 $automaticProposalBrowserTest = [IO.File]::ReadAllText($automaticProposalBrowserTestPath)
+$automaticProposalApply = [IO.File]::ReadAllText($automaticProposalApplyPath)
+$automaticProposalApplyTest = [IO.File]::ReadAllText($automaticProposalApplyTestPath)
 $app = [IO.File]::ReadAllText($appPath)
 foreach ($contract in @(
+    @{ Name = 'Application apply'; Text = $automaticProposalApply; Required = @('prepareAutomaticProposalApply', 'validatePlacementSet', 'automatic-proposal.apply-unverified-mismatch') },
+    @{ Name = 'Application apply test'; Text = $automaticProposalApplyTest; Required = @('expectFailurePreserves', 'toBe(frozenCurrent)', 'complete-with-cutoff') },
     @{ Name = 'React hook'; Text = $automaticProposalHook; Required = @('useSyncExternalStore', 'visibleSnapshot', 'interactionGeneration') },
-    @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '探索を中止', '提案配置（未適用）') },
-    @{ Name = 'App integration'; Text = $app; Required = @('readAutomaticProposalContext', '<AutomaticProposalPanel', 'persistenceOperationRef.current') },
-    @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '__proposalTerminatedCount', 'forceWebgl2=unsupported') }
+    @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '提案を適用', '配置が変わる場合は、1回の取り消しで元へ戻せます。') },
+    @{ Name = 'App integration'; Text = $app; Required = @('handleAutomaticProposalApply', 'automatic-proposal.apply', 'persistenceOperationRef.current') },
+    @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '自動提案の一括適用', 'forceWebgl2=unsupported') }
 )) {
     foreach ($requiredText in $contract.Required) {
         if (-not $contract.Text.Contains($requiredText)) {
@@ -409,4 +418,6 @@ foreach ($requiredText in @(
     automatic_proposal_session_view_implemented = $true
     automatic_proposal_react_preview_implemented = $true
     automatic_proposal_browser_integration_tested = $true
+    automatic_proposal_apply_implemented = $true
+    automatic_proposal_apply_undo_tested = $true
 }

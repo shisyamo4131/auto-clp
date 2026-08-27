@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createInitialProject } from "./application/project-factory";
+import { prepareAutomaticProposalApply } from "./application/automatic-proposal-apply";
 import {
   commitProjectHistory,
   createProjectHistory,
@@ -31,6 +32,7 @@ import {
 import type { WebGL2CapabilityCheck } from "./platform/webgl2";
 import { SceneWorkspace } from "./scene/SceneWorkspace";
 import { AutomaticProposalPanel } from "./ui/AutomaticProposalPanel";
+import type { AutomaticProposalApplyHandler } from "./ui/automatic-proposal-session";
 import { ProjectHistoryControls } from "./ui/ProjectHistoryControls";
 import { ProjectPersistencePanel } from "./ui/ProjectPersistencePanel";
 import { ProjectWorkspace } from "./ui/ProjectWorkspace";
@@ -306,6 +308,66 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     [],
   );
 
+  const handleAutomaticProposalApply = useCallback<AutomaticProposalApplyHandler>(
+    (request) => {
+      const currentSources = busySourcesRef.current;
+      if (
+        currentSources.project ||
+        currentSources.scene ||
+        persistenceInteractionRef.current ||
+        persistenceOperationRef.current
+      ) {
+        return { kind: "blocked" };
+      }
+      const currentProject = historyRef.current.present;
+      if (
+        currentProject !== request.sourceProject ||
+        projectInteractionGenerationRef.current !==
+          request.interactionGeneration
+      ) {
+        return { kind: "stale" };
+      }
+
+      const prepared = prepareAutomaticProposalApply(
+        currentProject,
+        request.sourceProject,
+        request.result,
+      );
+      if (!prepared.ok) {
+        return prepared.code === "automatic-proposal.apply-stale"
+          ? { kind: "stale" }
+          : { kind: "failed" };
+      }
+      if (!prepared.changed) {
+        return {
+          kind: "unchanged",
+          project: currentProject,
+          interactionGeneration: projectInteractionGenerationRef.current,
+          summary: prepared.summary,
+        };
+      }
+
+      const transition = handleProjectCommit({
+        baseProject: request.sourceProject,
+        nextProject: prepared.project,
+        action: "automatic-proposal.apply",
+      });
+      if (!transition.ok) {
+        return { kind: "stale" };
+      }
+      if (!transition.changed) {
+        return { kind: "failed" };
+      }
+      return {
+        kind: "changed",
+        project: historyRef.current.present,
+        interactionGeneration: projectInteractionGenerationRef.current,
+        summary: prepared.summary,
+      };
+    },
+    [handleProjectCommit],
+  );
+
   const handleSaveDevice = useCallback(
     (baseProject: Project) =>
       runPersistenceOperation(baseProject, async () => {
@@ -425,6 +487,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       />
 
       <AutomaticProposalPanel
+        applyProposal={handleAutomaticProposalApply}
         interactionGeneration={projectInteractionGeneration}
         project={project}
         readContext={readAutomaticProposalContext}

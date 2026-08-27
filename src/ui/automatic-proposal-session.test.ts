@@ -39,6 +39,37 @@ function noCargoResult(): AutomaticProposalResult {
   };
 }
 
+function completeResult(): AutomaticProposalResult {
+  return {
+    algorithmVersion: AUTOMATIC_PROPOSAL_ALGORITHM_VERSION,
+    effectiveLimits: {
+      candidateAttemptLimit: AUTOMATIC_PROPOSAL_CANDIDATE_ATTEMPT_LIMIT,
+      requestAttemptLimit: AUTOMATIC_PROPOSAL_REQUEST_ATTEMPT_LIMIT,
+      candidatePointLimit: AUTOMATIC_PROPOSAL_CANDIDATE_POINT_LIMIT,
+    },
+    attempts: {
+      requestAttemptCount: 1,
+      candidates: [
+        { containerId: "container-1", attemptCount: 1, outcome: "complete" },
+      ],
+    },
+    status: "complete",
+    plan: {
+      containerId: "container-1",
+      placements: [
+        {
+          cargoId: "cargo-1",
+          containerId: "container-1",
+          orientation: "LWH",
+          positionMm: { xMm: 0, yMm: 0, zMm: 0 },
+        },
+      ],
+      invalidReasonCount: 0,
+      unverifiedReasons: [],
+    },
+  };
+}
+
 interface ControlledHandle extends AutomaticProposalWorkerHandle {
   readonly resolve: (result: AutomaticProposalWorkerClientResult) => void;
   readonly reject: (reason?: unknown) => void;
@@ -447,4 +478,187 @@ describe("createAutomaticProposalSession", () => {
       code: "automatic-proposal.session-start-failed",
     });
   });
+
+  it("claims one ready identity exactly once and drops the full result after changed apply", async () => {
+    const source = projectFixture();
+    const applied = { ...source, name: "applied" };
+    let project = source;
+    let generation = 3;
+    const handle = controlledHandle();
+    const summary = {
+      containerId: "container-1",
+      placementCount: 1,
+      replacedPlacementCount: 0,
+      unverifiedReasonCount: 0,
+    };
+    const applyProposal = vi.fn(() => {
+      project = applied;
+      generation = 4;
+      return {
+        kind: "changed" as const,
+        project: applied,
+        interactionGeneration: 4,
+        summary,
+      };
+    });
+    const phases: string[] = [];
+    const session = createAutomaticProposalSession({
+      readContext: () => ({ project, interactionGeneration: generation, startBlocked: false }),
+      startWorker: () => handle,
+      applyProposal,
+    });
+    session.subscribe(() => phases.push(session.getSnapshot().phase));
+    session.start();
+    const result = completeResult();
+    handle.resolve({ kind: "ready", result });
+    await Promise.resolve();
+
+    expect(session.apply(0)).toBe(false);
+    expect(applyProposal).not.toHaveBeenCalled();
+    expect(session.apply(1)).toBe(true);
+    expect(session.apply(1)).toBe(false);
+    expect(applyProposal).toHaveBeenCalledOnce();
+    expect(applyProposal).toHaveBeenCalledWith({
+      sourceProject: source,
+      interactionGeneration: 3,
+      identity: 1,
+      result,
+    });
+    expect(phases).toContain("applying");
+    expect(session.getSnapshot()).toEqual({
+      phase: "applied",
+      currentProject: applied,
+      interactionGeneration: 4,
+      identity: 1,
+      summary,
+    });
+    expect(JSON.stringify(session.getSnapshot())).not.toContain("algorithmVersion");
+  });
+
+  it("reports an unchanged apply without replacing the exact Project reference", async () => {
+    const project = projectFixture();
+    const handle = controlledHandle();
+    const summary = {
+      containerId: "container-1",
+      placementCount: 1,
+      replacedPlacementCount: 1,
+      unverifiedReasonCount: 0,
+    };
+    const session = createAutomaticProposalSession({
+      readContext: () => ({ project, interactionGeneration: 1, startBlocked: false }),
+      startWorker: () => handle,
+      applyProposal: () => ({
+        kind: "unchanged",
+        project,
+        interactionGeneration: 1,
+        summary,
+      }),
+    });
+    session.start();
+    handle.resolve({ kind: "ready", result: completeResult() });
+    await Promise.resolve();
+
+    expect(session.apply(1)).toBe(true);
+    expect(session.getSnapshot()).toEqual({
+      phase: "unchanged",
+      currentProject: project,
+      interactionGeneration: 1,
+      identity: 1,
+      summary,
+    });
+  });
+
+  it.each(["blocked", "stale"] as const)(
+    "does not invoke apply callback when ready becomes %s",
+    async (transition) => {
+      const source = projectFixture("source");
+      let project = source;
+      let startBlocked = false;
+      const handle = controlledHandle();
+      const applyProposal = vi.fn();
+      const session = createAutomaticProposalSession({
+        readContext: () => ({ project, interactionGeneration: 1, startBlocked }),
+        startWorker: () => handle,
+        applyProposal,
+      });
+      session.start();
+      handle.resolve({ kind: "ready", result: completeResult() });
+      await Promise.resolve();
+      if (transition === "blocked") {
+        startBlocked = true;
+      } else {
+        project = projectFixture("changed");
+      }
+
+      expect(session.apply(1)).toBe(false);
+      expect(session.getSnapshot()).toEqual({ phase: transition });
+      expect(applyProposal).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["throws", "failed"] as const)(
+    "claims ready and maps an apply callback that %s to fixed failure",
+    async (outcome) => {
+      const project = projectFixture();
+      const handle = controlledHandle();
+      const applyProposal = vi.fn(() => {
+        if (outcome === "throws") {
+          throw new Error("marker-sensitive-input");
+        }
+        return { kind: "failed" as const };
+      });
+      const session = createAutomaticProposalSession({
+        readContext: () => ({ project, interactionGeneration: 1, startBlocked: false }),
+        startWorker: () => handle,
+        applyProposal,
+      });
+      session.start();
+      handle.resolve({ kind: "ready", result: completeResult() });
+      await Promise.resolve();
+
+      expect(session.apply(1)).toBe(false);
+      expect(session.getSnapshot()).toEqual({ phase: "apply-failed" });
+      expect(session.apply(1)).toBe(false);
+      expect(applyProposal).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(["project", "generation"] as const)(
+    "returns applied state to idle after a later %s change",
+    async (change) => {
+      const source = projectFixture("source");
+      let project = source;
+      let generation = 1;
+      const handle = controlledHandle();
+      const summary = {
+        containerId: "container-1",
+        placementCount: 1,
+        replacedPlacementCount: 0,
+        unverifiedReasonCount: 0,
+      };
+      const session = createAutomaticProposalSession({
+        readContext: () => ({ project, interactionGeneration: generation, startBlocked: false }),
+        startWorker: () => handle,
+        applyProposal: () => ({
+          kind: "changed",
+          project,
+          interactionGeneration: generation,
+          summary,
+        }),
+      });
+      session.start();
+      handle.resolve({ kind: "ready", result: completeResult() });
+      await Promise.resolve();
+      session.apply(1);
+      if (change === "project") {
+        project = projectFixture("later");
+      } else {
+        generation = 2;
+      }
+
+      session.sync();
+
+      expect(session.getSnapshot()).toEqual({ phase: "idle" });
+    },
+  );
 });

@@ -5,8 +5,8 @@
 - Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、全候補の置換前Worker判定、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、成功した案件変更を最大100件保持する非永続undo/redo、コンテナ包含・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置のThree.js描画、canvas積荷選択、fine pointerによる床面方向drag・視点操作、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
 - Implemented foundation: ADR 0004に基づく、一候補へ全積荷を配置する純粋な決定的DFS、目的関数順位、候補点・attempt上限、cutoff/no-complete-plan、未確認理由保持。
 - Implemented transport: 正本Schema・意味検証後だけ探索するone-shot module Worker、固定code、厳格な応答検証、同期fallbackなしのclient、即時terminate取消と遅延・二重応答mask、Appからの実Worker接続。
-- Implemented orchestration and preview: React非依存の探索session、Project参照・interaction generationのstale判定、取消・retry・遅延結果mask、React hook/panel、Appのbusy・generation開始gate、source相関付き固定copy、25件pageの非永続preview DOM。WebGL非対応時も利用できる。
-- Planned: 確認付き一括適用と一回のUndo、AP-08代表規模の実Worker性能測定。
+- Implemented orchestration, preview, and apply: React非依存の探索session、Project参照・interaction generationのstale判定、取消・retry・遅延結果mask、React hook/panel、Appのbusy・generation開始gate、source相関付き固定copy、25件pageの非永続preview DOM、Schema・意味・物理再検証付きの確認、一括適用、一回のUndo/Redo。WebGL非対応時も利用できる。
+- Planned: AP-08代表規模の実Worker性能測定。
 - Unavailable: 端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上のZ移動・向き変更・取り外し、デプロイ、クラウド保存、外部API、実運用サポート。
 
 未実装機能を利用可能として案内してはならない。
@@ -29,7 +29,7 @@ Phase 1の計画済み判定は、完全な搬入経路、積荷別上載荷重�
 
 Phase 1の技術受入には `acceptance.md` の匿名合成データだけを使う。自動試験と開発チーム内試用は実務利用者受入と区別し、実務試用が未実施の間は受入済みと報告しない。
 
-自動提案の純粋domain探索、Worker transport、session/view、利用者向けReact panel、Appでのbusy・generation配線、実Workerの開始・取消・retry、非永続preview DOMは実装済みである。探索開始だけでProjectを変更せず、preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在案件と履歴を保持する。通常編集、Undo/Redo、未保存入力、3D操作、保存・読込の開始時は旧探索を終了し、遅延結果を表示しない。適用は未実装であり、後続実装では全配置を確認付きで一括置換し、一回のUndoで戻せるようにする。探索上限到達と完全案なしを実積載不能または安全性の証明として案内してはならない。より優先される候補がcutoffの時は、後続候補の完全案を目的関数上の最良として案内してはならない。
+自動提案の純粋domain探索、Worker transport、session/view、利用者向けReact panel、Appでのbusy・generation配線、実Workerの開始・取消・retry、非永続preview DOM、確認付き一括適用と一回のUndo/Redoは実装済みである。探索開始だけでProjectを変更せず、preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在案件と履歴を保持する。通常編集、Undo/Redo、未保存入力、3D操作、保存・読込の開始時は旧探索または確認を終了し、遅延結果を表示しない。適用時は現在のProject参照とgenerationを再確認し、完全案をSchema・意味・正本物理判定で再検証してから配置だけを一括置換する。同じ配置集合なら履歴を増やさず、変更時だけ `自動提案の一括適用` 一件として記録する。探索上限到達と完全案なしを実積載不能または安全性の証明として案内してはならない。より優先される候補がcutoffの時は、後続候補の完全案を目的関数上の最良として案内してはならない。
 
 Node.js `22.13.0`以上`23`未満とCorepackを使用する。パッケージマネージャーはpnpm `11.19.0`で、依存バージョンは `package.json` と `pnpm-lock.yaml` に固定する。案件構造検証はAjv `8.20.0`のDraft 2020-12実装を使う。対象ブラウザと最低GPU性能は未決定であるため、現在は実行時のWebGL 2能力確認を利用可能性のゲートとし、正式な対応保証とはしない。
 

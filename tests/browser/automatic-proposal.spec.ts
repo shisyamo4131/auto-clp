@@ -43,25 +43,43 @@ async function importJson(page: Page, value: unknown) {
   });
 }
 
-async function addCargo(page: Page, name: string) {
+async function addCargo(
+  page: Page,
+  name: string,
+  options: { massKg?: string; canSupportCargo?: boolean } = {},
+) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await page.getByLabel("積荷名").fill(name);
   await page.getByLabel("長さ", { exact: true }).fill("100");
   await page.getByLabel("幅", { exact: true }).fill("100");
   await page.getByLabel("高さ", { exact: true }).fill("100");
-  await page.getByLabel("重量").fill("1");
+  await page.getByLabel("重量").fill(options.massKg ?? "1");
+  if (options.canSupportCargo === true) {
+    await page
+      .getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる")
+      .check();
+  }
   await page.getByRole("button", { name: "積荷を保存" }).click();
 }
 
-async function addContainer(page: Page, name: string) {
+async function addContainer(
+  page: Page,
+  name: string,
+  options: {
+    lengthMm?: string;
+    heightMm?: string;
+    openingHeightMm?: string;
+    payloadKg?: string;
+  } = {},
+) {
   await page.getByRole("button", { name: "候補を追加" }).click();
   await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill("200");
+  await page.getByLabel("内部長さ").fill(options.lengthMm ?? "200");
   await page.getByLabel("内部幅").fill("100");
-  await page.getByLabel("内部高さ").fill("100");
+  await page.getByLabel("内部高さ").fill(options.heightMm ?? "100");
   await page.getByLabel("開口幅").fill("100");
-  await page.getByLabel("開口高さ").fill("100");
-  await page.getByLabel("総耐荷重").fill("1000");
+  await page.getByLabel("開口高さ").fill(options.openingHeightMm ?? "100");
+  await page.getByLabel("総耐荷重").fill(options.payloadKg ?? "1000");
   await page.getByRole("button", { name: "候補を保存" }).click();
 }
 
@@ -105,6 +123,8 @@ async function installControlledProposalWorker(page: Page) {
       __proposalTerminatedCount: () => number;
       __cancelProposalFromBrowser: () => void;
       __proposalCancelLatencyMs: () => number | undefined;
+      __setProposalCompleteWithCutoff: (enabled: boolean) => void;
+      __setProposalPhysicallyInvalid: (enabled: boolean) => void;
     }
 
     const browserGlobal = globalThis as unknown as ControlledGlobal;
@@ -115,6 +135,8 @@ async function installControlledProposalWorker(page: Page) {
     let terminatedCount = 0;
     let cancelRequestedAt: number | undefined;
     let cancelLatencyMs: number | undefined;
+    let completeWithCutoff = false;
+    let physicallyInvalid = false;
 
     const resultFor = (request: ProposalRequest) => {
       const base = {
@@ -144,7 +166,14 @@ async function installControlledProposalWorker(page: Page) {
         readonly id: string;
       };
       const candidates = request.project.containers.map((container, index) =>
-        index === request.project.containers.length - 1
+        completeWithCutoff && index === 0
+          ? {
+              containerId: container.id,
+              attemptCount: 10_000,
+              outcome: "cutoff",
+              cutoffSource: "candidate",
+            }
+          : index === request.project.containers.length - 1
           ? {
               containerId: container.id,
               attemptCount: request.project.cargoes.length,
@@ -156,17 +185,25 @@ async function installControlledProposalWorker(page: Page) {
         ...base,
         attempts: {
           requestAttemptCount:
-            request.project.containers.length - 1 + request.project.cargoes.length,
+            candidates.reduce(
+              (total, candidate) => total + candidate.attemptCount,
+              0,
+            ),
           candidates,
         },
-        status: "complete",
+        status: completeWithCutoff ? "complete-with-cutoff" : "complete",
+        ...(completeWithCutoff ? { cutoffSource: "candidate" } : {}),
         plan: {
           containerId: finalContainer.id,
           placements: request.project.cargoes.map((cargo, index) => ({
             cargoId: cargo.id,
             containerId: finalContainer.id,
             orientation: cargo.allowedOrientations[0],
-            positionMm: { xMm: index * 10, yMm: 0, zMm: 0 },
+            positionMm: {
+              xMm: physicallyInvalid ? 1 + index * 10 : index * 10,
+              yMm: 0,
+              zMm: 0,
+            },
           })),
           invalidReasonCount: 0,
           unverifiedReasons: request.project.cargoes.map((cargo) => ({
@@ -212,6 +249,12 @@ async function installControlledProposalWorker(page: Page) {
     browserGlobal.__proposalPendingCount = () => pending.length;
     browserGlobal.__proposalTerminatedCount = () => terminatedCount;
     browserGlobal.__proposalCancelLatencyMs = () => cancelLatencyMs;
+    browserGlobal.__setProposalCompleteWithCutoff = (enabled) => {
+      completeWithCutoff = enabled;
+    };
+    browserGlobal.__setProposalPhysicallyInvalid = (enabled) => {
+      physicallyInvalid = enabled;
+    };
     browserGlobal.__cancelProposalFromBrowser = () => {
       const browserDocument = (
         globalThis as unknown as {
@@ -296,26 +339,254 @@ test("runs the real worker without WebGL for no-cargo and no-candidates without 
   await expect(panel.getByRole("button", { name: /適用/ })).toHaveCount(0);
 });
 
-test("shows a real-worker complete proposal as an unapplied immutable preview", async ({ page }) => {
+test("applies the real AP-02 plan as one confirmed history action and restores it with undo and redo", async ({
+  page,
+}) => {
   await page.goto("/?forceWebgl2=unsupported");
-  await addCargo(page, "小規模積荷");
-  await addContainer(page, "小規模候補");
+  await addCargo(page, "匿名積荷A");
+  await addCargo(page, "匿名積荷B");
+  await addContainer(page, "匿名AP02候補");
+  const placementPanel = page.locator(".placement-panel");
+  await placementPanel.getByRole("button", { name: "配置を追加: 匿名積荷A" }).click();
+  await page.getByLabel("X最小角").fill("50");
+  await placementPanel.getByRole("button", { name: "配置を保存" }).click();
   const panel = page.locator(".automatic-proposal");
   const history = page.locator(".project-history__summary");
-  const before = await history.textContent();
+  const canonical = page.getByTestId("canonical-project-settings");
+  const cargoList = page.getByRole("list", { name: "積荷一覧", exact: true });
+  const containerList = page.getByRole("list", { name: "候補一覧" });
+  const projectBefore = await canonical.textContent();
+  const cargoesBefore = await cargoList.textContent();
+  const containersBefore = await containerList.textContent();
+  const historyBefore = await history.textContent();
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
   await expect(panel).toContainText("案あり・未適用");
-  await expect(panel).toContainText("現在の配置0件");
-  await expect(panel).toContainText("提案1件");
+  await expect(panel).toContainText("現在の配置1件");
+  await expect(panel).toContainText("提案2件");
   await expect(panel).toContainText("automatic-proposal-v1");
-  await expect(panel).toContainText("小規模候補 (container-1)");
-  await expect(panel).toContainText("小規模積荷 (cargo-1)");
+  await expect(panel).toContainText("匿名AP02候補 (container-1)");
+  await expect(panel).toContainText("匿名積荷A (cargo-1)");
+  await expect(panel).toContainText("匿名積荷B (cargo-2)");
   await expect(panel).toContainText("完全な搬入経路は未確認です。");
   await expect(panel).toContainText("完全な搬入経路、構造・安定性、実積載の安全性を保証しません");
-  expect(await history.textContent()).toBe(before);
-  await expect(panel.getByRole("button", { name: /適用/ })).toHaveCount(0);
+  expect(await history.textContent()).toBe(historyBefore);
+  expect(await canonical.textContent()).toBe(projectBefore);
+  const placementList = placementPanel.getByRole("list", {
+    name: "選択候補の配置一覧",
+  });
+  await expect(placementList.getByRole("listitem")).toHaveCount(1);
+  await expect(placementList).toContainText("最小角 X 50・Y 0・Z 0 mm / LWH");
+
+  const applyButton = panel.getByRole("button", { name: "提案を適用", exact: true });
+  await applyButton.click();
+  const confirmation = panel.getByRole("alert");
+  await expect(confirmation).toContainText("現在の配置1件を");
+  await expect(confirmation).toContainText("提案2件で一括置換します");
+  await expect(confirmation).toContainText(
+    "配置が変わる場合は、1回の取り消しで元へ戻せます。",
+  );
+  await expect(confirmation.getByRole("button", { name: "提案を適用" })).toBeFocused();
+  await confirmation.getByRole("button", { name: "適用をやめる" }).click();
+  await expect(applyButton).toBeFocused();
+
+  await applyButton.click();
+  await confirmation.getByRole("button", { name: "提案を適用" }).click();
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "applied");
+  await expect(panel).toContainText("適用済み");
+  await expect(panel.locator(".automatic-proposal__summary")).toBeFocused();
+  await expect(history).toContainText("次に元に戻せる操作: 自動提案の一括適用。");
+  await expect(placementList.getByRole("listitem")).toHaveCount(2);
+  await expect(placementList).toContainText("最小角 X 0・Y 0・Z 0 mm / LWH");
+  await expect(placementList).toContainText("最小角 X 100・Y 0・Z 0 mm / LWH");
+  expect(await canonical.textContent()).toBe(projectBefore);
+  expect(await cargoList.textContent()).toBe(cargoesBefore);
+  expect(await containerList.textContent()).toBe(containersBefore);
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(placementList.getByRole("listitem")).toHaveCount(1);
+  await expect(placementList).toContainText("最小角 X 50・Y 0・Z 0 mm / LWH");
+  await page.getByRole("button", { name: "やり直す" }).click();
+  await expect(placementList.getByRole("listitem")).toHaveCount(2);
+  await expect(placementList).toContainText("最小角 X 100・Y 0・Z 0 mm / LWH");
+});
+
+test("confirms a zero-current add, commits rapid double confirmation once, and keeps a same-plan reapply unchanged", async ({
+  page,
+}) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  await addCargo(page, "匿名単一積荷");
+  await addContainer(page, "匿名単一候補");
+  const panel = page.locator(".automatic-proposal");
+  const history = page.locator(".project-history__summary");
+  const placementList = page
+    .locator(".placement-panel")
+    .getByRole("list", { name: "選択候補の配置一覧" });
+
+  await panel.getByRole("button", { name: "自動提案を開始" }).click();
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
+  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  const confirmation = panel.getByRole("alert");
+  await expect(confirmation).toContainText("提案1件を追加します");
+  const confirmButton = confirmation.getByRole("button", { name: "提案を適用" });
+  await confirmButton.evaluate((element) => {
+    const clickable = element as unknown as { click(): void };
+    clickable.click();
+    clickable.click();
+  });
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "applied");
+  await expect(placementList.getByRole("listitem")).toHaveCount(1);
+  await expect(history).toContainText("次に元に戻せる操作: 自動提案の一括適用。");
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(placementList.getByRole("listitem")).toHaveCount(0);
+  await page.getByRole("button", { name: "やり直す" }).click();
+  await expect(placementList.getByRole("listitem")).toHaveCount(1);
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "idle");
+
+  await panel.getByRole("button", { name: "自動提案を開始" }).click();
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
+  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await expect(panel.getByRole("alert")).toContainText(
+    "配置が変わる場合は、1回の取り消しで元へ戻せます。",
+  );
+  const historyBeforeNoOp = await history.textContent();
+  await panel
+    .getByRole("alert")
+    .getByRole("button", { name: "提案を適用" })
+    .click();
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "unchanged");
+  await expect(panel).toContainText("変更なし");
+  expect(await history.textContent()).toBe(historyBeforeNoOp);
+  await expect(placementList.getByRole("listitem")).toHaveCount(1);
+});
+
+test("preserves all AP-03 warnings through real preview, confirmation, apply, and physical validation", async ({
+  page,
+}) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  await addCargo(page, "匿名支持積荷", {
+    massKg: "1.001",
+    canSupportCargo: true,
+  });
+  await addCargo(page, "匿名上段積荷", { massKg: "1" });
+  await addContainer(page, "匿名AP03候補", {
+    lengthMm: "100",
+    heightMm: "200",
+    openingHeightMm: "200",
+    payloadKg: "2.001",
+  });
+  const panel = page.locator(".automatic-proposal");
+
+  await panel.getByRole("button", { name: "自動提案を開始" }).click();
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
+  await expect(panel.getByRole("heading", { name: "未確認事項（3件）" })).toBeVisible();
+  await expect(panel.getByText("完全な搬入経路は未確認です。")).toHaveCount(2);
+  await expect(panel.getByText("支持後の構造・安定性は未確認です。")).toHaveCount(1);
+  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  const confirmation = panel.getByRole("alert");
+  await expect(confirmation).toContainText("未確認事項が3件あります");
+  await confirmation.getByRole("button", { name: "提案を適用" }).click();
+
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "applied");
+  await expect(panel).toContainText("未確認事項3件を保持しています");
+  const physical = page.locator(".physical-validation");
+  await expect(physical.locator(".physical-validation__summary")).toContainText(
+    "確認が必要な理由が3件あります",
+  );
+  await expect(physical.getByRole("heading", { name: "未確認理由（3件）" })).toBeVisible();
+  await expect(physical).toContainText("完全な搬入経路は未確認です");
+  await expect(physical).toContainText(
+    "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
+  );
+});
+
+test("keeps a controlled complete-with-cutoff warning applicable in preview and confirmation", async ({
+  page,
+}) => {
+  await installControlledProposalWorker(page);
+  await page.goto("/?forceWebgl2=unsupported");
+  await addCargo(page, "匿名cutoff積荷");
+  await addContainer(page, "優先匿名候補");
+  await addContainer(page, "採用匿名候補");
+  await page.evaluate(() => {
+    const browserGlobal = globalThis as unknown as {
+      __setProposalCompleteWithCutoff: (enabled: boolean) => void;
+    };
+    browserGlobal.__setProposalCompleteWithCutoff(true);
+  });
+  const panel = page.locator(".automatic-proposal");
+
+  await panel.getByRole("button", { name: "自動提案を開始" }).click();
+  await expectPendingCount(page, 1);
+  await releaseProposal(page);
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
+  await expect(panel).toContainText("案あり・最良未確認・未適用");
+  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await expect(panel.getByRole("alert")).toContainText(
+    "この案が目的関数上の最良とは確認できません",
+  );
+  for (const width of [305, 320, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectNoHorizontalOverflow(page);
+  }
+});
+
+test("closes confirmation on generation and persistence changes and shows fixed apply failure without a commit", async ({
+  page,
+}) => {
+  await installControlledProposalWorker(page);
+  await page.goto("/?forceWebgl2=unsupported");
+  await addCargo(page, "marker-sensitive-cargo");
+  await addContainer(page, "匿名失敗候補", { lengthMm: "100" });
+  const panel = page.locator(".automatic-proposal");
+  const history = page.locator(".project-history__summary");
+
+  await panel.getByRole("button", { name: "自動提案を開始" }).click();
+  await releaseProposal(page);
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
+  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  const historyBeforeDraft = await history.textContent();
+  await page.getByLabel("案件名").fill("未保存変更");
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
+  await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
+  await page.getByLabel("案件名").fill("新規案件");
+  await expect(history).toHaveText(historyBeforeDraft ?? "");
+
+  await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
+  await releaseProposal(page);
+  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await page.getByRole("button", { name: "端末へ保存" }).click();
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
+  await expect(page.locator(".project-persistence__status")).toHaveText(
+    "現在の案件をこの端末へ保存しました。",
+  );
+  await expect(history).toHaveText(historyBeforeDraft ?? "");
+
+  await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
+  await page.evaluate(() => {
+    const browserGlobal = globalThis as unknown as {
+      __setProposalPhysicallyInvalid: (enabled: boolean) => void;
+    };
+    browserGlobal.__setProposalPhysicallyInvalid(true);
+  });
+  await releaseProposal(page);
+  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await panel.getByRole("alert").getByRole("button", { name: "提案を適用" }).click();
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "apply-failed");
+  await expect(panel).toContainText(
+    "提案を再検証できなかったため適用しませんでした。案件は変更していません。",
+  );
+  await expect(panel).not.toContainText("marker-sensitive-cargo");
+  expect(await history.textContent()).toBe(historyBeforeDraft);
+  await expect(
+    page
+      .locator(".placement-panel")
+      .getByText("この候補に配置された積荷はありません。"),
+  ).toBeVisible();
 });
 
 test("cancels a controlled slow worker responsively, ignores its late result, and retries", async ({
