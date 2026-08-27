@@ -4,7 +4,7 @@ Auto CLP は、精密機器運送業者が積荷とコンテナまたは車両�
 
 ## Status
 
-計画・ガバナンス段階です。アプリケーション実装はまだありません。現在の開発対象は、ローカルで動作する3D手動配置試作と、その後の自動配置提案です。
+ローカルWebアプリの最小骨格とWebGL 2能力確認画面を実装済みです。現在表示される3D画面は技術確認用で、積荷入力、配置、制約判定、保存、自動提案はまだ利用できません。
 
 ## Documentation
 
@@ -26,7 +26,14 @@ Auto CLP は、精密機器運送業者が積荷とコンテナまたは車両�
 
 ## Development
 
-アプリケーションのセットアップ、ビルド、テストコマンドは未実装です。現在検証済みのコマンドは `docs/operations.md` に記載したガバナンス検証だけです。
+Node.js 22とCorepackを使用します。依存関係は `pnpm-lock.yaml` に固定されています。
+
+```powershell
+corepack pnpm install --frozen-lockfile
+corepack pnpm run dev
+```
+
+開発サーバーは `http://127.0.0.1:5173` だけで待ち受けます。型検査、lint、単体テスト、ブラウザテスト、ビルドを含む全検証コマンドは `docs/operations.md` に記載しています。
 
 ## Security
 
