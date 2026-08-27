@@ -2,13 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   hasPositiveVolumeOverlap,
+  hasRequiredAxisClearance,
   isPlacementWithinContainer,
+  isPlacementWithinContainerWithClearance,
   orientedDimensions,
   placementBounds,
 } from "./geometry";
 import type { PlacementBoundsMm } from "./geometry";
 import type {
   Cargo,
+  ClearancesMm,
   DimensionsMm,
   Orientation,
   OrientedDimensionsMm,
@@ -363,5 +366,339 @@ describe("hasPositiveVolumeOverlap", () => {
 
     expect(reference).toEqual(originalReference);
     expect(candidate).toEqual(originalCandidate);
+  });
+});
+
+function clearanceForAxis(clearances: ClearancesMm, axis: AxisKey): number {
+  switch (axis) {
+    case "xMm":
+      return clearances.xMm;
+    case "yMm":
+      return clearances.yMm;
+    case "zMm":
+      return clearances.zMm;
+  }
+}
+
+function separatedBounds(
+  axis: AxisKey,
+  direction: "negative" | "positive",
+  gap: number,
+): PlacementBoundsMm {
+  return direction === "positive"
+    ? boundsAlongAxis(axis, 10 + gap, 20 + gap)
+    : boundsAlongAxis(axis, -10 - gap, -gap);
+}
+
+describe("isPlacementWithinContainerWithClearance", () => {
+  const clearances: ClearancesMm = { xMm: 2, yMm: 3, zMm: 4 };
+  const zeroClearances: ClearancesMm = { xMm: 0, yMm: 0, zMm: 0 };
+  const usableMin: PositionMm = { xMm: 2, yMm: 3, zMm: 0 };
+  const usableMax: PositionMm = { xMm: 8, yMm: 17, zMm: 26 };
+  const clearanceFaces = [
+    { label: "negative X opening face", key: "xMm", side: "lower", clearance: 2 },
+    { label: "positive X rear wall", key: "xMm", side: "upper", clearance: 2 },
+    { label: "minimum Y wall", key: "yMm", side: "lower", clearance: 3 },
+    { label: "maximum Y wall", key: "yMm", side: "upper", clearance: 3 },
+    { label: "ceiling", key: "zMm", side: "upper", clearance: 4 },
+  ] as const;
+  const faceCases = clearanceFaces.flatMap(({ label, key, side, clearance }) =>
+    ([-1, 0, 1] as const).map((delta) => {
+      const gap = clearance + delta;
+      const min =
+        side === "lower" ? replaceCoordinate(usableMin, key, gap) : usableMin;
+      const max =
+        side === "upper"
+          ? replaceCoordinate(usableMax, key, containerLimitForAxis(key) - gap)
+          : usableMax;
+
+      return {
+        label: `${label} gap c${delta === 0 ? "" : delta > 0 ? "+1" : "-1"}`,
+        candidate: bounds(min, max),
+        expected: delta >= 0,
+      };
+    }),
+  );
+  const invalidCases = axes.flatMap(({ label, key }) => [
+    { label: `${label} zero extent`, candidate: boundsAlongAxis(key, 5, 5) },
+    { label: `${label} inverted extent`, candidate: boundsAlongAxis(key, 6, 5) },
+  ]);
+
+  function containerLimitForAxis(axis: AxisKey): number {
+    switch (axis) {
+      case "xMm":
+        return containerDimensions.lengthMm;
+      case "yMm":
+        return containerDimensions.widthMm;
+      case "zMm":
+        return containerDimensions.heightMm;
+    }
+  }
+
+  it.each(faceCases)("checks $label", ({ candidate, expected }) => {
+    expect(
+      isPlacementWithinContainerWithClearance(
+        candidate,
+        containerDimensions,
+        clearances,
+      ),
+    ).toBe(expected);
+  });
+
+  it("allows exact floor contact without consuming Z clearance", () => {
+    expect(
+      isPlacementWithinContainerWithClearance(
+        bounds(usableMin, usableMax),
+        containerDimensions,
+        clearances,
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps raw containment mandatory below the floor", () => {
+    expect(
+      isPlacementWithinContainerWithClearance(
+        bounds({ ...usableMin, zMm: -1 }, usableMax),
+        containerDimensions,
+        clearances,
+      ),
+    ).toBe(false);
+  });
+
+  it("does not impose Z clearance above the floor", () => {
+    expect(
+      isPlacementWithinContainerWithClearance(
+        bounds({ ...usableMin, zMm: 1 }, usableMax),
+        containerDimensions,
+        clearances,
+      ),
+    ).toBe(true);
+  });
+
+  it("reduces to raw closed-container containment when every clearance is zero", () => {
+    expect(
+      isPlacementWithinContainerWithClearance(
+        bounds(
+          { xMm: 0, yMm: 0, zMm: 0 },
+          { xMm: 10, yMm: 20, zMm: 30 },
+        ),
+        containerDimensions,
+        zeroClearances,
+      ),
+    ).toBe(true);
+  });
+
+  it.each(
+    axes.flatMap(({ label, key, containerLimit }) => [
+      {
+        label: `${label} raw lower outside by 1 mm`,
+        candidate: bounds(
+          replaceCoordinate({ xMm: 0, yMm: 0, zMm: 0 }, key, -1),
+          { xMm: 10, yMm: 20, zMm: 30 },
+        ),
+      },
+      {
+        label: `${label} raw upper outside by 1 mm`,
+        candidate: bounds(
+          { xMm: 0, yMm: 0, zMm: 0 },
+          replaceCoordinate({ xMm: 10, yMm: 20, zMm: 30 }, key, containerLimit + 1),
+        ),
+      },
+    ]),
+  )("rejects $label even with zero clearance", ({ candidate }) => {
+    expect(
+      isPlacementWithinContainerWithClearance(
+        candidate,
+        containerDimensions,
+        zeroClearances,
+      ),
+    ).toBe(false);
+  });
+
+  it.each([
+    {
+      label: "X usable span exact",
+      exact: bounds(usableMin, usableMax),
+      tooLarge: bounds(usableMin, { ...usableMax, xMm: usableMax.xMm + 1 }),
+    },
+    {
+      label: "Y usable span exact",
+      exact: bounds(usableMin, usableMax),
+      tooLarge: bounds(usableMin, { ...usableMax, yMm: usableMax.yMm + 1 }),
+    },
+    {
+      label: "Z usable span exact",
+      exact: bounds(usableMin, usableMax),
+      tooLarge: bounds(usableMin, { ...usableMax, zMm: usableMax.zMm + 1 }),
+    },
+  ])("accepts $label and rejects 1 mm too large", ({ exact, tooLarge }) => {
+    expect(
+      isPlacementWithinContainerWithClearance(
+        exact,
+        containerDimensions,
+        clearances,
+      ),
+    ).toBe(true);
+    expect(
+      isPlacementWithinContainerWithClearance(
+        tooLarge,
+        containerDimensions,
+        clearances,
+      ),
+    ).toBe(false);
+  });
+
+  it.each(invalidCases)("rejects $label", ({ candidate }) => {
+    expect(
+      isPlacementWithinContainerWithClearance(
+        candidate,
+        containerDimensions,
+        zeroClearances,
+      ),
+    ).toBe(false);
+  });
+
+  it("does not mutate bounds, container dimensions, or clearances", () => {
+    const candidate = bounds(usableMin, usableMax);
+    const originalCandidate = structuredClone(candidate);
+    const originalContainer = structuredClone(containerDimensions);
+    const originalClearances = structuredClone(clearances);
+
+    isPlacementWithinContainerWithClearance(
+      candidate,
+      containerDimensions,
+      clearances,
+    );
+
+    expect(candidate).toEqual(originalCandidate);
+    expect(containerDimensions).toEqual(originalContainer);
+    expect(clearances).toEqual(originalClearances);
+  });
+});
+
+describe("hasRequiredAxisClearance", () => {
+  const reference = bounds(
+    { xMm: 0, yMm: 0, zMm: 0 },
+    { xMm: 10, yMm: 10, zMm: 10 },
+  );
+  const clearances: ClearancesMm = { xMm: 3, yMm: 4, zMm: 5 };
+  const zeroClearances: ClearancesMm = { xMm: 0, yMm: 0, zMm: 0 };
+  const axisGapCases = axes.flatMap(({ label, key }) => {
+    const clearance = clearanceForAxis(clearances, key);
+
+    return (["negative", "positive"] as const).flatMap((direction) =>
+      ([-1, 0, 1] as const).map((delta) => ({
+        label: `${label} ${direction} gap c${delta === 0 ? "" : delta > 0 ? "+1" : "-1"}`,
+        candidate: separatedBounds(key, direction, clearance + delta),
+        expected: delta >= 0,
+      })),
+    );
+  });
+  const zeroContactCases = [
+    ...axes.map(({ label, key }) => ({
+      label: `${label} face contact at c=0`,
+      candidate: separatedBounds(key, "positive", 0),
+    })),
+    {
+      label: "XY edge contact at c=0",
+      candidate: bounds(
+        { xMm: 10, yMm: 10, zMm: 2 },
+        { xMm: 20, yMm: 20, zMm: 8 },
+      ),
+    },
+    {
+      label: "XZ edge contact at c=0",
+      candidate: bounds(
+        { xMm: 10, yMm: 2, zMm: 10 },
+        { xMm: 20, yMm: 8, zMm: 20 },
+      ),
+    },
+    {
+      label: "YZ edge contact at c=0",
+      candidate: bounds(
+        { xMm: 2, yMm: 10, zMm: 10 },
+        { xMm: 8, yMm: 20, zMm: 20 },
+      ),
+    },
+    {
+      label: "corner contact at c=0",
+      candidate: bounds(
+        { xMm: 10, yMm: 10, zMm: 10 },
+        { xMm: 20, yMm: 20, zMm: 20 },
+      ),
+    },
+  ];
+  const invalidCases = axes.flatMap(({ label, key }) => [
+    { label: `${label} zero extent`, candidate: boundsAlongAxis(key, 5, 5) },
+    { label: `${label} inverted extent`, candidate: boundsAlongAxis(key, 6, 5) },
+  ]);
+
+  it.each(axisGapCases)(
+    "$label returns $expected in both operand orders",
+    ({ candidate, expected }) => {
+      expect(hasRequiredAxisClearance(reference, candidate, clearances)).toBe(expected);
+      expect(hasRequiredAxisClearance(candidate, reference, clearances)).toBe(expected);
+    },
+  );
+
+  it("uses one shared surface gap c, not one halo per cargo totaling 2c", () => {
+    const gapC = separatedBounds("xMm", "positive", clearances.xMm);
+    const gapTwoC = separatedBounds("xMm", "positive", clearances.xMm * 2);
+
+    expect(hasRequiredAxisClearance(reference, gapC, clearances)).toBe(true);
+    expect(hasRequiredAxisClearance(reference, gapTwoC, clearances)).toBe(true);
+  });
+
+  it.each(zeroContactCases)("accepts $label in both operand orders", ({ candidate }) => {
+    expect(hasRequiredAxisClearance(reference, candidate, zeroClearances)).toBe(true);
+    expect(hasRequiredAxisClearance(candidate, reference, zeroClearances)).toBe(true);
+  });
+
+  it("rejects positive-volume overlap regardless of zero clearance", () => {
+    const candidate = bounds(
+      { xMm: 9, yMm: 9, zMm: 9 },
+      { xMm: 19, yMm: 19, zMm: 19 },
+    );
+
+    expect(hasRequiredAxisClearance(reference, candidate, zeroClearances)).toBe(false);
+    expect(hasRequiredAxisClearance(candidate, reference, zeroClearances)).toBe(false);
+  });
+
+  it("accepts multiple-axis separation when one axis alone meets its clearance", () => {
+    const candidate = bounds(
+      { xMm: 13, yMm: 13, zMm: 2 },
+      { xMm: 23, yMm: 23, zMm: 8 },
+    );
+
+    expect(hasRequiredAxisClearance(reference, candidate, clearances)).toBe(true);
+    expect(hasRequiredAxisClearance(candidate, reference, clearances)).toBe(true);
+  });
+
+  it("rejects multiple-axis separation when no separated axis meets its clearance", () => {
+    const candidate = bounds(
+      { xMm: 12, yMm: 13, zMm: 14 },
+      { xMm: 22, yMm: 23, zMm: 24 },
+    );
+
+    expect(hasRequiredAxisClearance(reference, candidate, clearances)).toBe(false);
+    expect(hasRequiredAxisClearance(candidate, reference, clearances)).toBe(false);
+  });
+
+  it.each(invalidCases)("rejects $label in both operand orders", ({ candidate }) => {
+    expect(hasRequiredAxisClearance(reference, candidate, clearances)).toBe(false);
+    expect(hasRequiredAxisClearance(candidate, reference, clearances)).toBe(false);
+  });
+
+  it("does not mutate either bounds or clearances", () => {
+    const candidate = separatedBounds("yMm", "negative", clearances.yMm);
+    const originalReference = structuredClone(reference);
+    const originalCandidate = structuredClone(candidate);
+    const originalClearances = structuredClone(clearances);
+
+    hasRequiredAxisClearance(reference, candidate, clearances);
+
+    expect(reference).toEqual(originalReference);
+    expect(candidate).toEqual(originalCandidate);
+    expect(clearances).toEqual(originalClearances);
   });
 });

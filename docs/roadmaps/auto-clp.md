@@ -1,7 +1,7 @@
 # Auto CLP Roadmap
 
 - Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと配置案を得られるローカルWebアプリを完成させる。
-- Current progress: 48%
+- Current progress: 50%
 - Last reviewed: 2026-08-27
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
@@ -12,11 +12,11 @@
 | 基盤・データ契約 | 10 | 10 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly案件型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
 | 積荷・コンテナ入力モデル | 15 | 15 | Complete | 案件・隙間・積荷・候補の入力、一覧、編集、明示削除、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
 | 3D表示と手動配置 | 25 | 20 | In progress | 座標契約、候補・積荷選択、Project→scene投影・描画、投影範囲適応camera、フォーム配置編集、canvas床面方向drag、視点操作を実装。canvas上のZ移動・向き変更・取り外しとundo/redoは未実装 |
-| 物理制約の判定 | 20 | 3 | In progress | コンテナ包含と正体積AABB重なりの純粋geometry・境界テストを実装し、軸別隙間の実距離・適用面・支持例外を仕様0.5.0とADR 0011で確定。隙間判定コード、理由コード、集約、開口部、段積み、耐荷重、UI表示は未実装 |
+| 物理制約の判定 | 20 | 5 | In progress | コンテナ包含、正体積AABB重なり、隙間込み5面境界・床例外、非支持ペアの共有表面間距離を純粋geometryと境界テストで実装。支持例外の合成、理由コード、集約、開口部、段積み、耐荷重、UI表示は未実装 |
 | 保存・再読込・操作性 | 10 | 0 | Not started | 端末内保存、版付きJSON入出力、エラー復旧、利用者向け操作性 |
 | コンテナ・配置の自動提案 | 15 | 0 | Not started | 目的関数、探索、決定性、打切り、性能、提案説明 |
 | 実務利用者による受入 | 5 | 0 | Not started | 匿名化した代表ケース、試用、観察、合格記録 |
-| **Total** | **100** | **48** |  |  |
+| **Total** | **100** | **50** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
 
@@ -33,7 +33,7 @@
 | 基盤・データ契約 | [仕様](../specification.md)、[ADR索引](../decisions/README.md)、[データ契約](../data-model.md)、[JSON Schema](../../schemas/project-0.1.0.schema.json) | JSON Schema `0.1.0`、完全な案件型、構造・意味検証、検証済み書出し、取引的読込、TypeScript/React/Three.js/Vite骨格、WebGL 2能力ゲート、向き適用関数 | データ契約・型・lint・単体88件・ブラウザ4件・ビルド・ガバナンス検証 |
 | 積荷・コンテナ入力モデル | [仕様](../specification.md)、[ADR 0005](../decisions/0005-canonical-units-and-ranges.md)、[ADR 0007](../decisions/0007-cargo-orientation-policy.md) | 検証済みProject command、案件・隙間・積荷・候補の入力編集UI | 型・lint・単体147件・ブラウザ11件・実UIレビュー（305/320/375pxを含む） |
 | 3D表示と手動配置 | [ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md) | 座標契約、純粋な配置範囲・scene/drag adapter、非永続の候補・積荷選択、コンテナ内部・中央開口・登録済み配置の描画、全投影範囲camera、原子的なフォーム配置編集、canvas床面方向drag、視点操作 | 型・lint・単体212件・ブラウザ23件・ビルド・Chromium実UI試験・独立コードレビュー |
-| 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md) | コンテナ内部への包含、正体積AABB重なりの低レベル純粋関数。軸別隙間の高位判定とUIは未実装 | 全軸の境界等値・±1 mm、正負側の1 mm重なり・接触・離隔、対称性、退化・反転、非変異を単体74件のgeometry群で検証。隙間意味は独立調査と承認で確定 |
+| 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md) | コンテナ内部への包含、正体積AABB重なり、隙間込み境界、非支持ペア軸別隙間の低レベル純粋関数。支持例外を含む高位判定とUIは未実装 | 全軸・正負側の等値・±1 mm、c対2c、接触、複数分離軸、対称性、退化・反転、非変異を単体145件のgeometry群・全単体343件・独立レビューで検証 |
 | 保存・再読込・操作性 | [仕様](../specification.md) | 未実装 | 未実施 |
 | コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md) | 未実装 | 未実施 |
 | 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria) | 未実装 | 受入ケースと記録は未作成 |
@@ -68,3 +68,4 @@
 | 2026-08-27 | 45% | +8 | canvas上の積荷選択、Project非変更preview、最近接1 mmの床面方向drag、取消・描画障害rollback、視点操作、タッチ・フォームfallbackを実装し、単体212件・ブラウザ23件・実UI・独立レビューで検証 |
 | 2026-08-27 | 47% | +2 | コンテナ包含と正体積AABB重なりの純粋geometry基盤を実装し、全軸の等値・±1 mm、正負側接触、対称性、退化・反転、非変異を含む全単体272件と独立レビューで検証 |
 | 2026-08-27 | 48% | +1 | 軸別隙間を表面間の実距離とし、配置後の適用面、床・支持例外、非支持ペアの分離軸規則を仕様0.5.0とADR 0011で確定 |
+| 2026-08-27 | 50% | +2 | 隙間込み5面境界と床例外、非支持ペアの共有表面間距離・複数分離軸を純粋関数として実装し、geometry145件・全単体343件と独立レビューで検証 |

@@ -1,5 +1,6 @@
 import type {
   Cargo,
+  ClearancesMm,
   DimensionsMm,
   Orientation,
   OrientedDimensionsMm,
@@ -49,6 +50,78 @@ export function hasPositiveVolumeOverlap(
     second.min.yMm < first.max.yMm &&
     first.min.zMm < second.max.zMm &&
     second.min.zMm < first.max.zMm
+  );
+}
+
+export function isPlacementWithinContainerWithClearance(
+  bounds: PlacementBoundsMm,
+  internalDimensionsMm: DimensionsMm,
+  clearancesMm: ClearancesMm,
+): boolean {
+  return (
+    isPlacementWithinContainer(bounds, internalDimensionsMm) &&
+    bounds.min.xMm >= clearancesMm.xMm &&
+    bounds.max.xMm <= internalDimensionsMm.lengthMm - clearancesMm.xMm &&
+    bounds.min.yMm >= clearancesMm.yMm &&
+    bounds.max.yMm <= internalDimensionsMm.widthMm - clearancesMm.yMm &&
+    bounds.min.zMm >= 0 &&
+    bounds.max.zMm <= internalDimensionsMm.heightMm - clearancesMm.zMm
+  );
+}
+
+function separationGapMm(
+  firstMinMm: number,
+  firstMaxMm: number,
+  secondMinMm: number,
+  secondMaxMm: number,
+): number | undefined {
+  if (firstMaxMm <= secondMinMm) {
+    return secondMinMm - firstMaxMm;
+  }
+
+  if (secondMaxMm <= firstMinMm) {
+    return firstMinMm - secondMaxMm;
+  }
+
+  return undefined;
+}
+
+export function hasRequiredAxisClearance(
+  first: PlacementBoundsMm,
+  second: PlacementBoundsMm,
+  clearancesMm: ClearancesMm,
+): boolean {
+  if (
+    !hasPositiveAxisLengths(first) ||
+    !hasPositiveAxisLengths(second) ||
+    hasPositiveVolumeOverlap(first, second)
+  ) {
+    return false;
+  }
+
+  const xGapMm = separationGapMm(
+    first.min.xMm,
+    first.max.xMm,
+    second.min.xMm,
+    second.max.xMm,
+  );
+  const yGapMm = separationGapMm(
+    first.min.yMm,
+    first.max.yMm,
+    second.min.yMm,
+    second.max.yMm,
+  );
+  const zGapMm = separationGapMm(
+    first.min.zMm,
+    first.max.zMm,
+    second.min.zMm,
+    second.max.zMm,
+  );
+
+  return (
+    (xGapMm !== undefined && xGapMm >= clearancesMm.xMm) ||
+    (yGapMm !== undefined && yGapMm >= clearancesMm.yMm) ||
+    (zGapMm !== undefined && zGapMm >= clearancesMm.zMm)
   );
 }
 
