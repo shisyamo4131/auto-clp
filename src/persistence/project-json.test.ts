@@ -306,6 +306,38 @@ describe("serializeProjectJson", () => {
     }
   });
 
+  it("round-trips negative placement coordinates without persisting scene state", async () => {
+    const project: Project = {
+      ...richProject(),
+      placements: [
+        {
+          ...richProject().placements[0]!,
+          positionMm: { xMm: -1_000_000, yMm: -1, zMm: -999_999 },
+        },
+      ],
+    };
+    const withDerivedState = {
+      ...project,
+      scene: { scale: 0.001 },
+      camera: { position: [1, 2, 3] },
+      selection: { cargoId: "cargo-1" },
+    } as unknown as Project;
+    const original = structuredClone(withDerivedState);
+
+    const result = serializeProjectJson(withDerivedState);
+
+    expect(withDerivedState).toEqual(original);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(JSON.parse(result.json)).toEqual(project);
+      await expect(readProjectJson(sourceForText(result.json))).resolves.toEqual({
+        ok: true,
+        project,
+      });
+      expect(withDerivedState).toEqual(original);
+    }
+  });
+
   it.each([
     ["NaN", Number.NaN, "schema", "schema.type"],
     ["Infinity", Number.POSITIVE_INFINITY, "schema", "schema.type"],

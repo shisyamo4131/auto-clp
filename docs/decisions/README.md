@@ -20,5 +20,6 @@
 | [0007](0007-cargo-orientation-policy.md) | 積荷別の許可回転 | Accepted | 2026-08-27 |
 | [0008](0008-stacking-support-and-load.md) | Phase 1の支持と荷重判定 | Accepted | 2026-08-27 |
 | [0009](0009-versioned-project-data-contract.md) | 版付き案件JSONとモジュール境界 | Accepted | 2026-08-27 |
+| [0010](0010-container-coordinate-and-placement-anchor.md) | コンテナ局所座標と配置アンカー | Accepted | 2026-08-27 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

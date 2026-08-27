@@ -103,6 +103,7 @@
       }
     },
     "position": {
+      "description": "Minimum X/Y/Z corner in integer millimetres of the oriented cargo AABB, in the referenced container-local right-handed coordinate system. The container interior is [0,L] x [0,W] x [0,H], with x=0 at the negative-X opening face, +X inward, +Y left when viewed inward from the opening, and z=0 at the floor with +Z upward.",
       "type": "object",
       "additionalProperties": false,
       "required": [

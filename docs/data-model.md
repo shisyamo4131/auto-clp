@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decision: [ADR 0009](decisions/0009-versioned-project-data-contract.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)
 
 ## Contract Scope
 
 この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き適用、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、案件・隙間・積荷・候補の入力編集UIは実装済みである。端末保存と利用者向けJSON入出力UIは未実装であり、UI状態、Three.jsオブジェクト、計算結果のキャッシュは本契約へ保存しない。
 
-仕様版 `0.3.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `0.4.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -41,9 +41,9 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 
 ## Orientation Codes
 
-向きコードは、元の `Length`、`Width`、`Height` を世界X、Y、Z軸へ割り当てる順序を表す。
+向きコードは、元の `Length`、`Width`、`Height` を参照先コンテナの局所X、Y、Z軸へ割り当てる順序を表す。ADR 0007でいう世界X、Y、Zは、ADR 0010の採択以後このコンテナ局所軸を意味し、Three.js固有のworld軸を意味しない。
 
-| Code | World X | World Y | World Z | Default |
+| Code | Container X | Container Y | Container Z | Default |
 | --- | --- | --- | --- | --- |
 | `LWH` | Length | Width | Height | Yes |
 | `WLH` | Width | Length | Height | Yes |
@@ -51,6 +51,18 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 | `HLW` | Height | Length | Width | No |
 | `WHL` | Width | Height | Length | No |
 | `HWL` | Height | Width | Length | No |
+
+## Placement Coordinate Contract
+
+- 配置は `containerId` が参照するコンテナの局所右手座標系を使う。
+- コンテナ内部は `[0, L] × [0, W] × [0, H]` とする。原点は負X側開口面、最小Y側壁、床が交わる内隅で、+Xは開口から奥、+Yは幅方向で入口から奥を見た左側、+Zは上方とする。最小Y側壁は入口から見た右側である。
+- 開口面は `x = 0`、床は `z = 0`。開口のY範囲は `[(W - openingWidth) / 2, (W + openingWidth) / 2]`、Z範囲は `[0, openingHeight]` とし、差が奇数mmでも描画または比較のために丸めない。
+- `positionMm` は、`orientation` 適用後の軸整列積荷直方体の最小X・Y・Z角である。向き適用後の寸法を `(dx, dy, dz)` とすると、占有範囲は `[x, x + dx] × [y, y + dy] × [z, z + dz]` になる。
+- 向き変更時は既定で最小角を保持し、暗黙の平行移動や丸めを行わない。床置きは `z = 0` である。
+- 正規データと判定は整数mmを維持する。Three.js表示では派生値だけを `1 mm = 0.001 scene unit` で変換し、mesh中心を最小角と向き適用後寸法から計算する。0.5mmの表示中心を正規案件へ逆流させない。
+- 負座標や外側配置は修正途中の状態として保存できる。将来の境界判定では不適合となるが、scene投影は適合性を判定または保証しない。
+
+検証済みserializerは存在するが、座標値を生成する配置UIまたはapplication commandと、利用者向けJSON入出力UI・端末保存はまだ存在しない。この意味は案件Schema `0.1.0` の初回意味確定であり、JSONの形と版を変更しない。既存外部データが後から判明した場合は意味を推測して再解釈せず、新Schema版と明示的な移行を設計する。
 
 ## Stored and Derived State
 
@@ -99,7 +111,8 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 
 ## Pure Contracts
 
-- `orientedDimensions(cargo, orientation)` — 実装済み。世界軸の寸法を返し、入力を変更しない。整数・値域が検証済みであることまでは型だけで保証しない。
+- `orientedDimensions(cargo, orientation)` — 実装済み。コンテナ局所軸の寸法を返し、入力を変更しない。整数・値域が検証済みであることまでは型だけで保証しない。
+- `placementBounds(cargo, placement)` — 計画。最小角の `positionMm` と向き適用後寸法から、整数mmの軸整列占有範囲を返す。
 - `validateProjectReferences(project)` — 実装済み。ID、参照、単一配置、許可向き、開口と内部寸法、安全な質量合計を検証する。
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
 - `validateBounds(container, cargo, placement, clearances)` — 積載空間境界を判定する。

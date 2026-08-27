@@ -6,10 +6,12 @@ param(
 $ErrorActionPreference = 'Stop'
 $resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
 $schemaPath = Join-Path $resolvedProject 'schemas/project-0.1.0.schema.json'
+$specificationPath = Join-Path $resolvedProject 'docs/specification.md'
 $dataModelPath = Join-Path $resolvedProject 'docs/data-model.md'
 $decisionPath = Join-Path $resolvedProject 'docs/decisions/0009-versioned-project-data-contract.md'
+$coordinateDecisionPath = Join-Path $resolvedProject 'docs/decisions/0010-container-coordinate-and-placement-anchor.md'
 
-foreach ($path in @($schemaPath, $dataModelPath, $decisionPath)) {
+foreach ($path in @($schemaPath, $specificationPath, $dataModelPath, $decisionPath, $coordinateDecisionPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
     }
@@ -43,6 +45,13 @@ Assert-Equal $schema.'$defs'.clearanceMm.maximum 10000 'Maximum clearance'
 Assert-Equal $schema.'$defs'.coordinateMm.minimum -1000000 'Minimum coordinate'
 Assert-Equal $schema.'$defs'.coordinateMm.maximum 1000000 'Maximum coordinate'
 
+$positionDescription = [string]$schema.'$defs'.position.description
+foreach ($requiredText in @('Minimum X/Y/Z corner', 'container-local right-handed', '[0,L] x [0,W] x [0,H]', 'x=0', '+X inward', '+Y left', 'z=0', '+Z upward')) {
+    if (-not $positionDescription.Contains($requiredText)) {
+        throw "Position description does not contain the approved coordinate contract text: $requiredText"
+    }
+}
+
 $expectedRootFields = @(
     'schemaVersion',
     'projectId',
@@ -71,11 +80,33 @@ if (($defaultOrientations.Count -ne 2) -or
     throw "Default orientations do not match: $($defaultOrientations -join ', ')"
 }
 
+$specification = [IO.File]::ReadAllText($specificationPath)
+$specificationVersionMatch = [regex]::Match(
+    $specification,
+    '(?m)^- Specification version:\s*([0-9]+\.[0-9]+\.[0-9]+)\s*$'
+)
+if (-not $specificationVersionMatch.Success) {
+    throw 'Specification does not contain a parseable specification version.'
+}
+
 $dataModel = [IO.File]::ReadAllText($dataModelPath)
+$dataModelVersionMatch = [regex]::Match(
+    $dataModel,
+    '仕様版 `([0-9]+\.[0-9]+\.[0-9]+)`'
+)
+if (-not $dataModelVersionMatch.Success) {
+    throw 'Data model does not contain a parseable specification version.'
+}
+
+$specificationVersion = $specificationVersionMatch.Groups[1].Value
+$dataModelVersion = $dataModelVersionMatch.Groups[1].Value
+Assert-Equal $specificationVersion '0.4.0' 'Approved specification version'
+Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
+
 if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
-    -not $dataModel.Contains('仕様版 `0.3.0`') -or
     -not $dataModel.Contains('../schemas/project-0.1.0.schema.json') -or
-    -not $dataModel.Contains('5 MiB（5,242,880 bytes）')) {
+    -not $dataModel.Contains('5 MiB（5,242,880 bytes）') -or
+    -not $dataModel.Contains('decisions/0010-container-coordinate-and-placement-anchor.md')) {
     throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
 }
 
@@ -85,12 +116,20 @@ if ($decision -notmatch '(?m)^- Status:\s*Accepted\s*$' -or
     throw 'ADR 0009 does not accept the approved schema file.'
 }
 
+$coordinateDecision = [IO.File]::ReadAllText($coordinateDecisionPath)
+if ($coordinateDecision -notmatch '(?m)^- Status:\s*Accepted\s*$' -or
+    -not $coordinateDecision.Contains('positionMm') -or
+    -not $coordinateDecision.Contains('最小X・Y・Z角')) {
+    throw 'ADR 0010 does not accept the approved placement coordinate contract.'
+}
+
 [pscustomobject]@{
     project_path = $resolvedProject
     schema_path = $schemaPath
     schema_parsed = $true
     schema_dialect = $schema.'$schema'
     project_schema_version = $schema.properties.schemaVersion.const
+    specification_version = $specificationVersion
     root_required_fields = $rootFields.Count
     orientation_count = $orientations.Count
     cargo_limit = $schema.properties.cargoes.maxItems
