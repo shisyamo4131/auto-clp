@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { updatePlacement } from "../application/project-command";
+import type { ProjectHistoryCommitHandler } from "../application/project-history";
 import type { Project } from "../domain/model";
 import { PhysicalValidationPanel } from "../ui/PhysicalValidationPanel";
 import { PlacementPanel } from "../ui/PlacementPanel";
@@ -13,9 +14,11 @@ import { ThreeViewport, type CargoDragCommitResult } from "./ThreeViewport";
 
 interface SceneWorkspaceProps {
   readonly forceInitialRenderError?: boolean;
+  readonly historyRevision: number;
+  readonly onBusyChange: (busy: boolean) => void;
+  readonly onProjectCommit: ProjectHistoryCommitHandler;
   readonly onRendererError: () => void;
   readonly onRendererReady: () => void;
-  readonly onProjectChange: (project: Project) => void;
   readonly project: Project;
   readonly rendererMounted: boolean;
 }
@@ -29,9 +32,11 @@ function projectionErrorMessage(code: "scene.container-not-found" | "scene.cargo
 
 export function SceneWorkspace({
   forceInitialRenderError = false,
+  historyRevision,
+  onBusyChange,
+  onProjectCommit,
   onRendererError,
   onRendererReady,
-  onProjectChange,
   project,
   rendererMounted,
 }: SceneWorkspaceProps) {
@@ -83,6 +88,23 @@ export function SceneWorkspace({
         ).length;
   const selectedCargo = project.cargoes.find((cargo) => cargo.id === selectedCargoId);
   const interactionActive = placementInteractionActive || canvasDragActive;
+
+  useEffect(() => {
+    onBusyChange(interactionActive);
+    return () => onBusyChange(false);
+  }, [interactionActive, onBusyChange]);
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setCanvasStatus("");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [historyRevision]);
 
   useEffect(() => {
     const selectionStillVisible =
@@ -162,13 +184,28 @@ export function SceneWorkspace({
           message: "移動後の座標が保存可能な範囲にないか対象が変わったため、配置を元に戻しました。",
         };
       }
-      onProjectChange(result.project);
+      const transition = onProjectCommit({
+        baseProject: project,
+        nextProject: result.project,
+        action: "placement.drag-xy",
+      });
+      if (!transition.ok) {
+        return {
+          ok: false,
+          message:
+            "案件が更新されたため移動を保存できませんでした。配置を確認してやり直してください。",
+        };
+      }
+      if (!transition.changed) {
+        setCanvasStatus("配置位置は変わりませんでした。");
+        return { ok: true, message: "" };
+      }
       setCanvasStatus(
         `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動しました。物理判定の再計算を開始しました。`,
       );
       return { ok: true, message: "" };
     },
-    [effectiveContainerId, onProjectChange, project],
+    [effectiveContainerId, onProjectCommit, project],
   );
 
   return (
@@ -234,8 +271,9 @@ export function SceneWorkspace({
 
         <PlacementPanel
           externalInteractionActive={canvasDragActive}
+          historyRevision={historyRevision}
           onInteractionChange={setPlacementInteractionActive}
-          onProjectChange={onProjectChange}
+          onProjectCommit={onProjectCommit}
           onSelectedCargoChange={setSelectedCargoId}
           project={project}
           selectedCargoId={selectedCargoId}

@@ -163,6 +163,43 @@ function validateCandidate(current: Project, candidate: Project): ProjectCommand
   return { ok: true, project: schema.project };
 }
 
+function validateUnchangedProject(current: Project): ProjectCommandResult {
+  return validateCandidate(current, current);
+}
+
+function sameDimensions(first: Cargo["dimensionsMm"], second: Cargo["dimensionsMm"]): boolean {
+  return (
+    first.lengthMm === second.lengthMm &&
+    first.widthMm === second.widthMm &&
+    first.heightMm === second.heightMm
+  );
+}
+
+function sameCargo(first: Cargo, second: Cargo): boolean {
+  return (
+    first.id === second.id &&
+    first.name === second.name &&
+    sameDimensions(first.dimensionsMm, second.dimensionsMm) &&
+    first.massGrams === second.massGrams &&
+    first.canSupportCargo === second.canSupportCargo &&
+    first.allowedOrientations.length === second.allowedOrientations.length &&
+    first.allowedOrientations.every((orientation) =>
+      second.allowedOrientations.includes(orientation),
+    )
+  );
+}
+
+function sameContainer(first: Container, second: Container): boolean {
+  return (
+    first.id === second.id &&
+    first.name === second.name &&
+    sameDimensions(first.internalDimensionsMm, second.internalDimensionsMm) &&
+    first.openingMm.widthMm === second.openingMm.widthMm &&
+    first.openingMm.heightMm === second.openingMm.heightMm &&
+    first.payloadCapacityGrams === second.payloadCapacityGrams
+  );
+}
+
 function parsedValues(
   current: Project,
   results: readonly ParsedIntegerResult[],
@@ -215,9 +252,18 @@ export function updateProjectSettings(
     return parsed;
   }
   const [xMm = 0, yMm = 0, zMm = 0] = parsed.values;
+  const name = draft.name.trim();
+  if (
+    current.name === name &&
+    current.clearancesMm.xMm === xMm &&
+    current.clearancesMm.yMm === yMm &&
+    current.clearancesMm.zMm === zMm
+  ) {
+    return validateUnchangedProject(current);
+  }
   return validateCandidate(current, {
     ...current,
-    name: draft.name.trim(),
+    name,
     clearancesMm: { xMm, yMm, zMm },
   });
 }
@@ -260,6 +306,9 @@ export function saveCargo(
     canSupportCargo: draft.canSupportCargo,
     allowedOrientations: [...draft.allowedOrientations],
   };
+  if (existingIndex >= 0 && sameCargo(current.cargoes[existingIndex]!, cargo)) {
+    return validateUnchangedProject(current);
+  }
   const cargoes =
     existingIndex < 0
       ? [...current.cargoes, cargo]
@@ -310,6 +359,12 @@ export function saveContainer(
     openingMm: { widthMm: openingWidthMm, heightMm: openingHeightMm },
     payloadCapacityGrams,
   };
+  if (
+    existingIndex >= 0 &&
+    sameContainer(current.containers[existingIndex]!, container)
+  ) {
+    return validateUnchangedProject(current);
+  }
   const containers =
     existingIndex < 0
       ? [...current.containers, container]
@@ -392,6 +447,15 @@ export function updatePlacement(
   const parsed = parsePlacementDraft(current, draft, placementIndex);
   if (!parsed.ok) {
     return parsed;
+  }
+  const existingPlacement = current.placements[placementIndex]!;
+  if (
+    existingPlacement.positionMm.xMm === parsed.placementData.positionMm.xMm &&
+    existingPlacement.positionMm.yMm === parsed.placementData.positionMm.yMm &&
+    existingPlacement.positionMm.zMm === parsed.placementData.positionMm.zMm &&
+    existingPlacement.orientation === parsed.placementData.orientation
+  ) {
+    return validateUnchangedProject(current);
   }
   const placements = current.placements.map((placement, index) =>
     index === placementIndex

@@ -1,8 +1,8 @@
 # Auto CLP Roadmap
 
 - Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと配置案を得られるローカルWebアプリを完成させる。
-- Current progress: 65%
-- Last reviewed: 2026-08-27
+- Current progress: 67%
+- Last reviewed: 2026-08-28
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
 ## Milestones
@@ -11,19 +11,19 @@
 | --- | ---: | ---: | --- | --- |
 | 基盤・データ契約 | 10 | 10 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly案件型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
 | 積荷・コンテナ入力モデル | 15 | 15 | Complete | 案件・隙間・積荷・候補の入力、一覧、編集、明示削除、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
-| 3D表示と手動配置 | 25 | 20 | In progress | 座標契約、候補・積荷選択、Project→scene投影・描画、投影範囲適応camera、フォーム配置編集、canvas床面方向drag、視点操作を実装。canvas上のZ移動・向き変更・取り外しとundo/redoは未実装 |
+| 3D表示と手動配置 | 25 | 22 | In progress | 座標契約、候補・積荷選択、Project→scene投影・描画、投影範囲適応camera、フォーム配置編集、canvas床面方向drag、視点操作、最大100件の案件undo/redoを実装。canvas上のZ移動・向き変更・取り外しは必要性を未検証 |
 | 物理制約の判定 | 20 | 20 | Complete | 低レベルgeometry・耐荷重評価、高位集約、境界違反のカスケード抑制、100%支持時だけの隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL非依存UI、許可上限1,000配置の応答性を実装・検証 |
 | 保存・再読込・操作性 | 10 | 0 | Not started | 端末内保存、版付きJSON入出力、エラー復旧、利用者向け操作性 |
 | コンテナ・配置の自動提案 | 15 | 0 | Not started | 目的関数、探索、決定性、打切り、性能、提案説明 |
 | 実務利用者による受入 | 5 | 0 | Not started | 匿名化した代表ケース、試用、観察、合格記録 |
-| **Total** | **100** | **65** |  |  |
+| **Total** | **100** | **67** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
 
 ## Next Work
 
-1. 3D配置のundo/redoと、必要性を検証した上でcanvas上のZ・向き操作を追加する。
-2. File・端末保存アダプターと利用者向けJSON入出力を接続する。
+1. File・端末保存アダプターと利用者向けJSON入出力を接続する。
+2. canvas上のZ移動・向き変更・取り外しが代表操作で必要か検証し、必要な範囲だけ追加する。
 3. 匿名の代表受入ケースと合格基準を具体化する。
 
 ## Deliverables and Verification Evidence
@@ -32,7 +32,7 @@
 | --- | --- | --- | --- |
 | 基盤・データ契約 | [仕様](../specification.md)、[ADR索引](../decisions/README.md)、[データ契約](../data-model.md)、[JSON Schema](../../schemas/project-0.1.0.schema.json) | JSON Schema `0.1.0`、完全な案件型、構造・意味検証、検証済み書出し、取引的読込、TypeScript/React/Three.js/Vite骨格、WebGL 2能力ゲート、向き適用関数 | データ契約・型・lint・単体88件・ブラウザ4件・ビルド・ガバナンス検証 |
 | 積荷・コンテナ入力モデル | [仕様](../specification.md)、[ADR 0005](../decisions/0005-canonical-units-and-ranges.md)、[ADR 0007](../decisions/0007-cargo-orientation-policy.md) | 検証済みProject command、案件・隙間・積荷・候補の入力編集UI | 型・lint・単体147件・ブラウザ11件・実UIレビュー（305/320/375pxを含む） |
-| 3D表示と手動配置 | [ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md) | 座標契約、純粋な配置範囲・scene/drag adapter、非永続の候補・積荷選択、コンテナ内部・中央開口・登録済み配置の描画、全投影範囲camera、原子的なフォーム配置編集、canvas床面方向drag、視点操作 | 型・lint・単体212件・ブラウザ23件・ビルド・Chromium実UI試験・独立コードレビュー |
+| 3D表示と手動配置 | [仕様](../specification.md)、[ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md) | 座標契約、純粋な配置範囲・scene/drag adapter、非永続の候補・積荷選択、コンテナ内部・中央開口・登録済み配置の描画、全投影範囲camera、原子的なフォーム配置編集、canvas床面方向drag、視点操作、最大100件のProject参照履歴と案件undo/redo UI | 型・lint・全単体567件・全ブラウザ37件・ビルド・305/320/375px Chromium実UI試験・独立コードレビュー |
 | 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md) | 低レベルgeometry・耐荷重評価、高位独立診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体551件・全ブラウザ31件。1,000同一bounds配置で499,500不適合理由と1,000未確認理由を打切りなく保持し、summaryは件数だけ、先頭・中間・末尾を各25件取得しながらmain timer/rAFが進むことを実Workerで検証。305/320/375px実UIと独立レビュー合格 |
 | 保存・再読込・操作性 | [仕様](../specification.md) | 未実装 | 未実施 |
 | コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md) | 未実装 | 未実施 |
@@ -75,3 +75,4 @@
 | 2026-08-27 | 55% | +1 | 床支持と、段積み許可された候補上面の完全一致Z接触・XY 100%被覆を純粋関数で合成し、geometry233件・全単体454件と独立レビューで検証 |
 | 2026-08-27 | 59% | +4 | 境界違反を独立・優先表示しながら無関係な理由を保持する仕様0.6.0とADR 0012を確定し、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を集約する純粋判定をvalidation65件・全単体488件と独立レビューで検証 |
 | 2026-08-27 | 65% | +6 | 物理判定をローカルmodule Workerへ接続し、適合・不適合・未確認・判定不能、対象・関連積荷、独立理由をアクセシブルにページ表示。全単体551件・ブラウザ31件、許可上限1,000配置の499,500不適合理由を含む実Worker試験、305/320/375px実UI、独立レビューで物理制約マイルストーンを完了 |
+| 2026-08-28 | 67% | +2 | 案件設定・積荷・候補・配置・1回の3D床面dragを最大100件取り消し・やり直しできる非永続履歴を実装。stale/no-op/分岐、入力中lock、native入力履歴保護、WebGL非依存、全単体567件・全ブラウザ37件、305/320/375px実UI、独立レビューで検証 |

@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$ProjectPath = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 )
@@ -110,8 +110,20 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.6.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.7.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
+
+foreach ($requiredText in @(
+    '最大100件まで取り消し・やり直し',
+    '同一状態へのno-opを履歴へ追加しない',
+    'その時点のやり直し履歴を破棄',
+    '未保存のフォーム入力',
+    '操作履歴は現在の実行セッションだけに保持'
+)) {
+    if (-not $specification.Contains($requiredText)) {
+        throw "Specification does not contain the approved operation-history contract text: $requiredText"
+    }
+}
 
 if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
     -not $dataModel.Contains('../schemas/project-0.1.0.schema.json') -or

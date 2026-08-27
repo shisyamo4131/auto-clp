@@ -1,4 +1,11 @@
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 
 import {
   deleteCargo,
@@ -11,12 +18,18 @@ import {
   type ProjectCommandResult,
   type ProjectSettingsDraft,
 } from "../application/project-command";
+import type {
+  ProjectHistoryAction,
+  ProjectHistoryCommitHandler,
+} from "../application/project-history";
 import { ORIENTATIONS, type Cargo, type Container, type Orientation, type Project } from "../domain/model";
 import type { ValidationIssue } from "../domain/validation";
 
 interface ProjectWorkspaceProps {
+  readonly historyRevision: number;
+  readonly onBusyChange: (busy: boolean) => void;
+  readonly onProjectCommit: ProjectHistoryCommitHandler;
   readonly project: Project;
-  readonly onProjectChange: (project: Project) => void;
 }
 
 const ORIENTATION_COPY: Record<Orientation, string> = {
@@ -184,18 +197,30 @@ function ErrorSummary({ id, issues }: { readonly id: string; readonly issues: re
   );
 }
 
+type ApplyResultStatus = "success" | "command-failure" | "stale";
+
 function applyResult(
   result: ProjectCommandResult,
-  onProjectChange: (project: Project) => void,
+  baseProject: Project,
+  action: ProjectHistoryAction,
+  onProjectCommit: ProjectHistoryCommitHandler,
   setIssues: (issues: readonly ValidationIssue[]) => void,
-): boolean {
+): ApplyResultStatus {
   if (!result.ok) {
     setIssues(result.issues);
-    return false;
+    return "command-failure";
+  }
+  const transition = onProjectCommit({
+    baseProject,
+    nextProject: result.project,
+    action,
+  });
+  if (!transition.ok) {
+    setIssues([]);
+    return "stale";
   }
   setIssues([]);
-  onProjectChange(result.project);
-  return true;
+  return "success";
 }
 
 function focusFirstInvalid(form: HTMLFormElement | null): void {
@@ -208,25 +233,84 @@ function focusElement(id: string): void {
   queueMicrotask(() => document.getElementById(id)?.focus());
 }
 
-function ProjectSettings({ project, onProjectChange }: ProjectWorkspaceProps) {
-  const [draft, setDraft] = useState<ProjectSettingsDraft>(() => ({
+function projectSettingsDraftFrom(project: Project): ProjectSettingsDraft {
+  return {
     name: project.name,
     clearanceXmm: String(project.clearancesMm.xMm),
     clearanceYmm: String(project.clearancesMm.yMm),
     clearanceZmm: String(project.clearancesMm.zMm),
-  }));
+  };
+}
+
+function ProjectSettings({
+  historyRevision,
+  onBusyChange,
+  onProjectCommit,
+  project,
+}: ProjectWorkspaceProps) {
+  const [draft, setDraft] = useState<ProjectSettingsDraft>(() =>
+    projectSettingsDraftFrom(project),
+  );
   const [issues, setIssues] = useState<readonly ValidationIssue[]>([]);
   const [status, setStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const appliedHistoryRevision = useRef(historyRevision);
+  const dirty =
+    draft.name !== project.name ||
+    draft.clearanceXmm !== String(project.clearancesMm.xMm) ||
+    draft.clearanceYmm !== String(project.clearancesMm.yMm) ||
+    draft.clearanceZmm !== String(project.clearancesMm.zMm);
+
+  useEffect(() => {
+    onBusyChange(dirty);
+    return () => onBusyChange(false);
+  }, [dirty, onBusyChange]);
+
+  useEffect(() => {
+    if (appliedHistoryRevision.current === historyRevision) {
+      return;
+    }
+    appliedHistoryRevision.current = historyRevision;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setDraft(projectSettingsDraftFrom(project));
+        setIssues([]);
+        setStatus("");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [historyRevision, project]);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!applyResult(updateProjectSettings(project, draft), onProjectChange, setIssues)) {
-      setStatus("");
+    const result = updateProjectSettings(project, draft);
+    const applied = applyResult(
+      result,
+      project,
+      "project-settings.update",
+      onProjectCommit,
+      setIssues,
+    );
+    if (applied !== "success") {
+      setStatus(
+        applied === "stale"
+          ? "案件が更新されたため保存できませんでした。入力内容を確認して再度保存してください。"
+          : "",
+      );
       focusFirstInvalid(formRef.current);
       return;
     }
-    setStatus("案件と隙間を保存しました。");
+    if (result.ok) {
+      setDraft(projectSettingsDraftFrom(result.project));
+      setStatus(
+        result.project === project
+          ? "案件と隙間に変更はありません。"
+          : "案件と隙間を保存しました。",
+      );
+    }
     focusElement("project-save-button");
   };
 
@@ -301,7 +385,12 @@ function ProjectSettings({ project, onProjectChange }: ProjectWorkspaceProps) {
 
 type EditorMode = { readonly kind: "none" | "add" } | { readonly kind: "edit"; readonly id: string };
 
-function CargoManager({ project, onProjectChange }: ProjectWorkspaceProps) {
+function CargoManager({
+  historyRevision,
+  onBusyChange,
+  onProjectCommit,
+  project,
+}: ProjectWorkspaceProps) {
   const [mode, setMode] = useState<EditorMode>({ kind: "none" });
   const [draft, setDraft] = useState<CargoDraft>(EMPTY_CARGO_DRAFT);
   const [originalDraft, setOriginalDraft] = useState<CargoDraft>(EMPTY_CARGO_DRAFT);
@@ -310,8 +399,38 @@ function CargoManager({ project, onProjectChange }: ProjectWorkspaceProps) {
   const [deleteId, setDeleteId] = useState<string>();
   const [status, setStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const appliedHistoryRevision = useRef(historyRevision);
   const dirty = JSON.stringify(draft) !== JSON.stringify(originalDraft);
   const selectedId = mode.kind === "edit" ? mode.id : undefined;
+  const busy =
+    mode.kind !== "none" || pendingMode !== undefined || deleteId !== undefined;
+
+  useEffect(() => {
+    onBusyChange(busy);
+    return () => onBusyChange(false);
+  }, [busy, onBusyChange]);
+
+  useEffect(() => {
+    if (appliedHistoryRevision.current === historyRevision) {
+      return;
+    }
+    appliedHistoryRevision.current = historyRevision;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setMode({ kind: "none" });
+        setDraft(EMPTY_CARGO_DRAFT);
+        setOriginalDraft(EMPTY_CARGO_DRAFT);
+        setIssues([]);
+        setPendingMode(undefined);
+        setDeleteId(undefined);
+        setStatus("");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [historyRevision]);
 
   const activate = (nextMode: EditorMode) => {
     const target =
@@ -364,13 +483,30 @@ function CargoManager({ project, onProjectChange }: ProjectWorkspaceProps) {
       focusElement("cargo-add-button");
       return;
     }
-    if (!applyResult(result, onProjectChange, setIssues)) {
-      setStatus("");
+    const applied = applyResult(
+      result,
+      project,
+      mode.kind === "add" ? "cargo.add" : "cargo.update",
+      onProjectCommit,
+      setIssues,
+    );
+    if (applied !== "success") {
+      setStatus(
+        applied === "stale"
+          ? "案件が更新されたため積荷を保存できませんでした。入力内容を確認してください。"
+          : "",
+      );
       focusFirstInvalid(formRef.current);
       return;
     }
     const returnFocusId = selectedId === undefined ? "cargo-add-button" : `cargo-edit-${selectedId}`;
-    setStatus(mode.kind === "add" ? "積荷を追加しました。" : "積荷の変更を保存しました。");
+    setStatus(
+      result.ok && result.project === project
+        ? "積荷に変更はありません。"
+        : mode.kind === "add"
+          ? "積荷を追加しました。"
+          : "積荷の変更を保存しました。",
+    );
     setMode({ kind: "none" });
     setDraft(EMPTY_CARGO_DRAFT);
     setOriginalDraft(EMPTY_CARGO_DRAFT);
@@ -381,7 +517,14 @@ function CargoManager({ project, onProjectChange }: ProjectWorkspaceProps) {
 
   const confirmDelete = (id: string) => {
     const result = deleteCargo(project, id);
-    if (applyResult(result, onProjectChange, setIssues)) {
+    const applied = applyResult(
+      result,
+      project,
+      "cargo.delete",
+      onProjectCommit,
+      setIssues,
+    );
+    if (applied === "success") {
       setDeleteId(undefined);
       setPendingMode(undefined);
       setStatus("積荷を削除しました。");
@@ -393,8 +536,14 @@ function CargoManager({ project, onProjectChange }: ProjectWorkspaceProps) {
       focusElement("cargo-add-button");
       return;
     }
-    setStatus("");
-    focusElement("cargo-errors");
+    setStatus(
+      applied === "stale"
+        ? "案件が更新されたため積荷を削除できませんでした。削除確認をやり直してください。"
+        : "",
+    );
+    if (applied === "command-failure") {
+      focusElement("cargo-errors");
+    }
   };
 
   const cancelEditor = () => {
@@ -544,7 +693,12 @@ function CargoManager({ project, onProjectChange }: ProjectWorkspaceProps) {
   );
 }
 
-function ContainerManager({ project, onProjectChange }: ProjectWorkspaceProps) {
+function ContainerManager({
+  historyRevision,
+  onBusyChange,
+  onProjectCommit,
+  project,
+}: ProjectWorkspaceProps) {
   const [mode, setMode] = useState<EditorMode>({ kind: "none" });
   const [draft, setDraft] = useState<ContainerDraft>(EMPTY_CONTAINER_DRAFT);
   const [originalDraft, setOriginalDraft] = useState<ContainerDraft>(EMPTY_CONTAINER_DRAFT);
@@ -553,8 +707,38 @@ function ContainerManager({ project, onProjectChange }: ProjectWorkspaceProps) {
   const [deleteId, setDeleteId] = useState<string>();
   const [status, setStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
+  const appliedHistoryRevision = useRef(historyRevision);
   const dirty = JSON.stringify(draft) !== JSON.stringify(originalDraft);
   const selectedId = mode.kind === "edit" ? mode.id : undefined;
+  const busy =
+    mode.kind !== "none" || pendingMode !== undefined || deleteId !== undefined;
+
+  useEffect(() => {
+    onBusyChange(busy);
+    return () => onBusyChange(false);
+  }, [busy, onBusyChange]);
+
+  useEffect(() => {
+    if (appliedHistoryRevision.current === historyRevision) {
+      return;
+    }
+    appliedHistoryRevision.current = historyRevision;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setMode({ kind: "none" });
+        setDraft(EMPTY_CONTAINER_DRAFT);
+        setOriginalDraft(EMPTY_CONTAINER_DRAFT);
+        setIssues([]);
+        setPendingMode(undefined);
+        setDeleteId(undefined);
+        setStatus("");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [historyRevision]);
 
   const activate = (nextMode: EditorMode) => {
     const target =
@@ -605,14 +789,31 @@ function ContainerManager({ project, onProjectChange }: ProjectWorkspaceProps) {
       focusElement("container-add-button");
       return;
     }
-    if (!applyResult(result, onProjectChange, setIssues)) {
-      setStatus("");
+    const applied = applyResult(
+      result,
+      project,
+      mode.kind === "add" ? "container.add" : "container.update",
+      onProjectCommit,
+      setIssues,
+    );
+    if (applied !== "success") {
+      setStatus(
+        applied === "stale"
+          ? "案件が更新されたため候補を保存できませんでした。入力内容を確認してください。"
+          : "",
+      );
       focusFirstInvalid(formRef.current);
       return;
     }
     const returnFocusId =
       selectedId === undefined ? "container-add-button" : `container-edit-${selectedId}`;
-    setStatus(mode.kind === "add" ? "候補を追加しました。" : "候補の変更を保存しました。");
+    setStatus(
+      result.ok && result.project === project
+        ? "候補に変更はありません。"
+        : mode.kind === "add"
+          ? "候補を追加しました。"
+          : "候補の変更を保存しました。",
+    );
     setMode({ kind: "none" });
     setDraft(EMPTY_CONTAINER_DRAFT);
     setOriginalDraft(EMPTY_CONTAINER_DRAFT);
@@ -622,7 +823,14 @@ function ContainerManager({ project, onProjectChange }: ProjectWorkspaceProps) {
   };
   const confirmDelete = (id: string) => {
     const result = deleteContainer(project, id);
-    if (applyResult(result, onProjectChange, setIssues)) {
+    const applied = applyResult(
+      result,
+      project,
+      "container.delete",
+      onProjectCommit,
+      setIssues,
+    );
+    if (applied === "success") {
       setDeleteId(undefined);
       setPendingMode(undefined);
       setStatus("候補を削除しました。");
@@ -634,8 +842,14 @@ function ContainerManager({ project, onProjectChange }: ProjectWorkspaceProps) {
       focusElement("container-add-button");
       return;
     }
-    setStatus("");
-    focusElement("container-errors");
+    setStatus(
+      applied === "stale"
+        ? "案件が更新されたため候補を削除できませんでした。削除確認をやり直してください。"
+        : "",
+    );
+    if (applied === "command-failure") {
+      focusElement("container-errors");
+    }
   };
 
   const cancelEditor = () => {
@@ -733,7 +947,44 @@ function ContainerManager({ project, onProjectChange }: ProjectWorkspaceProps) {
   );
 }
 
-export function ProjectWorkspace({ project, onProjectChange }: ProjectWorkspaceProps) {
+export function ProjectWorkspace({
+  historyRevision,
+  onBusyChange,
+  onProjectCommit,
+  project,
+}: ProjectWorkspaceProps) {
+  const [busyEditors, setBusyEditors] = useState({
+    settings: false,
+    cargo: false,
+    container: false,
+  });
+  const reportEditorBusy = useCallback(
+    (editor: keyof typeof busyEditors, busy: boolean) => {
+      setBusyEditors((current) =>
+        current[editor] === busy ? current : { ...current, [editor]: busy },
+      );
+    },
+    [],
+  );
+  const reportSettingsBusy = useCallback(
+    (busy: boolean) => reportEditorBusy("settings", busy),
+    [reportEditorBusy],
+  );
+  const reportCargoBusy = useCallback(
+    (busy: boolean) => reportEditorBusy("cargo", busy),
+    [reportEditorBusy],
+  );
+  const reportContainerBusy = useCallback(
+    (busy: boolean) => reportEditorBusy("container", busy),
+    [reportEditorBusy],
+  );
+  const busy = busyEditors.settings || busyEditors.cargo || busyEditors.container;
+
+  useEffect(() => {
+    onBusyChange(busy);
+    return () => onBusyChange(false);
+  }, [busy, onBusyChange]);
+
   const summary = useMemo(
     () => `積荷 ${project.cargoes.length}件、候補 ${project.containers.length}件、配置 ${project.placements.length}件`,
     [project],
@@ -747,10 +998,25 @@ export function ProjectWorkspace({ project, onProjectChange }: ProjectWorkspaceP
       <aside className="privacy-note" aria-label="入力データの注意">
         実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しないでください。
       </aside>
-      <ProjectSettings project={project} onProjectChange={onProjectChange} />
+      <ProjectSettings
+        historyRevision={historyRevision}
+        onBusyChange={reportSettingsBusy}
+        onProjectCommit={onProjectCommit}
+        project={project}
+      />
       <div className="entity-columns">
-        <CargoManager project={project} onProjectChange={onProjectChange} />
-        <ContainerManager project={project} onProjectChange={onProjectChange} />
+        <CargoManager
+          historyRevision={historyRevision}
+          onBusyChange={reportCargoBusy}
+          onProjectCommit={onProjectCommit}
+          project={project}
+        />
+        <ContainerManager
+          historyRevision={historyRevision}
+          onBusyChange={reportContainerBusy}
+          onProjectCommit={onProjectCommit}
+          project={project}
+        />
       </div>
     </section>
   );

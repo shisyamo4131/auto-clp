@@ -7,13 +7,15 @@ import {
   type PlacementDraft,
   type ProjectCommandResult,
 } from "../application/project-command";
+import type { ProjectHistoryCommitHandler } from "../application/project-history";
 import type { Orientation, Placement, Project } from "../domain/model";
 import type { ValidationIssue } from "../domain/validation";
 
 interface PlacementPanelProps {
   readonly externalInteractionActive: boolean;
+  readonly historyRevision: number;
   readonly onInteractionChange: (active: boolean) => void;
-  readonly onProjectChange: (project: Project) => void;
+  readonly onProjectCommit: ProjectHistoryCommitHandler;
   readonly onSelectedCargoChange: (cargoId?: string) => void;
   readonly project: Project;
   readonly selectedCargoId?: string;
@@ -125,8 +127,9 @@ function PositionField({
 
 export function PlacementPanel({
   externalInteractionActive,
+  historyRevision,
   onInteractionChange,
-  onProjectChange,
+  onProjectCommit,
   onSelectedCargoChange,
   project,
   selectedCargoId,
@@ -139,6 +142,7 @@ export function PlacementPanel({
   const [status, setStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const previousSelectedContainerId = useRef(selectedContainerId);
+  const appliedHistoryRevision = useRef(historyRevision);
   const interactionActive = editor !== undefined || deleteTarget !== undefined;
   const controlsDisabled = interactionActive || externalInteractionActive;
   const placedCargoIds = new Set(project.placements.map((placement) => placement.cargoId));
@@ -158,6 +162,27 @@ export function PlacementPanel({
     setIssues([]);
     onInteractionChange(false);
   };
+
+  useEffect(() => {
+    if (appliedHistoryRevision.current === historyRevision) {
+      return;
+    }
+    appliedHistoryRevision.current = historyRevision;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) {
+        setEditor(undefined);
+        setDeleteTarget(undefined);
+        setDraft(undefined);
+        setIssues([]);
+        setStatus("");
+        onInteractionChange(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [historyRevision, onInteractionChange]);
 
   useEffect(() => {
     const previous = previousSelectedContainerId.current;
@@ -336,7 +361,18 @@ export function PlacementPanel({
 
     const returnId = `placement-edit-${editor.cargoId}`;
     const wasNew = editor.kind === "new";
-    onProjectChange(result.project);
+    const transition = onProjectCommit({
+      baseProject: project,
+      nextProject: result.project,
+      action: wasNew ? "placement.add" : "placement.update",
+    });
+    if (!transition.ok) {
+      setIssues([]);
+      setStatus(
+        "案件が更新されたため配置を保存できませんでした。入力内容を確認してください。",
+      );
+      return;
+    }
     if (!wasNew) {
       onSelectedCargoChange(editor.cargoId);
     }
@@ -344,7 +380,9 @@ export function PlacementPanel({
     setStatus(
       wasNew
         ? "新しい配置を保存し、物理判定の再計算を開始しました。"
-        : "配置を保存し、物理判定の再計算を開始しました。",
+        : result.project === project
+          ? "配置に変更はありません。"
+          : "配置を保存し、物理判定の再計算を開始しました。",
     );
     focusPreferredOrPanel(returnId);
   };
@@ -397,7 +435,18 @@ export function PlacementPanel({
       return;
     }
     const cargoId = deleteTarget.cargoId;
-    onProjectChange(result.project);
+    const transition = onProjectCommit({
+      baseProject: project,
+      nextProject: result.project,
+      action: "placement.delete",
+    });
+    if (!transition.ok) {
+      setIssues([]);
+      setStatus(
+        "案件が更新されたため配置を削除できませんでした。削除確認をやり直してください。",
+      );
+      return;
+    }
     if (selectedCargoId === cargoId) {
       onSelectedCargoChange(undefined);
     }

@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createInitialProject } from "./application/project-factory";
+import {
+  commitProjectHistory,
+  createProjectHistory,
+  redoProjectHistory,
+  undoProjectHistory,
+  type ProjectHistoryCommit,
+  type ProjectHistoryTransition,
+} from "./application/project-history";
 import type { WebGL2CapabilityCheck } from "./platform/webgl2";
 import { SceneWorkspace } from "./scene/SceneWorkspace";
+import { ProjectHistoryControls } from "./ui/ProjectHistoryControls";
 import { ProjectWorkspace } from "./ui/ProjectWorkspace";
 
 type AppState =
@@ -42,7 +51,16 @@ const stateCopy: Record<AppState, { readonly title: string; readonly detail: str
 
 export function App({ capabilityCheck, forceInitialRenderError = false }: AppProps) {
   const [state, setState] = useState<AppState>("checking");
-  const [project, setProject] = useState(createInitialProject);
+  const [history, setHistory] = useState(() =>
+    createProjectHistory(createInitialProject()),
+  );
+  const historyRef = useRef(history);
+  const [historyRevision, setHistoryRevision] = useState(0);
+  const [historyCommitRevision, setHistoryCommitRevision] = useState(0);
+  const [busySources, setBusySources] = useState({ project: false, scene: false });
+  const busySourcesRef = useRef(busySources);
+  const busyRef = useRef(false);
+  const project = history.present;
 
   useEffect(() => {
     let cancelled = false;
@@ -67,8 +85,66 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     setState((current) => (current === "unsupported" ? current : "renderer-error"));
   }, []);
 
+  const handleBusyChange = useCallback(
+    (source: "project" | "scene", busy: boolean) => {
+      const current = busySourcesRef.current;
+      if (current[source] === busy) {
+        return;
+      }
+      const next = { ...current, [source]: busy };
+      busySourcesRef.current = next;
+      busyRef.current = next.project || next.scene;
+      setBusySources(next);
+    },
+    [],
+  );
+  const handleSceneBusyChange = useCallback(
+    (busy: boolean) => handleBusyChange("scene", busy),
+    [handleBusyChange],
+  );
+  const handleProjectBusyChange = useCallback(
+    (busy: boolean) => handleBusyChange("project", busy),
+    [handleBusyChange],
+  );
+
+  const handleProjectCommit = useCallback(
+    (commit: ProjectHistoryCommit): ProjectHistoryTransition => {
+      const transition = commitProjectHistory(historyRef.current, commit);
+      if (transition.ok && transition.changed) {
+        historyRef.current = transition.state;
+        setHistory(transition.state);
+        setHistoryCommitRevision((current) => current + 1);
+      }
+      return transition;
+    },
+    [],
+  );
+
+  const navigateHistory = useCallback(
+    (direction: "undo" | "redo"): boolean => {
+      if (busyRef.current) {
+        return false;
+      }
+      const transition =
+        direction === "undo"
+          ? undoProjectHistory(historyRef.current)
+          : redoProjectHistory(historyRef.current);
+      if (!transition.ok || !transition.changed) {
+        return false;
+      }
+      historyRef.current = transition.state;
+      setHistory(transition.state);
+      setHistoryRevision((current) => current + 1);
+      return true;
+    },
+    [],
+  );
+  const handleUndo = useCallback(() => navigateHistory("undo"), [navigateHistory]);
+  const handleRedo = useCallback(() => navigateHistory("redo"), [navigateHistory]);
+
   const copy = stateCopy[state];
   const rendererMounted = state === "renderer-checking" || state === "supported";
+  const historyBusy = busySources.project || busySources.scene;
 
   return (
     <main className="app-shell">
@@ -77,6 +153,17 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         <h1>Auto CLP</h1>
         <p className="lede">精密機器輸送の積載案を、端末内で安全側に検討するための試作環境です。</p>
       </header>
+
+      <ProjectHistoryControls
+        busy={historyBusy}
+        canRedo={history.future.length > 0}
+        canUndo={history.past.length > 0}
+        commitRevision={historyCommitRevision}
+        redoAction={history.future.at(-1)?.action}
+        undoAction={history.past.at(-1)?.action}
+        onRedo={handleRedo}
+        onUndo={handleUndo}
+      />
 
       <section
         className={`capability capability--${state}`}
@@ -98,7 +185,9 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           forceInitialRenderError={forceInitialRenderError}
           onRendererError={handleRendererError}
           onRendererReady={handleRendererReady}
-          onProjectChange={setProject}
+          historyRevision={historyRevision}
+          onBusyChange={handleSceneBusyChange}
+          onProjectCommit={handleProjectCommit}
           project={project}
           rendererMounted={rendererMounted}
         />
@@ -111,7 +200,12 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         </span>
       </aside>
 
-      <ProjectWorkspace project={project} onProjectChange={setProject} />
+      <ProjectWorkspace
+        historyRevision={historyRevision}
+        onBusyChange={handleProjectBusyChange}
+        onProjectCommit={handleProjectCommit}
+        project={project}
+      />
     </main>
   );
 }

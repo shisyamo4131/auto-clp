@@ -108,6 +108,53 @@ h1 {
   line-height: 1.75;
 }
 
+.project-history {
+  min-width: 0;
+  margin-bottom: 1rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(132, 172, 195, 0.26);
+  border-radius: 0.8rem;
+  background: rgba(9, 24, 39, 0.72);
+}
+
+.project-history__heading {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.project-history__heading > * {
+  min-width: 0;
+}
+
+.project-history__heading h2,
+.project-history__summary,
+.project-history__busy {
+  overflow-wrap: anywhere;
+}
+
+.project-history__heading h2 {
+  margin-bottom: 0;
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
+}
+
+.project-history__summary,
+.project-history__busy {
+  margin: 0.75rem 0 0;
+  line-height: 1.55;
+}
+
+.project-history__summary {
+  color: #a8bdcf;
+}
+
+.project-history__busy {
+  color: #ffe2b3;
+}
+
 .capability {
   overflow: hidden;
   min-height: 230px;
@@ -869,6 +916,7 @@ legend {
   }
 
   .capability__copy,
+  .project-history,
   .scene-workspace__controls,
   .placement-panel,
   .physical-validation,

@@ -314,12 +314,16 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   const originalSummary = await placementSummary(row);
   const cargoPoint = await selectCargoOnCanvas(page, canvas, row);
   const editButton = panel.getByRole("button", { name: "編集: 合成canvas積荷" });
+  const undo = page.getByRole("button", { name: "元に戻す" });
+  const redo = page.getByRole("button", { name: "やり直す" });
 
   await page.mouse.move(cargoPoint.x, cargoPoint.y);
   await page.mouse.down();
   await page.mouse.move(cargoPoint.x + 70, cargoPoint.y + 24, { steps: 4 });
   await expect(sceneSelect).toBeDisabled();
   await expect(editButton).toBeDisabled();
+  await expect(undo).toBeDisabled();
+  await expect(redo).toBeDisabled();
   expect(await placementSummary(row)).toBe(originalSummary);
   await page.mouse.up();
 
@@ -334,6 +338,13 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   await expect(page.locator(".physical-validation__summary")).toHaveText(
     "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
   );
+  await expect(page.locator(".project-history__summary")).toContainText(
+    "次に元に戻せる操作: 3Dでの配置移動。",
+  );
+  await undo.click();
+  expect(await placementSummary(row)).toBe(originalSummary);
+  await redo.click();
+  expect(await placementSummary(row)).toBe(movedSummary);
 
   const match = movedSummary.match(/X (-?\d+)・Y (-?\d+)・Z (-?\d+) mm \/ (\w+)/);
   expect(match).not.toBeNull();
@@ -354,16 +365,21 @@ test("rolls an active canvas drag back on Escape, pointer cancellation, and wind
   const { canvas, row, sceneSelect, status } = await createInteractiveScene(page);
   const originalSummary = await placementSummary(row);
   const cargoPoint = await selectCargoOnCanvas(page, canvas, row);
+  const historySummary = page.locator(".project-history__summary");
+  const undo = page.getByRole("button", { name: "元に戻す" });
+  const beforeHistory = await historySummary.textContent();
 
   await page.mouse.move(cargoPoint.x, cargoPoint.y);
   await page.mouse.down();
   await page.mouse.move(cargoPoint.x + 60, cargoPoint.y + 20, { steps: 3 });
   await expect(sceneSelect).toBeDisabled();
+  await expect(undo).toBeDisabled();
   await page.keyboard.press("Escape");
   await page.mouse.up();
   await expect(sceneSelect).toBeEnabled();
   await expect(status).toContainText("Escapeキーで配置の移動をキャンセルしました");
   expect(await placementSummary(row)).toBe(originalSummary);
+  expect(await historySummary.textContent()).toBe(beforeHistory);
 
   await page.mouse.move(cargoPoint.x, cargoPoint.y);
   await page.mouse.down();
@@ -378,6 +394,7 @@ test("rolls an active canvas drag back on Escape, pointer cancellation, and wind
   await expect(sceneSelect).toBeEnabled();
   await expect(status).toContainText("ポインター操作が中断されたため");
   expect(await placementSummary(row)).toBe(originalSummary);
+  expect(await historySummary.textContent()).toBe(beforeHistory);
 
   await page.mouse.move(cargoPoint.x, cargoPoint.y);
   await page.mouse.down();
@@ -394,6 +411,7 @@ test("rolls an active canvas drag back on Escape, pointer cancellation, and wind
   await expect(sceneSelect).toBeEnabled();
   await expect(status).toContainText("ウィンドウの操作が中断されたため");
   expect(await placementSummary(row)).toBe(originalSummary);
+  expect(await historySummary.textContent()).toBe(beforeHistory);
 });
 
 test("rolls an active drag back and unlocks the form when the WebGL context is lost", async ({

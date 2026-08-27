@@ -789,3 +789,151 @@ describe("placement commands", () => {
     });
   });
 });
+
+describe("history-aware no-op commands", () => {
+  it("returns the identical Project for unchanged settings", () => {
+    const current = placedProject();
+
+    const result = updateProjectSettings(current, {
+      name: `  ${current.name}  `,
+      clearanceXmm: String(current.clearancesMm.xMm),
+      clearanceYmm: String(current.clearancesMm.yMm),
+      clearanceZmm: String(current.clearancesMm.zMm),
+    });
+
+    expect(result).toEqual({ ok: true, project: current });
+    if (result.ok) {
+      expect(result.project).toBe(current);
+    }
+  });
+
+  it("returns the identical Project for an unchanged cargo edit", () => {
+    const current = placedProject();
+
+    const result = saveCargo(current, cargoDraft, "cargo-1");
+
+    expect(result).toEqual({ ok: true, project: current });
+    if (result.ok) {
+      expect(result.project).toBe(current);
+    }
+  });
+
+  it("returns the identical Project for an unchanged container edit", () => {
+    const current = placedProject();
+
+    const result = saveContainer(current, containerDraft, "container-1");
+
+    expect(result).toEqual({ ok: true, project: current });
+    if (result.ok) {
+      expect(result.project).toBe(current);
+    }
+  });
+
+  it("returns the identical Project for an unchanged placement edit", () => {
+    const current = placedProject();
+
+    const result = updatePlacement(
+      current,
+      "cargo-1",
+      "container-1",
+      placementDraft,
+    );
+
+    expect(result).toEqual({ ok: true, project: current });
+    if (result.ok) {
+      expect(result.project).toBe(current);
+    }
+  });
+
+  it("does not let an unchanged settings command bypass duplicate-ID validation", () => {
+    const current = deepFreeze({
+      ...placedProject(),
+      cargoes: [cargo(), cargo()],
+    });
+    const original = structuredClone(current);
+
+    const result = updateProjectSettings(current, {
+      name: current.name,
+      clearanceXmm: String(current.clearancesMm.xMm),
+      clearanceYmm: String(current.clearancesMm.yMm),
+      clearanceZmm: String(current.clearancesMm.zMm),
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      project: current,
+      issues: [{ code: "semantic.duplicate-cargo-id", path: "/cargoes/1/id" }],
+    });
+    expect(current).toEqual(original);
+  });
+
+  it("does not let an unchanged cargo command bypass an unknown container reference", () => {
+    const current = deepFreeze({
+      ...placedProject(),
+      placements: [placement("cargo-1", "missing-container")],
+    });
+    const original = structuredClone(current);
+
+    const result = saveCargo(current, cargoDraft, "cargo-1");
+
+    expect(result).toEqual({
+      ok: false,
+      project: current,
+      issues: [
+        {
+          code: "semantic.unknown-container-reference",
+          path: "/placements/0/containerId",
+        },
+      ],
+    });
+    expect(current).toEqual(original);
+  });
+
+  it("does not let an unchanged container command bypass an unknown cargo reference", () => {
+    const current = deepFreeze({
+      ...placedProject(),
+      placements: [placement("missing-cargo", "container-1")],
+    });
+    const original = structuredClone(current);
+
+    const result = saveContainer(current, containerDraft, "container-1");
+
+    expect(result).toEqual({
+      ok: false,
+      project: current,
+      issues: [
+        {
+          code: "semantic.unknown-cargo-reference",
+          path: "/placements/0/cargoId",
+        },
+      ],
+    });
+    expect(current).toEqual(original);
+  });
+
+  it("does not let an unchanged placement command bypass disallowed-orientation validation", () => {
+    const current = deepFreeze({
+      ...placedProject(),
+      cargoes: [{ ...cargo(), allowedOrientations: ["LWH"] }],
+      placements: [{ ...placement(), orientation: "WLH" }],
+    } satisfies Project);
+    const original = structuredClone(current);
+
+    const result = updatePlacement(current, "cargo-1", "container-1", {
+      ...placementDraft,
+      orientation: "WLH",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      project: current,
+      issues: [
+        {
+          code: "semantic.disallowed-orientation",
+          path: "/placements/0/orientation",
+        },
+      ],
+    });
+    expect(current).toEqual(original);
+  });
+});
