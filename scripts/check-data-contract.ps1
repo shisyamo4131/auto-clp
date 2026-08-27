@@ -19,6 +19,10 @@ $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-opti
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
 $automaticProposalTestPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.test.ts'
+$automaticProposalProtocolPath = Join-Path $resolvedProject 'src/workers/automatic-proposal-worker-protocol.ts'
+$automaticProposalEnginePath = Join-Path $resolvedProject 'src/workers/automatic-proposal-worker-engine.ts'
+$automaticProposalWorkerPath = Join-Path $resolvedProject 'src/workers/automatic-proposal.worker.ts'
+$automaticProposalClientPath = Join-Path $resolvedProject 'src/ui/automatic-proposal-worker-client.ts'
 
 foreach ($path in @(
     $schemaPath,
@@ -34,7 +38,11 @@ foreach ($path in @(
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
-    $automaticProposalTestPath
+    $automaticProposalTestPath,
+    $automaticProposalProtocolPath,
+    $automaticProposalEnginePath,
+    $automaticProposalWorkerPath,
+    $automaticProposalClientPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
@@ -310,8 +318,8 @@ foreach ($requiredText in @(
 
 
 foreach ($requiredText in @(
-    '自動提案の純粋domain探索だけが実装済み',
-    '利用者向けWorker、preview、取消、適用は未実装',
+    '自動提案の純粋domain探索と未接続Worker transportだけが実装済み',
+    '利用者向けpreview、Appでの取消・stale、適用は未実装',
     'preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在案件を保持',
     '目的関数上の最良として案内してはならない'
 )) {
@@ -367,4 +375,5 @@ foreach ($requiredText in @(
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true
+    automatic_proposal_worker_transport_implemented = $true
 }

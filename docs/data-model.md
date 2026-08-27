@@ -123,7 +123,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | `persistence/project-import-preflight-client`、`workers/project-import-preflight` | 実装済み: one-shot module Workerで全候補を置換前に判定し、応答検証後に必ずWorkerを終了 | DOM、IndexedDB、同期fallback、理由の保存 |
 | `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置への純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointerによる床面方向drag・視点操作。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
 | `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認、非永続の3D候補・積荷選択、配置追加・整数座標・許可向き・取り外しフォーム、canvas直接操作と正確な移動・向きのキーボード対応フォームfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、案件履歴ボタン・ショートカット・状態通知・入力中lock、手動端末保存・読込・削除、JSON入出力、固定code状態・削除focus管理 | 幾何・制約計算と正規入力変換の再実装 |
-| `workers` | 実装済み: 物理判定をメインスレッド外で評価し、集約状態と理由件数だけを初回応答し、要求された理由を25件ずつ返すローカルmodule Worker。計画: ADR 0004の決定的上限と取消を持つ自動提案専用Worker | DOM、React状態の直接操作、外部通信 |
+| `workers` | 実装済み: 物理判定のローカルmodule Worker。自動提案は正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答maskまで実装。計画: App接続、Project/generation stale判定、preview・適用 | DOM、React状態の直接操作、外部通信 |
 
 実装済みの依存は、UIからapplicationとdomainの型へ、applicationからdomainとpersistenceの検証境界へ、persistenceからdomainへ向かう。scene adapterはdomainの整数mmからThree非依存の表示値を一方向に導出し、rendererはその表示値だけを受け取る。sceneのmesh transform、camera、候補・積荷選択をProjectへ戻さず、canvas dragは正規開始位置とpointer差分から純粋adapterで整数mm入力を作り、application commandを通す。読込ユースケースではapplicationがpersistence境界を呼び、入力編集ではapplication commandがraw draftを正規mm・gへ変換してSchema・意味検証を呼ぶ。domain関数は入力から新しい値または理由を返す純粋関数とし、引数を変更しない。
 
