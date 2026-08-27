@@ -1,7 +1,7 @@
 # Auto CLP Roadmap
 
 - Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと配置案を得られるローカルWebアプリを完成させる。
-- Current progress: 79%
+- Current progress: 81%
 - Last reviewed: 2026-08-28
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
@@ -14,9 +14,9 @@
 | 3D表示と手動配置 | 25 | 22 | In progress | 座標契約、候補・積荷選択、Project→scene投影・描画、投影範囲適応camera、フォーム配置編集、canvas床面方向drag、視点操作、最大100件の案件undo/redoを実装。canvas上のZ移動・向き変更・取り外しは必要性を未検証 |
 | 物理制約の判定 | 20 | 20 | Complete | 低レベルgeometry・耐荷重評価、高位集約、境界違反のカスケード抑制、100%支持時だけの隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL非依存UI、許可上限1,000配置の応答性を実装・検証 |
 | 保存・再読込・操作性 | 10 | 10 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、focus・狭幅を実装・検証 |
-| コンテナ・配置の自動提案 | 15 | 0 | Not started | 目的関数、探索、決定性、打切り、性能、提案説明 |
+| コンテナ・配置の自動提案 | 15 | 2 | In progress | ADR 0004で一候補完全案、目的関数、DFS列挙、決定的attempt上限と境界、cutoff/no-complete-plan、preview/適用/Undo、安全copyと数値入り合成受入fixtureを確定。実装・実行証拠は未着手 |
 | 実務利用者による受入 | 5 | 2 | In progress | 4本の匿名合成ケース、合格基準、観察様式、自動証拠の対応付けと実行を完了。開発チーム内試用、実務利用者試用は未完了 |
-| **Total** | **100** | **79** |  |  |
+| **Total** | **100** | **81** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
 
@@ -24,7 +24,7 @@
 
 1. 4本の匿名合成受入ケースを開発チーム内で実機試用し、操作補助なしの完了可否と誤認し得る表示を観察記録へ残す。
 2. 開発チーム内試用と後続の実務試用で、canvas上のZ移動・向き変更・取り外しが必要か観察し、必要な範囲だけ追加する。
-3. ADR 0004の自動提案目的関数、許容計算時間、最適性、打切り表示を確定する。
+3. ADR 0004の純粋な決定的探索、目的関数、上限、既存validator再確認を実装し、AP-01〜05の単体境界を検証する。
 
 ## Deliverables and Verification Evidence
 
@@ -35,12 +35,11 @@
 | 3D表示と手動配置 | [仕様](../specification.md)、[ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md) | 座標契約、純粋な配置範囲・scene/drag adapter、非永続の候補・積荷選択、コンテナ内部・中央開口・登録済み配置の描画、全投影範囲camera、原子的なフォーム配置編集、canvas床面方向drag、視点操作、最大100件のProject参照履歴と案件undo/redo UI | 型・lint・全単体567件・全ブラウザ37件・ビルド・305/320/375px Chromium実UI試験・独立コードレビュー |
 | 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md) | 低レベルgeometry・耐荷重評価、高位独立診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体551件・全ブラウザ31件。1,000同一bounds配置で499,500不適合理由と1,000未確認理由を打切りなく保持し、summaryは件数だけ、先頭・中間・末尾を各25件取得しながらmain timer/rAFが進むことを実Workerで検証。305/320/375px実UIと独立レビュー合格 |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、固定code UI | 全単体623件・全ブラウザ48件。実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL非依存、305/320/375px、1,000配置・100候補の実Worker応答性、独立レビュー合格 |
-| コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md) | 未実装 | 未実施 |
+| コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md)、[合成受入AP-01〜08](../acceptance.md#automatic-proposal-synthetic-cases) | 未実装 | 目的関数、決定性、探索上限、preview/適用境界、安全copyを確定。実装・実行証拠は未実施 |
 | 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | 全単体628件・全ブラウザ51件、型・lint・build、文書・データ・ガバナンス検証、独立レビュー合格。開発チーム内試用と実務利用者試用は未実施 |
 
 ## Unresolved Problems and Decisions
 
-- 自動提案の目的関数と許容計算時間が未決定。
 - 実務利用者試用の評価担当、日程、合否記録が未決定。
 - 対応ブラウザと最低GPU性能が未決定。
 
@@ -79,3 +78,4 @@
 | 2026-08-28 | 77% | +10 | IndexedDB単一手動枠、固定名JSON入出力、全候補Worker事前判定、履歴barrier、固定code失敗表示を実装。全単体623件・全ブラウザ48件で実reload/delete/download/reimport、失敗段階、競合、focus、狭幅、1,000配置・100候補応答性を検証し、保存・再読込・操作性マイルストーンを完了 |
 | 2026-08-28 | 78% | +1 | 4本の匿名合成受入ケース、合格基準、観察様式を確定し、実務利用者試用と区別した技術受入の正本を追加 |
 | 2026-08-28 | 79% | +1 | 床突き抜け専用診断とWorker伝送を実装し、合成ケースを全単体628件・全ブラウザ51件へ対応付けて自動証拠サブゲートを完了。人間による試用は未実施 |
+| 2026-08-28 | 81% | +2 | ADR 0004をAcceptedとし、一候補完全案、内部容積優先、DFS列挙、決定的attempt上限と境界、cutoff/no-complete-plan、非永続preview、確認付き一括適用、安全copy、数値入りAP-01〜08を確定。実装は未着手 |

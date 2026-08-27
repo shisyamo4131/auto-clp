@@ -15,6 +15,7 @@ $clearanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0011-axis-cl
 $physicalValidationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0012-independent-physical-validation-diagnostics.md'
 $persistenceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0013-manual-local-persistence-and-json-files.md'
 $floorPenetrationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0014-dedicated-floor-penetration-diagnostic.md'
+$optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 
 foreach ($path in @(
@@ -28,6 +29,7 @@ foreach ($path in @(
     $physicalValidationDecisionPath,
     $persistenceDecisionPath,
     $floorPenetrationDecisionPath,
+    $optimizationDecisionPath,
     $acceptancePath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -119,7 +121,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.9.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.10.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -143,6 +145,21 @@ foreach ($requiredText in @(
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved operation-history contract text: $requiredText"
+    }
+}
+
+foreach ($requiredText in @(
+    '全積荷をちょうど一度ずつ、一つの登録済み候補コンテナへ配置',
+    '内部容積、内部床面積、内部長さ、内部幅、内部高さ、候補ID',
+    '未探索の次attemptが上限を超える時だけcutoff',
+    '目的関数上の最良とは未確認',
+    'no-complete-plan',
+    '取消、失敗、stale、適用前previewはProject、履歴、保存状態を変更しない',
+    'no-cargo',
+    'no-candidates'
+)) {
+    if (-not $specification.Contains($requiredText)) {
+        throw "Specification does not contain the approved automatic-proposal contract text: $requiredText"
     }
 }
 
@@ -221,6 +238,36 @@ if ($floorPenetrationDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0014 does not have Accepted status.'
 }
 
+$optimizationDecision = [IO.File]::ReadAllText($optimizationDecisionPath)
+if ($optimizationDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0004 does not have Accepted status.'
+}
+
+foreach ($requiredText in @(
+    '全積荷定義をちょうど一度ずつ、一つの登録済み候補コンテナへ配置',
+    '内部容積、内部床面積、内部長さ、内部幅、内部高さ、候補ID',
+    '最大2,048点',
+    '最大10,000 placement attempt',
+    '一要求最大1,000,000 attempt',
+    'depth-first backtracking',
+    'X={cX, L-cX-dx, 各配置maxX+cX}',
+    '三重loopで直積を遅延列挙',
+    '10億点規模の中間配列を生成・sortしない',
+    '未探索の次attemptが存在して10,001回目または1,000,001回目を許可できない時だけcutoff',
+    'complete-with-cutoff',
+    '目的関数上の最良とは確認できません',
+    'cutoff',
+    'no-complete-plan',
+    'no-cargo',
+    'no-candidates',
+    'Schema `0.1.0`',
+    '移行不要'
+)) {
+    if (-not $optimizationDecision.Contains($requiredText)) {
+        throw "ADR 0004 does not contain the approved automatic-proposal contract text: $requiredText"
+    }
+}
+
 foreach ($requiredText in @(
     'floor-penetration',
     '最小Zが0 mm未満',
@@ -239,10 +286,32 @@ foreach ($requiredText in @(
     'AC-02 Exact Stack and 1 mm Support Failure',
     'AC-03 Independent Floor Penetration Diagnostics',
     'AC-04 Recovery, Portability, and No-WebGL Fallback',
+    'AP-01 Candidate objective',
+    'small=200×100×100',
+    '10,000回目で自然終了',
+    'complete-with-cutoff',
+    'no-complete-plan',
+    'no-cargo',
+    'no-candidates',
+    'cold 1回とwarm 3回',
+    '1,000配置相当',
+    '直積全体を中間配列へ展開しない',
+    'AP-08 Worker and performance',
     '実務利用者試用'
 )) {
     if (-not $acceptance.Contains($requiredText)) {
         throw "Acceptance contract does not contain the approved case text: $requiredText"
+    }
+}
+
+
+foreach ($requiredText in @(
+    '自動提案は未実装',
+    'preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在案件を保持',
+    '目的関数上の最良として案内してはならない'
+)) {
+    if (-not $operations.Contains($requiredText)) {
+        throw "Operations does not contain the approved automatic-proposal boundary text: $requiredText"
     }
 }
 
@@ -290,5 +359,6 @@ foreach ($requiredText in @(
     physical_validation_decision_0012_accepted = $true
     persistence_decision_0013_accepted = $true
     floor_penetration_decision_0014_accepted = $true
+    optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
 }

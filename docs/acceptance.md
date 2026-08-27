@@ -106,3 +106,20 @@
 - Safety status understood as non-guarantee: yes/no
 - Keyboard/touch/narrow-width observations:
 - Defect IDs and final pass/fail:
+
+## Automatic Proposal Synthetic Cases
+
+自動提案の実装後は、以下を実務利用者受入とは分けた技術受入として追加する。
+
+- AP-01 Candidate objective: 共通して隙間0、積荷1個 `50×50×50 mm`、1,000 g、`LWH` のみを使う。容積比較は `small=200×100×100` が `large=300×100×100` に勝つ。同容積比較は `floor-small=100×100×200` が `floor-large=200×100×100` に勝つ。同容積・床面積比較は `length-small=100×200×100` が `length-large=200×100×100` に勝つ。同寸法比較は入力配列と表示名を入れ替えても `container-a` が `container-b` に勝つ。各候補の開口と耐荷重は積荷を許容する値とする。
+- AP-02 Complete plan only: 隙間0、候補 `200×100×100 mm`、開口 `100×100 mm`、耐荷重2,000 g、積荷 `cargo-a` と `cargo-b` を各 `100×100×100 mm`、1,000 g、`LWH` のみとする。期待案は `(0,0,0)` と `(100,0,0)` に各積荷を一度ずつ置く。同じ出力から一方欠落、重複、未知ID、候補混在を作り、適用境界ですべて拒否する。候補長さを199 mmにした派生fixtureでは部分案を適用不可とする。
+- AP-03 Unverified preserved: 隙間0、候補 `100×100×200 mm`、開口 `100×200 mm`、耐荷重2,001 gとする。`support` は `100×100×100 mm`、1,001 g、支持可、`upper` は同寸法、1,000 g、支持不可とする。期待案はsupportを `(0,0,0)`、upperを `(0,0,100)` に置き、不適合0、搬入経路未確認2件、upperの構造・安定性未確認1件をpreviewと適用確認に保持する。
+- AP-04 Cutoff semantics: 純粋なattempt予算fixtureで候補1〜10,000回目を評価し10,001回目を拒否、要求1〜1,000,000回目を評価し1,000,001回目を拒否する。9,999回で自然終了、10,000回目で自然終了、10,000回後に未探索あり、上限ちょうどで成功を別々に固定する。より優先される候補が完全案なしcutoff、次候補が完全案の集約fixtureでは `complete-with-cutoff`、次候補選択、目的上最良未確認の専用警告、適用可とする。順位を逆転した時は劣後候補を探索せず通常成功とする。
+- AP-05 No complete plan: 隙間0、積荷 `101×100×100 mm`、1,000 g、`LWH` のみと、各 `100×100×100 mm`、開口 `100×100 mm`、耐荷重1,000 gの不可能候補2個を使う。向き事前filterでattempt 0、全候補探索済み、`no-complete-plan`、cutoffなし、適用不可、実積載不能の非証明copyを期待する。
+- AP-06 Preview and apply: 探索、preview、取消、失敗、staleでは現在Projectと履歴を同一参照で保持し、確認付き適用だけが配置を一括置換する。Undo/Redoで探索前後を正確に往復する。
+- AP-07 Determinism: 同じ正規案件、アルゴリズム版、探索上限から、候補・積荷配列順や表示名に依存しない同じ案と理由順を返す。
+- AP-08 Worker and performance: 隙間0、`200×200×200 mm`、1,000 g、`LWH` の積荷20個と、候補 `1,000×800×1,000 mm`、開口 `800×1,000 mm`、十分な耐荷重を代表fixtureとする。記録環境でcold 1回とwarm 3回を各5秒以内、取消要求からWorker終了・idle観測まで250 ms以内とする。main timer/rAF、WebGL非対応、キーボード、305/320/375 pxを別行で検証する。別の純粋候補点fixtureでは1,000配置相当から各軸を重複排除・昇順化し、Z→X→Yの期待順で2,048点以下だけを生成して停止し、直積全体を中間配列へ展開しないことを検証する。
+
+空入力fixtureは、積荷0・候補ありと両方0を `no-cargo`、積荷あり・候補0を `no-candidates` とし、attempt 0、previewなし、適用不可、履歴変更なしを期待する。
+
+AP-04の上限試験は、`1..N` の順序付きattempt記述子を生成して指定ordinalだけを成功させられる純粋なtest infrastructureを使う。これはProjectの設定や利用者入力へ公開しない。AP-08の記録にはcommit SHA、algorithm・Schema版、browser/Playwright/OS、CPU、logical processor数、RAM、電源状態、cold/warmと反復番号、viewport、WebGL状態、積荷・候補数、選択候補、候補別・要求attempt数、結果・cutoff源、配置・不適合・未確認件数、結果hash、開始・完了・経過、取消・Worker終了・取消遅延、timer/rAF回数と最大遅延、console warning/error、合否、備考を含める。
