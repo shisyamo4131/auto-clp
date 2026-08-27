@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { createInitialProject } from "./application/project-factory";
 import type { WebGL2CapabilityCheck } from "./platform/webgl2";
 import { ThreeViewport } from "./scene/ThreeViewport";
+import { ProjectWorkspace } from "./ui/ProjectWorkspace";
 
 type AppState =
   | "checking"
@@ -26,7 +28,7 @@ const stateCopy: Record<AppState, { readonly title: string; readonly detail: str
   },
   supported: {
     title: "3D表示を利用できます",
-    detail: "現在はアプリ基盤の確認用プレビューです。積荷入力と配置操作はまだ利用できません。",
+    detail: "案件入力は3D表示とは独立して利用できます。現在の3D表示は操作・判定結果ではない確認用プレビューです。",
   },
   unsupported: {
     title: "3D表示を利用できません",
@@ -40,6 +42,7 @@ const stateCopy: Record<AppState, { readonly title: string; readonly detail: str
 
 export function App({ capabilityCheck, forceInitialRenderError = false }: AppProps) {
   const [state, setState] = useState<AppState>("checking");
+  const [project, setProject] = useState(createInitialProject);
 
   useEffect(() => {
     let cancelled = false;
@@ -100,8 +103,12 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
 
       <aside className="safety-note" aria-label="現在の制限">
         <strong>現在の段階</strong>
-        <span>物理的安全性、法令適合性、荷崩れ防止を保証するものではありません。</span>
+        <span>
+          入力が有効でも積載可能・安全とは限りません。物理的安全性、開口部の完全な通過経路、支持・荷重、法令適合性、荷崩れ防止は未確認です。
+        </span>
       </aside>
+
+      <ProjectWorkspace project={project} onProjectChange={setProject} />
     </main>
   );
 }
