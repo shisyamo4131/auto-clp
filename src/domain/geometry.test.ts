@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  fittingOpeningOrientations,
+  fitsRectangularOpening,
   hasPositiveVolumeOverlap,
   hasRequiredAxisClearance,
   isPlacementWithinContainer,
@@ -14,6 +16,7 @@ import type {
   ClearancesMm,
   DimensionsMm,
   Orientation,
+  OpeningMm,
   OrientedDimensionsMm,
   Placement,
   PositionMm,
@@ -699,6 +702,224 @@ describe("hasRequiredAxisClearance", () => {
 
     expect(reference).toEqual(originalReference);
     expect(candidate).toEqual(originalCandidate);
+    expect(clearances).toEqual(originalClearances);
+  });
+});
+
+describe("fitsRectangularOpening", () => {
+  const dimensions: OrientedDimensionsMm = { xMm: 900, yMm: 100, zMm: 200 };
+  const clearances: ClearancesMm = { xMm: 30, yMm: 10, zMm: 20 };
+  const exactOpening: OpeningMm = { widthMm: 120, heightMm: 220 };
+
+  it.each([
+    { label: "width exact", opening: exactOpening, expected: true },
+    {
+      label: "width 1 mm too small",
+      opening: { ...exactOpening, widthMm: exactOpening.widthMm - 1 },
+      expected: false,
+    },
+    {
+      label: "width 1 mm larger",
+      opening: { ...exactOpening, widthMm: exactOpening.widthMm + 1 },
+      expected: true,
+    },
+    { label: "height exact", opening: exactOpening, expected: true },
+    {
+      label: "height 1 mm too small",
+      opening: { ...exactOpening, heightMm: exactOpening.heightMm - 1 },
+      expected: false,
+    },
+    {
+      label: "height 1 mm larger",
+      opening: { ...exactOpening, heightMm: exactOpening.heightMm + 1 },
+      expected: true,
+    },
+  ])("checks $label", ({ opening, expected }) => {
+    expect(fitsRectangularOpening(dimensions, opening, clearances)).toBe(expected);
+  });
+
+  it.each([
+    {
+      label: "width only",
+      opening: { widthMm: exactOpening.widthMm - 1, heightMm: exactOpening.heightMm },
+    },
+    {
+      label: "height only",
+      opening: { widthMm: exactOpening.widthMm, heightMm: exactOpening.heightMm - 1 },
+    },
+    {
+      label: "both width and height",
+      opening: {
+        widthMm: exactOpening.widthMm - 1,
+        heightMm: exactOpening.heightMm - 1,
+      },
+    },
+  ])("rejects when $label fails", ({ opening }) => {
+    expect(fitsRectangularOpening(dimensions, opening, clearances)).toBe(false);
+  });
+
+  it("accepts exact width and height equality when clearances are zero", () => {
+    expect(
+      fitsRectangularOpening(
+        dimensions,
+        { widthMm: dimensions.yMm, heightMm: dimensions.zMm },
+        { xMm: 0, yMm: 0, zMm: 0 },
+      ),
+    ).toBe(true);
+  });
+
+  it("ignores X clearance and oriented X dimension", () => {
+    expect(
+      fitsRectangularOpening(
+        { ...dimensions, xMm: 1 },
+        exactOpening,
+        { ...clearances, xMm: 0 },
+      ),
+    ).toBe(true);
+    expect(
+      fitsRectangularOpening(
+        { ...dimensions, xMm: 100_000 },
+        exactOpening,
+        { ...clearances, xMm: 10_000 },
+      ),
+    ).toBe(true);
+  });
+
+  it("requires Y clearance on both sides rather than only once", () => {
+    expect(
+      fitsRectangularOpening(
+        dimensions,
+        { ...exactOpening, widthMm: dimensions.yMm + clearances.yMm },
+        clearances,
+      ),
+    ).toBe(false);
+    expect(fitsRectangularOpening(dimensions, exactOpening, clearances)).toBe(true);
+  });
+
+  it("requires Z clearance only once because the cargo stays on the opening floor", () => {
+    expect(
+      fitsRectangularOpening(
+        dimensions,
+        {
+          widthMm: exactOpening.widthMm,
+          heightMm: dimensions.zMm + clearances.zMm,
+        },
+        clearances,
+      ),
+    ).toBe(true);
+  });
+
+  it("does not mutate dimensions, opening, or clearances", () => {
+    const originalDimensions = structuredClone(dimensions);
+    const originalOpening = structuredClone(exactOpening);
+    const originalClearances = structuredClone(clearances);
+
+    fitsRectangularOpening(dimensions, exactOpening, clearances);
+
+    expect(dimensions).toEqual(originalDimensions);
+    expect(exactOpening).toEqual(originalOpening);
+    expect(clearances).toEqual(originalClearances);
+  });
+});
+
+describe("fittingOpeningOrientations", () => {
+  const allOrientations: readonly Orientation[] = [
+    "LWH",
+    "WLH",
+    "LHW",
+    "HLW",
+    "WHL",
+    "HWL",
+  ];
+  const openingCargo: Cargo = {
+    ...cargo,
+    allowedOrientations: allOrientations,
+  };
+  const exactClearances: ClearancesMm = { xMm: 999, yMm: 2, zMm: 3 };
+
+  it.each(mappings)(
+    "uses the %s oriented Y/Z dimensions",
+    (orientation, oriented) => {
+      const singleAllowedCargo: Cargo = {
+        ...openingCargo,
+        allowedOrientations: [orientation],
+      };
+      const opening: OpeningMm = {
+        widthMm: oriented.yMm + exactClearances.yMm * 2,
+        heightMm: oriented.zMm + exactClearances.zMm,
+      };
+
+      expect(
+        fittingOpeningOrientations(singleAllowedCargo, opening, exactClearances),
+      ).toEqual([orientation]);
+    },
+  );
+
+  it("returns exactly one fitting allowed orientation", () => {
+    expect(
+      fittingOpeningOrientations(
+        openingCargo,
+        { widthMm: 100, heightMm: 200 },
+        { xMm: 0, yMm: 0, zMm: 0 },
+      ),
+    ).toEqual(["HLW"]);
+  });
+
+  it("returns multiple fitting orientations in the allowed-list order", () => {
+    const customOrderCargo: Cargo = {
+      ...openingCargo,
+      allowedOrientations: ["HWL", "LWH", "HLW", "WLH", "WHL", "LHW"],
+    };
+
+    expect(
+      fittingOpeningOrientations(
+        customOrderCargo,
+        { widthMm: 200, heightMm: 300 },
+        { xMm: 0, yMm: 0, zMm: 0 },
+      ),
+    ).toEqual(["HWL", "LWH", "HLW", "WLH"]);
+  });
+
+  it("returns none when every allowed orientation fails", () => {
+    expect(
+      fittingOpeningOrientations(
+        openingCargo,
+        { widthMm: 99, heightMm: 99 },
+        { xMm: 0, yMm: 0, zMm: 0 },
+      ),
+    ).toEqual([]);
+  });
+
+  it("excludes fitting orientations that are not allowed", () => {
+    const subsetCargo: Cargo = {
+      ...openingCargo,
+      allowedOrientations: ["WHL", "LWH"],
+    };
+
+    expect(
+      fittingOpeningOrientations(
+        subsetCargo,
+        { widthMm: 1_000, heightMm: 1_000 },
+        { xMm: 0, yMm: 0, zMm: 0 },
+      ),
+    ).toEqual(["WHL", "LWH"]);
+  });
+
+  it("returns a new array and does not mutate cargo, opening, or clearances", () => {
+    const opening: OpeningMm = { widthMm: 1_000, heightMm: 1_000 };
+    const clearances: ClearancesMm = { xMm: 8, yMm: 9, zMm: 10 };
+    const originalCargo = structuredClone(openingCargo);
+    const originalOpening = structuredClone(opening);
+    const originalClearances = structuredClone(clearances);
+
+    const first = fittingOpeningOrientations(openingCargo, opening, clearances);
+    const second = fittingOpeningOrientations(openingCargo, opening, clearances);
+
+    expect(first).toEqual(allOrientations);
+    expect(first).not.toBe(openingCargo.allowedOrientations);
+    expect(first).not.toBe(second);
+    expect(openingCargo).toEqual(originalCargo);
+    expect(opening).toEqual(originalOpening);
     expect(clearances).toEqual(originalClearances);
   });
 });

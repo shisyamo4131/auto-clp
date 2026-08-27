@@ -110,7 +110,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | Planned module | Responsibility | Forbidden dependencies |
 | --- | --- | --- |
 | `domain/model` | 実装済み: 版、向き、寸法、隙間、積荷、候補、配置、案件のreadonly型 | React、Three.js、ブラウザ保存API |
-| `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間。計画: 支持例外を含む高位判定、矩形和集合 | UI、描画、永続化 |
+| `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間、矩形開口寸法と許可向き抽出。計画: 支持例外を含む高位判定、矩形和集合 | UI、描画、永続化 |
 | `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計。計画: 境界、隙間、開口通過、支持、耐荷重 | React、Three.js、I/O |
 | `application/project-import`、`application/project-command` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド。計画: undo/redo | DOM、Three.jsオブジェクトの所有 |
 | `persistence/project-json` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し。計画: File・端末保存アダプター | 3D描画、直接UI更新 |
@@ -128,6 +128,8 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - `hasPositiveVolumeOverlap(first, second)` — 実装済み。全3軸で正の長さを共有する場合だけ重なりとし、面・辺・角だけの接触は重なりとしない。隙間と支持接触は扱わない。
 - `isPlacementWithinContainerWithClearance(bounds, internalDimensionsMm, clearancesMm)` — 実装済み。生の包含を前提に、開口面・奥壁・Y両側壁・天井へ軸別隙間を片側ずつ要求し、床Zを例外とする。
 - `hasRequiredAxisClearance(first, second, clearancesMm)` — 実装済み。正体積の非支持ペアについて、少なくとも一つの分離軸の共有表面間距離が対応する隙間以上かを判定する。支持関係の識別と例外適用は呼出側の計画機能である。
+- `fitsRectangularOpening(orientedDimensionsMm, openingMm, clearancesMm)` — 実装済み。Y隙間を左右2面分、Z隙間を床例外後の上側1面分だけ加え、向き適用後のY・Z断面が矩形開口へ寸法上収まるかを判定する。X寸法とX隙間は使わない。
+- `fittingOpeningOrientations(cargo, openingMm, clearancesMm)` — 実装済み。積荷の許可向きだけを入力順で評価し、矩形断面へ寸法上収まる向きの新しい配列を返す。経路状態と理由は扱わない。
 - `validateProjectReferences(project)` — 実装済み。ID、参照、単一配置、許可向き、開口と内部寸法、安全な質量合計を検証する。
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
 - `validateBounds(container, cargo, placement, clearances)` — 計画。開口面・奥壁・Y両側壁・天井へ片側ずつ軸別実距離を要求し、床Zを例外として積載空間境界を判定する。
@@ -146,4 +148,4 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - 読込失敗時に既存状態が変わらないことを確認する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 
-[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、狭幅表示を含む。支持例外・理由コードを含む物理制約の集約とUI、undo/redo、端末保存に対する検証は引き続き必要である。
+[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、狭幅表示を含む。経路未確認状態、支持例外・理由コードを含む物理制約の集約とUI、undo/redo、端末保存に対する検証は引き続き必要である。

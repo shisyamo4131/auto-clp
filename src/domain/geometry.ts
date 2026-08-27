@@ -2,6 +2,7 @@ import type {
   Cargo,
   ClearancesMm,
   DimensionsMm,
+  OpeningMm,
   Orientation,
   OrientedDimensionsMm,
   Placement,
@@ -145,6 +146,32 @@ export function orientedDimensions(
     case "HWL":
       return { xMm: heightMm, yMm: widthMm, zMm: lengthMm };
   }
+}
+
+export function fitsRectangularOpening(
+  orientedDimensionsMm: OrientedDimensionsMm,
+  openingMm: OpeningMm,
+  clearancesMm: ClearancesMm,
+): boolean {
+  return (
+    orientedDimensionsMm.yMm + 2 * clearancesMm.yMm <=
+      openingMm.widthMm &&
+    orientedDimensionsMm.zMm + clearancesMm.zMm <= openingMm.heightMm
+  );
+}
+
+export function fittingOpeningOrientations(
+  cargo: Pick<Cargo, "dimensionsMm" | "allowedOrientations">,
+  openingMm: OpeningMm,
+  clearancesMm: ClearancesMm,
+): readonly Orientation[] {
+  return cargo.allowedOrientations.filter((orientation) =>
+    fitsRectangularOpening(
+      orientedDimensions(cargo, orientation),
+      openingMm,
+      clearancesMm,
+    ),
+  );
 }
 
 export function placementBounds(
