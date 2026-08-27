@@ -2,11 +2,13 @@
 
 ## Current Availability
 
-- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置のThree.js描画、canvas積荷選択、fine pointerによる床面方向drag・視点操作、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
+- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、コンテナ包含・正体積AABB重なりの純粋geometry基盤、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置のThree.js描画、canvas積荷選択、fine pointerによる床面方向drag・視点操作、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
 - Planned: File・端末保存とJSON入出力UI、undo/redo、矩形開口・許可回転・幾何支持・総耐荷重の制約再計算、自動提案。
 - Unavailable: 入力内容の再起動後保持、canvas上のZ移動・向き変更・取り外し、undo/redo、物理適合判定、保存・JSON入出力、デプロイ、クラウド保存、外部API、実運用サポート。
 
 未実装機能を利用可能として案内してはならない。
+
+包含・重なりの低レベルgeometry基盤は実装済みだが、隙間、対象ID、理由コード、集約状態、UI表示へ未接続である。現段階ではこれを利用者向けの物理適合判定として案内しない。
 
 Phase 1の計画済み判定は、完全な搬入経路、積荷別上載荷重、重心、軸重、床荷重、荷崩れ、固縛、動荷重を保証しない。これらは実装後も「未確認」として利用者へ区別して表示する。
 

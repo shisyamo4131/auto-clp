@@ -100,7 +100,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | Planned module | Responsibility | Forbidden dependencies |
 | --- | --- | --- |
 | `domain/model` | 実装済み: 版、向き、寸法、隙間、積荷、候補、配置、案件のreadonly型 | React、Three.js、ブラウザ保存API |
-| `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲。計画: 交差、矩形和集合 | UI、描画、永続化 |
+| `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、正体積AABB重なり。計画: 隙間を含む高位判定、矩形和集合 | UI、描画、永続化 |
 | `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計。計画: 境界、隙間、開口通過、支持、耐荷重 | React、Three.js、I/O |
 | `application/project-import`、`application/project-command` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド。計画: undo/redo | DOM、Three.jsオブジェクトの所有 |
 | `persistence/project-json` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し。計画: File・端末保存アダプター | 3D描画、直接UI更新 |
@@ -114,6 +114,8 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 
 - `orientedDimensions(cargo, orientation)` — 実装済み。コンテナ局所軸の寸法を返し、入力を変更しない。整数・値域が検証済みであることまでは型だけで保証しない。
 - `placementBounds(cargo, placement)` — 実装済み。最小角の `positionMm` と向き適用後寸法から、整数mmの軸整列占有範囲を返し、入力を変更しない。
+- `isPlacementWithinContainer(bounds, internalDimensionsMm)` — 実装済み。正体積AABBが閉区間のコンテナ内部に全て含まれるかを判定し、境界等値を合格とする。隙間は扱わない。
+- `hasPositiveVolumeOverlap(first, second)` — 実装済み。全3軸で正の長さを共有する場合だけ重なりとし、面・辺・角だけの接触は重なりとしない。隙間と支持接触は扱わない。
 - `validateProjectReferences(project)` — 実装済み。ID、参照、単一配置、許可向き、開口と内部寸法、安全な質量合計を検証する。
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
 - `validateBounds(container, cargo, placement, clearances)` — 積載空間境界を判定する。
@@ -132,4 +134,4 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - 読込失敗時に既存状態が変わらないことを確認する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 
-[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、狭幅表示を含む。物理制約、undo/redo、端末保存に対する検証は引き続き必要である。
+[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、狭幅表示を含む。隙間・理由コードを含む物理制約の集約とUI、undo/redo、端末保存に対する検証は引き続き必要である。

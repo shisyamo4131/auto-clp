@@ -1,5 +1,6 @@
 import type {
   Cargo,
+  DimensionsMm,
   Orientation,
   OrientedDimensionsMm,
   Placement,
@@ -10,6 +11,45 @@ export interface PlacementBoundsMm {
   readonly min: PositionMm;
   readonly dimensions: OrientedDimensionsMm;
   readonly max: PositionMm;
+}
+
+function hasPositiveAxisLengths(bounds: PlacementBoundsMm): boolean {
+  return (
+    bounds.min.xMm < bounds.max.xMm &&
+    bounds.min.yMm < bounds.max.yMm &&
+    bounds.min.zMm < bounds.max.zMm
+  );
+}
+
+export function isPlacementWithinContainer(
+  bounds: PlacementBoundsMm,
+  internalDimensionsMm: DimensionsMm,
+): boolean {
+  return (
+    hasPositiveAxisLengths(bounds) &&
+    bounds.min.xMm >= 0 &&
+    bounds.min.yMm >= 0 &&
+    bounds.min.zMm >= 0 &&
+    bounds.max.xMm <= internalDimensionsMm.lengthMm &&
+    bounds.max.yMm <= internalDimensionsMm.widthMm &&
+    bounds.max.zMm <= internalDimensionsMm.heightMm
+  );
+}
+
+export function hasPositiveVolumeOverlap(
+  first: PlacementBoundsMm,
+  second: PlacementBoundsMm,
+): boolean {
+  return (
+    hasPositiveAxisLengths(first) &&
+    hasPositiveAxisLengths(second) &&
+    first.min.xMm < second.max.xMm &&
+    second.min.xMm < first.max.xMm &&
+    first.min.yMm < second.max.yMm &&
+    second.min.yMm < first.max.yMm &&
+    first.min.zMm < second.max.zMm &&
+    second.min.zMm < first.max.zMm
+  );
 }
 
 export function orientedDimensions(
