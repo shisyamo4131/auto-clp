@@ -6,4 +6,4 @@
 
 | Record | State | Date |
 | --- | --- | --- |
-| [GOV14-AUTOCLP-01](GOV14-AUTOCLP-01.md) | Migration in progress; replacement pending | 2026-08-28 |
+| [GOV14-AUTOCLP-01](GOV14-AUTOCLP-01.md) | Turnover complete; PM（AutoCLP）-02 active | 2026-08-28 |
