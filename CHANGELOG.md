@@ -39,6 +39,7 @@
 - 案件設定・積荷・候補・配置・1回の3D床面dragを最大100件取り消し・やり直しできる、Project参照を構造共有する非永続履歴とアクセシブルな操作UI。
 - stale/no-op/分岐、未保存入力中のlock、native入力履歴と独自入力コンポーネントの保護、WebGL非依存、305〜375px表示を覆う履歴回帰。
 - IndexedDB `current-project` 単一手動枠のtransaction完了後保存・読込・確認削除と、固定名 `auto-clp-project-0.1.0.json` の標準file input/download。
+- 端末保存・JSON入出力をまとめるモーダルNavigation Drawerと、処理中・成功・失敗を操作ごとに識別できるアクセシブルなSnackbar。
 - 全候補を置換前に再判定するone-shot module Worker、履歴barrier、非同期interaction generation、固定code失敗表示、削除確認focus管理。
 - 実IndexedDB reload/delete、download/reimport、全JSON失敗段階、blocked/abort/破損、遅延競合、WebGL非依存、狭幅、1,000配置・100候補Worker応答性を覆う回帰。
 - 手動の端末内保存、保持・削除、JSONファイル、競合・rollback境界を定めるADR 0013。

@@ -2,7 +2,7 @@
 
 ## Current Availability
 
-- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、全候補の置換前Worker判定、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、成功した案件変更を最大100件保持する非永続undo/redo、コンテナ包含・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置のThree.js描画、canvas積荷選択、fine pointerによる床面方向drag、選択積荷近傍の許可済み床面90°回転、ホイールと明示的な `＋` / `－` による拡大縮小、遠方積荷に左右されない荷室基準の視点復元、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
+- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、保存Navigation Drawerと操作単位のSnackbar、全候補の置換前Worker判定、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、成功した案件変更を最大100件保持する非永続undo/redo、コンテナ包含・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置のThree.js描画、canvas積荷選択、fine pointerによる床面方向drag、選択積荷近傍の許可済み床面90°回転、ホイールと明示的な `＋` / `－` による拡大縮小、遠方積荷に左右されない荷室基準の視点復元、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
 - Implemented foundation: ADR 0004に基づく、一候補へ全積荷を配置する純粋な決定的DFS、目的関数順位、候補点・attempt上限、cutoff/no-complete-plan、未確認理由保持。
 - Implemented transport: 正本Schema・意味検証後だけ探索するone-shot module Worker、固定code、厳格な応答検証、同期fallbackなしのclient、即時terminate取消と遅延・二重応答mask、Appからの実Worker接続。
 - Implemented orchestration, preview, and apply: React非依存の探索session、Project参照・interaction generationのstale判定、取消・retry・遅延結果mask、React hook/panel、Appのbusy・generation開始gate、source相関付き固定copy、25件pageの非永続preview DOM、Schema・意味・物理再検証付きの確認、一括適用、一回のUndo/Redo。WebGL非対応時も利用できる。
@@ -75,6 +75,8 @@ corepack pnpm run dev:ui-trial
 案件名、軸別隙間、積荷、コンテナ・車両候補は入力・編集できる。入力途中の文字列は明示的な保存操作まで正規案件へ反映せず、不正入力時は直前の正規案件を保持する。入力成功は積載可能性や物理的安全性の確認を意味しない。
 
 「端末へ保存」は現在の検証済み案件をIndexedDBの単一枠へ手動保存し、transaction完了後だけ成功を表示する。「端末保存を読込」は全候補のWorker事前判定後に案件を一括置換し、旧履歴・draft・選択・camera・判定結果をリセットする。「端末保存を削除」は確認後に保存コピーだけを削除し、画面の案件とJSONファイルは削除しない。自動保存・自動読込はない。保存中の案件commit・履歴操作、読込中に入力状態が変化した案件置換は拒否する。
+
+これら5操作は「案件データ」から開く右側Navigation Drawerへまとめる。Drawerはモーダルとして背景のpointer、Tab移動、案件Undo/Redo shortcutを遮断し、閉じる操作またはEscapeで入口へfocusを戻す。処理中にDrawerを閉じても永続化処理は継続する。処理中と完了はDrawerを閉じた画面でもSnackbarへ操作単位で表示し、成功と取消は6秒後に消去、失敗は明示的に閉じるまで保持する。Drawer内の直近結果はlive regionにせず、同じ文の連続操作でも新しい通知として扱う。
 
 「JSONを書き出す」は検証済み `auto-clp-project-0.1.0.json` をdownloadし、「JSONを読み込む」は標準file inputから同じ取引的読込を行う。端末保存はブラウザのサイトデータ削除・容量管理で失われ得るためバックアップではない。必要な時はJSONも書き出す。操作履歴、未保存入力、選択、camera、判定結果はどちらにも保存しない。
 

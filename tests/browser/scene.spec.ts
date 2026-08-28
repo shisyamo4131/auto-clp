@@ -605,9 +605,9 @@ test("restores a container-sized view when cargo is saved at an extreme coordina
 }) => {
   await page.goto("/");
   await addInteractiveCargo(page, "合成遠方積荷", {
-    lengthMm: "100000",
-    widthMm: "100000",
-    heightMm: "100000",
+    lengthMm: "1200",
+    widthMm: "800",
+    heightMm: "600",
   });
   await addContainer(page, "合成遠方候補");
   const canvas = page.getByRole("img", { name: previewName });
@@ -654,6 +654,7 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   const editButton = panel.getByRole("button", { name: "編集: 合成canvas積荷" });
   const undo = page.getByRole("button", { name: "元に戻す" });
   const redo = page.getByRole("button", { name: "やり直す" });
+  const persistenceEntry = page.getByRole("button", { name: "案件データを開く" });
 
   await page.mouse.move(cargoPoint.x, cargoPoint.y);
   await page.mouse.down();
@@ -663,10 +664,14 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   await expect(rotationButton).toBeDisabled();
   await expect(undo).toBeDisabled();
   await expect(redo).toBeDisabled();
+  await persistenceEntry.evaluate((element) =>
+    (element as unknown as { click(): void }).click(),
+  );
   await expect(page.getByRole("button", { name: "端末へ保存" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "JSONを書き出す" })).toBeDisabled();
   expect(await placementSummary(row)).toBe(originalSummary);
   await page.mouse.up();
+  await page.getByRole("button", { name: "案件データを閉じる" }).click();
 
   await expect(sceneSelect).toBeEnabled();
   await expect(editButton).toBeEnabled();
@@ -829,23 +834,34 @@ test("rolls an active canvas drag back on Escape, pointer cancellation, and wind
   const historySummary = page.locator(".project-history__summary");
   const undo = page.getByRole("button", { name: "元に戻す" });
   const beforeHistory = await historySummary.textContent();
+  const persistenceEntry = page.getByRole("button", { name: "案件データを開く" });
 
   await page.mouse.move(cargoPoint.x, cargoPoint.y);
   await page.mouse.down();
   await page.mouse.move(cargoPoint.x + 60, cargoPoint.y + 20, { steps: 3 });
   await expect(sceneSelect).toBeDisabled();
   await expect(undo).toBeDisabled();
+  await persistenceEntry.evaluate((element) =>
+    (element as unknown as { click(): void }).click(),
+  );
   await expect(page.getByRole("button", { name: "端末へ保存" })).toBeDisabled();
+  await page
+    .getByRole("button", { name: "案件データを閉じる" })
+    .evaluate((element) => (element as unknown as { click(): void }).click());
+  await expect(persistenceEntry).toHaveAttribute("aria-expanded", "false");
   await page.keyboard.press("Escape");
   await page.mouse.up();
   await expect(sceneSelect).toBeEnabled();
   await expect(status).toContainText("Escapeキーで配置の移動をキャンセルしました");
   expect(await placementSummary(row)).toBe(originalSummary);
   expect(await historySummary.textContent()).toBe(beforeHistory);
+  const cargoPointAfterModal = await selectCargoOnCanvas(page, canvas, row);
 
-  await page.mouse.move(cargoPoint.x, cargoPoint.y);
+  await page.mouse.move(cargoPointAfterModal.x, cargoPointAfterModal.y);
   await page.mouse.down();
-  await page.mouse.move(cargoPoint.x - 60, cargoPoint.y + 20, { steps: 3 });
+  await page.mouse.move(cargoPointAfterModal.x - 60, cargoPointAfterModal.y + 20, {
+    steps: 3,
+  });
   await expect(sceneSelect).toBeDisabled();
   await canvas.dispatchEvent("pointercancel", {
     bubbles: true,
@@ -858,9 +874,11 @@ test("rolls an active canvas drag back on Escape, pointer cancellation, and wind
   expect(await placementSummary(row)).toBe(originalSummary);
   expect(await historySummary.textContent()).toBe(beforeHistory);
 
-  await page.mouse.move(cargoPoint.x, cargoPoint.y);
+  await page.mouse.move(cargoPointAfterModal.x, cargoPointAfterModal.y);
   await page.mouse.down();
-  await page.mouse.move(cargoPoint.x + 55, cargoPoint.y - 20, { steps: 3 });
+  await page.mouse.move(cargoPointAfterModal.x + 55, cargoPointAfterModal.y - 20, {
+    steps: 3,
+  });
   await expect(sceneSelect).toBeDisabled();
   await page.evaluate(() => {
     const browserGlobal = globalThis as unknown as {

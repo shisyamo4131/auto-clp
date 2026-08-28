@@ -89,6 +89,14 @@
 - 操作はcamera・resize・drag previewへ追従し、画面外では隠れ、camera操作と重ならず、305 pxでも横overflowしない。キーボード確定後のfocus保持、drag中lock、単一許可向きもブラウザ回帰で確認した。最終差分で全単体855件・全ブラウザ67件、型、lint、buildが個別に成功し、独立レビューでblocking所見0件を確認した。
 - 実Chromeでの人間による位置・文言・連続操作の使いやすさ、touch/coarse pointer、screen readerは未確認である。
 
+## Persistence Drawer and Snackbar Resolution
+
+- `CP-PHASE1-PERSISTENCE-UX-001` で、端末保存・読込・確認削除とJSON書出し・読込を「案件データ」から開く右側Navigation Drawerへ集約した。保存形式、固定JSON名、IndexedDB、Worker事前判定、履歴barrier、競合境界は変更していない。
+- Drawerは全幅でモーダル契約を使い、背景pointer、Tab移動、案件Undo/Redo shortcutを遮断する。開時は閉じる操作、閉じる操作とEscape後は入口へfocusを移し、処理開始でfile inputがdisabledになった場合もfocusをDrawer内へ保持する。処理中に閉じても処理自体は継続する。
+- 処理中・成功・取消・失敗は通知ID付きSnackbarへ表示する。同じ文の連続操作も新しい通知とし、成功・取消は6秒、失敗は明示closeまで保持する。Drawer内の直近結果は二重読み上げしない非live表示とした。
+- 保存13件、scene16件、自動提案11件の対象ブラウザ回帰と独立レビュー3巡で、狭幅、削除確認、非同期処理、背景操作、camera測定fixtureも確認した。最終差分で全単体855件・全ブラウザ70件、型、lint、buildが個別に成功し、blocking / nonblocking所見0件を確認した。
+- 実Chromeでの人間によるDrawer位置・通知寿命・文言の使いやすさ、実screen reader、touch端末、Chromium以外は未確認である。
+
 ## Remaining and Unverified
 
 - `acceptance.md` の正確な全fixtureを人間が再現した証拠。
@@ -97,8 +105,8 @@
 - 試用中のconsole warning/error確認。
 - 自由なZ drag、横倒し4向き、touch/coarse pointer、最低GPU、正式対応ブラウザ。
 - 実務利用者による代表ケース、合否、日程、評価担当。
-- Snackbar、scene-local layout、配置フォーム等に残る向きコードの可読化の設計・実装・回帰。
-- 非永続仮置き場と保存Navigation Drawerの設計・実装・回帰。
+- scene-local layout、配置フォーム等に残る向きコードの可読化の設計・実装・回帰。
+- 非永続仮置き場の設計・実装・回帰。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 

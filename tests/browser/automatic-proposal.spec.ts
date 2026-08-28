@@ -558,12 +558,14 @@ test("closes confirmation on generation and persistence changes and shows fixed 
   await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
   await releaseProposal(page);
   await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await page.getByRole("button", { name: "案件データを開く" }).click();
   await page.getByRole("button", { name: "端末へ保存" }).click();
-  await expect(panel.getByRole("alert")).toHaveCount(0);
-  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(page.locator(".project-persistence__status")).toHaveText(
     "現在の案件をこの端末へ保存しました。",
   );
+  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(history).toHaveText(historyBeforeDraft ?? "");
 
   await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
@@ -689,9 +691,11 @@ test("invalidates a running proposal when persistence starts and after a valid J
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expectPendingCount(page, 1);
+  await page.getByRole("button", { name: "案件データを開く" }).click();
   await page.getByRole("button", { name: "端末へ保存" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(persistenceStatus).toHaveText("現在の案件をこの端末へ保存しました。");
+  await page.getByRole("button", { name: "案件データを閉じる" }).click();
 
   await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
   await expectPendingCount(page, 2);
