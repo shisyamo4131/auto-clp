@@ -53,7 +53,7 @@
 
 ## Tool Blocker and Recovery Attempts
 
-最初のin-app Browser試用では、file chooser/setFilesを含む呼出しが535.2秒後に中断された。その後、fresh in-app Browser backendは一時利用不能、local Chrome接続も利用不能だった。backend状態が変わった後の最後のfresh in-app Browser試行でも、60秒timeoutを指定した一度だけのfile-input呼出しが返らず、435.0秒後に中断した。いずれも画面状態を再取得できず、Auto CLP製品不具合とは断定しない。再試行ループは停止した。
+最初のin-app Browser試用では、file chooser/setFilesを含む呼出しが535.2秒後に中断された。その後、fresh in-app Browser backendは一時利用不能、local Chrome接続も利用不能だった。backend状態が変わった後の最後のfresh in-app Browser試行でも、60秒timeoutを指定した一度だけのfile-input呼出しが返らず、435.0秒後に中断した。さらにWindows Computer Useで既存Chromeを起動する代替は、製品画面へ到達する前のapp approval timeoutで停止した。いずれも画面状態を再取得できず、Auto CLP製品不具合とは断定しない。再試行ループは停止した。
 
 再開条件は、標準file inputへ合成JSONを設定して60秒以内に画面状態を再取得できる実ブラウザ操作環境である。再開時はAC-01〜03を繰り返さず、AC-04 JSON再読込、WebGL非対応、305/320/375 px、残るfocus、consoleだけを実施する。
 
