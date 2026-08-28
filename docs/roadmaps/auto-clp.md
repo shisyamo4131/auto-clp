@@ -22,9 +22,10 @@
 
 ## Next Work
 
-1. [案内付き人間評価](../evidence/phase1-human-ui-trial-4e6c680.md)で確認されたUI改善を同じChrome操作で再試用し、仮置きdrag、近傍回転、カメラ復元、座標導線、案件履歴、保存Drawer、Snackbar、結果指向の向き表示を人間が確認する。
-2. `HUT-01` 修正後の派生床突き抜けfixtureを人間が再試用し、正式fixture、評価者区分、狭幅補足文、自然なTab順、確認後focus、WebGL非対応fallbackも観察する。
-3. 実務利用者試用の評価担当、日程、合否記録を決める。JSON名の案件名利用は現仕様・ADRと衝突するため別承認まで変更しない。
+1. 予定されているガバナンス変更とコーディネーター交代後、[承認済み・未実装の `CP-PHASE1-SCENE-FEEDBACK-001`](../evidence/phase1-human-ui-trial-4e6c680.md#approved-follow-up-pending-governance-turnover) をno-change restart verificationから再開する。canvas上wheelのpage scroll、X/Y床面との正面積重なりがないdropだけの未配置化、`大きさ` 表記を、仕様0.12.0・ADR 0015・実装・試験・独立レビューの一体変更として完了する。案件Schema 0.1.0と進捗98%は据え置く。
+2. 上記変更後、同じChrome操作で仮置きdrag、drag-out未配置化とUndo/Redo、近傍回転、カメラボタン、canvas上page scroll、座標導線、案件履歴、保存Drawer、Snackbar、結果指向表示を人間が再試用する。
+3. `HUT-01` 修正後の派生床突き抜けfixtureを人間が再試用し、正式fixture、評価者区分、狭幅補足文、自然なTab順、確認後focus、WebGL非対応fallbackも観察する。
+4. 実務利用者試用の評価担当、日程、合否記録を決める。JSON名の案件名利用は現仕様・ADRと衝突するため別承認まで変更しない。
 
 ## Deliverables and Verification Evidence
 
