@@ -354,6 +354,7 @@ function hasPositiveXyProjectionOverlap(
 
 function computeSupportAssessments(
   selectedPlacements: readonly SelectedPlacementEvaluation[],
+  normalizeFloorPenetratingCandidates = false,
 ): ReadonlyMap<string, SupportAssessment> {
   const assessments = new Map<string, SupportAssessment>();
 
@@ -365,8 +366,22 @@ function computeSupportAssessments(
     const candidates = selectedPlacements.filter(
       (candidate) => candidate.cargo.id !== target.cargo.id,
     );
+    const diagnosticCandidates = candidates.map((candidate) => ({
+      ...candidate,
+      bounds:
+        normalizeFloorPenetratingCandidates && candidate.bounds.min.zMm < 0
+          ? {
+              ...candidate.bounds,
+              min: { ...candidate.bounds.min, zMm: 0 },
+              max: {
+                ...candidate.bounds.max,
+                zMm: candidate.bounds.max.zMm - candidate.bounds.min.zMm,
+              },
+            }
+          : candidate.bounds,
+    }));
     const contributorIds = sortedUniqueCargoIds(
-      candidates
+      diagnosticCandidates
         .filter(
           (candidate) =>
             candidate.cargo.canSupportCargo &&
@@ -375,7 +390,7 @@ function computeSupportAssessments(
         )
         .map((candidate) => candidate.cargo.id),
     );
-    const geometryCandidates = candidates.map<GeometricSupportCandidateMm>(
+    const geometryCandidates = diagnosticCandidates.map<GeometricSupportCandidateMm>(
       (candidate) => ({
         bounds: candidate.bounds,
         canSupportCargo: candidate.cargo.canSupportCargo,
@@ -516,6 +531,11 @@ export function validatePlacementSet(
     } satisfies SelectedPlacementEvaluation;
   });
   const supportAssessments = computeSupportAssessments(selectedPlacements);
+  const floorNormalizedSupportAssessments = selectedPlacements.some(
+    (selected) => selected.bounds.min.zMm < 0,
+  )
+    ? computeSupportAssessments(selectedPlacements, true)
+    : supportAssessments;
 
   const reasons: PhysicalValidationReason[] = [];
   const reasonKeys = new Set<string>();
@@ -577,7 +597,17 @@ export function validatePlacementSet(
         });
       } else if (
         !isFullSupportContributor(first, second, supportAssessments) &&
+        !isFullSupportContributor(
+          first,
+          second,
+          floorNormalizedSupportAssessments,
+        ) &&
         !isFullSupportContributor(second, first, supportAssessments) &&
+        !isFullSupportContributor(
+          second,
+          first,
+          floorNormalizedSupportAssessments,
+        ) &&
         !hasRequiredAxisClearance(
           first.bounds,
           second.bounds,
@@ -624,6 +654,9 @@ export function validatePlacementSet(
     }
 
     const assessment = supportAssessments.get(selected.cargo.id)!;
+    const floorNormalizedAssessment = floorNormalizedSupportAssessments.get(
+      selected.cargo.id,
+    )!;
     const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
 
     if (assessment.full) {
@@ -633,7 +666,7 @@ export function validatePlacementSet(
         target,
         relatedCargoIds: assessment.contributorIds,
       });
-    } else if (selected.rawInside) {
+    } else if (!floorNormalizedAssessment.full && selected.rawInside) {
       appendReason({
         status: "invalid",
         code: "support-not-full",

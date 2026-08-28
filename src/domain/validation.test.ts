@@ -815,6 +815,237 @@ describe("validatePlacementSet", () => {
     });
   });
 
+  it("suppresses the human-trial support cascade only after floor normalization", () => {
+    const cargoes = [
+      physicalCargo("cargo-a", {
+        dimensionsMm: { lengthMm: 1_000, widthMm: 800, heightMm: 600 },
+        allowedOrientations: ["LWH", "WLH"],
+      }),
+      physicalCargo("cargo-b", {
+        dimensionsMm: { lengthMm: 1_000, widthMm: 800, heightMm: 600 },
+        allowedOrientations: ["LWH", "WLH"],
+      }),
+    ];
+    const project = physicalProject({
+      cargoes,
+      containers: [
+        physicalContainer("container-1", {
+          internalDimensionsMm: {
+            lengthMm: 4_000,
+            widthMm: 2_400,
+            heightMm: 2_400,
+          },
+          openingMm: { widthMm: 2_200, heightMm: 2_200 },
+          payloadCapacityGrams: 1_000_000,
+        }),
+      ],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: 200, yMm: 100, zMm: -1 },
+          orientation: "WLH",
+        }),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 200, yMm: 100, zMm: 600 },
+          orientation: "WLH",
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("floor-penetration", "cargo-a"),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+      ],
+    });
+  });
+
+  it.each([
+    {
+      label: "unrelated elevated cargo",
+      supporter: physicalCargo("cargo-a"),
+      upperPosition: { xMm: 20, yMm: 0, zMm: 10 },
+    },
+    {
+      label: "remaining Z mismatch",
+      supporter: physicalCargo("cargo-a"),
+      upperPosition: { xMm: 0, yMm: 0, zMm: 11 },
+    },
+    {
+      label: "support permission false",
+      supporter: physicalCargo("cargo-a", { canSupportCargo: false }),
+      upperPosition: { xMm: 0, yMm: 0, zMm: 10 },
+    },
+    {
+      label: "1 mm XY support loss",
+      supporter: physicalCargo("cargo-a"),
+      upperPosition: { xMm: 1, yMm: 0, zMm: 10 },
+    },
+  ])("keeps support failure after floor normalization for $label", ({
+    supporter,
+    upperPosition,
+  }) => {
+    const project = physicalProject({
+      cargoes: [supporter, physicalCargo("cargo-b")],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: 0, yMm: 0, zMm: -1 },
+        }),
+        physicalPlacement("cargo-b", { positionMm: upperPosition }),
+      ],
+    });
+
+    const result = validatePlacementSet(project, "container-1");
+
+    expect(result.kind).toBe("evaluated");
+    if (result.kind === "evaluated") {
+      expect(result.reasons).toContainEqual(
+        invalidCargoReason("support-not-full", "cargo-b"),
+      );
+      expect(result.reasons).not.toContainEqual(
+        unverifiedCargoReason("structure-stability-unverified", "cargo-b"),
+      );
+    }
+  });
+
+  it("suppresses a support cascade formed by multiple floor-normalized supporters", () => {
+    const upper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
+    });
+    const project = physicalProject({
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b"), upper],
+      placements: [
+        physicalPlacement("cargo-a", {
+          positionMm: { xMm: 0, yMm: 0, zMm: -1 },
+        }),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 10, yMm: 0, zMm: -1 },
+        }),
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("floor-penetration", "cargo-a"),
+        invalidCargoReason("floor-penetration", "cargo-b"),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        pathReason("cargo-u"),
+      ],
+    });
+  });
+
+  it("combines raw-inside and floor-normalized support without pair or support cascades", () => {
+    const upper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
+    });
+    const project = physicalProject({
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 5 },
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b"), upper],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 10, yMm: 0, zMm: -1 },
+        }),
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("floor-penetration", "cargo-b"),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        pathReason("cargo-u"),
+      ],
+    });
+  });
+
+  it("keeps pair and support failures when mixed supporters leave a 1 mm hole", () => {
+    const upper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
+    });
+    const project = physicalProject({
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 5 },
+      cargoes: [physicalCargo("cargo-a"), physicalCargo("cargo-b"), upper],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 11, yMm: 0, zMm: -1 },
+        }),
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("floor-penetration", "cargo-b"),
+        invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-u"]),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        pathReason("cargo-u"),
+        invalidCargoReason("support-not-full", "cargo-u", ["cargo-a"]),
+      ],
+    });
+  });
+
+  it("keeps the actual-support structure warning with an unrelated floor candidate", () => {
+    const actualSupport = physicalCargo("cargo-a", {
+      dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
+    });
+    const upper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
+    });
+    const project = physicalProject({
+      cargoes: [actualSupport, physicalCargo("cargo-b"), upper],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 30, yMm: 0, zMm: -1 },
+        }),
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason("floor-penetration", "cargo-b"),
+        pathReason("cargo-a"),
+        pathReason("cargo-b"),
+        pathReason("cargo-u"),
+        unverifiedCargoReason(
+          "structure-stability-unverified",
+          "cargo-u",
+          ["cargo-a"],
+        ),
+      ],
+    });
+  });
+
   it("retains structure warning for a raw-outside elevated target that is fully supported", () => {
     const cargoUpper = physicalCargo("cargo-u", {
       dimensionsMm: { lengthMm: 10, widthMm: 10, heightMm: 91 },

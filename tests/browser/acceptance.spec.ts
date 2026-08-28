@@ -57,13 +57,21 @@ async function addContainer(
 async function placeCargo(
   page: Page,
   cargoName: string,
-  position: { readonly xMm?: string; readonly yMm?: string; readonly zMm?: string },
+  position: {
+    readonly xMm?: string;
+    readonly yMm?: string;
+    readonly zMm?: string;
+    readonly orientation?: "LWH" | "WLH";
+  },
 ) {
   const panel = page.locator(".placement-panel");
   await panel.getByRole("button", { name: `配置を追加: ${cargoName}` }).click();
   await page.getByLabel("X最小角").fill(position.xMm ?? "0");
   await page.getByLabel("Y最小角").fill(position.yMm ?? "0");
   await page.getByLabel("Z最小角").fill(position.zMm ?? "0");
+  if (position.orientation !== undefined) {
+    await page.getByLabel("向き").selectOption(position.orientation);
+  }
   await panel.getByRole("button", { name: "配置を保存" }).click();
 }
 
@@ -221,4 +229,58 @@ test("orders floor penetration before independent opening and payload failures",
   );
   await expect(validation).not.toContainText("必要な軸別隙間がありません");
   await expect(validation).not.toContainText("100%覆われていません");
+});
+
+test("suppresses the human-trial floor-derived support message through the Worker", async ({
+  page,
+}) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  await addCargo(page, "テスト積荷A", {
+    lengthMm: "1000",
+    widthMm: "800",
+    heightMm: "600",
+    massKg: "100",
+    canSupportCargo: true,
+  });
+  await addCargo(page, "テスト積荷B", {
+    lengthMm: "1000",
+    widthMm: "800",
+    heightMm: "600",
+    massKg: "100",
+  });
+  await addContainer(page, "テスト荷室", {
+    lengthMm: "4000",
+    widthMm: "2400",
+    heightMm: "2400",
+    openingWidthMm: "2200",
+    openingHeightMm: "2200",
+    payloadKg: "1000",
+  });
+  await placeCargo(page, "テスト積荷A", {
+    xMm: "200",
+    yMm: "100",
+    zMm: "-1",
+    orientation: "WLH",
+  });
+  await placeCargo(page, "テスト積荷B", {
+    xMm: "200",
+    yMm: "100",
+    zMm: "600",
+    orientation: "WLH",
+  });
+
+  const validation = page.locator(".physical-validation");
+  await expect(
+    validation.getByRole("heading", { name: "不適合理由（1件）" }),
+  ).toBeVisible();
+  await expect(validation).toContainText(
+    "積荷が床より下へ貫通しています。Z座標を0以上に修正してください。",
+  );
+  await expect(validation).not.toContainText("100%覆われていません");
+  await expect(validation).not.toContainText(
+    "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
+  );
+  await expect(
+    validation.getByRole("heading", { name: "未確認理由（2件）" }),
+  ).toBeVisible();
 });

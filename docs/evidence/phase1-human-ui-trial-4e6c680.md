@@ -67,6 +67,14 @@
 
 - 案件名を既定のJSONファイル名へ使うこと、または利用者がJSONファイル名を指定すること。現在の固定名・非反射security境界と衝突するため、本証跡だけで実装しない。
 
+## HUT-01 Resolution
+
+- `CP-PHASE1-FLOOR-CASCADE-FIX-001` で、floor-penetrating supporterを診断上Z=0へ正規化した時だけ完全支持となる上段について、派生 `support-not-full` とpair隙間理由を抑制した。
+- 実座標で支持が成立していない間は `structure-stability-unverified` を追加しない。無関係な未支持荷、Z不一致、支持不可、XY 1 mm不足、複数支持の1 mm穴は従来どおり不適合を保持する。
+- 人間評価fixtureそのものをdomainと実Worker browser回帰へ追加した。修正後は床突き抜け1件を先頭表示し、A/Bの搬入経路未確認2件を保持し、派生支持不足と構造・安定性未確認を表示しない。
+- 独立レビューでblocking所見0件を確認した。最終差分で全単体848件、全ブラウザ64件、型、lint、build、データ契約、対象単体76件、対象ブラウザ4件が個別に成功した。buildは既知の1 MB級chunk警告を保持するが、本修正の失敗ではない。
+- 人間による同じfixtureの再試用は未実施である。したがって実装・自動回帰上は解決済みだが、人間観察結果そのものを書き換えない。
+
 ## Remaining and Unverified
 
 - `acceptance.md` の正確な全fixtureを人間が再現した証拠。
@@ -77,7 +85,7 @@
 - 実務利用者による代表ケース、合否、日程、評価担当。
 - Snackbar、scene-local layout、canvas回転、可読な向き表示の設計・実装・回帰。
 - `＋` / `－`、荷室基準の視点復元、非永続仮置き場、保存Navigation Drawerの設計・実装・回帰。
-- `HUT-01` の修正と、今回のA/B座標、無関係な未支持荷、開口・耐荷重、理由順、Worker・ブラウザ表示の回帰。
+- `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 
 ## Repository and Local Side Effects
