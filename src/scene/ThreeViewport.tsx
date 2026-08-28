@@ -560,6 +560,7 @@ export function ThreeViewport({
       controls = new OrbitControls(camera, canvas);
       controls.target.copy(initialTarget);
       configureCameraDistanceLimits(controls, camera, projection);
+      controls.enableZoom = false;
       controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
       controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
       controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;

@@ -595,7 +595,7 @@ export const PlacementPanel = forwardRef<PlacementPanelHandle, PlacementPanelPro
                         <strong>{cargoName}</strong>
                         {presentation === undefined ? null : (
                           <span className="placement-list__size">
-                            荷室内での大きさ: {presentation.sizeCopy}
+                            大きさ: {presentation.sizeCopy}
                           </span>
                         )}
                         <span className="placement-list__position">

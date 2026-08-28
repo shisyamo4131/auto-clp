@@ -113,13 +113,13 @@
 - 検証中、選択カード展開でcanvas位置が変わるpointer不具合と、scene自己busyの再注入によるフォーム取消後focus漏れを発見し、カードをviewport後へ移し外部busyを分離して修正した。全6向き13件、履歴、scene、配置、受入、自動提案、永続化の回帰を含め、最終差分で全単体875件・全ブラウザ75件、型、lint、buildが個別に成功し、独立レビューでblocking / nonblocking所見0件を確認した。
 - 実Chromeでの文言理解、長い向きoptionの読みやすさ、scroll感触、実screen reader/touch、Chromium以外は未確認である。
 
-## Approved Follow-up Pending Governance Turnover
+## Approved Follow-up Resolution
 
 - Checkpoint: `CP-PHASE1-SCENE-FEEDBACK-001`
-- Approval state: **Approved, not implemented**
+- Approval state: **Implemented and automated verification complete; human re-trial pending**
 - Approved on: 2026-08-28
 - Product baseline before the planned governance change: `322ba5a88f70c6dd92585c356937fd911e06645a`
-- The approval must survive the planned instruction-chain change and coordinator-task replacement. The replacement task must load the then-current governance, verify the exact primary directory `C:\Users\seven\projects\auto-clp`, branch, HEAD, single-worktree state, permissions, and a no-change restart callback before assigning or implementing this checkpoint. The replacement task must use its own thread and host as the callback destination.
+- The approval survived the instruction-chain change and coordinator-task replacement. PM（AutoCLP）-02 verified the exact primary directory `C:\Users\seven\projects\auto-clp`, branch, HEAD, single-worktree state, permissions, and no-change restart callback before implementing this checkpoint; future project callbacks route to that replacement task and host.
 
 The user approved the following combined behavior after direct human operation of the local app:
 
@@ -127,11 +127,13 @@ The user approved the following combined behavior after direct human operation o
 2. **Drag-out removal:** after a placed cargo floor drag is quantized to integer X/Y, a no-op remains a no-op. If the oriented X/Y footprint has positive-area overlap with the raw container floor `[0, L] × [0, W]`, the placement remains saved; partial overhang continues to be diagnosed as an invalid placement. If the overlap area is zero, including face- or edge-only contact, the existing placement is deleted and the cargo returns to the derived staging area as one `placement.delete` history action. Undo restores the former position and orientation; redo returns it to staging. Z is excluded from this gesture boundary so floor penetration, ceiling overrun, and other Z corrections remain saved and independently diagnosed.
 3. **Size copy:** the selected-cargo card and placement list use the label `大きさ` instead of `荷室内での大きさ` or `仮置き時の大きさ`; state remains visible through the existing placed/staged copy.
 
-This approval is for a backward-compatible specification addition planned as specification `0.12.0` with a new ADR 0015 refining ADR 0010. Project Schema `0.1.0`, persisted JSON meaning, serializer, persistence, physical validation rules, and automatic proposal behavior remain unchanged; no saved-data migration is required. The implementation checkpoint must update the specification, data model where the derived interaction boundary is documented, ADR and decision index, operations, roadmap, changelog, this evidence follow-up, application code, unit/browser tests, and independent review evidence as one aligned change. Rollback is to restore OrbitControls zoom and the placed-drag update-only branch; the persisted format requires no rollback migration.
+This backward-compatible addition is now recorded as specification `0.12.0` and Accepted ADR 0015 refining ADR 0010. Project Schema `0.1.0`, persisted JSON meaning, serializer, persistence, physical validation rules, and automatic proposal behavior remain unchanged; no saved-data migration is required. The aligned implementation updates the specification, derived data-model boundary, ADR and index, operations, roadmap, changelog, this evidence follow-up, application code, unit/browser tests, and independent review evidence. Rollback is to restore OrbitControls zoom and the placed-drag update-only branch; the persisted format requires no rollback migration.
 
-The expected verification includes page scrolling over the canvas without camera, Project, or history mutation; continued `＋` / `－` zoom and view reset; X/Y overlap boundary unit cases; partial-overhang retention; full-outside staging with status, Worker-target removal, one-step Undo/Redo, stale/import conflict retention, cancellation paths, touch scroll, narrow viewports, and the full required project gates. Progress remains 98% until new verified acceptance evidence changes an existing weighted gate.
+Automated verification covers page scrolling over the canvas without camera, Project, or history mutation; continued `＋` / `－` zoom and view reset; strict X/Y positive-area overlap boundary unit cases; partial-overhang retention through the existing placement-update path; and full-outside staging with status, physical-Worker target removal, and one-step Undo/Redo. Existing scene, persistence, stale/import, cancellation, touch-scroll, and narrow-viewport regressions remain in the full suite. Progress remains 98% because this refines an already-complete weighted milestone and does not add human acceptance evidence.
 
-At this recording checkpoint there is no approved implementation work in progress, no unintegrated branch or commit, and no uncommitted exception. External communication, deployment, external writes, real data, destructive actions, and unrelated specification changes remain unapproved.
+独立レビューでは実装上のblocking所見0件を確認し、最初のreviewで既存完全外配置のno-op先行、4辺の1 mm overlapと面接触0、Z除外、全6向きを直接固定する純粋分類試験の不足が中程度の所見として1件挙がった。`placedFloorDragDisposition` を純粋scene adapterとして抽出し、18件の分類試験を追加して所見を解消した。最終差分は全単体907件・全browser76件、型、lint、build、データ契約、文書、ガバナンス、diff検査を個別に通過した。buildは既知の1 MB級chunk advisoryだけを保持する。
+
+Implementation and required automated gates are complete in the primary working directory; the exact immutable commit is the commit containing this updated record. External communication, deployment, external writes, real data, destructive actions, and unrelated specification changes remain unapproved.
 
 ## Remaining and Unverified
 
@@ -143,7 +145,7 @@ At this recording checkpoint there is no approved implementation work in progres
 - 実務利用者による代表ケース、合否、日程、評価担当。
 - scene-local layout、結果指向の向き表示、座標フォーム導線、案件履歴の人間による再試用。
 - 非永続仮置き場の人間による見つけやすさ・掴みやすさ・荷室内dropの再試用。
-- `CP-PHASE1-SCENE-FEEDBACK-001` は承認済みだが、ガバナンス変更とタスク交代後の仕様0.12.0・ADR 0015・実装・試験・独立レビューが未実施。
+- `CP-PHASE1-SCENE-FEEDBACK-001` の仕様0.12.0・ADR 0015・実装・自動試験は完了したが、人間によるwheel scroll、完全drag-out、`大きさ` copyの再試用は未実施。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 

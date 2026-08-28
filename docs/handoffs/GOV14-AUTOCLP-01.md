@@ -72,9 +72,9 @@ The new capacity command returned exit code 0 for the exact current task: 56.64 
 
 Unmapped project rule count after migration: zero. Project-owned rules and product content are preserved; managed files are updated only by the approved sync script.
 
-## Pending Product Checkpoint
+## Product Checkpoint Resolution
 
-`CP-PHASE1-SCENE-FEEDBACK-001` remains approved and not implemented. It contains wheel-to-page-scroll with button-only camera zoom, positive-area X/Y overlap semantics for retaining or removing a dragged placement, and simplified `大きさ` labels. The planned aligned change is specification 0.12.0 plus ADR 0015, implementation, tests, evidence, operations, roadmap, and changelog. Schema 0.1.0 and progress 98% remain unchanged until verified evidence supports an update.
+`CP-PHASE1-SCENE-FEEDBACK-001` is implemented and verified in the commit containing this record. It adds wheel-to-page-scroll with button-only camera zoom, positive-area X/Y overlap semantics for retaining or removing a dragged placement, and simplified `大きさ` labels. The aligned change includes specification 0.12.0, Accepted ADR 0015, implementation, tests, evidence, operations, roadmap, changelog, and data-contract validation. Schema 0.1.0 and progress 98% remain unchanged. Because a commit cannot embed its own immutable SHA, the exact SHA is reported from the post-commit verification of the commit containing this record.
 
 JSON filename customization remains unapproved. External communication, deployment, external writes, real data, destructive actions, history rewrite, push/fetch/publication, separate Worktrees, and unrelated specification changes remain unapproved.
 

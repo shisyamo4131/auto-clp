@@ -11,7 +11,7 @@
 | --- | ---: | ---: | --- | --- |
 | 基盤・データ契約 | 10 | 10 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly案件型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
 | 積荷・コンテナ入力モデル | 15 | 15 | Complete | 案件・隙間・積荷・候補の入力、一覧、編集、明示削除、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
-| 3D表示と手動配置 | 25 | 25 | Complete | 座標契約、候補・積荷選択、Project→scene投影・描画、荷室外の非永続仮置きとdrag初回配置、フォーム配置編集、canvas床面方向drag、選択積荷近傍の許可向き90度回転、ホイールと明示ボタンの拡大縮小、荷室基準の視点復元、3D直前の単一履歴操作、選択積荷の結果指向寸法・位置と座標フォーム導線を実装。正確なZ移動と取り外しはフォームfallbackで提供 |
+| 3D表示と手動配置 | 25 | 25 | Complete | 座標契約、候補・積荷選択、Project→scene投影・描画、荷室外の非永続仮置きとdrag初回配置、フォーム配置編集、canvas床面方向drag、正面積境界での完全drag-out仮置き復帰、選択積荷近傍の許可向き90度回転、viewport wheelのpage scrollと明示ボタンzoom、荷室基準の視点復元、3D直前の単一履歴操作、選択積荷の結果指向寸法・位置と座標フォーム導線を実装。正確なZ移動はフォームfallbackで提供 |
 | 物理制約の判定 | 20 | 20 | Complete | 低レベルgeometry・耐荷重評価、高位集約、100%支持時だけの隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL非依存UI、許可上限1,000配置の応答性を実装・検証。人間の派生床突き抜け観察で発見した境界違反由来の上段支持不足カスケード `HUT-01` は、診断上の床Z=0正規化、負例、複数支持、実Worker表示を追加して修正・回帰済み |
 | 保存・再読込・操作性 | 10 | 10 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、保存Navigation Drawer、操作単位Snackbar、modal focus・狭幅を実装・検証 |
 | コンテナ・配置の自動提案 | 15 | 15 | Complete | 決定的探索、Worker、session/view、React panel、Appのbusy・generation gate、取消・retry、非永続preview、再検証付き一括適用、一回のUndo/Redoを実装・検証。AP-08代表規模の実Worker性能・決定性・main timer/rAF・native取消を記録環境で検証 |
@@ -22,10 +22,9 @@
 
 ## Next Work
 
-1. 予定されているガバナンス変更とコーディネーター交代後、[承認済み・未実装の `CP-PHASE1-SCENE-FEEDBACK-001`](../evidence/phase1-human-ui-trial-4e6c680.md#approved-follow-up-pending-governance-turnover) をno-change restart verificationから再開する。canvas上wheelのpage scroll、X/Y床面との正面積重なりがないdropだけの未配置化、`大きさ` 表記を、仕様0.12.0・ADR 0015・実装・試験・独立レビューの一体変更として完了する。案件Schema 0.1.0と進捗98%は据え置く。
-2. 上記変更後、同じChrome操作で仮置きdrag、drag-out未配置化とUndo/Redo、近傍回転、カメラボタン、canvas上page scroll、座標導線、案件履歴、保存Drawer、Snackbar、結果指向表示を人間が再試用する。
-3. `HUT-01` 修正後の派生床突き抜けfixtureを人間が再試用し、正式fixture、評価者区分、狭幅補足文、自然なTab順、確認後focus、WebGL非対応fallbackも観察する。
-4. 実務利用者試用の評価担当、日程、合否記録を決める。JSON名の案件名利用は現仕様・ADRと衝突するため別承認まで変更しない。
+1. [完了した `CP-PHASE1-SCENE-FEEDBACK-001`](../evidence/phase1-human-ui-trial-4e6c680.md#approved-follow-up-resolution) を、同じChrome操作で仮置きdrag、drag-out未配置化とUndo/Redo、近傍回転、カメラボタン、canvas上page scroll、座標導線、案件履歴、保存Drawer、Snackbar、結果指向表示として人間が再試用する。
+2. `HUT-01` 修正後の派生床突き抜けfixtureを人間が再試用し、正式fixture、評価者区分、狭幅補足文、自然なTab順、確認後focus、WebGL非対応fallbackも観察する。
+3. 実務利用者試用の評価担当、日程、合否記録を決める。JSON名の案件名利用は現仕様・ADRと衝突するため別承認まで変更しない。
 
 ## Deliverables and Verification Evidence
 
@@ -33,7 +32,7 @@
 | --- | --- | --- | --- |
 | 基盤・データ契約 | [仕様](../specification.md)、[ADR索引](../decisions/README.md)、[データ契約](../data-model.md)、[JSON Schema](../../schemas/project-0.1.0.schema.json) | JSON Schema `0.1.0`、完全な案件型、構造・意味検証、検証済み書出し、取引的読込、TypeScript/React/Three.js/Vite骨格、WebGL 2能力ゲート、向き適用関数 | データ契約・型・lint・単体88件・ブラウザ4件・ビルド・ガバナンス検証 |
 | 積荷・コンテナ入力モデル | [仕様](../specification.md)、[ADR 0005](../decisions/0005-canonical-units-and-ranges.md)、[ADR 0007](../decisions/0007-cargo-orientation-policy.md) | 検証済みProject command、案件・隙間・積荷・候補の入力編集UI | 型・lint・単体147件・ブラウザ11件・実UIレビュー（305/320/375pxを含む） |
-| 3D表示と手動配置 | [仕様](../specification.md)、[ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md) | 座標契約、純粋な配置範囲・scene/drag adapter、非永続の候補・積荷選択・仮置きgrid、コンテナ内部・中央開口・登録済み配置・仮置き積荷の描画、全投影範囲camera、原子的なフォーム配置編集、仮置きからの初回配置、canvas床面方向drag、近傍回転、視点操作、結果指向の選択カード、既存座標フォーム導線、3D直前の単一案件履歴 | 型・lint・全単体875件・全ブラウザ75件・ビルド・305/320/375px Chromium回帰・1,000件純粋投影・全6向き表示・独立コードレビュー |
+| 3D表示と手動配置 | [仕様](../specification.md)、[ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0015](../decisions/0015-scene-wheel-drag-out-and-size-copy.md) | 座標契約、純粋な配置範囲・正面積overlap・scene/drag adapter、非永続の候補・積荷選択・仮置きgrid、コンテナ内部・中央開口・登録済み配置・仮置き積荷の描画、全投影範囲camera、原子的なフォーム配置編集、仮置きからの初回配置、canvas床面方向dragと完全drag-out削除、近傍回転、button zoomとwheel page scroll、結果指向の選択カード、既存座標フォーム導線、3D直前の単一案件履歴 | 型・lint・全単体907件・全ブラウザ76件・ビルド・305/320/375px Chromium回帰・1,000件純粋投影・全6向き表示・独立コードレビュー |
 | 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md) | 低レベルgeometry・耐荷重評価、高位独立診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体848件・全ブラウザ64件、型・lint・build。1,000同一bounds配置の大規模理由保持とmain timer/rAFを維持し、`HUT-01` の人間fixture、無関係な未支持、Z不一致、支持不可、XY 1 mm不足、複数支持、実Worker表示を追加して独立レビュー合格 |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、固定code UI | 全単体623件・全ブラウザ48件。実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL非依存、305/320/375px、1,000配置・100候補の実Worker応答性、独立レビュー合格 |
 | コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md)、[合成受入AP-01〜08](../acceptance.md#automatic-proposal-synthetic-cases) | 純粋探索・Worker・session/view、React hook/panel、Project/generationとbusy gate、実Worker開始・取消・retry、非永続preview、適用直前再検証、確認付き一括適用、同一案no-op、一回のUndo/Redo、25件pageを実装 | domain31件、Worker80件、apply21件を含む全単体839件・全ブラウザ63件。実Worker AP-02/AP-03、Project/history非変更、stale、正常JSON置換、適用・no-op・Undo/Redo、警告保持、WebGL非依存、ARIA、305/320/375px、独立レビュー合格。AP-08は[記録環境の技術証拠](../evidence/automatic-proposal-ap08-1226b082.md)でcold 59.7 ms、warm 48.7〜50.9 ms、各210 attempts・同一hash、native取消0 ms・UI 0.5 ms、console 0件を確認。一般端末SLAではない |
@@ -98,3 +97,4 @@
 | 2026-08-28 | 97% | +1 | 案件全体で未配置の積荷を荷室外の非永続仮置きgridへ派生し、fine pointerの荷室内dropだけを一回の配置追加として確定する主操作を実装。他候補の配置除外、全6向き、1,000件、outside/stale/cancel、Undo/Redo、touch/form fallback、狭幅を全単体862件・全ブラウザ74件で回帰し、型・lint・build・独立レビューに合格したため3D表示と手動配置を24/25へ更新 |
 | 2026-08-28 | 98% | +1 | 単一の案件Undo/Redoを3D直前へ移し、選択積荷の奥行・横幅・高さ、入口・右壁・床からの位置、既存座標フォームへの導線、全6向きの結果指向表示を実装。busy、focus、scroll、WebGL非対応、長名、狭幅を全単体875件・全ブラウザ75件で回帰し、型・lint・build・独立レビューに合格したため3D表示と手動配置25/25を完了 |
 | 2026-08-28 | 98% | +0 | 共通ガバナンス1.4.0、調整runbook、session容量経路、handoff recordを導入。製品仕様0.11.0、Schema 0.1.0、実装済み機能、weighted milestoneの完了証拠は変更しないため進捗は据え置き |
+| 2026-08-28 | 98% | +0 | 仕様0.12.0とADR 0015で、viewport wheelのpage scroll、配置済みdragのX/Y正面積境界による仮置き復帰、共通 `大きさ` labelを確定・実装。全単体907件・全browser76件と独立レビューに合格したが、既に完了済みの3Dマイルストーン内の操作性改善であり進捗は据え置き |

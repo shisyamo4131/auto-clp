@@ -16,6 +16,7 @@ $clearanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0011-axis-cl
 $physicalValidationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0012-independent-physical-validation-diagnostics.md'
 $persistenceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0013-manual-local-persistence-and-json-files.md'
 $floorPenetrationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0014-dedicated-floor-penetration-diagnostic.md'
+$sceneFeedbackDecisionPath = Join-Path $resolvedProject 'docs/decisions/0015-scene-wheel-drag-out-and-size-copy.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -35,6 +36,10 @@ $automaticProposalPerformanceTestPath = Join-Path $resolvedProject 'tests/browse
 $automaticProposalEvidenceIndexPath = Join-Path $resolvedProject 'docs/evidence/README.md'
 $automaticProposalEvidencePath = Join-Path $resolvedProject 'docs/evidence/automatic-proposal-ap08-1226b082.md'
 $appPath = Join-Path $resolvedProject 'src/App.tsx'
+$geometryPath = Join-Path $resolvedProject 'src/domain/geometry.ts'
+$sceneWorkspacePath = Join-Path $resolvedProject 'src/scene/SceneWorkspace.tsx'
+$threeViewportPath = Join-Path $resolvedProject 'src/scene/ThreeViewport.tsx'
+$sceneBrowserTestPath = Join-Path $resolvedProject 'tests/browser/scene.spec.ts'
 
 foreach ($path in @(
     $schemaPath,
@@ -48,6 +53,7 @@ foreach ($path in @(
     $physicalValidationDecisionPath,
     $persistenceDecisionPath,
     $floorPenetrationDecisionPath,
+    $sceneFeedbackDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -66,7 +72,11 @@ foreach ($path in @(
     $automaticProposalPerformanceTestPath,
     $automaticProposalEvidenceIndexPath,
     $automaticProposalEvidencePath,
-    $appPath
+    $appPath,
+    $geometryPath,
+    $sceneWorkspacePath,
+    $threeViewportPath,
+    $sceneBrowserTestPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
@@ -155,6 +165,19 @@ foreach ($requiredText in @(
     }
 }
 
+foreach ($requiredText in @(
+    'X/Y占有範囲が生の荷室床面',
+    '正面積で重なる場合は配置を保持',
+    '重なり面積が0',
+    '一回の `placement.delete`',
+    'viewport上のwheel入力はページscroll',
+    '共通label `大きさ`'
+)) {
+    if (-not $specification.Contains($requiredText)) {
+        throw "Specification does not contain the approved scene-feedback contract text: $requiredText"
+    }
+}
+
 if ($readme.Contains('AP-08代表規模の実Worker性能記録は未完了')) {
     throw 'Root README still reports AP-08 performance evidence as incomplete.'
 }
@@ -171,7 +194,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.11.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.12.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -247,6 +270,37 @@ if ($coordinateDecision -notmatch '(?m)^- Status:\s*Accepted\s*$' -or
     -not $coordinateDecision.Contains('positionMm') -or
     -not $coordinateDecision.Contains('最小X・Y・Z角')) {
     throw 'ADR 0010 does not accept the approved placement coordinate contract.'
+}
+
+$sceneFeedbackDecision = [IO.File]::ReadAllText($sceneFeedbackDecisionPath)
+if ($sceneFeedbackDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0015 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    'wheelをpreventせずpage scrollへ渡す',
+    '正の共通長',
+    '`placement.delete`',
+    'Project Schema `0.1.0`'
+)) {
+    if (-not $sceneFeedbackDecision.Contains($requiredText)) {
+        throw "ADR 0015 does not contain the approved scene-feedback marker: $requiredText"
+    }
+}
+
+$geometry = [IO.File]::ReadAllText($geometryPath)
+$sceneWorkspace = [IO.File]::ReadAllText($sceneWorkspacePath)
+$threeViewport = [IO.File]::ReadAllText($threeViewportPath)
+$sceneBrowserTest = [IO.File]::ReadAllText($sceneBrowserTestPath)
+foreach ($implementationMarker in @(
+    @{ Name = 'geometry'; Text = $geometry; Required = 'export function hasPositiveAreaOverlap' },
+    @{ Name = 'scene workspace overlap'; Text = $sceneWorkspace; Required = 'placedFloorDragDisposition(' },
+    @{ Name = 'scene workspace deletion'; Text = $sceneWorkspace; Required = 'action: "placement.delete"' },
+    @{ Name = 'viewport wheel policy'; Text = $threeViewport; Required = 'controls.enableZoom = false' },
+    @{ Name = 'scene browser drag-out'; Text = $sceneBrowserTest; Required = 'returns a fully dragged-out placement to staging as one undoable deletion' }
+)) {
+    if (-not $implementationMarker.Text.Contains($implementationMarker.Required)) {
+        throw "$($implementationMarker.Name) does not contain the approved implementation marker: $($implementationMarker.Required)"
+    }
 }
 
 $clearanceDecision = [IO.File]::ReadAllText($clearanceDecisionPath)
@@ -463,6 +517,7 @@ foreach ($requiredText in @(
     physical_validation_decision_0012_accepted = $true
     persistence_decision_0013_accepted = $true
     floor_penetration_decision_0014_accepted = $true
+    scene_feedback_decision_0015_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true

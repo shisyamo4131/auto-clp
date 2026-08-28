@@ -50,6 +50,20 @@ function isValidRectangle(rectangle: RectangleBoundsMm): boolean {
   );
 }
 
+export function hasPositiveAreaOverlap(
+  first: RectangleBoundsMm,
+  second: RectangleBoundsMm,
+): boolean {
+  return (
+    isValidRectangle(first) &&
+    isValidRectangle(second) &&
+    first.min.xMm < second.max.xMm &&
+    second.min.xMm < first.max.xMm &&
+    first.min.yMm < second.max.yMm &&
+    second.min.yMm < first.max.yMm
+  );
+}
+
 function addCoverageRange(
   minimumCoverage: number[],
   pendingAddition: number[],

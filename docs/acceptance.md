@@ -88,7 +88,7 @@
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
 - canvas追加操作の判断: AC-01とAC-04で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。
 - 現在のUI-assisted観察: Codex UIテスターによる[部分観察](evidence/phase1-development-ui-trial-8c8ece2.md)では、AC-01〜03、通常経路のJSON再読込、WebGL非対応fallbackでのZ編集・物理判定・履歴・端末保存、305 / 320 / 375 px、主要focus、console 0件を画面操作で確認し、向き・削除・JSON・自動提案controlは有効状態だけを確認した。Z・向き・取り外しはフォームで発見できたためcanvas側追加操作の根拠にはしないが、exact floor dragは3回の誤座標commitを要し、狭幅時の向き補足文とともに改善候補となった。WebGL非対応時の向き変更・取り外し・JSON往復、自然なTab順と確認後focus、人間による安全表示理解は未観察で、人間試用または実務受入の証拠ではない。
-- 現在の人間観察: 人間のプロジェクト評価者による[案内付き部分評価](evidence/phase1-human-ui-trial-4e6c680.md)では、匿名派生ケースの3D床面移動、正確な座標修正、向き、配置削除・Undo、完全支持・1 mm支持不足、床突き抜け、端末保存・読込、JSON往復をChromeで完了した。基本操作は直感的と評価された一方、確定座標とUndo/Redoが3Dから離れるレイアウト、`LWH` / `WLH` の認知負荷と実際の誤設定、遠いdrag後に荷室が小さくなり視点を復元できない問題、操作結果文の時間的関連、固定JSON名に改善要望が出た。`＋` / `－` と荷室基準の視点復元、荷室外の非永続仮置き場、選択積荷近傍の90度回転、保存Navigation Drawerが追加要望である。派生床突き抜け観察では、Z=0へ戻せば解消する上段支持不足まで連鎖表示したため現仕様不適合 `HUT-01` として不合格だった。`CP-PHASE1-FLOOR-CASCADE-FIX-001` で実装・domain・実Worker browser回帰を修正済みだが、人間再試用は未実施である。正式AC-03の数値・構成による人間再現、正式fixture、狭幅・Tab・fallback、評価者区分も未確認のため、実務利用者受入ではない。
+- 現在の人間観察: 人間のプロジェクト評価者による[案内付き部分評価](evidence/phase1-human-ui-trial-4e6c680.md)では、匿名派生ケースの3D床面移動、正確な座標修正、向き、配置削除・Undo、完全支持・1 mm支持不足、床突き抜け、端末保存・読込、JSON往復をChromeで完了した。基本操作は直感的と評価された一方、確定座標とUndo/Redoが3Dから離れるレイアウト、`LWH` / `WLH` の認知負荷と実際の誤設定、遠いdrag後に荷室が小さくなり視点を復元できない問題、操作結果文の時間的関連、固定JSON名に改善要望が出た。`＋` / `－` と荷室基準の視点復元、荷室外の非永続仮置き場、選択積荷近傍の90度回転、保存Navigation Drawerが追加要望である。派生床突き抜け観察では、Z=0へ戻せば解消する上段支持不足まで連鎖表示したため現仕様不適合 `HUT-01` として不合格だった。`CP-PHASE1-FLOOR-CASCADE-FIX-001` で診断を修正し、`CP-PHASE1-SCENE-FEEDBACK-001` でwheel page scroll、button-only camera zoom、配置済み積荷の完全drag-outによる一回の仮置き復帰、共通 `大きさ` labelを自動検証した。どちらも人間再試用は未実施である。正式AC-03の数値・構成による人間再現、正式fixture、狭幅・Tab・fallback、評価者区分も未確認のため、実務利用者受入ではない。
 
 ### Current Automated Mapping
 
@@ -96,7 +96,7 @@
 - AC-02: `tests/browser/acceptance.spec.ts` が正確な合成データで完全支持、Xを1 mmずらした支持不足、undo復元を実行する。
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` が履歴、IndexedDB、固定JSON往復、WebGL非対応fallbackを分担して実行する。
-- 2026-08-28時点の統合証拠は全単体839件、全ブラウザ63件、型、lint、build、データ契約、文書、ガバナンス検証の成功である。開発チーム内試用と実務利用者試用の証拠ではない。
+- 2026-08-28時点の統合証拠は全単体907件、全ブラウザ76件、型、lint、build、データ契約、文書、ガバナンス検証の成功である。開発チーム内試用と実務利用者試用の証拠ではない。
 
 ## Observation Record Template
 

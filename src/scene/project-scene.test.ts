@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { updatePlacement } from "../application/project-command";
 import { orientedDimensions } from "../domain/geometry";
 import {
+  ORIENTATIONS,
   PROJECT_SCHEMA_VERSION,
   type Orientation,
   type Project,
@@ -12,6 +13,7 @@ import {
   domainPointToScene,
   floorQuarterTurnOrientation,
   MM_TO_SCENE_UNIT,
+  placedFloorDragDisposition,
   projectContainerToScene,
   sceneBoundsReachRadius,
   sceneContainerBounds,
@@ -474,6 +476,92 @@ describe("sceneFloorDragPositionMm", () => {
     expect(project.placements[0]?.positionMm.zMm).toBe(-13);
     expect(project.placements[0]?.orientation).toBe("LWH");
   });
+});
+
+describe("placedFloorDragDisposition", () => {
+  const cargo = {
+    dimensionsMm: { lengthMm: 300, widthMm: 200, heightMm: 100 },
+  };
+  const container = {
+    internalDimensionsMm: { lengthMm: 1_000, widthMm: 800, heightMm: 600 },
+  };
+
+  it.each(ORIENTATIONS)(
+    "keeps a quantized no-op for an already outside %s placement",
+    (orientation) => {
+      const positionMm = { xMm: 1_100, yMm: 900, zMm: -50 };
+      expect(
+        placedFloorDragDisposition(
+          cargo,
+          container,
+          { orientation, positionMm },
+          { ...positionMm },
+        ),
+      ).toBe("no-op");
+    },
+  );
+
+  it.each(ORIENTATIONS)(
+    "ignores floor penetration and ceiling overrun for %s",
+    (orientation) => {
+      const placement = {
+        orientation,
+        positionMm: { xMm: 100, yMm: 100, zMm: 0 },
+      };
+      expect(
+        placedFloorDragDisposition(cargo, container, placement, {
+          xMm: 101,
+          yMm: 100,
+          zMm: -1,
+        }),
+      ).toBe("update");
+      expect(
+        placedFloorDragDisposition(cargo, container, placement, {
+          xMm: 101,
+          yMm: 100,
+          zMm: container.internalDimensionsMm.heightMm + 1,
+        }),
+      ).toBe("update");
+    },
+  );
+
+  it.each(ORIENTATIONS)(
+    "retains one-millimetre overlap and deletes face contact for every edge in %s",
+    (orientation) => {
+      const dimensions = orientedDimensions(cargo, orientation);
+      const placement = {
+        orientation,
+        positionMm: { xMm: 100, yMm: 100, zMm: 50 },
+      };
+      const cases = [
+        {
+          overlap: { xMm: -dimensions.xMm + 1, yMm: 100, zMm: -999 },
+          contact: { xMm: -dimensions.xMm, yMm: 100, zMm: -999 },
+        },
+        {
+          overlap: { xMm: 999, yMm: 100, zMm: 999 },
+          contact: { xMm: 1_000, yMm: 100, zMm: 999 },
+        },
+        {
+          overlap: { xMm: 100, yMm: -dimensions.yMm + 1, zMm: -999 },
+          contact: { xMm: 100, yMm: -dimensions.yMm, zMm: -999 },
+        },
+        {
+          overlap: { xMm: 100, yMm: 799, zMm: 999 },
+          contact: { xMm: 100, yMm: 800, zMm: 999 },
+        },
+      ] as const;
+
+      for (const boundary of cases) {
+        expect(
+          placedFloorDragDisposition(cargo, container, placement, boundary.overlap),
+        ).toBe("update");
+        expect(
+          placedFloorDragDisposition(cargo, container, placement, boundary.contact),
+        ).toBe("delete");
+      }
+    },
+  );
 });
 
 describe("sceneProjectionBounds", () => {

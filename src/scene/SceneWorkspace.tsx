@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { addPlacement, updatePlacement } from "../application/project-command";
-import type { ProjectHistoryCommitHandler } from "../application/project-history";
 import {
-  isPlacementWithinContainer,
-  placementBounds,
-} from "../domain/geometry";
+  addPlacement,
+  deletePlacement,
+  updatePlacement,
+} from "../application/project-command";
+import type { ProjectHistoryCommitHandler } from "../application/project-history";
+import { isPlacementWithinContainer, placementBounds } from "../domain/geometry";
 import type { Project } from "../domain/model";
 import { PhysicalValidationPanel } from "../ui/PhysicalValidationPanel";
 import {
@@ -22,6 +23,7 @@ import {
 } from "../ui/placement-presentation";
 import {
   floorQuarterTurnOrientation,
+  placedFloorDragDisposition,
   projectContainerToScene,
   sceneFloorDragPositionMm,
   type SceneVector3,
@@ -316,6 +318,53 @@ export function SceneWorkspace({
         };
       }
       const nextPosition = sceneFloorDragPositionMm(placement.positionMm, deltaScene);
+      const cargo = project.cargoes.find((candidate) => candidate.id === cargoId);
+      const container = project.containers.find(
+        (candidate) => candidate.id === effectiveContainerId,
+      );
+      if (cargo === undefined || container === undefined) {
+        return {
+          ok: false,
+          message:
+            "対象の積荷または候補が最新の案件に見つからないため、移動を保存せず元に戻しました。",
+        };
+      }
+      const dragDisposition = placedFloorDragDisposition(
+        cargo,
+        container,
+        placement,
+        nextPosition,
+      );
+      if (dragDisposition === "no-op") {
+        setCanvasStatus("配置位置は変わりませんでした。");
+        return { ok: true, message: "" };
+      }
+      if (dragDisposition === "delete") {
+        const result = deletePlacement(project, cargoId, effectiveContainerId);
+        if (!result.ok) {
+          return {
+            ok: false,
+            message:
+              "対象の配置が最新の案件に見つからないため、仮置き場へ戻せず元の配置を保持しました。",
+          };
+        }
+        const transition = onProjectCommit({
+          baseProject: project,
+          nextProject: result.project,
+          action: "placement.delete",
+        });
+        if (!transition.ok || !transition.changed) {
+          return {
+            ok: false,
+            message:
+              "案件が更新されたため配置を削除できませんでした。元の配置を確認してやり直してください。",
+          };
+        }
+        setCanvasStatus(
+          `${cargo.name}を荷室の床面から完全に外へ移動したため、配置を削除して仮置き場へ戻しました。`,
+        );
+        return { ok: true, message: "" };
+      }
       const result = updatePlacement(project, cargoId, effectiveContainerId, {
         xMm: String(nextPosition.xMm),
         yMm: String(nextPosition.yMm),
@@ -470,7 +519,7 @@ export function SceneWorkspace({
 
         <p id="scene-workspace-interaction-help" className="scene-workspace__status">
           {rendererMounted
-            ? "3Dでは積荷をクリックまたはタップして選択できます。仮置き場の積荷は、細かいポインターで荷室内へ全体をドラッグすると初めて配置されます。配置済み積荷のドラッグは床面方向へ移動し、空白の左ドラッグで回転、右ドラッグで平行移動、ホイールで拡大・縮小します。正確な座標と向きは下のフォームで編集できます。"
+            ? "3Dでは積荷をクリックまたはタップして選択できます。仮置き場の積荷は、細かいポインターで荷室内へ全体をドラッグすると初めて配置されます。配置済み積荷のドラッグは床面方向へ移動し、荷室の床面から完全に外へ出すと仮置き場へ戻ります。空白の左ドラッグで回転、右ドラッグで平行移動し、＋と－で拡大・縮小します。ホイールはページをスクロールします。正確な座標と向きは下のフォームで編集できます。"
             : "3D表示を利用できない場合も、下のフォームで座標と向きを編集できます。"}
         </p>
 
@@ -557,10 +606,7 @@ export function SceneWorkspace({
               </p>
               {selectedPresentation === undefined ? null : (
                 <p className="scene-selection-card__size">
-                  {selectedProjection.kind === "staged"
-                    ? "仮置き時の大きさ"
-                    : "荷室内での大きさ"}
-                  : {selectedPresentation.sizeCopy}
+                  大きさ: {selectedPresentation.sizeCopy}
                 </p>
               )}
               {selectedProjection.kind === "placed" && selectedPlacement !== undefined ? (

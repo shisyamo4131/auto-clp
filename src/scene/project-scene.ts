@@ -1,7 +1,14 @@
-import { orientedDimensions, placementBounds } from "../domain/geometry";
+import {
+  hasPositiveAreaOverlap,
+  orientedDimensions,
+  placementBounds,
+} from "../domain/geometry";
 import type {
+  Cargo,
+  Container,
   Orientation,
   OrientedDimensionsMm,
+  Placement,
   PositionMm,
   Project,
 } from "../domain/model";
@@ -205,6 +212,46 @@ export function sceneFloorDragPositionMm(
     ),
     zMm: normalizedStartZ,
   };
+}
+
+export type PlacedFloorDragDisposition = "no-op" | "update" | "delete";
+
+/**
+ * Classifies a quantized placed-cargo floor drag without changing Project state.
+ * Only X/Y participate in the interaction boundary; Z is deliberately ignored.
+ */
+export function placedFloorDragDisposition(
+  cargo: Pick<Cargo, "dimensionsMm">,
+  container: Pick<Container, "internalDimensionsMm">,
+  placement: Pick<Placement, "orientation" | "positionMm">,
+  nextPositionMm: PositionMm,
+): PlacedFloorDragDisposition {
+  if (
+    nextPositionMm.xMm === placement.positionMm.xMm &&
+    nextPositionMm.yMm === placement.positionMm.yMm
+  ) {
+    return "no-op";
+  }
+
+  const nextBounds = placementBounds(cargo, {
+    orientation: placement.orientation,
+    positionMm: nextPositionMm,
+  });
+  return hasPositiveAreaOverlap(
+    {
+      min: { xMm: nextBounds.min.xMm, yMm: nextBounds.min.yMm },
+      max: { xMm: nextBounds.max.xMm, yMm: nextBounds.max.yMm },
+    },
+    {
+      min: { xMm: 0, yMm: 0 },
+      max: {
+        xMm: container.internalDimensionsMm.lengthMm,
+        yMm: container.internalDimensionsMm.widthMm,
+      },
+    },
+  )
+    ? "update"
+    : "delete";
 }
 
 function centerFromBounds(

@@ -475,6 +475,45 @@ test("stages an unplaced cargo and commits one in-container drag through history
   await expect(page.getByRole("button", { name: "床面で90°回転" })).toBeVisible();
 });
 
+test("returns a fully dragged-out placement to staging as one undoable deletion", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const { canvas, row, status } = await createInteractiveScene(page);
+  const originalSummary = await placementSummary(row);
+  const originalDetails = await row.locator(".placement-list__details").textContent();
+  const cargoPoint = await selectCargoOnCanvas(page, canvas, row);
+  const bounds = await canvas.boundingBox();
+  if (bounds === null) {
+    throw new Error("3D canvas has no bounding box");
+  }
+
+  await page.mouse.move(cargoPoint.x, cargoPoint.y);
+  await page.mouse.down();
+  await page.mouse.move(1, cargoPoint.y, { steps: 12 });
+  await page.mouse.up();
+
+  await expect(row).toHaveCount(0);
+  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+  await expect(status).toContainText("配置を削除して仮置き場へ戻しました");
+  await expect(page.locator(".physical-validation__summary")).toHaveText(
+    "適合：この候補には配置済みの積荷がありません。",
+  );
+  await expect(page.locator(".project-history__summary")).toContainText(
+    "次に元に戻せる操作: 配置の削除。",
+  );
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(row).toHaveCount(1);
+  expect(await placementSummary(row)).toBe(originalSummary);
+  expect(await row.locator(".placement-list__details").textContent()).toBe(originalDetails);
+  await expect(page.locator(".viewport__staging-label")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "やり直す" }).click();
+  await expect(row).toHaveCount(0);
+  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+});
+
 test("shows result-oriented scene actions and opens the existing coordinate form", async ({
   page,
 }) => {
@@ -497,7 +536,7 @@ test("shows result-oriented scene actions and opens the existing coordinate form
   await expect(card).toContainText(cargoName);
   await expect(card).toContainText("未配置（仮置き場）");
   await expect(card.locator(".scene-selection-card__size")).toHaveText(
-    "仮置き時の大きさ: 奥行方向 500 × 横幅方向 400 × 高さ方向 300 mm",
+    "大きさ: 奥行方向 500 × 横幅方向 400 × 高さ方向 300 mm",
   );
   await expect(card).not.toContainText("入口から手前面まで");
   await expect(card).not.toContainText("保存上の向きコード");
@@ -580,7 +619,7 @@ test("shows result-oriented scene actions and opens the existing coordinate form
   await expect(historySummary).toContainText("次に元に戻せる操作: 配置の追加。");
   await expect(card).toContainText("荷室内に配置済み");
   await expect(card.locator(".scene-selection-card__size")).toHaveText(
-    "荷室内での大きさ: 奥行方向 400 × 横幅方向 500 × 高さ方向 300 mm",
+    "大きさ: 奥行方向 400 × 横幅方向 500 × 高さ方向 300 mm",
   );
   await expect(card.locator(".scene-selection-card__position")).toContainText(
     "入口から手前面まで 100 mm",
@@ -841,13 +880,38 @@ test("selects cargo, clears on blank space, and keeps clicks and camera controls
   await page.mouse.down();
   await page.mouse.move(blankPoint.x + 45, blankPoint.y - 35, { steps: 3 });
   await page.mouse.up();
-  const beforeWheel = await canvas.screenshot();
-  await page.mouse.wheel(0, -240);
-  const afterWheel = await canvas.screenshot();
-  expect(afterWheel.equals(beforeWheel)).toBe(false);
   const historyBeforeCameraButtons = await page
     .locator(".project-history__summary")
     .textContent();
+  await canvas.hover();
+  const scrollBeforeWheel = await page.evaluate(() => {
+    const browserGlobal = globalThis as unknown as {
+      readonly document: { readonly documentElement: { readonly scrollHeight: number } };
+      readonly innerHeight: number;
+      readonly scrollY: number;
+    };
+    return {
+      maximum:
+        browserGlobal.document.documentElement.scrollHeight - browserGlobal.innerHeight,
+      y: browserGlobal.scrollY,
+    };
+  });
+  const wheelDelta = scrollBeforeWheel.y < scrollBeforeWheel.maximum ? 240 : -240;
+  const beforeWheel = await canvas.screenshot();
+  await page.mouse.wheel(0, wheelDelta);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (globalThis as unknown as { readonly scrollY: number }).scrollY,
+      ),
+    )
+    .not.toBe(scrollBeforeWheel.y);
+  const afterWheel = await canvas.screenshot();
+  expect(afterWheel.equals(beforeWheel)).toBe(true);
+  expect(await page.locator(".project-history__summary").textContent()).toBe(
+    historyBeforeCameraButtons,
+  );
   const beforeZoom = await canvas.screenshot();
   await page.getByRole("button", { name: "拡大" }).click();
   const afterZoom = await canvas.screenshot();
@@ -914,8 +978,7 @@ test("rotates a selected cargo once beside the mesh and preserves its minimum co
     cardBounds.y + cardBounds.height + cargoControlMarginPx,
   );
 
-  await canvas.hover();
-  await page.mouse.wheel(0, -360);
+  await page.getByRole("button", { name: "拡大" }).click();
   await expect(row).toHaveAttribute("aria-current", "true");
   await expect(rotationButton).toBeVisible();
   await expect

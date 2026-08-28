@@ -4,6 +4,7 @@ import {
   fittingOpeningOrientations,
   fitsRectangularOpening,
   hasFullGeometricSupport,
+  hasPositiveAreaOverlap,
   hasPositiveVolumeOverlap,
   hasRequiredAxisClearance,
   isRectangleFullyCoveredByUnion,
@@ -374,6 +375,49 @@ describe("hasPositiveVolumeOverlap", () => {
     hasPositiveVolumeOverlap(reference, candidate);
 
     expect(reference).toEqual(originalReference);
+    expect(candidate).toEqual(originalCandidate);
+  });
+});
+
+describe("hasPositiveAreaOverlap", () => {
+  const rectangle = (
+    minXmm: number,
+    minYmm: number,
+    maxXmm: number,
+    maxYmm: number,
+  ): RectangleBoundsMm => ({
+    min: { xMm: minXmm, yMm: minYmm },
+    max: { xMm: maxXmm, yMm: maxYmm },
+  });
+  const floor = rectangle(0, 0, 1_000, 800);
+
+  it.each([
+    ["the same rectangle", rectangle(0, 0, 1_000, 800), true],
+    ["one millimetre at the negative X side", rectangle(-499, 100, 1, 500), true],
+    ["one millimetre at the positive X side", rectangle(999, 100, 1_499, 500), true],
+    ["one millimetre at the negative Y side", rectangle(100, -399, 500, 1), true],
+    ["one millimetre at the positive Y side", rectangle(100, 799, 500, 1_199), true],
+    ["negative X face contact", rectangle(-500, 100, 0, 500), false],
+    ["positive X face contact", rectangle(1_000, 100, 1_500, 500), false],
+    ["negative Y face contact", rectangle(100, -400, 500, 0), false],
+    ["positive Y face contact", rectangle(100, 800, 500, 1_200), false],
+    ["corner contact", rectangle(1_000, 800, 1_500, 1_200), false],
+    ["a one millimetre gap", rectangle(1_001, 100, 1_501, 500), false],
+    ["a zero-width rectangle", rectangle(10, 10, 10, 20), false],
+    ["an inverted rectangle", rectangle(20, 10, 10, 20), false],
+  ] as const)("returns %s = %s in both operand orders", (_label, candidate, expected) => {
+    expect(hasPositiveAreaOverlap(floor, candidate)).toBe(expected);
+    expect(hasPositiveAreaOverlap(candidate, floor)).toBe(expected);
+  });
+
+  it("does not mutate either rectangle", () => {
+    const candidate = rectangle(-499, 100, 1, 500);
+    const originalFloor = structuredClone(floor);
+    const originalCandidate = structuredClone(candidate);
+
+    hasPositiveAreaOverlap(floor, candidate);
+
+    expect(floor).toEqual(originalFloor);
     expect(candidate).toEqual(originalCandidate);
   });
 });
