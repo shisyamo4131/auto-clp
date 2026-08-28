@@ -53,6 +53,7 @@
 - production module Workerを使うAP-08匿名20積荷性能回帰と、cold/warm、決定的result hash、main timer/rAF、native取消、console、実行環境を保存する技術証拠。
 - 匿名合成AC-01〜04のCodex UI-assisted部分観察記録。exact floor dragの反復修正、通常JSON再読込、WebGL非対応時のZ編集・判定・履歴・端末保存、狭幅、主要focus、consoleを確認し、未実行操作・環境遅延・改善候補・残る人間試用を区別。
 - 固定loopback URLとstrict portを使うUI試用server script、および固定済みPlaywright Chromiumを導入する初期設定script。
+- 人間のプロジェクト評価者がChromeで匿名派生ケースの移動・向き・削除・履歴、1 mm支持不足、床突き抜け、端末保存、JSON往復を完了し、床突き抜け由来の支持不足カスケード不具合を発見した案内付き人間評価証跡。
 
 ### Changed
 
@@ -91,6 +92,8 @@
 - 自動提案のReact/App接続と実Worker previewの検証に基づき、Auto CLPロードマップ進捗を88%から91%へ更新。確認付き適用、Undo、AP-08代表規模の実時間性能は未実装または未検証。
 - 自動提案の確認付き一括適用と一回のUndo/Redoの検証に基づき、Auto CLPロードマップ進捗を91%から93%へ更新。AP-08代表規模の実時間性能は未検証。
 - 記録環境でのAP-08実Worker性能・決定性・取消の検証に基づき、自動提案マイルストーンを完了し、Auto CLPロードマップ進捗を93%から94%へ更新。一般端末SLA、最低GPU、実務利用者受入は未検証。
+- 案内付き人間評価の独立証跡に基づき、Auto CLPロードマップ進捗を94%から95%へ更新。床突き抜け由来の支持不足カスケード修正を最優先とし、明示zoom・荷室基準の視点復元、非永続仮置き場、選択積荷近傍の許可向き回転、scene近傍の座標・履歴、時間的に識別できる通知、保存Navigation Drawerを後続UI改善、JSON名変更を仕様・ADR承認待ちとして分離。
+- 既知の物理診断仕様違反 `HUT-01` を反映し、物理制約マイルストーンを20/20 Completeから19/20 In progressへ訂正して、ロードマップ進捗を95%から94%へ更新。修正と回帰完了まで1点を保留。
 
 ### Fixed
 

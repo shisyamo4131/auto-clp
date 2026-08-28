@@ -11,20 +11,20 @@
 | --- | ---: | ---: | --- | --- |
 | 基盤・データ契約 | 10 | 10 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly案件型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
 | 積荷・コンテナ入力モデル | 15 | 15 | Complete | 案件・隙間・積荷・候補の入力、一覧、編集、明示削除、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
-| 3D表示と手動配置 | 25 | 22 | In progress | 座標契約、候補・積荷選択、Project→scene投影・描画、投影範囲適応camera、フォーム配置編集、canvas床面方向drag、視点操作、最大100件の案件undo/redoを実装。canvas上のZ移動・向き変更・取り外しは必要性を未検証 |
-| 物理制約の判定 | 20 | 20 | Complete | 低レベルgeometry・耐荷重評価、高位集約、境界違反のカスケード抑制、100%支持時だけの隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL非依存UI、許可上限1,000配置の応答性を実装・検証 |
+| 3D表示と手動配置 | 25 | 22 | In progress | 座標契約、候補・積荷選択、Project→scene投影・描画、投影範囲適応camera、フォーム配置編集、canvas床面方向drag、視点操作、最大100件の案件undo/redoを実装。canvas近傍の許可向き90度回転は人間評価で必要性確認済み・未実装。canvas上のZ移動と取り外しは必要性未検証 |
+| 物理制約の判定 | 20 | 19 | In progress | 低レベルgeometry・耐荷重評価、高位集約、100%支持時だけの隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL非依存UI、許可上限1,000配置の応答性を実装・検証。人間の派生床突き抜け観察で、境界違反由来の上段支持不足を連鎖表示する `HUT-01` を発見したため、修正と回帰まで完了判定を1点保留 |
 | 保存・再読込・操作性 | 10 | 10 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、focus・狭幅を実装・検証 |
 | コンテナ・配置の自動提案 | 15 | 15 | Complete | 決定的探索、Worker、session/view、React panel、Appのbusy・generation gate、取消・retry、非永続preview、再検証付き一括適用、一回のUndo/Redoを実装・検証。AP-08代表規模の実Worker性能・決定性・main timer/rAF・native取消を記録環境で検証 |
-| 実務利用者による受入 | 5 | 2 | In progress | 4本の匿名合成ケース、合格基準、観察様式、自動証拠の対応付けと実行を完了。開発チーム内試用、実務利用者試用は未完了 |
+| 実務利用者による受入 | 5 | 3 | In progress | 4本の匿名合成ケース、合格基準、自動証拠に加え、案内付き人間評価で移動・向き・削除・履歴・物理理由・保存・JSON往復と改善点を観察し、床突き抜け由来の支持不足カスケード不具合を発見。正式fixture、評価者区分、狭幅・Tab・fallback、実務利用者試用は未完了 |
 | **Total** | **100** | **94** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
 
 ## Next Work
 
-1. [Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)と区別した開発チーム内の人間試用で、AC-01〜04、安全表示、狭幅補足文、自然なTab順と確認後focusを観察する。
-2. 開発チーム内試用と後続の実務試用で、canvas上のZ移動・向き変更・取り外しが必要か判断し、必要な範囲だけ追加する。
-3. 実務利用者試用の評価担当、日程、合否記録を決め、匿名の観察記録として実施する。
+1. [案内付き人間評価](../evidence/phase1-human-ui-trial-4e6c680.md)で発見した `HUT-01` を修正し、床突き抜け由来の上段支持不足だけを抑制しながら、無関係な支持不足、開口・耐荷重、理由順、Worker・ブラウザ表示を回帰する。
+2. 同評価で必要性が確認された、明示的な `＋` / `－` と荷室基準の視点復元、荷室外の非永続仮置き場、選択積荷近傍の許可向き90度回転、scene近傍の座標・履歴操作、時間的に識別できる通知、保存Navigation Drawerを、既存commandと安全境界を保つUI改善として設計・実装・検証する。
+3. 人間評価の残りとして正式fixture、評価者区分、狭幅補足文、自然なTab順、確認後focus、WebGL非対応fallbackを観察し、実務利用者試用の評価担当、日程、合否記録を決める。JSON名の案件名利用は現仕様・ADRと衝突するため別承認まで変更しない。
 
 ## Deliverables and Verification Evidence
 
@@ -33,15 +33,16 @@
 | 基盤・データ契約 | [仕様](../specification.md)、[ADR索引](../decisions/README.md)、[データ契約](../data-model.md)、[JSON Schema](../../schemas/project-0.1.0.schema.json) | JSON Schema `0.1.0`、完全な案件型、構造・意味検証、検証済み書出し、取引的読込、TypeScript/React/Three.js/Vite骨格、WebGL 2能力ゲート、向き適用関数 | データ契約・型・lint・単体88件・ブラウザ4件・ビルド・ガバナンス検証 |
 | 積荷・コンテナ入力モデル | [仕様](../specification.md)、[ADR 0005](../decisions/0005-canonical-units-and-ranges.md)、[ADR 0007](../decisions/0007-cargo-orientation-policy.md) | 検証済みProject command、案件・隙間・積荷・候補の入力編集UI | 型・lint・単体147件・ブラウザ11件・実UIレビュー（305/320/375pxを含む） |
 | 3D表示と手動配置 | [仕様](../specification.md)、[ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md) | 座標契約、純粋な配置範囲・scene/drag adapter、非永続の候補・積荷選択、コンテナ内部・中央開口・登録済み配置の描画、全投影範囲camera、原子的なフォーム配置編集、canvas床面方向drag、視点操作、最大100件のProject参照履歴と案件undo/redo UI | 型・lint・全単体567件・全ブラウザ37件・ビルド・305/320/375px Chromium実UI試験・独立コードレビュー |
-| 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md) | 低レベルgeometry・耐荷重評価、高位独立診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体551件・全ブラウザ31件。1,000同一bounds配置で499,500不適合理由と1,000未確認理由を打切りなく保持し、summaryは件数だけ、先頭・中間・末尾を各25件取得しながらmain timer/rAFが進むことを実Workerで検証。305/320/375px実UIと独立レビュー合格 |
+| 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md) | 低レベルgeometry・耐荷重評価、高位独立診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体551件・全ブラウザ31件。1,000同一bounds配置で499,500不適合理由と1,000未確認理由を打切りなく保持し、summaryは件数だけ、先頭・中間・末尾を各25件取得しながらmain timer/rAFが進むことを実Workerで検証。305/320/375px実UIと独立レビューは当時合格したが、後続の人間派生fixtureで `HUT-01` を発見し、完了判定を修正まで保留 |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、固定code UI | 全単体623件・全ブラウザ48件。実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL非依存、305/320/375px、1,000配置・100候補の実Worker応答性、独立レビュー合格 |
 | コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md)、[合成受入AP-01〜08](../acceptance.md#automatic-proposal-synthetic-cases) | 純粋探索・Worker・session/view、React hook/panel、Project/generationとbusy gate、実Worker開始・取消・retry、非永続preview、適用直前再検証、確認付き一括適用、同一案no-op、一回のUndo/Redo、25件pageを実装 | domain31件、Worker80件、apply21件を含む全単体839件・全ブラウザ63件。実Worker AP-02/AP-03、Project/history非変更、stale、正常JSON置換、適用・no-op・Undo/Redo、警告保持、WebGL非依存、ARIA、305/320/375px、独立レビュー合格。AP-08は[記録環境の技術証拠](../evidence/automatic-proposal-ap08-1226b082.md)でcold 59.7 ms、warm 48.7〜50.9 ms、各210 attempts・同一hash、native取消0 ms・UI 0.5 ms、console 0件を確認。一般端末SLAではない |
-| 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | 全単体628件・全ブラウザ51件、型・lint・build、文書・データ・ガバナンス検証、独立レビュー合格。[Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)でAC-01〜03、通常JSON再読込、WebGL非対応時のZ編集・判定・履歴・端末保存、狭幅、主要focus、consoleを確認し、向き・削除・JSON等はcontrolの有効状態だけを確認。AC-04全操作、人間による安全表示理解、開発チーム内試用、実務利用者試用は未実施 |
+| 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | 全単体628件・全ブラウザ51件、型・lint・build、文書・データ・ガバナンス検証、独立レビュー合格。[Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)に加え、[案内付き人間評価](../evidence/phase1-human-ui-trial-4e6c680.md)で派生ケースの移動・向き・削除・履歴・理由理解・端末保存・JSON往復を完了し、`HUT-01` とUI改善根拠を記録。正式fixture、評価者区分、狭幅・Tab・fallback、実務利用者試用は未完了 |
 
 ## Unresolved Problems and Decisions
 
 - 実務利用者試用の評価担当、日程、合否記録が未決定。
 - 対応ブラウザと最低GPU性能が未決定。
+- JSON出力名を案件名または利用者指定へ変える要望は、固定名・案件名非反射を定める現仕様とADR 0013に衝突し、別承認が未決定。
 
 ## Definition of Done
 
@@ -87,3 +88,5 @@
 | 2026-08-28 | 94% | +1 | AP-08の匿名20積荷fixtureをproduction module Workerで測定。記録環境でcold 59.7 ms、warm 48.7〜50.9 ms、全4回210 attempts・同一hash、main timer/rAF進行、native取消0 ms・UI 0.5 ms、console 0件を検証し、自動提案マイルストーンを完了。一般端末SLA、最低GPU、実務受入ではない |
 | 2026-08-28 | 94% | +0 | Codex UI-assisted試用でAC-01〜03とAC-04端末再読込までを実画面観察。exact floor dragで3回の誤座標commitを記録した。JSON file-inputのbrowser tool応答不能により残項目と人間試用は未完了のため加点なし |
 | 2026-08-28 | 94% | +0 | PC再起動後にCodex UI-assisted試用を再開し、通常JSON再読込、WebGL非対応時のZ編集・判定・Undo・端末保存、305 / 320 / 375 px、主要focus、console 0件を観察。向き・削除・JSON等はcontrolの有効状態だけを確認し、人間試用とAC-04全操作は未完了のため加点なし |
+| 2026-08-28 | 95% | +1 | 人間のプロジェクト評価者がChromeで匿名派生ケースの移動・向き・削除・Undo、完全支持・1 mm支持不足・床突き抜け、端末保存・読込、JSON往復を完了。独立した人間観察証跡を作成し、基本操作の直感性、向き誤設定、sceneから離れた座標・履歴、通知、JSON名の改善点と、床突き抜け由来の支持不足カスケード不具合 `HUT-01` を記録。正式fixture、評価者区分、狭幅・Tab・fallbackは未確認 |
+| 2026-08-28 | 94% | -1 | 人間観察で判明した `HUT-01` は現仕様に反する既知の物理診断不具合であるため、物理制約マイルストーンを20/20 Completeから19/20 In progressへ訂正。修正と回帰完了まで1点を保留 |
