@@ -36,6 +36,7 @@ interface ThreeViewportProps {
 }
 
 interface CargoVisual {
+  readonly kind: "placed" | "staged";
   readonly mesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>;
   readonly outline: THREE.LineSegments<THREE.EdgesGeometry, THREE.LineBasicMaterial>;
 }
@@ -184,14 +185,15 @@ function addProjection(
   materials.push(openingMaterial);
 
   for (const cargo of projection.cargoes) {
+    const staged = cargo.kind === "staged";
     const cargoGeometry = new THREE.BoxGeometry(
       cargo.dimensions.x,
       cargo.dimensions.y,
       cargo.dimensions.z,
     );
     const cargoMaterial = new THREE.MeshStandardMaterial({
-      color: 0x40d4c4,
-      opacity: 0.8,
+      color: staged ? 0xf0a35b : 0x40d4c4,
+      opacity: staged ? 0.58 : 0.8,
       roughness: 0.55,
       transparent: true,
     });
@@ -202,7 +204,9 @@ function addProjection(
     scene.add(cargoMesh);
 
     const outlineGeometry = new THREE.EdgesGeometry(cargoGeometry);
-    const outlineMaterial = new THREE.LineBasicMaterial({ color: 0xffe69a });
+    const outlineMaterial = new THREE.LineBasicMaterial({
+      color: staged ? 0xffd19a : 0xffe69a,
+    });
     const outline = new THREE.LineSegments(outlineGeometry, outlineMaterial);
     outline.visible = false;
     outline.renderOrder = 1;
@@ -210,7 +214,11 @@ function addProjection(
 
     geometries.push(cargoGeometry, outlineGeometry);
     materials.push(cargoMaterial, outlineMaterial);
-    cargoVisuals.set(cargo.cargoId, { mesh: cargoMesh, outline });
+    cargoVisuals.set(cargo.cargoId, {
+      kind: cargo.kind,
+      mesh: cargoMesh,
+      outline,
+    });
   }
 
   return cargoVisuals;
@@ -249,6 +257,11 @@ export function ThreeViewport({
   const zoomOutRef = useRef<() => void>(() => undefined);
   const selectedCargoIdRef = useRef(selectedCargoId);
   const updateSelectionRef = useRef<(cargoId?: string) => void>(() => undefined);
+  const selectedCargoKind = projection?.cargoes.find(
+    (cargo) => cargo.cargoId === selectedCargoId,
+  )?.kind;
+  const stagedCargoCount =
+    projection?.cargoes.filter((cargo) => cargo.kind === "staged").length ?? 0;
 
   useEffect(() => {
     interactionDisabledRef.current = interactionDisabled;
@@ -311,9 +324,26 @@ export function ThreeViewport({
     const updateSelection = (cargoId?: string): boolean => {
       for (const [candidateId, visual] of cargoVisuals) {
         const selected = candidateId === cargoId;
-        visual.mesh.material.color.setHex(selected ? 0x72eadc : 0x40d4c4);
-        visual.mesh.material.opacity = selected ? 0.96 : 0.8;
-        visual.mesh.material.emissive.setHex(selected ? 0x123c3a : 0x000000);
+        const staged = visual.kind === "staged";
+        visual.mesh.material.color.setHex(
+          selected
+            ? staged
+              ? 0xffbe75
+              : 0x72eadc
+            : staged
+              ? 0xf0a35b
+              : 0x40d4c4,
+        );
+        visual.mesh.material.opacity = selected
+          ? staged
+            ? 0.82
+            : 0.96
+          : staged
+            ? 0.58
+            : 0.8;
+        visual.mesh.material.emissive.setHex(
+          selected ? (staged ? 0x4a260c : 0x123c3a) : 0x000000,
+        );
         visual.outline.visible = selected;
       }
       return renderScene();
@@ -541,7 +571,12 @@ export function ThreeViewport({
       updateRotationControlPosition = () => {
         const cargoId = selectedCargoIdRef.current;
         const visual = cargoId === undefined ? undefined : cargoVisuals.get(cargoId);
-        if (disposed || renderer === undefined || visual === undefined) {
+        if (
+          disposed ||
+          renderer === undefined ||
+          visual === undefined ||
+          visual.kind === "staged"
+        ) {
           hideRotationControl();
           return;
         }
@@ -672,7 +707,7 @@ export function ThreeViewport({
         className="viewport__cargo-action"
         style={{ visibility: "hidden" }}
       >
-        {selectedCargoId === undefined ? null : (
+        {selectedCargoId === undefined || selectedCargoKind !== "placed" ? null : (
           <>
           <button
             type="button"
@@ -688,6 +723,11 @@ export function ThreeViewport({
           </>
         )}
       </div>
+      {stagedCargoCount === 0 ? null : (
+        <div className="viewport__staging-label">
+          仮置き場 <strong>{stagedCargoCount}件</strong>
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         role="img"

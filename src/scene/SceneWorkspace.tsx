@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { updatePlacement } from "../application/project-command";
+import { addPlacement, updatePlacement } from "../application/project-command";
 import type { ProjectHistoryCommitHandler } from "../application/project-history";
+import {
+  isPlacementWithinContainer,
+  placementBounds,
+} from "../domain/geometry";
 import type { Project } from "../domain/model";
 import { PhysicalValidationPanel } from "../ui/PhysicalValidationPanel";
 import { PlacementPanel } from "../ui/PlacementPanel";
@@ -88,6 +92,8 @@ export function SceneWorkspace({
           (placement) => placement.containerId === effectiveContainerId,
         ).length;
   const selectedCargo = project.cargoes.find((cargo) => cargo.id === selectedCargoId);
+  const stagedCount =
+    projection?.cargoes.filter((cargo) => cargo.kind === "staged").length ?? 0;
   const selectedPlacement = project.placements.find(
     (placement) =>
       placement.cargoId === selectedCargoId &&
@@ -122,11 +128,7 @@ export function SceneWorkspace({
   useEffect(() => {
     const selectionStillVisible =
       selectedCargoId === undefined ||
-      project.placements.some(
-        (placement) =>
-          placement.cargoId === selectedCargoId &&
-          placement.containerId === effectiveContainerId,
-      );
+      projection?.cargoes.some((cargo) => cargo.cargoId === selectedCargoId) === true;
     if (selectionStillVisible) {
       return;
     }
@@ -140,7 +142,7 @@ export function SceneWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [effectiveContainerId, project.placements, selectedCargoId]);
+  }, [projection, selectedCargoId]);
 
   const handleCargoSelectionChange = useCallback(
     (cargoId?: string) => {
@@ -173,6 +175,103 @@ export function SceneWorkspace({
       cargoId: string,
       deltaScene: Pick<SceneVector3, "x" | "z">,
     ): CargoDragCommitResult => {
+      const projectedCargo = projection?.cargoes.find(
+        (candidate) => candidate.cargoId === cargoId,
+      );
+      if (projectedCargo?.kind === "staged") {
+        if (effectiveContainerId === undefined) {
+          return {
+            ok: false,
+            message: "配置先の候補が見つからないため、積荷を仮置き場へ戻しました。",
+          };
+        }
+        if (project.placements.some((placement) => placement.cargoId === cargoId)) {
+          return {
+            ok: false,
+            message:
+              "対象の積荷は既に配置されているため、重複配置せず仮置き場へ戻しました。",
+          };
+        }
+        const cargo = project.cargoes.find((candidate) => candidate.id === cargoId);
+        const container = project.containers.find(
+          (candidate) => candidate.id === effectiveContainerId,
+        );
+        if (cargo === undefined || container === undefined) {
+          return {
+            ok: false,
+            message:
+              "対象の積荷または候補が最新の案件に見つからないため、仮置き場へ戻しました。",
+          };
+        }
+        const nextPosition = sceneFloorDragPositionMm(
+          projectedCargo.positionMm,
+          deltaScene,
+        );
+        if (
+          nextPosition.xMm === projectedCargo.positionMm.xMm &&
+          nextPosition.yMm === projectedCargo.positionMm.yMm
+        ) {
+          return {
+            ok: false,
+            message:
+              "積荷は移動していないため配置せず、仮置き場に残しました。荷室内までドラッグしてください。",
+          };
+        }
+        const placement = {
+          cargoId,
+          containerId: effectiveContainerId,
+          positionMm: nextPosition,
+          orientation: projectedCargo.orientation,
+        } as const;
+        const bounds = placementBounds(cargo, placement);
+        if (
+          !isPlacementWithinContainer(
+            bounds,
+            container.internalDimensionsMm,
+          )
+        ) {
+          return {
+            ok: false,
+            message:
+              "積荷全体が荷室内に入っていないため配置せず、仮置き場へ戻しました。",
+          };
+        }
+        const result = addPlacement(project, cargoId, effectiveContainerId, {
+          xMm: String(nextPosition.xMm),
+          yMm: String(nextPosition.yMm),
+          zMm: "0",
+          orientation: projectedCargo.orientation,
+        });
+        if (!result.ok) {
+          return {
+            ok: false,
+            message:
+              "配置座標が保存可能な範囲にないか対象が変わったため、仮置き場へ戻しました。",
+          };
+        }
+        const transition = onProjectCommit({
+          baseProject: project,
+          nextProject: result.project,
+          action: "placement.add",
+        });
+        if (!transition.ok) {
+          return {
+            ok: false,
+            message:
+              "案件が更新されたため配置を保存できませんでした。積荷を仮置き場へ戻しました。",
+          };
+        }
+        if (!transition.changed) {
+          return {
+            ok: false,
+            message: "配置は変更されなかったため、積荷を仮置き場へ戻しました。",
+          };
+        }
+        setCanvasStatus(
+          `${cargo.name}を荷室内のX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z 0 mmへ配置しました。物理判定の再計算を開始しました。`,
+        );
+        return { ok: true, message: "" };
+      }
       const placement = project.placements.find(
         (candidate) =>
           candidate.cargoId === cargoId &&
@@ -218,7 +317,7 @@ export function SceneWorkspace({
       );
       return { ok: true, message: "" };
     },
-    [effectiveContainerId, onProjectCommit, project],
+    [effectiveContainerId, onProjectCommit, project, projection],
   );
 
   const handleCargoFloorRotation = useCallback(() => {
@@ -334,12 +433,12 @@ export function SceneWorkspace({
         >
           {effectiveContainerId === undefined
             ? "候補0件、配置0件。物理判定の対象はありません。"
-            : `選択中の候補: ${project.containers.find((container) => container.id === effectiveContainerId)?.name ?? "不明な候補"}。配置${placementCount}件。${selectedCargo === undefined ? "積荷は未選択です。" : `選択中の積荷: ${selectedCargo.name}。`}物理判定は保存済み配置から自動更新されます。${canvasStatus === "" ? "" : ` ${canvasStatus}`}`}
+            : `選択中の候補: ${project.containers.find((container) => container.id === effectiveContainerId)?.name ?? "不明な候補"}。配置${placementCount}件。仮置き場${stagedCount}件。${selectedCargo === undefined ? "積荷は未選択です。" : `選択中の積荷: ${selectedCargo.name}。`}物理判定は保存済み配置だけから自動更新されます。${canvasStatus === "" ? "" : ` ${canvasStatus}`}`}
         </p>
 
         <p id="scene-workspace-interaction-help" className="scene-workspace__status">
           {rendererMounted
-            ? "3Dでは積荷をクリックまたはタップして選択できます。細かいポインターで積荷をドラッグすると床面方向へ移動し、空白の左ドラッグで回転、右ドラッグで平行移動、ホイールで拡大・縮小します。正確な座標と向きは下のフォームで編集できます。"
+            ? "3Dでは積荷をクリックまたはタップして選択できます。仮置き場の積荷は、細かいポインターで荷室内へ全体をドラッグすると初めて配置されます。配置済み積荷のドラッグは床面方向へ移動し、空白の左ドラッグで回転、右ドラッグで平行移動、ホイールで拡大・縮小します。正確な座標と向きは下のフォームで編集できます。"
             : "3D表示を利用できない場合も、下のフォームで座標と向きを編集できます。"}
         </p>
 

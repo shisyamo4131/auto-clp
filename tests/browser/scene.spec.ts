@@ -125,6 +125,27 @@ async function selectCargoOnCanvas(
   throw new Error("Synthetic cargo was not hit by the tested canvas points");
 }
 
+async function locateStagedCargoOnCanvas(canvas: Locator) {
+  await canvas.scrollIntoViewIfNeeded();
+  const bounds = await canvas.boundingBox();
+  if (bounds === null) {
+    throw new Error("3D canvas has no bounding box");
+  }
+  const warmCargo = measureStagedCargo(await canvas.screenshot());
+  expect(warmCargo.count).toBeGreaterThan(20);
+  const point = {
+    x: bounds.x + bounds.width * warmCargo.centerXRatio,
+    y: bounds.y + bounds.height * warmCargo.centerYRatio,
+  };
+  return { bounds, point, warmCargo };
+}
+
+async function selectStagedCargoOnCanvas(page: Page, canvas: Locator) {
+  const located = await locateStagedCargoOnCanvas(canvas);
+  await page.mouse.click(located.point.x, located.point.y);
+  return located;
+}
+
 async function placementSummary(row: Locator) {
   return (await row.locator("span").textContent()) ?? "";
 }
@@ -148,6 +169,22 @@ interface ContainerFrameMeasurement {
   readonly width: number;
 }
 
+interface DecodedPng {
+  readonly channels: number;
+  readonly height: number;
+  readonly pixels: Buffer;
+  readonly stride: number;
+  readonly width: number;
+}
+
+interface StagedCargoMeasurement {
+  readonly centerXRatio: number;
+  readonly centerYRatio: number;
+  readonly count: number;
+  readonly heightRatio: number;
+  readonly widthRatio: number;
+}
+
 function paethPredictor(left: number, up: number, upperLeft: number): number {
   const estimate = left + up - upperLeft;
   const leftDistance = Math.abs(estimate - left);
@@ -157,7 +194,7 @@ function paethPredictor(left: number, up: number, upperLeft: number): number {
   return upDistance <= upperLeftDistance ? up : upperLeft;
 }
 
-function measureContainerFrame(image: Buffer): ContainerFrameMeasurement {
+function decodePng(image: Buffer): DecodedPng {
   const idatChunks: Buffer[] = [];
   let width = 0;
   let height = 0;
@@ -217,6 +254,11 @@ function measureContainerFrame(image: Buffer): ContainerFrameMeasurement {
     }
   }
 
+  return { channels, height, pixels, stride, width };
+}
+
+function measureContainerFrame(image: Buffer): ContainerFrameMeasurement {
+  const { channels, height, pixels, stride, width } = decodePng(image);
   let count = 0;
   let minX = width;
   let minY = height;
@@ -241,6 +283,76 @@ function measureContainerFrame(image: Buffer): ContainerFrameMeasurement {
     count,
     height: count === 0 ? 0 : maxY - minY + 1,
     width: count === 0 ? 0 : maxX - minX + 1,
+  };
+}
+
+function measureStagedCargo(image: Buffer): StagedCargoMeasurement {
+  const { channels, height, pixels, stride, width } = decodePng(image);
+  const measuredHeight = Math.floor(height * 0.9);
+  const mask = new Uint8Array(width * measuredHeight);
+  for (let y = 0; y < measuredHeight; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const pixelOffset = y * stride + x * channels;
+      const red = pixels[pixelOffset]!;
+      const green = pixels[pixelOffset + 1]!;
+      const blue = pixels[pixelOffset + 2]!;
+      if (red >= 30 && red >= green + 8 && green >= blue + 5) {
+        mask[y * width + x] = 1;
+      }
+    }
+  }
+
+  let best = { count: 0, minX: width, minY: height, maxX: -1, maxY: -1 };
+  const queue: number[] = [];
+  for (let start = 0; start < mask.length; start += 1) {
+    if (mask[start] !== 1) continue;
+    mask[start] = 2;
+    queue.length = 0;
+    queue.push(start);
+    let cursor = 0;
+    let count = 0;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+    while (cursor < queue.length) {
+      const pixelIndex = queue[cursor++]!;
+      const x = pixelIndex % width;
+      const y = Math.floor(pixelIndex / width);
+      count += 1;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+      for (const neighbor of [pixelIndex - 1, pixelIndex + 1, pixelIndex - width, pixelIndex + width]) {
+        const neighborX = neighbor % width;
+        if (
+          neighbor < 0 ||
+          neighbor >= mask.length ||
+          (neighbor === pixelIndex - 1 && x === 0) ||
+          (neighbor === pixelIndex + 1 && x === width - 1) ||
+          neighborX < 0 ||
+          mask[neighbor] !== 1
+        ) {
+          continue;
+        }
+        mask[neighbor] = 2;
+        queue.push(neighbor);
+      }
+    }
+    const area = (maxX - minX + 1) * (maxY - minY + 1);
+    const density = count / area;
+    if (density >= 0.12 && count > best.count) {
+      best = { count, minX, minY, maxX, maxY };
+    }
+  }
+
+  return {
+    centerXRatio: best.count === 0 ? 0 : (best.minX + best.maxX + 1) / 2 / width,
+    centerYRatio: best.count === 0 ? 0 : (best.minY + best.maxY + 1) / 2 / height,
+    count: best.count,
+    heightRatio: best.count === 0 ? 0 : (best.maxY - best.minY + 1) / height,
+    widthRatio: best.count === 0 ? 0 : (best.maxX - best.minX + 1) / width,
   };
 }
 
@@ -281,6 +393,154 @@ test("shows an empty unjudged scene with a supported canvas", async ({ page }) =
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
 });
 
+test("stages an unplaced cargo and commits one in-container drag through history", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await addInteractiveCargo(page, "合成仮置き積荷", {
+    lengthMm: "500",
+    widthMm: "400",
+    heightMm: "300",
+  });
+  await addContainer(page, "合成仮置き候補");
+  const canvas = page.getByRole("img", { name: previewName });
+  const panel = page.locator(".placement-panel");
+  const status = page.locator("#scene-workspace-status");
+  const historySummary = page.locator(".project-history__summary");
+  const emptyPlacement = page.getByText("この候補に配置された積荷はありません。");
+
+  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+  await expect(status).toContainText("配置0件。仮置き場1件");
+  await expect(emptyPlacement).toBeVisible();
+  await expect(page.locator(".physical-validation__summary")).toHaveText(
+    "適合：この候補には配置済みの積荷がありません。",
+  );
+  const historyBefore = await historySummary.textContent();
+  const { bounds, point, warmCargo } = await selectStagedCargoOnCanvas(page, canvas);
+  expect(warmCargo.centerXRatio).toBeGreaterThan(0);
+  expect(warmCargo.centerXRatio).toBeLessThan(1);
+  expect(warmCargo.centerYRatio).toBeGreaterThan(0);
+  expect(warmCargo.centerYRatio).toBeLessThan(1);
+  expect(warmCargo.widthRatio).toBeGreaterThan(0);
+  expect(warmCargo.heightRatio).toBeGreaterThan(0);
+  await expect(status).toContainText("選択中の積荷: 合成仮置き積荷");
+  await expect(page.getByRole("button", { name: "床面で90°回転" })).toHaveCount(0);
+
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await page.mouse.move(point.x - 24, point.y - 8, { steps: 3 });
+  await page.mouse.up();
+  await expect(status).toContainText("積荷全体が荷室内に入っていないため配置せず");
+  await expect(emptyPlacement).toBeVisible();
+  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+  expect(await historySummary.textContent()).toBe(historyBefore);
+
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width * 0.52, bounds.y + bounds.height * 0.58, {
+    steps: 8,
+  });
+  await expect(status).toContainText("床面に平行な配置移動をプレビュー中です");
+  await expect(emptyPlacement).toBeVisible();
+  await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
+  await page.mouse.up();
+
+  const row = panel
+    .getByRole("list", { name: "選択候補の配置一覧" })
+    .getByRole("listitem");
+  await expect(row).toHaveCount(1);
+  await expect(row).toHaveAttribute("aria-current", "true");
+  await expect(row.locator("span")).toContainText("Z 0 mm / LWH");
+  await expect(status).toContainText("合成仮置き積荷を荷室内");
+  await expect(status).toContainText("配置1件。仮置き場0件");
+  await expect(page.locator(".viewport__staging-label")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "床面で90°回転" })).toBeVisible();
+  await expect(historySummary).toContainText("次に元に戻せる操作: 配置の追加");
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(emptyPlacement).toBeVisible();
+  await expect(status).toContainText("選択中の積荷: 合成仮置き積荷");
+  await expect(status).toContainText("配置0件。仮置き場1件");
+  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+  await expect(page.getByRole("button", { name: "床面で90°回転" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "やり直す" }).click();
+  await expect(row).toHaveCount(1);
+  await expect(row).toHaveAttribute("aria-current", "true");
+  await expect(page.getByRole("button", { name: "床面で90°回転" })).toBeVisible();
+});
+
+test("keeps staged cargo touch interaction selection-only with the form fallback available", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await addInteractiveCargo(page, "合成touch仮置き積荷", {
+    lengthMm: "500",
+    widthMm: "400",
+    heightMm: "300",
+  });
+  await addContainer(page, "合成touch仮置き候補");
+  const canvas = page.getByRole("img", { name: previewName });
+  const { point } = await locateStagedCargoOnCanvas(canvas);
+  const historySummary = page.locator(".project-history__summary");
+  const historyBefore = await historySummary.textContent();
+
+  await canvas.dispatchEvent("pointerdown", {
+    bubbles: true,
+    button: 0,
+    clientX: point.x,
+    clientY: point.y,
+    pointerId: 41,
+    pointerType: "touch",
+  });
+  await canvas.dispatchEvent("pointermove", {
+    bubbles: true,
+    buttons: 1,
+    clientX: point.x + 120,
+    clientY: point.y - 90,
+    pointerId: 41,
+    pointerType: "touch",
+  });
+  await canvas.dispatchEvent("pointerup", {
+    bubbles: true,
+    button: 0,
+    clientX: point.x + 120,
+    clientY: point.y - 90,
+    pointerId: 41,
+    pointerType: "touch",
+  });
+
+  await expect(page.locator("#scene-workspace-status")).toContainText(
+    "選択中の積荷: 合成touch仮置き積荷",
+  );
+  await expect(page.getByText("この候補に配置された積荷はありません。")).toBeVisible();
+  expect(await historySummary.textContent()).toBe(historyBefore);
+  await expect(
+    page.locator(".placement-panel").getByRole("button", {
+      name: "配置を追加: 合成touch仮置き積荷",
+    }),
+  ).toBeVisible();
+});
+
+test("does not stage cargo that is already placed in another container", async ({ page }) => {
+  await page.goto("/");
+  await addInteractiveCargo(page, "合成別候補配置積荷", {
+    lengthMm: "500",
+    widthMm: "400",
+    heightMm: "300",
+  });
+  await addContainer(page, "合成配置元候補");
+  await placeCargo(page, "合成別候補配置積荷");
+  await addContainer(page, "合成別候補");
+  await page.getByLabel("表示する候補").selectOption({ label: "合成別候補" });
+
+  await expect(page.locator("#scene-workspace-status")).toContainText(
+    "選択中の候補: 合成別候補。配置0件。仮置き場0件",
+  );
+  await expect(page.locator(".viewport__staging-label")).toHaveCount(0);
+  await expect(page.getByText("この候補に配置された積荷はありません。")).toBeVisible();
+});
+
 test("keeps scene selection stable across add, edit, switch, and delete", async ({ page }) => {
   await page.goto("/");
   const capabilityStatus = page.getByRole("status");
@@ -293,7 +553,7 @@ test("keeps scene selection stable across add, edit, switch, and delete", async 
   const sceneSelect = page.getByLabel("表示する候補");
   const physicalSummary = page.locator(".physical-validation__summary");
   await expect(sceneSelect).toHaveValue("container-1");
-  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
   await expect(physicalSummary).toHaveText("適合：この候補には配置済みの積荷がありません。");
 
   await addContainer(page, "合成候補B", "7001");
@@ -305,7 +565,7 @@ test("keeps scene selection stable across add, edit, switch, and delete", async 
   await expect(capabilityStatus.getByRole("img", { name: previewName })).toHaveCount(0);
   const capabilityCopy = await capabilityStatus.textContent();
   await sceneSelect.selectOption({ label: "合成候補B" });
-  await expect(sceneStatus).toHaveText("選択中の候補: 合成候補B。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。");
+  await expect(sceneStatus).toHaveText("選択中の候補: 合成候補B。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。");
   await expect(capabilityStatus).toHaveText(capabilityCopy ?? "");
   await expect(physicalSummary).toHaveText("適合：この候補には配置済みの積荷がありません。");
 
@@ -314,13 +574,13 @@ test("keeps scene selection stable across add, edit, switch, and delete", async 
   await page.getByLabel("内部長さ").fill("8001");
   await page.getByRole("button", { name: "候補の変更を保存: 合成候補B" }).click();
   await expect(sceneSelect).toHaveValue("container-2");
-  await expect(page.getByText("選択中の候補: 合成候補B更新。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 合成候補B更新。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
 
   await page.getByRole("button", { name: "削除: 合成候補B更新" }).click();
   await page.getByRole("button", { name: "削除を確定: 合成候補B更新" }).click();
   await expect(sceneSelect).toHaveValue("container-1");
-  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
 });
 
 test("selects cargo, clears on blank space, and keeps clicks and camera controls non-mutating", async ({
@@ -704,7 +964,7 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   await expect(sceneSelect).toBeEnabled();
 });
 
-test("rejects a canvas commit while import is active and rolls the preview back", async ({
+test("rejects a placed-cargo canvas update while import is active and rolls the preview back", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -819,7 +1079,141 @@ test("rejects a canvas commit while import is active and rolls the preview back"
     browserGlobal.__releaseProjectImportPreflight();
   });
   await expect(persistenceStatus).toContainText("操作中に案件が更新されたため");
+  expect(await placementSummary(row)).toBe(originalSummary);
   expect(await historySummary.textContent()).toBe(historyBefore);
+  await expect(page.getByTestId("canonical-project-settings")).toContainText("新規案件");
+  await expect(page.getByText("置換を拒否する案件")).toHaveCount(0);
+});
+
+test("rejects a staged-cargo canvas add while import is active and rolls the preview back", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    type WorkerConstructor = new (
+      scriptUrl: string | URL,
+      options?: { readonly type?: string },
+    ) => object;
+    interface PendingRequest {
+      readonly requestId: number;
+      readonly worker: ControlledPreflightWorker;
+    }
+    const browserGlobal = globalThis as unknown as {
+      Worker: WorkerConstructor;
+      __hasPendingProjectImportPreflight: () => boolean;
+      __releaseProjectImportPreflight: () => void;
+    };
+    const NativeWorker = browserGlobal.Worker;
+    let pending: PendingRequest | undefined;
+    class ControlledPreflightWorker {
+      onmessage: ((event: { readonly data: unknown }) => void) | null = null;
+      onerror: (() => void) | null = null;
+      onmessageerror: (() => void) | null = null;
+      private terminated = false;
+
+      postMessage(request: { readonly requestId: number }) {
+        pending = { requestId: request.requestId, worker: this };
+      }
+
+      release(requestId: number) {
+        if (!this.terminated) {
+          this.onmessage?.({
+            data: {
+              type: "project-import-preflight-ready",
+              requestId,
+            },
+          });
+        }
+      }
+
+      terminate() {
+        this.terminated = true;
+        if (pending?.worker === this) {
+          pending = undefined;
+        }
+      }
+    }
+    class RoutingWorker {
+      constructor(scriptUrl: string | URL, options?: { readonly type?: string }) {
+        if (String(scriptUrl).includes("project-import-preflight.worker")) {
+          return new ControlledPreflightWorker();
+        }
+        return new NativeWorker(scriptUrl, options);
+      }
+    }
+    browserGlobal.__hasPendingProjectImportPreflight = () => pending !== undefined;
+    browserGlobal.__releaseProjectImportPreflight = () => {
+      const current = pending;
+      pending = undefined;
+      current?.worker.release(current.requestId);
+    };
+    browserGlobal.Worker = RoutingWorker as unknown as WorkerConstructor;
+  });
+  await page.goto("/");
+  await addInteractiveCargo(page, "合成stale仮置き積荷", {
+    lengthMm: "500",
+    widthMm: "400",
+    heightMm: "300",
+  });
+  await addContainer(page, "合成stale仮置き候補");
+  const canvas = page.getByRole("img", { name: previewName });
+  const status = page.locator("#scene-workspace-status");
+  const emptyPlacement = page.getByText("この候補に配置された積荷はありません。");
+  const historySummary = page.locator(".project-history__summary");
+  const historyBefore = await historySummary.textContent();
+  const { bounds, point: cargoPoint } = await selectStagedCargoOnCanvas(page, canvas);
+  const persistenceStatus = page.locator(".project-persistence__status");
+
+  await page.locator("input[type='file']").setInputFiles({
+    name: "anonymous-project.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        schemaVersion: "0.1.0",
+        projectId: "scene-import",
+        name: "置換を拒否する案件",
+        clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
+        cargoes: [],
+        containers: [],
+        placements: [],
+      }),
+    ),
+  });
+  await expect(persistenceStatus).toContainText("処理中です");
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const browserGlobal = globalThis as unknown as {
+          __hasPendingProjectImportPreflight: () => boolean;
+        };
+        return browserGlobal.__hasPendingProjectImportPreflight();
+      }),
+    )
+    .toBe(true);
+  await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
+
+  await page.mouse.move(cargoPoint.x, cargoPoint.y);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width * 0.52, bounds.y + bounds.height * 0.58, {
+    steps: 8,
+  });
+  await expect(status).toContainText("床面に平行な配置移動をプレビュー中です");
+  await expect(persistenceStatus).toContainText("処理中です");
+  await page.mouse.up();
+
+  await expect(status).toContainText("案件が更新されたため配置を保存できませんでした");
+  await expect(emptyPlacement).toBeVisible();
+  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+  await expect(page.getByTestId("canonical-project-settings")).toContainText("新規案件");
+  await page.evaluate(() => {
+    const browserGlobal = globalThis as unknown as {
+      __releaseProjectImportPreflight: () => void;
+    };
+    browserGlobal.__releaseProjectImportPreflight();
+  });
+  await expect(persistenceStatus).toContainText("操作中に案件が更新されたため");
+  expect(await historySummary.textContent()).toBe(historyBefore);
+  await expect(emptyPlacement).toBeVisible();
+  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
   await expect(page.getByTestId("canonical-project-settings")).toContainText("新規案件");
   await expect(page.getByText("置換を拒否する案件")).toHaveCount(0);
 });
@@ -939,7 +1333,7 @@ test("keeps scene input available without WebGL and does not mount a canvas", as
   await expect(page.getByRole("img", { name: previewName })).toHaveCount(0);
   await addContainer(page, "非対応時の合成候補");
   await expect(page.getByLabel("表示する候補")).toHaveValue("container-1");
-  await expect(page.getByText("選択中の候補: 非対応時の合成候補。配置0件。積荷は未選択です。物理判定は保存済み配置から自動更新されます。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 非対応時の合成候補。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
   await expect(page.locator(".physical-validation__summary")).toHaveText(
     "適合：この候補には配置済みの積荷がありません。",
   );
@@ -1067,8 +1461,19 @@ test("keeps the scene workspace within 305, 320, and 375 pixel viewports", async
     "data-capability-state",
     "supported",
   );
+  await addInteractiveCargo(page, "狭幅仮置き積荷A", {
+    lengthMm: "500",
+    widthMm: "400",
+    heightMm: "300",
+  });
+  await addInteractiveCargo(page, "狭幅仮置き積荷B", {
+    lengthMm: "450",
+    widthMm: "350",
+    heightMm: "250",
+  });
   await addContainer(page, "狭幅表示用合成候補");
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
+  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 2件");
   await expect(page.getByRole("group", { name: "3D表示の視点操作" })).toBeVisible();
   await expect(page.getByRole("button", { name: "拡大" })).toBeVisible();
   await expect(page.getByRole("button", { name: "縮小" })).toBeVisible();

@@ -97,6 +97,14 @@
 - 保存13件、scene16件、自動提案11件の対象ブラウザ回帰と独立レビュー3巡で、狭幅、削除確認、非同期処理、背景操作、camera測定fixtureも確認した。最終差分で全単体855件・全ブラウザ70件、型、lint、buildが個別に成功し、blocking / nonblocking所見0件を確認した。
 - 実Chromeでの人間によるDrawer位置・通知寿命・文言の使いやすさ、実screen reader、touch端末、Chromium以外は未確認である。
 
+## Non-persistent Staging Resolution
+
+- `CP-PHASE1-STAGING-001` で、案件全体で未配置の積荷を、選択荷室の負X側開口外にある暖色の非永続仮置きgridへ派生表示した。他の候補へ配置済みの積荷は重複表示せず、Project、JSON、端末保存、履歴、物理判定へ仮置き状態を含めない。
+- 仮置きは積荷順、先頭許可向き、Z=0、100 mm間隔、最大向き適用寸法から決定的に配置する。fine pointerで直方体全体が生の荷室内へ入ったdropだけを既存配置追加commandへ渡し、一回の履歴操作として確定する。外側、no-op、競合、取消は開始位置へ戻して案件を変更しない。
+- 確定後も選択を保持して近傍回転を表示し、Undoで仮置きへ復帰、Redoで配置へ戻る。touch/coarse pointerは選択だけとし、WebGL非対応を含む座標フォームを初回配置と微調整のfallbackとして維持する。
+- 全6向き、他候補除外、0 / 1 / 1,000件の純粋投影、非変異、camera bounds、荷室内・外drop、配置済み・仮置き双方のJSON競合、touch、305 / 320 / 375 pxを回帰した。最終差分で全単体862件・全ブラウザ74件、型、lint、buildが個別に成功し、独立レビューでblocking / nonblocking所見0件を確認した。
+- 実Chromeでの自由なcamera操作後の掴みやすさ、1,000件の継続FPS、低GPU、実touch端末、Chromium以外は未確認である。
+
 ## Remaining and Unverified
 
 - `acceptance.md` の正確な全fixtureを人間が再現した証拠。
@@ -106,7 +114,7 @@
 - 自由なZ drag、横倒し4向き、touch/coarse pointer、最低GPU、正式対応ブラウザ。
 - 実務利用者による代表ケース、合否、日程、評価担当。
 - scene-local layout、配置フォーム等に残る向きコードの可読化の設計・実装・回帰。
-- 非永続仮置き場の設計・実装・回帰。
+- 非永続仮置き場の人間による見つけやすさ・掴みやすさ・荷室内dropの再試用。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 

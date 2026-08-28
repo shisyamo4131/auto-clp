@@ -686,6 +686,23 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.viewport__staging-label {
+  position: absolute;
+  z-index: 2;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  max-width: calc(100% - 1.5rem);
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(240, 163, 91, 0.82);
+  border-radius: 0.5rem;
+  color: #ffe0bd;
+  background: rgba(56, 29, 13, 0.88);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
 .scene-workspace {
   min-width: 0;
   border-top: 1px solid rgba(132, 172, 195, 0.16);

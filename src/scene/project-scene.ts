@@ -1,4 +1,4 @@
-import { placementBounds } from "../domain/geometry";
+import { orientedDimensions, placementBounds } from "../domain/geometry";
 import type {
   Orientation,
   OrientedDimensionsMm,
@@ -7,6 +7,7 @@ import type {
 } from "../domain/model";
 
 export const MM_TO_SCENE_UNIT = 0.001;
+export const STAGING_GAP_MM = 100;
 
 const FLOOR_QUARTER_TURN_ORIENTATION = {
   LWH: "WLH",
@@ -44,12 +45,26 @@ export interface SceneContainerProjection {
   readonly opening: SceneOpeningFrame;
 }
 
-export interface SceneCargoProjection {
+interface SceneCargoProjectionBase {
   readonly cargoId: string;
   readonly name: string;
   readonly center: SceneVector3;
   readonly dimensions: SceneVector3;
+  readonly orientation: Orientation;
+  readonly positionMm: PositionMm;
 }
+
+export interface ScenePlacedCargoProjection extends SceneCargoProjectionBase {
+  readonly kind: "placed";
+}
+
+export interface SceneStagedCargoProjection extends SceneCargoProjectionBase {
+  readonly kind: "staged";
+}
+
+export type SceneCargoProjection =
+  | ScenePlacedCargoProjection
+  | SceneStagedCargoProjection;
 
 export interface ProjectSceneProjection {
   readonly container: SceneContainerProjection;
@@ -203,6 +218,62 @@ function centerFromBounds(
   });
 }
 
+function stagedCargoesToScene(
+  project: Project,
+  containerWidthMm: number,
+): SceneStagedCargoProjection[] {
+  const placedCargoIds = new Set(
+    project.placements.map((placement) => placement.cargoId),
+  );
+  const staged = project.cargoes
+    .filter((cargo) => !placedCargoIds.has(cargo.id))
+    .map((cargo) => {
+      const orientation = cargo.allowedOrientations[0]!;
+      return {
+        cargo,
+        dimensions: orientedDimensions(cargo, orientation),
+        orientation,
+      };
+    });
+  if (staged.length === 0) {
+    return [];
+  }
+
+  const columnCount = Math.ceil(Math.sqrt(staged.length));
+  const maxFootprintX = Math.max(
+    ...staged.map(({ dimensions }) => dimensions.xMm),
+  );
+  const maxFootprintY = Math.max(
+    ...staged.map(({ dimensions }) => dimensions.yMm),
+  );
+  const gridWidthY =
+    columnCount * maxFootprintY + (columnCount - 1) * STAGING_GAP_MM;
+  const gridStartY = Math.floor((containerWidthMm - gridWidthY) / 2);
+
+  return staged.map(({ cargo, dimensions, orientation }, index) => {
+    const column = index % columnCount;
+    const row = Math.floor(index / columnCount);
+    const positionMm = {
+      xMm:
+        -STAGING_GAP_MM -
+        (row + 1) * maxFootprintX -
+        row * STAGING_GAP_MM,
+      yMm:
+        gridStartY + column * (maxFootprintY + STAGING_GAP_MM),
+      zMm: 0,
+    };
+    return {
+      kind: "staged",
+      cargoId: cargo.id,
+      name: cargo.name,
+      orientation,
+      positionMm,
+      center: centerFromBounds(positionMm, dimensions),
+      dimensions: domainDimensionsToScene(dimensions),
+    };
+  });
+}
+
 export function projectContainerToScene(
   project: Project,
   containerId: string,
@@ -241,12 +312,19 @@ export function projectContainerToScene(
 
     const bounds = placementBounds(cargo, placement);
     cargoes.push({
+      kind: "placed",
       cargoId: cargo.id,
       name: cargo.name,
+      orientation: placement.orientation,
+      positionMm: placement.positionMm,
       center: centerFromBounds(bounds.min, bounds.dimensions),
       dimensions: domainDimensionsToScene(bounds.dimensions),
     });
   }
+
+  cargoes.push(
+    ...stagedCargoesToScene(project, container.internalDimensionsMm.widthMm),
+  );
 
   return {
     ok: true,

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { updatePlacement } from "../application/project-command";
-import { PROJECT_SCHEMA_VERSION, type Project } from "../domain/model";
+import { orientedDimensions } from "../domain/geometry";
+import {
+  PROJECT_SCHEMA_VERSION,
+  type Orientation,
+  type Project,
+} from "../domain/model";
 import {
   domainDimensionsToScene,
   domainPointToScene,
@@ -166,17 +171,188 @@ describe("project scene coordinate adapter", () => {
     expect(project).not.toHaveProperty("selection");
   });
 
-  it("returns an empty cargo projection when the selected container has no placements", () => {
+  it("returns an empty cargo projection when the project has no cargoes", () => {
     const project = projectFixture();
-    const withoutPlacements: Project = { ...project, placements: [] };
+    const emptyProject: Project = { ...project, cargoes: [], placements: [] };
 
-    const result = projectContainerToScene(withoutPlacements, "container-1");
+    const result = projectContainerToScene(emptyProject, "container-1");
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.projection.cargoes).toEqual([]);
     }
   });
+
+  it("projects globally unplaced cargoes in project order and excludes cargo placed in another container", () => {
+    const base = projectFixture();
+    const project: Project = {
+      ...base,
+      placements: [base.placements[1]!],
+    };
+    const original = structuredClone(project);
+
+    const result = projectContainerToScene(project, "container-1");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.projection.cargoes).toHaveLength(1);
+      expect(result.projection.cargoes[0]).toMatchObject({
+        kind: "staged",
+        cargoId: "cargo-1",
+        orientation: "LWH",
+        positionMm: { zMm: 0 },
+      });
+      expect(result.projection.cargoes.some((cargo) => cargo.cargoId === "cargo-2")).toBe(
+        false,
+      );
+    }
+    expect(project).toEqual(original);
+  });
+
+  it("uses the first allowed orientation for all six canonical staged orientations", () => {
+    const orientations: readonly Orientation[] = [
+      "LWH",
+      "LHW",
+      "WLH",
+      "WHL",
+      "HLW",
+      "HWL",
+    ];
+    const base = projectFixture();
+    const project: Project = {
+      ...base,
+      cargoes: orientations.map((orientation, index) => ({
+        id: `orientation-${index}`,
+        name: `匿名向き積荷${index}`,
+        dimensionsMm: { lengthMm: 101, widthMm: 203, heightMm: 305 },
+        massGrams: 1,
+        canSupportCargo: false,
+        allowedOrientations: [orientation],
+      })),
+      containers: [base.containers[0]!],
+      placements: [],
+    };
+
+    const result = projectContainerToScene(project, "container-1");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.projection.cargoes.map((cargo) => cargo.cargoId)).toEqual(
+        orientations.map((_, index) => `orientation-${index}`),
+      );
+      for (const [index, cargoProjection] of result.projection.cargoes.entries()) {
+        const cargo = project.cargoes[index]!;
+        const orientation = orientations[index]!;
+        expect(cargoProjection).toMatchObject({
+          kind: "staged",
+          orientation,
+          positionMm: { zMm: 0 },
+        });
+        expect(cargoProjection.dimensions).toEqual(
+          domainDimensionsToScene(orientedDimensions(cargo, orientation)),
+        );
+      }
+    }
+  });
+
+  it("lays staged cargoes outside negative X on a deterministic non-overlapping square grid", () => {
+    const base = projectFixture();
+    const project: Project = {
+      ...base,
+      cargoes: Array.from({ length: 7 }, (_, index) => ({
+        id: `grid-cargo-${index}`,
+        name: `匿名grid積荷${index}`,
+        dimensionsMm: {
+          lengthMm: 100 + index * 11,
+          widthMm: 80 + index * 7,
+          heightMm: 60 + index * 3,
+        },
+        massGrams: 1,
+        canSupportCargo: false,
+        allowedOrientations: [index % 2 === 0 ? "LWH" : "WLH"] as const,
+      })),
+      containers: [base.containers[0]!],
+      placements: [],
+    };
+    const original = structuredClone(project);
+
+    const result = projectContainerToScene(project, "container-1");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const staged = result.projection.cargoes;
+      expect(staged.map((cargo) => cargo.cargoId)).toEqual(
+        project.cargoes.map((cargo) => cargo.id),
+      );
+      for (const cargo of staged) {
+        expect(cargo.kind).toBe("staged");
+        expect(cargo.positionMm.xMm).toBeLessThan(0);
+        expect(cargo.positionMm.zMm).toBe(0);
+      }
+      for (let firstIndex = 0; firstIndex < staged.length; firstIndex += 1) {
+        for (let secondIndex = firstIndex + 1; secondIndex < staged.length; secondIndex += 1) {
+          const first = staged[firstIndex]!;
+          const second = staged[secondIndex]!;
+          const firstX = first.dimensions.x / MM_TO_SCENE_UNIT;
+          const firstY = first.dimensions.z / MM_TO_SCENE_UNIT;
+          const secondX = second.dimensions.x / MM_TO_SCENE_UNIT;
+          const secondY = second.dimensions.z / MM_TO_SCENE_UNIT;
+          const xGap = Math.max(
+            second.positionMm.xMm - (first.positionMm.xMm + firstX),
+            first.positionMm.xMm - (second.positionMm.xMm + secondX),
+          );
+          const yGap = Math.max(
+            second.positionMm.yMm - (first.positionMm.yMm + firstY),
+            first.positionMm.yMm - (second.positionMm.yMm + secondY),
+          );
+          expect(Math.max(xGap, yGap)).toBeGreaterThanOrEqual(100);
+        }
+      }
+    }
+    expect(project).toEqual(original);
+  });
+
+  it.each([0, 1, 1_000])(
+    "keeps %i staged cargo projections finite without changing Project",
+    (cargoCount) => {
+      const base = projectFixture();
+      const project: Project = {
+        ...base,
+        cargoes: Array.from({ length: cargoCount }, (_, index) => ({
+          id: `finite-cargo-${index}`,
+          name: `匿名finite積荷${index}`,
+          dimensionsMm: { lengthMm: 100_000, widthMm: 99_999, heightMm: 99_998 },
+          massGrams: 1,
+          canSupportCargo: false,
+          allowedOrientations: ["WLH"],
+        })),
+        containers: [base.containers[0]!],
+        placements: [],
+      };
+      const original = structuredClone(project);
+
+      const result = projectContainerToScene(project, "container-1");
+
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.projection.cargoes).toHaveLength(cargoCount);
+        for (const cargo of result.projection.cargoes) {
+          expect([
+            cargo.center.x,
+            cargo.center.y,
+            cargo.center.z,
+            cargo.dimensions.x,
+            cargo.dimensions.y,
+            cargo.dimensions.z,
+            cargo.positionMm.xMm,
+            cargo.positionMm.yMm,
+            cargo.positionMm.zMm,
+          ].every(Number.isFinite)).toBe(true);
+        }
+      }
+      expect(project).toEqual(original);
+    },
+  );
 
   it("returns a stable error when the selected container is missing", () => {
     const project = projectFixture();
@@ -324,6 +500,37 @@ describe("sceneProjectionBounds", () => {
     expect(bounds.radius).toBeCloseTo(Math.hypot(1.001, 1.003, 1) / 2, 12);
     expectBoxWithinProjectionBounds(projection.container, bounds);
     expect(projection).toEqual(original);
+  });
+
+  it("keeps container reset bounds unchanged while all-object bounds include staged cargo", () => {
+    const base = projectFixture();
+    const project: Project = {
+      ...base,
+      cargoes: [base.cargoes[0]!],
+      containers: [base.containers[0]!],
+      placements: [],
+    };
+    const result = projectContainerToScene(project, "container-1");
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    const containerBounds = sceneContainerBounds(result.projection);
+    const allBounds = sceneProjectionBounds(result.projection);
+
+    expectVectorClose(containerBounds.min, { x: 0, y: 0, z: -1 });
+    expectVectorClose(containerBounds.max, { x: 1.001, y: 1.003, z: 0 });
+    expect(result.projection.cargoes[0]).toMatchObject({
+      kind: "staged",
+      positionMm: { xMm: -201, zMm: 0 },
+    });
+    expect(allBounds.min.x).toBeLessThan(0);
+    expectBoxWithinProjectionBounds(result.projection.container, allBounds);
+    expectBoxWithinProjectionBounds(result.projection.cargoes[0]!, allBounds);
+    expect(sceneBoundsReachRadius(containerBounds.center, allBounds)).toBeGreaterThan(
+      containerBounds.radius,
+    );
   });
 
   it("keeps container-only camera bounds stable when cargo is at coordinate extremes", () => {
