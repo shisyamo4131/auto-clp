@@ -104,7 +104,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await page.getByLabel("向き").selectOption("WLH");
   await placementPanel.getByRole("button", { name: "配置を保存" }).click();
   await expect(sceneSelect).toBeEnabled();
-  await expect(placementPanel.getByText("最小角 X -1000000・Y 1000000・Z -1 mm / WLH")).toBeVisible();
+  await expect(placementPanel.getByText("位置: 入口から手前面まで -1000000 mm / 入口から見て右壁から右側面まで 1000000 mm / 床から下面まで -1 mm")).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
     "選択中の候補: 合成配置候補A。配置1件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
   );
@@ -141,7 +141,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await expect(sceneSelect).toBeDisabled();
   await placementPanel.getByRole("button", { name: "配置編集をキャンセル" }).click();
   await expect(placementPanel.getByRole("button", { name: "編集: 合成配置積荷" })).toBeFocused();
-  await expect(placementPanel.getByText("最小角 X -1000000・Y 1000000・Z -1 mm / WLH")).toBeVisible();
+  await expect(placementPanel.getByText("位置: 入口から手前面まで -1000000 mm / 入口から見て右壁から右側面まで 1000000 mm / 床から下面まで -1 mm")).toBeVisible();
   await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
     "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
   );
@@ -151,7 +151,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await expect(placementPanel.getByRole("button", { name: "配置の削除を確定" })).toBeFocused();
   await placementPanel.getByRole("button", { name: "配置の削除をやめる" }).click();
   await expect(placementPanel.getByRole("button", { name: "配置を削除: 合成配置積荷" })).toBeFocused();
-  await expect(placementPanel.getByText("最小角 X -1000000・Y 1000000・Z -1 mm / WLH")).toBeVisible();
+  await expect(placementPanel.getByText("位置: 入口から手前面まで -1000000 mm / 入口から見て右壁から右側面まで 1000000 mm / 床から下面まで -1 mm")).toBeVisible();
 
   await placementPanel.getByRole("button", { name: "配置を削除: 合成配置積荷" }).click();
   await placementPanel.getByRole("button", { name: "配置の削除を確定" }).click();
@@ -210,7 +210,7 @@ test("supports placement CRUD without WebGL while keeping the canvas absent", as
   await panel.getByRole("button", { name: "編集: 非対応時配置積荷" }).click();
   await page.getByLabel("X最小角").fill("-2");
   await panel.getByRole("button", { name: "配置を保存" }).click();
-  await expect(panel.getByText("最小角 X -2・Y 0・Z 0 mm / LWH")).toBeVisible();
+  await expect(panel.getByText("位置: 入口から手前面まで -2 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm")).toBeVisible();
   await panel.getByRole("button", { name: "配置を削除: 非対応時配置積荷" }).click();
   await panel.getByRole("button", { name: "配置の削除を確定" }).click();
   await expect(panel.getByRole("button", { name: "配置を追加: 非対応時配置積荷" })).toBeVisible();

@@ -147,7 +147,7 @@ async function selectStagedCargoOnCanvas(page: Page, canvas: Locator) {
 }
 
 async function placementSummary(row: Locator) {
-  return (await row.locator("span").textContent()) ?? "";
+  return (await row.locator(".placement-list__position").textContent()) ?? "";
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -450,7 +450,12 @@ test("stages an unplaced cargo and commits one in-container drag through history
     .getByRole("listitem");
   await expect(row).toHaveCount(1);
   await expect(row).toHaveAttribute("aria-current", "true");
-  await expect(row.locator("span")).toContainText("Z 0 mm / LWH");
+  await expect(row.locator(".placement-list__position")).toContainText(
+    "床から下面まで 0 mm",
+  );
+  await expect(row.locator(".placement-list__size")).toContainText(
+    "奥行方向 500 × 横幅方向 400 × 高さ方向 300 mm",
+  );
   await expect(status).toContainText("合成仮置き積荷を荷室内");
   await expect(status).toContainText("配置1件。仮置き場0件");
   await expect(page.locator(".viewport__staging-label")).toHaveCount(0);
@@ -468,6 +473,156 @@ test("stages an unplaced cargo and commits one in-container drag through history
   await expect(row).toHaveCount(1);
   await expect(row).toHaveAttribute("aria-current", "true");
   await expect(page.getByRole("button", { name: "床面で90°回転" })).toBeVisible();
+});
+
+test("shows result-oriented scene actions and opens the existing coordinate form", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const cargoName = `選択中の長い合成積荷${"名".repeat(70)}`;
+  await addInteractiveCargo(page, cargoName, {
+    lengthMm: "500",
+    widthMm: "400",
+    heightMm: "300",
+  });
+  await addContainer(page, "選択操作用合成候補");
+  const canvas = page.getByRole("img", { name: previewName });
+  await selectStagedCargoOnCanvas(page, canvas);
+
+  const card = page.locator(".scene-selection-card");
+  const action = card.getByRole("button", { name: "座標を入力して配置" });
+  const history = page.locator(".project-history");
+  const historySummary = history.locator(".project-history__summary");
+  const emptyPlacement = page.getByText("この候補に配置された積荷はありません。");
+  await expect(card).toContainText(cargoName);
+  await expect(card).toContainText("未配置（仮置き場）");
+  await expect(card.locator(".scene-selection-card__size")).toHaveText(
+    "仮置き時の大きさ: 奥行方向 500 × 横幅方向 400 × 高さ方向 300 mm",
+  );
+  await expect(card).not.toContainText("入口から手前面まで");
+  await expect(card).not.toContainText("保存上の向きコード");
+  await expect(action).toBeEnabled();
+  await expect(history).toHaveCount(1);
+  await expect(history.getByRole("heading", { name: "案件全体の操作" })).toBeVisible();
+  expect(
+    await page.locator(".scene-workspace__history").evaluate((element) =>
+      element.firstElementChild?.classList.contains("project-history") === true &&
+      element.nextElementSibling?.classList.contains("viewport") === true,
+    ),
+  ).toBe(true);
+
+  await page.getByRole("button", { name: "元に戻す" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "拡大" })).toBeFocused();
+  for (const width of [305, 320, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectNoHorizontalOverflow(page);
+    const cardBounds = await card.locator(".scene-selection-card__content").boundingBox();
+    const actionBounds = await action.boundingBox();
+    if (cardBounds === null || actionBounds === null) {
+      throw new Error("Scene selection card has no narrow-width bounding box");
+    }
+    expect(actionBounds.width).toBeGreaterThanOrEqual(cardBounds.width - 2);
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+
+  const historyBefore = await historySummary.textContent();
+  await page.evaluate(() => {
+    const browserGlobal = globalThis as unknown as {
+      placementFormScrollCount?: number;
+      readonly Element: {
+        readonly prototype: {
+          scrollIntoView: (options?: unknown) => void;
+        };
+      };
+    };
+    browserGlobal.placementFormScrollCount = 0;
+    const elementPrototype = browserGlobal.Element.prototype;
+    const originalScrollIntoView = elementPrototype.scrollIntoView;
+    elementPrototype.scrollIntoView = function scrollIntoView(this: {
+      readonly classList: { contains: (name: string) => boolean };
+    }, options?: unknown) {
+      if (this.classList.contains("placement-form")) {
+        browserGlobal.placementFormScrollCount =
+          (browserGlobal.placementFormScrollCount ?? 0) + 1;
+      }
+      Reflect.apply(
+        originalScrollIntoView,
+        this,
+        options === undefined ? [] : [options],
+      );
+    };
+  });
+  await action.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("X最小角")).toBeFocused();
+  expect(
+    await page.evaluate(() => {
+      const browserGlobal = globalThis as unknown as {
+        readonly placementFormScrollCount?: number;
+      };
+      return browserGlobal.placementFormScrollCount ?? 0;
+    }),
+  ).toBe(1);
+  await expect(page.getByLabel("X最小角")).toHaveValue("0");
+  await expect(action).toBeDisabled();
+  await expect(card).toContainText("開いている配置操作を完了すると座標入力を開けます");
+  await expect(emptyPlacement).toBeVisible();
+  await page.getByLabel("X最小角").fill("100");
+  await page.getByLabel("Y最小角").fill("200");
+  await page.getByLabel("向き").selectOption("WLH");
+  await expect(page.getByLabel("向き").locator("option").nth(1)).toHaveText(
+    "奥行方向 400 × 横幅方向 500 × 高さ方向 300 mm（元の高さが上）— 保存上の向きコード WLH",
+  );
+  await page.locator(".placement-panel").getByRole("button", { name: "配置を保存" }).click();
+
+  await expect(historySummary).not.toHaveText(historyBefore ?? "");
+  await expect(historySummary).toContainText("次に元に戻せる操作: 配置の追加。");
+  await expect(card).toContainText("荷室内に配置済み");
+  await expect(card.locator(".scene-selection-card__size")).toHaveText(
+    "荷室内での大きさ: 奥行方向 400 × 横幅方向 500 × 高さ方向 300 mm",
+  );
+  await expect(card.locator(".scene-selection-card__position")).toContainText(
+    "入口から手前面まで 100 mm",
+  );
+  await expect(card.locator(".scene-selection-card__position")).toContainText(
+    "入口から見て右壁から右側面まで 200 mm",
+  );
+  await expect(card.locator(".scene-selection-card__position")).toContainText(
+    "床から下面まで 0 mm",
+  );
+  await expect(card.locator(".scene-selection-card__size")).not.toContainText("WLH");
+  await expect(card.getByText("保存上の詳細", { exact: true })).toBeVisible();
+  await expect(card.getByText("保存上の向きコード: WLH", { exact: true })).toBeHidden();
+
+  const fineTune = card.getByRole("button", { name: "座標を微調整" });
+  await fineTune.click();
+  await expect(page.getByLabel("X最小角")).toBeFocused();
+  await expect(page.getByLabel("X最小角")).toHaveValue("100");
+  await expect(fineTune).toBeDisabled();
+  await page.locator(".placement-panel").getByRole("button", { name: "配置編集をキャンセル" }).click();
+
+  await page.locator(".placement-panel").getByRole("button", {
+    name: `配置を削除: ${cargoName}`,
+  }).click();
+  await expect(fineTune).toBeDisabled();
+  await expect(card).toContainText("開いている配置操作を完了すると座標入力を開けます");
+  await page.locator(".placement-panel").getByRole("button", { name: "配置の削除をやめる" }).click();
+
+  await page.getByRole("button", { name: "案件データを開く" }).click();
+  await expect(fineTune).toBeEnabled();
+  await page.getByRole("button", { name: "端末保存を削除" }).click();
+  await expect(fineTune).toBeDisabled();
+  await expect(card).toContainText("別の案件操作または保存処理を完了すると座標入力を開けます");
+  await page.getByRole("button", { name: "削除をやめる" }).click();
+  await expect(fineTune).toBeEnabled();
+  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await expect(fineTune).toBeEnabled();
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(card).toContainText("未配置（仮置き場）");
+  await expect(card).not.toContainText("入口から手前面まで");
+  await expect(card.getByRole("button", { name: "座標を入力して配置" })).toBeVisible();
 });
 
 test("keeps staged cargo touch interaction selection-only with the form fallback available", async ({
@@ -778,8 +933,8 @@ test("rotates a selected cargo once beside the mesh and preserves its minimum co
   await rotationButton.focus();
   await page.keyboard.press("Enter");
   await expect(rotationButton).toBeFocused();
-  await expect(row.locator("span")).toContainText(
-    "最小角 X 2100・Y 500・Z 250 mm / LWH",
+  await expect(row.locator(".placement-list__position")).toHaveText(
+    "位置: 入口から手前面まで 2100 mm / 入口から見て右壁から右側面まで 500 mm / 床から下面まで 250 mm",
   );
   await expect(row).toHaveAttribute("aria-current", "true");
   await expect(status).toContainText("床面で90°回転しました");
@@ -794,8 +949,8 @@ test("rotates a selected cargo once beside the mesh and preserves its minimum co
     "次にやり直せる操作: 配置の更新。",
   );
   await page.getByRole("button", { name: "やり直す" }).click();
-  await expect(row.locator("span")).toContainText(
-    "最小角 X 2100・Y 500・Z 250 mm / LWH",
+  await expect(row.locator(".placement-list__position")).toHaveText(
+    "位置: 入口から手前面まで 2100 mm / 入口から見て右壁から右側面まで 500 mm / 床から下面まで 250 mm",
   );
 
   await page.setViewportSize({ width: 305, height: 900 });
@@ -857,7 +1012,9 @@ test("explains why floor rotation is unavailable for a single-orientation cargo"
     "aria-describedby",
     "viewport-floor-rotation-explanation",
   );
-  await expect(row.locator("span")).toContainText("/ LWH");
+  await expect(row.locator(".placement-list__details")).toContainText(
+    "保存上の向きコード: LWH",
+  );
 });
 
 test("restores a container-sized view when cargo is saved at an extreme coordinate", async ({
@@ -882,8 +1039,8 @@ test("restores a container-sized view when cargo is saved at an extreme coordina
   const row = panel
     .getByRole("list", { name: "選択候補の配置一覧" })
     .getByRole("listitem");
-  await expect(row.locator("span")).toContainText(
-    "最小角 X 1000000・Y 0・Z 0 mm",
+  await expect(row.locator(".placement-list__position")).toContainText(
+    "入口から手前面まで 1000000 mm",
   );
   const initialExtremeContainerFrame = measureContainerFrame(await canvas.screenshot());
   expectSameContainerFrame(initialExtremeContainerFrame, baselineContainerFrame);
@@ -911,6 +1068,7 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   const originalSummary = await placementSummary(row);
   const cargoPoint = await selectCargoOnCanvas(page, canvas, row);
   const rotationButton = page.getByRole("button", { name: "床面で90°回転" });
+  const coordinateButton = page.getByRole("button", { name: "座標を微調整" });
   const editButton = panel.getByRole("button", { name: "編集: 合成canvas積荷" });
   const undo = page.getByRole("button", { name: "元に戻す" });
   const redo = page.getByRole("button", { name: "やり直す" });
@@ -922,6 +1080,10 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   await expect(sceneSelect).toBeDisabled();
   await expect(editButton).toBeDisabled();
   await expect(rotationButton).toBeDisabled();
+  await expect(coordinateButton).toBeDisabled();
+  await expect(page.locator(".scene-selection-card")).toContainText(
+    "3D移動を完了すると座標入力を開けます",
+  );
   await expect(undo).toBeDisabled();
   await expect(redo).toBeDisabled();
   await persistenceEntry.evaluate((element) =>
@@ -935,9 +1097,11 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
 
   await expect(sceneSelect).toBeEnabled();
   await expect(editButton).toBeEnabled();
-  await expect(row.locator("span")).not.toHaveText(originalSummary);
+  await expect(row.locator(".placement-list__position")).not.toHaveText(originalSummary);
   const movedSummary = await placementSummary(row);
-  expect(movedSummary).toMatch(/^最小角 X -?\d+・Y -?\d+・Z 250 mm \/ WLH$/);
+  expect(movedSummary).toMatch(
+    /^位置: 入口から手前面まで -?\d+ mm \/ 入口から見て右壁から右側面まで -?\d+ mm \/ 床から下面まで 250 mm$/,
+  );
   const statusText = (await status.textContent()) ?? "";
   expect(statusText.match(/移動しました/g)).toHaveLength(1);
   await expect(status).toContainText("物理判定の再計算を開始しました");
@@ -952,7 +1116,9 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   await redo.click();
   expect(await placementSummary(row)).toBe(movedSummary);
 
-  const match = movedSummary.match(/X (-?\d+)・Y (-?\d+)・Z (-?\d+) mm \/ (\w+)/);
+  const match = movedSummary.match(
+    /入口から手前面まで (-?\d+) mm \/ 入口から見て右壁から右側面まで (-?\d+) mm \/ 床から下面まで (-?\d+) mm/,
+  );
   expect(match).not.toBeNull();
   await editButton.click();
   await expect(page.getByLabel("X最小角")).toHaveValue(match?.[1] ?? "");

@@ -105,6 +105,14 @@
 - 全6向き、他候補除外、0 / 1 / 1,000件の純粋投影、非変異、camera bounds、荷室内・外drop、配置済み・仮置き双方のJSON競合、touch、305 / 320 / 375 pxを回帰した。最終差分で全単体862件・全ブラウザ74件、型、lint、buildが個別に成功し、独立レビューでblocking / nonblocking所見0件を確認した。
 - 実Chromeでの自由なcamera操作後の掴みやすさ、1,000件の継続FPS、低GPU、実touch端末、Chromium以外は未確認である。
 
+## Scene-local Actions Resolution
+
+- `CP-PHASE1-SCENE-ACTIONS-001` で、案件全体の単一Undo/Redoを3D viewport直前へ移し、既存shortcut、action名、busy、focus、最大100件の履歴を同じhandlerのまま維持した。履歴操作は配置だけでなく案件全体へ作用すると明示した。
+- 選択積荷のcanvas外カードへ、向き適用後の奥行・横幅・高さを結果指向で表示した。配置済みは入口から手前面、入口視点の右壁から右側面、床から下面までの最小面位置を表示し、仮置きは保存されない派生座標を表示しない。`LWH`等は折り畳みの保存上詳細に残した。
+- 「座標を微調整」「座標を入力して配置」は既存PlacementPanelの追加・編集処理だけを開き、フォームをscrollしてX入力へfocusする。scene側へdraft、command、履歴を複製していない。配置一覧と向き選択も実寸法と上向き元軸を先に表示する。
+- 検証中、選択カード展開でcanvas位置が変わるpointer不具合と、scene自己busyの再注入によるフォーム取消後focus漏れを発見し、カードをviewport後へ移し外部busyを分離して修正した。全6向き13件、履歴、scene、配置、受入、自動提案、永続化の回帰を含め、最終差分で全単体875件・全ブラウザ75件、型、lint、buildが個別に成功し、独立レビューでblocking / nonblocking所見0件を確認した。
+- 実Chromeでの文言理解、長い向きoptionの読みやすさ、scroll感触、実screen reader/touch、Chromium以外は未確認である。
+
 ## Remaining and Unverified
 
 - `acceptance.md` の正確な全fixtureを人間が再現した証拠。
@@ -113,7 +121,7 @@
 - 試用中のconsole warning/error確認。
 - 自由なZ drag、横倒し4向き、touch/coarse pointer、最低GPU、正式対応ブラウザ。
 - 実務利用者による代表ケース、合否、日程、評価担当。
-- scene-local layout、配置フォーム等に残る向きコードの可読化の設計・実装・回帰。
+- scene-local layout、結果指向の向き表示、座標フォーム導線、案件履歴の人間による再試用。
 - 非永続仮置き場の人間による見つけやすさ・掴みやすさ・荷室内dropの再試用。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。

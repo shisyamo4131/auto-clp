@@ -377,7 +377,7 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
     name: "選択候補の配置一覧",
   });
   await expect(placementList.getByRole("listitem")).toHaveCount(1);
-  await expect(placementList).toContainText("最小角 X 50・Y 0・Z 0 mm / LWH");
+  await expect(placementList).toContainText("位置: 入口から手前面まで 50 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
 
   const applyButton = panel.getByRole("button", { name: "提案を適用", exact: true });
   await applyButton.click();
@@ -398,18 +398,18 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
   await expect(panel.locator(".automatic-proposal__summary")).toBeFocused();
   await expect(history).toContainText("次に元に戻せる操作: 自動提案の一括適用。");
   await expect(placementList.getByRole("listitem")).toHaveCount(2);
-  await expect(placementList).toContainText("最小角 X 0・Y 0・Z 0 mm / LWH");
-  await expect(placementList).toContainText("最小角 X 100・Y 0・Z 0 mm / LWH");
+  await expect(placementList).toContainText("位置: 入口から手前面まで 0 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
+  await expect(placementList).toContainText("位置: 入口から手前面まで 100 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
   expect(await canonical.textContent()).toBe(projectBefore);
   expect(await cargoList.textContent()).toBe(cargoesBefore);
   expect(await containerList.textContent()).toBe(containersBefore);
 
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(placementList.getByRole("listitem")).toHaveCount(1);
-  await expect(placementList).toContainText("最小角 X 50・Y 0・Z 0 mm / LWH");
+  await expect(placementList).toContainText("位置: 入口から手前面まで 50 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
   await page.getByRole("button", { name: "やり直す" }).click();
   await expect(placementList.getByRole("listitem")).toHaveCount(2);
-  await expect(placementList).toContainText("最小角 X 100・Y 0・Z 0 mm / LWH");
+  await expect(placementList).toContainText("位置: 入口から手前面まで 100 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
 });
 
 test("confirms a zero-current add, commits rapid double confirmation once, and keeps a same-plan reapply unchanged", async ({

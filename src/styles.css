@@ -130,13 +130,13 @@ h1 {
   min-width: 0;
 }
 
-.project-history__heading h2,
+.project-history__heading h4,
 .project-history__summary,
 .project-history__busy {
   overflow-wrap: anywhere;
 }
 
-.project-history__heading h2 {
+.project-history__heading h4 {
   margin-bottom: 0;
   font-size: clamp(1.15rem, 3vw, 1.45rem);
 }
@@ -148,11 +148,17 @@ h1 {
 }
 
 .project-history__summary {
+  min-height: 3.1em;
   color: #a8bdcf;
 }
 
 .project-history__busy {
+  min-height: 1.55em;
   color: #ffe2b3;
+}
+
+.project-history__busy[data-active="false"] {
+  visibility: hidden;
 }
 
 .project-persistence-entry {
@@ -770,6 +776,117 @@ h1 {
   overflow-wrap: anywhere;
 }
 
+.scene-workspace__history {
+  min-width: 0;
+  padding: 0 clamp(1.25rem, 3vw, 2rem) clamp(1rem, 3vw, 1.5rem);
+}
+
+.scene-workspace__history > .project-history {
+  min-width: 0;
+  margin: 0;
+}
+
+.scene-selection-card {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+  margin: clamp(1rem, 3vw, 1.5rem) clamp(1.25rem, 3vw, 2rem);
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(114, 234, 220, 0.34);
+  border-radius: 0.8rem;
+  background: rgba(9, 24, 39, 0.82);
+}
+
+.scene-selection-card h4,
+.scene-selection-card p,
+.scene-selection-card dl,
+.scene-selection-card details {
+  margin: 0;
+}
+
+.scene-selection-card h4 {
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
+}
+
+.scene-selection-card__empty,
+.scene-selection-card__size,
+.scene-selection-card__reason,
+.scene-selection-card__details {
+  color: #a8bdcf;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.scene-selection-card__content {
+  display: grid;
+  min-width: 0;
+  gap: 0.65rem;
+}
+
+.scene-selection-card__cargo-name {
+  font-size: 1.05rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.scene-selection-card__state {
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid rgba(240, 163, 91, 0.65);
+  border-radius: 999px;
+  color: #ffe0bd;
+  background: rgba(56, 29, 13, 0.56);
+  overflow-wrap: anywhere;
+}
+
+.scene-selection-card__position {
+  display: grid;
+  min-width: 0;
+  gap: 0.4rem;
+}
+
+.scene-selection-card__position > div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 1.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.scene-selection-card__position dt {
+  color: #72eadc;
+  font-weight: 750;
+}
+
+.scene-selection-card__position dd {
+  min-width: 0;
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.scene-selection-card__details summary,
+.placement-list__details summary {
+  width: fit-content;
+  max-width: 100%;
+  cursor: pointer;
+  color: #c8dceb;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.scene-selection-card__details p {
+  margin-top: 0.4rem;
+}
+
+.scene-selection-card__action {
+  width: 100%;
+}
+
+.scene-selection-card__reason {
+  color: #ffe2b3;
+}
+
 .placement-panel {
   min-width: 0;
   margin-top: 0.4rem;
@@ -837,6 +954,18 @@ h1 {
   border-color: #72eadc;
   background: rgba(24, 75, 78, 0.42);
   box-shadow: inset 0 0 0 1px rgba(114, 234, 220, 0.42);
+}
+
+.placement-list__size,
+.placement-list__position,
+.placement-list__details {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.placement-list__details span {
+  display: block;
+  margin-top: 0.35rem;
 }
 
 .placement-list > li > div:first-child {
@@ -1401,6 +1530,8 @@ legend {
   .project-persistence-entry,
   .automatic-proposal,
   .scene-workspace__controls,
+  .scene-workspace__history,
+  .scene-selection-card,
   .placement-panel,
   .physical-validation,
   .editor-card,

@@ -127,6 +127,11 @@ test("undoes and redoes settings, cargo, container, and placement CRUD without W
   const summary = page.locator(".project-history__summary");
   const canonical = page.getByTestId("canonical-project-settings");
 
+  await expect(page.locator(".project-history")).toHaveCount(1);
+  await expect(
+    page.getByRole("heading", { name: "案件全体の操作" }),
+  ).toBeVisible();
+  await expect(page.locator(".scene-workspace__history > .project-history")).toHaveCount(1);
   await expect(undo).toBeDisabled();
   await expect(redo).toBeDisabled();
   await expect(undo).toHaveAttribute("aria-keyshortcuts", "Control+Z Meta+Z");
@@ -181,22 +186,22 @@ test("undoes and redoes settings, cargo, container, and placement CRUD without W
 
   await addPlacement(page, "履歴積荷更新");
   const placementPanel = page.locator(".placement-panel");
-  await expect(placementPanel).toContainText("最小角 X 0・Y 0・Z 0 mm / LWH");
+  await expect(placementPanel).toContainText("位置: 入口から手前面まで 0 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
   await undo.click();
   await expect(placementPanel).toContainText("この候補に配置された積荷はありません。");
   await redo.click();
-  await expect(placementPanel).toContainText("最小角 X 0・Y 0・Z 0 mm / LWH");
+  await expect(placementPanel).toContainText("位置: 入口から手前面まで 0 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
 
   await placementPanel.getByRole("button", { name: "編集: 履歴積荷更新" }).click();
   await expect(undo).toBeDisabled();
   await expect(redo).toBeDisabled();
   await page.getByLabel("X最小角").fill("25");
   await placementPanel.getByRole("button", { name: "配置を保存" }).click();
-  await expect(placementPanel).toContainText("最小角 X 25・Y 0・Z 0 mm / LWH");
+  await expect(placementPanel).toContainText("位置: 入口から手前面まで 25 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
   await undo.click();
-  await expect(placementPanel).toContainText("最小角 X 0・Y 0・Z 0 mm / LWH");
+  await expect(placementPanel).toContainText("位置: 入口から手前面まで 0 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
   await redo.click();
-  await expect(placementPanel).toContainText("最小角 X 25・Y 0・Z 0 mm / LWH");
+  await expect(placementPanel).toContainText("位置: 入口から手前面まで 25 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
 
   await placementPanel
     .getByRole("button", { name: "配置を削除: 履歴積荷更新" })
@@ -206,7 +211,7 @@ test("undoes and redoes settings, cargo, container, and placement CRUD without W
   await placementPanel.getByRole("button", { name: "配置の削除を確定" }).click();
   await expect(placementPanel).toContainText("この候補に配置された積荷はありません。");
   await undo.click();
-  await expect(placementPanel).toContainText("最小角 X 25・Y 0・Z 0 mm / LWH");
+  await expect(placementPanel).toContainText("位置: 入口から手前面まで 25 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
   await redo.click();
   await expect(placementPanel).toContainText("この候補に配置された積荷はありません。");
 

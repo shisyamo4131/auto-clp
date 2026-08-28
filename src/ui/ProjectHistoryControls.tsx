@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import type { ProjectHistoryAction } from "../application/project-history";
 
-interface ProjectHistoryControlsProps {
+export interface ProjectHistoryControlsProps {
   readonly busy: boolean;
   readonly canRedo: boolean;
   readonly canUndo: boolean;
@@ -156,8 +156,8 @@ export function ProjectHistoryControls({
     <section className="project-history" aria-labelledby="project-history-title">
       <div className="project-history__heading">
         <div>
-          <p className="eyebrow">PROJECT HISTORY</p>
-          <h2 id="project-history-title">取り消し・やり直し</h2>
+          <p className="eyebrow">PROJECT-WIDE HISTORY</p>
+          <h4 id="project-history-title">案件全体の操作</h4>
         </div>
         <div className="button-row">
           <button
@@ -185,11 +185,16 @@ export function ProjectHistoryControls({
       <p className="project-history__summary" aria-live="polite" aria-atomic="true">
         {summary}
       </p>
-      {busy ? (
-        <p id="project-history-busy" className="project-history__busy">
-          未保存入力、削除確認、または3D移動中は履歴を変更しません。
-        </p>
-      ) : null}
+      <p
+        id="project-history-busy"
+        className="project-history__busy"
+        data-active={busy ? "true" : "false"}
+        aria-hidden={busy ? undefined : true}
+      >
+        {busy
+          ? "未保存入力、削除確認、または3D移動中は履歴を変更しません。"
+          : "案件操作の履歴は現在利用できます。"}
+      </p>
     </section>
   );
 }

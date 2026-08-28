@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 
 import {
   addPlacement,
@@ -10,6 +17,11 @@ import {
 import type { ProjectHistoryCommitHandler } from "../application/project-history";
 import type { Orientation, Placement, Project } from "../domain/model";
 import type { ValidationIssue } from "../domain/validation";
+import {
+  placementOrientationOptionCopy,
+  placementPositionCopy,
+  presentOrientedPlacement,
+} from "./placement-presentation";
 
 interface PlacementPanelProps {
   readonly externalInteractionActive: boolean;
@@ -22,6 +34,10 @@ interface PlacementPanelProps {
   readonly selectedContainerId?: string;
 }
 
+export interface PlacementPanelHandle {
+  readonly openCoordinatesForCargo: (cargoId: string) => boolean;
+}
+
 interface PlacementTarget {
   readonly cargoId: string;
   readonly containerId: string;
@@ -29,15 +45,6 @@ interface PlacementTarget {
 
 type PlacementEditor = PlacementTarget &
   ({ readonly kind: "new" } | { readonly kind: "edit" });
-
-const ORIENTATION_COPY: Record<Orientation, string> = {
-  LWH: "X=長さ・Y=幅・Z=高さ",
-  WLH: "X=幅・Y=長さ・Z=高さ",
-  LHW: "X=長さ・Y=高さ・Z=幅",
-  HLW: "X=高さ・Y=長さ・Z=幅",
-  WHL: "X=幅・Y=高さ・Z=長さ",
-  HWL: "X=高さ・Y=幅・Z=長さ",
-};
 
 function draftFromPlacement(placement: Placement): PlacementDraft {
   return {
@@ -125,7 +132,7 @@ function PositionField({
   );
 }
 
-export function PlacementPanel({
+export const PlacementPanel = forwardRef<PlacementPanelHandle, PlacementPanelProps>(function PlacementPanel({
   externalInteractionActive,
   historyRevision,
   onInteractionChange,
@@ -134,7 +141,7 @@ export function PlacementPanel({
   project,
   selectedCargoId,
   selectedContainerId,
-}: PlacementPanelProps) {
+}: PlacementPanelProps, ref) {
   const [editor, setEditor] = useState<PlacementEditor>();
   const [deleteTarget, setDeleteTarget] = useState<PlacementTarget>();
   const [draft, setDraft] = useState<PlacementDraft>();
@@ -272,6 +279,13 @@ export function PlacementPanel({
     setStatus(result.issues.map(placementIssueMessage).join(" "));
   };
 
+  const focusPlacementForm = () => {
+    queueMicrotask(() => {
+      formRef.current?.scrollIntoView({ block: "nearest" });
+      document.getElementById("placement-xMm")?.focus();
+    });
+  };
+
   const beginAdd = (cargoId: string) => {
     if (selectedContainerId === undefined) {
       setStatus("配置先の候補を選択してください。");
@@ -296,7 +310,7 @@ export function PlacementPanel({
     setIssues([]);
     setStatus("新しい配置を入力中です。配置を保存するまで案件、3D表示、物理判定へ反映しません。");
     onInteractionChange(true);
-    focusElement("placement-xMm");
+    focusPlacementForm();
   };
 
   const beginEdit = (placement: Placement) => {
@@ -311,8 +325,40 @@ export function PlacementPanel({
     setIssues([]);
     setStatus("配置の編集を開きました。保存またはキャンセルしてください。");
     onInteractionChange(true);
-    focusElement("placement-xMm");
+    focusPlacementForm();
   };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      openCoordinatesForCargo(cargoId: string): boolean {
+        if (controlsDisabled || selectedContainerId === undefined) {
+          return false;
+        }
+        const placement = project.placements.find(
+          (candidate) =>
+            candidate.cargoId === cargoId &&
+            candidate.containerId === selectedContainerId,
+        );
+        if (placement !== undefined) {
+          beginEdit(placement);
+          return true;
+        }
+        if (
+          project.cargoes.some((cargo) => cargo.id === cargoId) &&
+          !project.placements.some((candidate) => candidate.cargoId === cargoId)
+        ) {
+          beginAdd(cargoId);
+          return true;
+        }
+        setIssues([]);
+        setStatus(
+          "対象の積荷は別の候補へ配置済みか最新の案件にないため、座標入力を開けませんでした。",
+        );
+        return false;
+      },
+    }),
+  );
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -529,6 +575,10 @@ export function PlacementPanel({
                     (candidate) => candidate.id === placement.cargoId,
                   );
                   const cargoName = cargo?.name ?? "不明な積荷";
+                  const presentation =
+                    cargo === undefined
+                      ? undefined
+                      : presentOrientedPlacement(cargo, placement.orientation);
                   return (
                     <li
                       key={placement.cargoId}
@@ -543,9 +593,18 @@ export function PlacementPanel({
                     >
                       <div>
                         <strong>{cargoName}</strong>
-                        <span>
-                          最小角 X {placement.positionMm.xMm}・Y {placement.positionMm.yMm}・Z {placement.positionMm.zMm} mm / {placement.orientation}
+                        {presentation === undefined ? null : (
+                          <span className="placement-list__size">
+                            荷室内での大きさ: {presentation.sizeCopy}
+                          </span>
+                        )}
+                        <span className="placement-list__position">
+                          位置: {placementPositionCopy(placement.positionMm)}
                         </span>
+                        <details className="placement-list__details">
+                          <summary>保存上の詳細</summary>
+                          <span>保存上の向きコード: {placement.orientation}</span>
+                        </details>
                       </div>
                       <div className="button-row">
                         <button
@@ -619,7 +678,7 @@ export function PlacementPanel({
                   >
                     {editedCargo?.allowedOrientations.map((orientation) => (
                       <option key={orientation} value={orientation}>
-                        {orientation} — {ORIENTATION_COPY[orientation]}
+                        {placementOrientationOptionCopy(editedCargo, orientation)}
                       </option>
                     ))}
                   </select>
@@ -657,4 +716,4 @@ export function PlacementPanel({
       )}
     </section>
   );
-}
+});

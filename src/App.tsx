@@ -33,7 +33,6 @@ import type { WebGL2CapabilityCheck } from "./platform/webgl2";
 import { SceneWorkspace } from "./scene/SceneWorkspace";
 import { AutomaticProposalPanel } from "./ui/AutomaticProposalPanel";
 import type { AutomaticProposalApplyHandler } from "./ui/automatic-proposal-session";
-import { ProjectHistoryControls } from "./ui/ProjectHistoryControls";
 import { ProjectPersistencePanel } from "./ui/ProjectPersistencePanel";
 import { ProjectWorkspace } from "./ui/ProjectWorkspace";
 
@@ -464,17 +463,6 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         <p className="lede">精密機器輸送の積載案を、端末内で安全側に検討するための試作環境です。</p>
       </header>
 
-      <ProjectHistoryControls
-        busy={historyBusy}
-        canRedo={history.future.length > 0}
-        canUndo={history.past.length > 0}
-        commitRevision={historyCommitRevision}
-        redoAction={history.future.at(-1)?.action}
-        undoAction={history.past.at(-1)?.action}
-        onRedo={handleRedo}
-        onUndo={handleUndo}
-      />
-
       <ProjectPersistencePanel
         busy={externalPersistenceBusy}
         onDeleteDevice={handleDeleteDevice}
@@ -512,7 +500,22 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         </div>
         <SceneWorkspace
           key={`scene-${projectBarrierRevision}`}
+          externalInteractionActive={
+            busySources.project ||
+            persistenceInteractionActive ||
+            persistenceOperationActive
+          }
           forceInitialRenderError={forceInitialRenderError}
+          historyControls={{
+            busy: historyBusy,
+            canRedo: history.future.length > 0,
+            canUndo: history.past.length > 0,
+            commitRevision: historyCommitRevision,
+            redoAction: history.future.at(-1)?.action,
+            undoAction: history.past.at(-1)?.action,
+            onRedo: handleRedo,
+            onUndo: handleUndo,
+          }}
           onRendererError={handleRendererError}
           onRendererReady={handleRendererReady}
           historyRevision={historyRevision}

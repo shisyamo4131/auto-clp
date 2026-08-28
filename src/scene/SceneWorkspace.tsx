@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { addPlacement, updatePlacement } from "../application/project-command";
 import type { ProjectHistoryCommitHandler } from "../application/project-history";
@@ -8,7 +8,18 @@ import {
 } from "../domain/geometry";
 import type { Project } from "../domain/model";
 import { PhysicalValidationPanel } from "../ui/PhysicalValidationPanel";
-import { PlacementPanel } from "../ui/PlacementPanel";
+import {
+  PlacementPanel,
+  type PlacementPanelHandle,
+} from "../ui/PlacementPanel";
+import {
+  ProjectHistoryControls,
+  type ProjectHistoryControlsProps,
+} from "../ui/ProjectHistoryControls";
+import {
+  placementPositionCopy,
+  presentOrientedPlacement,
+} from "../ui/placement-presentation";
 import {
   floorQuarterTurnOrientation,
   projectContainerToScene,
@@ -18,7 +29,9 @@ import {
 import { ThreeViewport, type CargoDragCommitResult } from "./ThreeViewport";
 
 interface SceneWorkspaceProps {
+  readonly externalInteractionActive: boolean;
   readonly forceInitialRenderError?: boolean;
+  readonly historyControls: ProjectHistoryControlsProps;
   readonly historyRevision: number;
   readonly onBusyChange: (busy: boolean) => void;
   readonly onProjectCommit: ProjectHistoryCommitHandler;
@@ -36,7 +49,9 @@ function projectionErrorMessage(code: "scene.container-not-found" | "scene.cargo
 }
 
 export function SceneWorkspace({
+  externalInteractionActive,
   forceInitialRenderError = false,
+  historyControls,
   historyRevision,
   onBusyChange,
   onProjectCommit,
@@ -50,6 +65,7 @@ export function SceneWorkspace({
   const [canvasDragActive, setCanvasDragActive] = useState(false);
   const [selectedCargoId, setSelectedCargoId] = useState<string>();
   const [canvasStatus, setCanvasStatus] = useState("");
+  const placementPanelRef = useRef<PlacementPanelHandle>(null);
   const selectedContainer = project.containers.find(
     (container) => container.id === selectedContainerId,
   );
@@ -92,6 +108,9 @@ export function SceneWorkspace({
           (placement) => placement.containerId === effectiveContainerId,
         ).length;
   const selectedCargo = project.cargoes.find((cargo) => cargo.id === selectedCargoId);
+  const selectedProjection = projection?.cargoes.find(
+    (cargo) => cargo.cargoId === selectedCargoId,
+  );
   const stagedCount =
     projection?.cargoes.filter((cargo) => cargo.kind === "staged").length ?? 0;
   const selectedPlacement = project.placements.find(
@@ -107,6 +126,19 @@ export function SceneWorkspace({
     nextFloorOrientation !== undefined &&
     selectedCargo?.allowedOrientations.includes(nextFloorOrientation) === true;
   const interactionActive = placementInteractionActive || canvasDragActive;
+  const coordinateActionDisabled =
+    externalInteractionActive || interactionActive || effectiveContainerId === undefined;
+  const coordinateActionReason = canvasDragActive
+    ? "3D移動を完了すると座標入力を開けます。"
+    : placementInteractionActive
+      ? "開いている配置操作を完了すると座標入力を開けます。"
+      : externalInteractionActive
+        ? "別の案件操作または保存処理を完了すると座標入力を開けます。"
+        : undefined;
+  const selectedPresentation =
+    selectedCargo === undefined || selectedProjection === undefined
+      ? undefined
+      : presentOrientedPlacement(selectedCargo, selectedProjection.orientation);
 
   useEffect(() => {
     onBusyChange(interactionActive);
@@ -443,7 +475,8 @@ export function SceneWorkspace({
         </p>
 
         <PlacementPanel
-          externalInteractionActive={canvasDragActive}
+          ref={placementPanelRef}
+          externalInteractionActive={externalInteractionActive || canvasDragActive}
           historyRevision={historyRevision}
           onInteractionChange={setPlacementInteractionActive}
           onProjectCommit={onProjectCommit}
@@ -467,6 +500,10 @@ export function SceneWorkspace({
         <p className="scene-workspace__notice">
           描画は配置の見た目を確認するためのもので、積載可能性や物理的安全性を保証しません。
         </p>
+      </div>
+
+      <div className="scene-workspace__history">
+        <ProjectHistoryControls {...historyControls} />
       </div>
 
       {rendererMounted ? (
@@ -495,6 +532,89 @@ export function SceneWorkspace({
           statusDescriptionId="scene-workspace-status scene-workspace-interaction-help"
         />
       ) : null}
+
+      <section
+        className="scene-selection-card"
+        aria-labelledby="scene-selection-card-title"
+      >
+          <div>
+            <p className="eyebrow">SELECTED CARGO</p>
+            <h4 id="scene-selection-card-title">選択中の積荷</h4>
+          </div>
+          {selectedCargo === undefined || selectedProjection === undefined ? (
+            <p className="scene-selection-card__empty">
+              3D表示で積荷を選ぶと、大きさと位置、正確な座標入力への入口を表示します。
+            </p>
+          ) : (
+            <div className="scene-selection-card__content">
+              <strong className="scene-selection-card__cargo-name">
+                {selectedCargo.name}
+              </strong>
+              <p className="scene-selection-card__state">
+                {selectedProjection.kind === "staged"
+                  ? "未配置（仮置き場）"
+                  : "荷室内に配置済み"}
+              </p>
+              {selectedPresentation === undefined ? null : (
+                <p className="scene-selection-card__size">
+                  {selectedProjection.kind === "staged"
+                    ? "仮置き時の大きさ"
+                    : "荷室内での大きさ"}
+                  : {selectedPresentation.sizeCopy}
+                </p>
+              )}
+              {selectedProjection.kind === "placed" && selectedPlacement !== undefined ? (
+                <>
+                  <dl className="scene-selection-card__position">
+                    <div>
+                      <dt>X</dt>
+                      <dd>入口から手前面まで {selectedPlacement.positionMm.xMm} mm</dd>
+                    </div>
+                    <div>
+                      <dt>Y</dt>
+                      <dd>
+                        入口から見て右壁から右側面まで {selectedPlacement.positionMm.yMm} mm
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Z</dt>
+                      <dd>床から下面まで {selectedPlacement.positionMm.zMm} mm</dd>
+                    </div>
+                  </dl>
+                  <details className="scene-selection-card__details">
+                    <summary>保存上の詳細</summary>
+                    <p>保存上の向きコード: {selectedPlacement.orientation}</p>
+                    <p>保存位置: {placementPositionCopy(selectedPlacement.positionMm)}</p>
+                  </details>
+                </>
+              ) : null}
+              <button
+                className="scene-selection-card__action"
+                type="button"
+                disabled={coordinateActionDisabled}
+                aria-describedby={
+                  coordinateActionReason === undefined
+                    ? undefined
+                    : "scene-selection-coordinate-lock"
+                }
+                onClick={() => {
+                  if (selectedCargoId !== undefined && !coordinateActionDisabled) {
+                    placementPanelRef.current?.openCoordinatesForCargo(selectedCargoId);
+                  }
+                }}
+              >
+                {selectedProjection.kind === "staged"
+                  ? "座標を入力して配置"
+                  : "座標を微調整"}
+              </button>
+              {coordinateActionReason === undefined ? null : (
+                <p id="scene-selection-coordinate-lock" className="scene-selection-card__reason">
+                  {coordinateActionReason}
+                </p>
+              )}
+            </div>
+          )}
+      </section>
     </section>
   );
 }

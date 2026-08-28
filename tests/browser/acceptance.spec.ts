@@ -120,7 +120,7 @@ test("executes the AC-01 form subset for orientation, removal, undo, and no-WebG
   await panel.getByRole("button", { name: "編集: 合成積荷B" }).click();
   await page.getByLabel("向き").selectOption("WLH");
   await panel.getByRole("button", { name: "配置を保存" }).click();
-  await expect(panel).toContainText("最小角 X 1500・Y 100・Z 0 mm / WLH");
+  await expect(panel).toContainText("位置: 入口から手前面まで 1500 mm / 入口から見て右壁から右側面まで 100 mm / 床から下面まで 0 mm");
   await expect(validation.getByRole("heading", { name: "不適合理由", exact: false })).toHaveCount(0);
   await expect(validation.getByRole("heading", { name: "未確認理由（2件）" })).toBeVisible();
 
@@ -128,7 +128,7 @@ test("executes the AC-01 form subset for orientation, removal, undo, and no-WebG
   await panel.getByRole("button", { name: "配置の削除を確定" }).click();
   await expect(panel.getByRole("button", { name: "配置を追加: 合成積荷B" })).toBeVisible();
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(panel).toContainText("最小角 X 1500・Y 100・Z 0 mm / WLH");
+  await expect(panel).toContainText("位置: 入口から手前面まで 1500 mm / 入口から見て右壁から右側面まで 100 mm / 床から下面まで 0 mm");
   await expect(page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" })).toHaveCount(0);
 });
 
@@ -175,10 +175,10 @@ test("reports a 1 mm support strip loss and undo restores the exact stack", asyn
   await expect(validation).toContainText(
     "床にない積荷の底面が、段積み可能な支持面で100%覆われていません。",
   );
-  await expect(placementPanel).toContainText("最小角 X 501・Y 500・Z 500 mm / LWH");
+  await expect(placementPanel).toContainText("位置: 入口から手前面まで 501 mm / 入口から見て右壁から右側面まで 500 mm / 床から下面まで 500 mm");
 
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(placementPanel).toContainText("最小角 X 500・Y 500・Z 500 mm / LWH");
+  await expect(placementPanel).toContainText("位置: 入口から手前面まで 500 mm / 入口から見て右壁から右側面まで 500 mm / 床から下面まで 500 mm");
   await expect(validation).not.toContainText("100%覆われていません");
   await expect(validation).toContainText(
     "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
