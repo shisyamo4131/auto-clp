@@ -1,12 +1,23 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const host = "127.0.0.1";
-const port = 4173;
-const baseURL = `http://${host}:${port}`;
+const runtimeBaseUrlEnvironmentVariable = "AUTO_CLP_BROWSER_BASE_URL";
+const runtimeOutputDirectoryEnvironmentVariable = "AUTO_CLP_BROWSER_OUTPUT_DIR";
+const baseURL = process.env[runtimeBaseUrlEnvironmentVariable];
+if (baseURL === undefined || baseURL.length === 0) {
+  throw new Error(
+    `${runtimeBaseUrlEnvironmentVariable} is required; run browser tests through the package test:browser script`,
+  );
+}
+const outputDir = process.env[runtimeOutputDirectoryEnvironmentVariable];
+if (outputDir === undefined || outputDir.length === 0) {
+  throw new Error(
+    `${runtimeOutputDirectoryEnvironmentVariable} is required; run browser tests through the package test:browser script`,
+  );
+}
 const chromeLogFile = process.env.CHROME_LOG_FILE;
 
 export default defineConfig({
-  outputDir: "./test-results",
+  outputDir,
   testDir: "./tests/browser",
   fullyParallel: false,
   workers: 1,

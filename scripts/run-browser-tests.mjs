@@ -1,73 +1,43 @@
-/* global AbortSignal, console, fetch, process */
+/* global console, process */
 
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { setTimeout as delay } from "node:timers/promises";
+
+import { createServer } from "vite";
 
 const host = "127.0.0.1";
-const port = 4173;
-const baseURL = `http://${host}:${port}`;
+const runtimeBaseUrlEnvironmentVariable = "AUTO_CLP_BROWSER_BASE_URL";
+const runtimeOutputDirectoryEnvironmentVariable = "AUTO_CLP_BROWSER_OUTPUT_DIR";
 const projectPath = process.cwd();
-const viteEntry = resolve(projectPath, "node_modules/vite/bin/vite.js");
 const playwrightEntry = resolve(projectPath, "node_modules/@playwright/test/cli.js");
 const playwrightConfig = resolve(projectPath, "playwright.config.ts");
 const chromeLogDirectory = await mkdtemp(join(tmpdir(), "auto-clp-browser-"));
 const chromeLogFile = join(chromeLogDirectory, "chrome-debug.log");
+const playwrightOutputDirectory = join(chromeLogDirectory, "playwright-output");
 
-const server = spawn(
-  process.execPath,
-  [viteEntry, "--host", host, "--port", String(port), "--strictPort"],
-  {
-    cwd: projectPath,
-    stdio: ["ignore", "pipe", "pipe"],
-    windowsHide: true,
-  },
-);
-
-server.stdout.pipe(process.stdout);
-server.stderr.pipe(process.stderr);
-
-let serverExitState;
-const serverExited = once(server, "exit").then(([code, signal]) => {
-  serverExitState = { code, signal };
-});
-
-async function waitForServer() {
-  const deadline = Date.now() + 10_000;
-
-  while (Date.now() < deadline) {
-    if (serverExitState !== undefined) {
-      throw new Error(
-        `Vite exited before becoming ready (code=${serverExitState.code}, signal=${serverExitState.signal})`,
-      );
-    }
-
-    try {
-      const response = await fetch(baseURL, { signal: AbortSignal.timeout(1_000) });
-      await response.arrayBuffer();
-      if (response.ok) {
-        return;
-      }
-    } catch {
-      // The server may still be starting; retry until the bounded deadline.
-    }
-
-    await delay(100);
+function getOwnedServerBaseUrl(server) {
+  const address = server.httpServer?.address();
+  if (address === null || address === undefined || typeof address === "string") {
+    throw new Error("Vite did not expose its owned loopback TCP listener");
   }
-
-  throw new Error(`Vite did not become ready at ${baseURL} within 10 seconds`);
+  return `http://${host}:${address.port}`;
 }
 
-async function runPlaywright() {
+async function runPlaywright(baseURL) {
   const tests = spawn(
     process.execPath,
     [playwrightEntry, "test", "--config", playwrightConfig, ...process.argv.slice(2)],
     {
       cwd: chromeLogDirectory,
-      env: { ...process.env, CHROME_LOG_FILE: chromeLogFile },
+      env: {
+        ...process.env,
+        CHROME_LOG_FILE: chromeLogFile,
+        [runtimeBaseUrlEnvironmentVariable]: baseURL,
+        [runtimeOutputDirectoryEnvironmentVariable]: playwrightOutputDirectory,
+      },
       stdio: "inherit",
       windowsHide: true,
     },
@@ -82,33 +52,58 @@ async function runPlaywright() {
   return 1;
 }
 
-async function stopServer() {
-  if (serverExitState !== undefined) {
-    return;
-  }
-
-  server.kill("SIGTERM");
-  const stopped = await Promise.race([
-    serverExited.then(() => true),
-    delay(3_000).then(() => false),
-  ]);
-
-  if (!stopped && serverExitState === undefined) {
-    server.kill("SIGKILL");
-    await serverExited;
-  }
-}
-
+let server;
 let exitCode = 1;
 
 try {
-  await waitForServer();
-  exitCode = await runPlaywright();
+  server = await createServer({
+    root: projectPath,
+    server: {
+      host,
+      port: 0,
+      strictPort: true,
+    },
+  });
+  await server.listen();
+  const baseURL = getOwnedServerBaseUrl(server);
+  console.log(`${runtimeBaseUrlEnvironmentVariable}=${baseURL}`);
+  console.log(
+    `${runtimeOutputDirectoryEnvironmentVariable}=${playwrightOutputDirectory}`,
+  );
+  exitCode = await runPlaywright(baseURL);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
 } finally {
-  await stopServer();
-  await rm(chromeLogDirectory, { recursive: true, force: true });
+  try {
+    await server?.close();
+  } catch (error) {
+    console.error(
+      `Failed to close the owned Vite server: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+    if (exitCode === 0) {
+      exitCode = 1;
+    }
+  }
+
+  if (exitCode === 0) {
+    try {
+      await rm(chromeLogDirectory, { recursive: true, force: true });
+      console.log(`Removed browser-test temporary directory: ${chromeLogDirectory}`);
+    } catch (error) {
+      console.error(
+        `Failed to remove browser-test temporary directory ${chromeLogDirectory}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      exitCode = 1;
+    }
+  }
+
+  if (exitCode !== 0) {
+    console.error(`Browser-test diagnostics retained at: ${chromeLogDirectory}`);
+  }
 }
 
 process.exitCode = exitCode;

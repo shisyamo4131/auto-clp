@@ -1,6 +1,13 @@
 import { expect, test, type Download, type Page } from "@playwright/test";
 
 const exportFilename = "auto-clp-project-0.1.0.json";
+const runtimeBaseUrlEnvironmentVariable = "AUTO_CLP_BROWSER_BASE_URL";
+const runtimeBaseUrl = process.env[runtimeBaseUrlEnvironmentVariable];
+if (runtimeBaseUrl === undefined || runtimeBaseUrl.length === 0) {
+  throw new Error(
+    `${runtimeBaseUrlEnvironmentVariable} is required; run this test through the package test:browser script`,
+  );
+}
 
 function projectJson(name: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -543,6 +550,10 @@ test("runs a 1000-placement, 100-candidate preflight off the main thread", async
   page,
 }) => {
   await page.goto("/?forceWebgl2=unsupported");
+  const workerUrl = new URL(
+    "/src/workers/project-import-preflight.worker.ts",
+    runtimeBaseUrl,
+  ).href;
   const large = projectJson("匿名large-preflight", {
     cargoes: Array.from({ length: 1000 }, (_, index) => ({
       id: `cargo-${index + 1}`,
@@ -567,7 +578,7 @@ test("runs a 1000-placement, 100-candidate preflight off the main thread", async
     })),
   });
 
-  const result = await page.evaluate(async (input) => {
+  const result = await page.evaluate(async ({ input, workerUrl: workerUrlValue }) => {
     const browserGlobal = globalThis as unknown as {
       readonly Date: DateConstructor;
       readonly Promise: PromiseConstructor;
@@ -586,10 +597,7 @@ test("runs a 1000-placement, 100-candidate preflight off the main thread", async
     }, 0);
     const started = browserGlobal.Date.now();
     const worker = new browserGlobal.Worker(
-      new browserGlobal.URL(
-        "/src/workers/project-import-preflight.worker.ts",
-        "http://127.0.0.1:4173/",
-      ),
+      new browserGlobal.URL(workerUrlValue),
       { type: "module" },
     );
     const response = await new browserGlobal.Promise<unknown>((resolve) => {
@@ -603,7 +611,7 @@ test("runs a 1000-placement, 100-candidate preflight off the main thread", async
     worker.terminate();
     browserGlobal.clearInterval(timer);
     return { elapsedMs: browserGlobal.Date.now() - started, response, ticks };
-  }, large);
+  }, { input: large, workerUrl });
 
   expect(result.response).toEqual({
     type: "project-import-preflight-ready",

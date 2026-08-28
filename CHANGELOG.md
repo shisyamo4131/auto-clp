@@ -52,6 +52,7 @@
 - `自動提案の一括適用` を一件だけ記録するUndo/Redoと、AP-02/AP-03、改ざん拒否、警告保持、stale・busy・二重適用、狭幅・WebGL非依存を覆う36件の追加単体・4件の追加ブラウザ回帰。
 - production module Workerを使うAP-08匿名20積荷性能回帰と、cold/warm、決定的result hash、main timer/rAF、native取消、console、実行環境を保存する技術証拠。
 - 匿名合成AC-01〜04のCodex UI-assisted部分観察記録。exact floor dragの反復修正、通常JSON再読込、WebGL非対応時のZ編集・判定・履歴・端末保存、狭幅、主要focus、consoleを確認し、未実行操作・環境遅延・改善候補・残る人間試用を区別。
+- 固定loopback URLとstrict portを使うUI試用server script、および固定済みPlaywright Chromiumを導入する初期設定script。
 
 ### Changed
 
@@ -95,6 +96,7 @@
 
 - 床下配置を一般的なコンテナ境界外と同じ理由でしか説明できなかった診断契約を、専用の床突き抜け理由へ分離。
 - プロジェクト文書検証がPlaywrightの一時 `test-results` 内Markdownを正本文書として数えないよう修正。
+- 並行ブラウザ試験が固定portの別runnerへ誤接続し、所有していないserverの停止後に連鎖失敗できた実行基盤を、runner所有の動的loopback serverと固有Playwright output directoryへ分離。成功時だけ一時成果物を削除し、失敗時は診断pathを保持する。
 
 ### Removed
 

@@ -39,10 +39,22 @@ Node.js `22.13.0`以上`23`未満とCorepackを使用する。パッケージマ
 
 ```powershell
 corepack pnpm install --frozen-lockfile
-corepack pnpm exec playwright install chromium
+corepack pnpm run setup:playwright:chromium
 ```
 
+`setup:playwright:chromium` は固定済み `@playwright/test` のCLIからChromiumを取得する初期設定専用scriptである。ネットワーク通信とプロジェクト外browser cacheへの書込みを伴うため、実行前にそれぞれの承認を得る。通常の検証gateでは再実行しない。
+
 検証には匿名の合成データだけを使う。実在顧客、実貨物、搬送経路、価格、資格情報を使用しない。
+
+### Windows / Codex Local Test Setup
+
+- 対応するNode.jsは `package.json` の `>=22.13.0 <23`、package managerはCorepack経由のpnpm `11.19.0`である。版を推測せず、`package.json` とlockfileを正とする。
+- 日常の入口は `corepack pnpm run typecheck`、`lint`、`test:unit`、`test:browser`、`build` とする。ブラウザ試験runnerは自分が所有するloopback Vite serverをOS割当の空きportで起動し、その正確なURLとrunner固有の絶対output directoryをPlaywrightへ渡して終了時に同じserverだけを閉じる。並行runner間でportまたは成果物directoryを共有しない。成功時は一時directoryを削除し、試験失敗・signal終了・server cleanup失敗時はtrace、attachment、last-run、Chrome log用pathを含む固有directoryを保持して正確なpathを表示する。
+- pnpm 11でscriptへ引数を渡す時は追加の `--` を挟まない。対象を絞る例は `corepack pnpm run test:browser capability.spec.ts` とする。`corepack pnpm run dev -- --port 4174` のようにすると、`--` がViteへそのまま渡り、後続optionの解釈を変えるため使用しない。
+- Codexのworkspace sandboxでは、`pnpm list` や `pnpm exec` がworkspace探索、共有store、launcher解決のためproject外pathへ触れて失敗する場合がある。一方、`pnpm run` はpackage scriptが固定したrepository-local binaryをscript用PATHから起動できる。前者だけの失敗を依存欠落と断定せず、正本package scriptで再現を確認する。
+- ローカルWebアプリのCodex UI観察は、in-app Browserを第一経路とする。専用serverは `corepack pnpm run dev:ui-trial` で `http://127.0.0.1:4174/` のみに起動し、`strictPort` により既存listenerがあれば別portへ迂回せず失敗する。利用後は起動したprocessだけを停止する。
+- Computer UseまたはChrome制御を代替経路にするには、対応plugin・server・skillが有効で、対象appの操作承認があり、表示中で操作可能なWindows desktop sessionが必要である。これらが不足する状態は製品不具合の証拠にしない。
+- 自動Playwright試験、Codex-assisted UI観察、開発チーム内の人間試用、実務利用者受入は別の証拠区分である。前段の成功を後段の合格へ読み替えない。Browserのfile chooser応答遅延や制御経路の停止も、再現可能なアプリ側不具合と切り分けるまでは製品失敗として扱わない。
 
 ## Normal Operation
 
@@ -51,6 +63,14 @@ corepack pnpm exec playwright install chromium
 ```powershell
 corepack pnpm run dev
 ```
+
+人間またはCodexによる再現可能なUI試用では、通常の開発serverと区別した固定URLを使う。
+
+```powershell
+corepack pnpm run dev:ui-trial
+```
+
+このscriptは `http://127.0.0.1:4174/` を `strictPort` で使用する。port使用中なら別serverへ接続または別portへ迂回せず、起動を失敗させる。
 
 案件名、軸別隙間、積荷、コンテナ・車両候補は入力・編集できる。入力途中の文字列は明示的な保存操作まで正規案件へ反映せず、不正入力時は直前の正規案件を保持する。入力成功は積載可能性や物理的安全性の確認を意味しない。
 
@@ -118,7 +138,7 @@ corepack pnpm run build
 
 ## Project Management Task Loop
 
-現在、継続実行中の委任タスクまたはイベントループはない。長期調整をユーザーが依頼した場合だけ次を開始する。
+長期調整では、個別タスクの一時的なIDや実行状態を製品文書へ固定せず、次のイベント通知方式を使用する。
 
 1. コーディネーターID・ホスト、委任タスクID・ホスト、主作業ディレクトリ、現在チェックポイント、コールバック先、ユーザー定義の終了条件を記録する。
 2. タスク作成、交代、またはアプリ再起動後に、変更なしチェックポイントのコールバックを1回検証する。

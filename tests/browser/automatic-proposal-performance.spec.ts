@@ -6,7 +6,13 @@ import { fileURLToPath } from "node:url";
 
 import { expect, test, type Page } from "@playwright/test";
 
-const baseUrl = "http://127.0.0.1:4173";
+const runtimeBaseUrlEnvironmentVariable = "AUTO_CLP_BROWSER_BASE_URL";
+const baseUrl = process.env[runtimeBaseUrlEnvironmentVariable];
+if (baseUrl === undefined || baseUrl.length === 0) {
+  throw new Error(
+    `${runtimeBaseUrlEnvironmentVariable} is required; run this test through the package test:browser script`,
+  );
+}
 const proposalWorkerFragment = "automatic-proposal.worker";
 const expectedAttemptCount = 210;
 

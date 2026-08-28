@@ -9,6 +9,8 @@
   "packageManager": "pnpm@11.19.0",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "dev:ui-trial": "vite --host 127.0.0.1 --port 4174 --strictPort",
+    "setup:playwright:chromium": "node node_modules/@playwright/test/cli.js install chromium",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint . --max-warnings 0",
     "test:unit": "vitest run",
