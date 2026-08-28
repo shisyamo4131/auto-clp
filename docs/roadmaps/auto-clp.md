@@ -22,8 +22,8 @@
 
 ## Next Work
 
-1. [部分UI観察](../evidence/phase1-development-ui-trial-8c8ece2.md)の再開条件を満たす実ブラウザ環境で、AC-04 JSON再読込、WebGL非対応、305/320/375 px、残るfocus、consoleを完了し、開発チーム内の人間試用と区別して記録する。
-2. 開発チーム内試用と後続の実務試用で、canvas上のZ移動・向き変更・取り外しが必要か観察し、必要な範囲だけ追加する。
+1. [Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)と区別した開発チーム内の人間試用で、AC-01〜04、安全表示、狭幅補足文、自然なTab順と確認後focusを観察する。
+2. 開発チーム内試用と後続の実務試用で、canvas上のZ移動・向き変更・取り外しが必要か判断し、必要な範囲だけ追加する。
 3. 実務利用者試用の評価担当、日程、合否記録を決め、匿名の観察記録として実施する。
 
 ## Deliverables and Verification Evidence
@@ -36,7 +36,7 @@
 | 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md) | 低レベルgeometry・耐荷重評価、高位独立診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体551件・全ブラウザ31件。1,000同一bounds配置で499,500不適合理由と1,000未確認理由を打切りなく保持し、summaryは件数だけ、先頭・中間・末尾を各25件取得しながらmain timer/rAFが進むことを実Workerで検証。305/320/375px実UIと独立レビュー合格 |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、固定code UI | 全単体623件・全ブラウザ48件。実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL非依存、305/320/375px、1,000配置・100候補の実Worker応答性、独立レビュー合格 |
 | コンテナ・配置の自動提案 | [ADR 0004](../decisions/0004-optimization-objective.md)、[合成受入AP-01〜08](../acceptance.md#automatic-proposal-synthetic-cases) | 純粋探索・Worker・session/view、React hook/panel、Project/generationとbusy gate、実Worker開始・取消・retry、非永続preview、適用直前再検証、確認付き一括適用、同一案no-op、一回のUndo/Redo、25件pageを実装 | domain31件、Worker80件、apply21件を含む全単体839件・全ブラウザ63件。実Worker AP-02/AP-03、Project/history非変更、stale、正常JSON置換、適用・no-op・Undo/Redo、警告保持、WebGL非依存、ARIA、305/320/375px、独立レビュー合格。AP-08は[記録環境の技術証拠](../evidence/automatic-proposal-ap08-1226b082.md)でcold 59.7 ms、warm 48.7〜50.9 ms、各210 attempts・同一hash、native取消0 ms・UI 0.5 ms、console 0件を確認。一般端末SLAではない |
-| 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | 全単体628件・全ブラウザ51件、型・lint・build、文書・データ・ガバナンス検証、独立レビュー合格。[Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)でAC-01〜03とAC-04一部を確認したが、browser tool障害で残項目未完了。開発チーム内の人間試用と実務利用者試用は未実施 |
+| 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | 全単体628件・全ブラウザ51件、型・lint・build、文書・データ・ガバナンス検証、独立レビュー合格。[Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)でAC-01〜03、通常JSON再読込、WebGL非対応時のZ編集・判定・履歴・端末保存、狭幅、主要focus、consoleを確認し、向き・削除・JSON等はcontrolの有効状態だけを確認。AC-04全操作、人間による安全表示理解、開発チーム内試用、実務利用者試用は未実施 |
 
 ## Unresolved Problems and Decisions
 
@@ -86,3 +86,4 @@
 | 2026-08-28 | 93% | +2 | 自動提案の適用直前再検証、常時確認、配置だけの一括置換、同一案no-op、一履歴操作のUndo/Redoを実装。全単体839件・全ブラウザ62件でAP-02/AP-03、警告保持、stale・busy・二重適用、狭幅・WebGL非依存を検証。AP-08実時間性能は未実施 |
 | 2026-08-28 | 94% | +1 | AP-08の匿名20積荷fixtureをproduction module Workerで測定。記録環境でcold 59.7 ms、warm 48.7〜50.9 ms、全4回210 attempts・同一hash、main timer/rAF進行、native取消0 ms・UI 0.5 ms、console 0件を検証し、自動提案マイルストーンを完了。一般端末SLA、最低GPU、実務受入ではない |
 | 2026-08-28 | 94% | +0 | Codex UI-assisted試用でAC-01〜03とAC-04端末再読込までを実画面観察。exact floor dragで3回の誤座標commitを記録した。JSON file-inputのbrowser tool応答不能により残項目と人間試用は未完了のため加点なし |
+| 2026-08-28 | 94% | +0 | PC再起動後にCodex UI-assisted試用を再開し、通常JSON再読込、WebGL非対応時のZ編集・判定・Undo・端末保存、305 / 320 / 375 px、主要focus、console 0件を観察。向き・削除・JSON等はcontrolの有効状態だけを確認し、人間試用とAC-04全操作は未完了のため加点なし |

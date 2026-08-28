@@ -51,7 +51,7 @@
 - 自動提案をSchema・意味・正本物理判定で再検証し、配置だけを深いcopyで一括置換する純粋な適用境界、identityを一度だけ取得する確認、同一案no-op、適用済み・変更なし表示。
 - `自動提案の一括適用` を一件だけ記録するUndo/Redoと、AP-02/AP-03、改ざん拒否、警告保持、stale・busy・二重適用、狭幅・WebGL非依存を覆う36件の追加単体・4件の追加ブラウザ回帰。
 - production module Workerを使うAP-08匿名20積荷性能回帰と、cold/warm、決定的result hash、main timer/rAF、native取消、console、実行環境を保存する技術証拠。
-- 匿名合成AC-01〜04のCodex UI-assisted部分観察記録。exact floor dragの反復修正、フォームfallback、物理理由、端末再読込、browser file-input障害と残る人間試用を区別。
+- 匿名合成AC-01〜04のCodex UI-assisted部分観察記録。exact floor dragの反復修正、通常JSON再読込、WebGL非対応時のZ編集・判定・履歴・端末保存、狭幅、主要focus、consoleを確認し、未実行操作・環境遅延・改善候補・残る人間試用を区別。
 
 ### Changed
 
