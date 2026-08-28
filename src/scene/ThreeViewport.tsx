@@ -3,6 +3,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import {
+  sceneBoundsReachRadius,
+  sceneContainerBounds,
   sceneProjectionBounds,
   type ProjectSceneProjection,
   type SceneVector3,
@@ -65,23 +67,70 @@ function fitCamera(
     return new THREE.Vector3(0, 0, 0);
   }
 
-  const bounds = sceneProjectionBounds(projection);
+  const bounds = sceneContainerBounds(projection);
   const radius = Math.max(bounds.radius, 0.001);
+  const distance = cameraFramingDistance(camera, radius);
+  const viewDirection = new THREE.Vector3(-1, 0.72, 0.9).normalize();
+  const target = new THREE.Vector3(bounds.center.x, bounds.center.y, bounds.center.z);
+
+  camera.near = Math.max(radius / 1_000, 0.0001);
+  camera.position.copy(target).addScaledVector(viewDirection, distance);
+  const projectionBounds = sceneProjectionBounds(projection);
+  const projectionCenter = new THREE.Vector3(
+    projectionBounds.center.x,
+    projectionBounds.center.y,
+    projectionBounds.center.z,
+  );
+  camera.far = Math.max(
+    camera.position.distanceTo(projectionCenter) + projectionBounds.radius * 1.1,
+    distance + radius * 20,
+    10,
+  );
+  camera.lookAt(target);
+  camera.updateProjectionMatrix();
+  return target;
+}
+
+function cameraFramingDistance(
+  camera: THREE.PerspectiveCamera,
+  radius: number,
+): number {
   const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov / 2);
   const horizontalHalfFov = Math.atan(
     Math.tan(verticalHalfFov) * Math.max(camera.aspect, 0.01),
   );
   const limitingHalfFov = Math.min(verticalHalfFov, horizontalHalfFov);
-  const distance = Math.max(radius / Math.sin(limitingHalfFov) * 1.08, 0.01);
-  const viewDirection = new THREE.Vector3(-1, 0.72, 0.9).normalize();
-  const target = new THREE.Vector3(bounds.center.x, bounds.center.y, bounds.center.z);
+  return Math.max(radius / Math.sin(limitingHalfFov) * 1.08, 0.01);
+}
 
-  camera.near = Math.max(distance - radius * 1.1, radius / 10_000, 0.0001);
-  camera.far = Math.max(distance + radius * 1.1, 1);
-  camera.position.copy(target).addScaledVector(viewDirection, distance);
-  camera.lookAt(target);
+function configureCameraDistanceLimits(
+  controls: OrbitControls,
+  camera: THREE.PerspectiveCamera,
+  projection: ProjectSceneProjection | null,
+): void {
+  if (projection === null) {
+    controls.minDistance = 0.05;
+    controls.maxDistance = 50;
+    return;
+  }
+
+  const containerRadius = Math.max(sceneContainerBounds(projection).radius, 0.001);
+  const projectionBounds = sceneProjectionBounds(projection);
+  const projectionReachRadius = sceneBoundsReachRadius(
+    { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+    projectionBounds,
+  );
+  controls.minDistance = Math.max(containerRadius * 0.15, 0.001);
+  controls.maxDistance = Math.max(
+    containerRadius * 20,
+    cameraFramingDistance(camera, projectionReachRadius) * 1.5,
+    10,
+  );
+  camera.far = Math.max(
+    camera.far,
+    controls.maxDistance + projectionReachRadius * 1.1,
+  );
   camera.updateProjectionMatrix();
-  return target;
 }
 
 function addProjection(
@@ -188,6 +237,8 @@ export function ThreeViewport({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const interactionDisabledRef = useRef(interactionDisabled);
   const resetViewRef = useRef<() => void>(() => undefined);
+  const zoomInRef = useRef<() => void>(() => undefined);
+  const zoomOutRef = useRef<() => void>(() => undefined);
   const selectedCargoIdRef = useRef(selectedCargoId);
   const updateSelectionRef = useRef<(cargoId?: string) => void>(() => undefined);
 
@@ -457,6 +508,7 @@ export function ThreeViewport({
       const initialTarget = fitCamera(camera, projection);
       controls = new OrbitControls(camera, canvas);
       controls.target.copy(initialTarget);
+      configureCameraDistanceLimits(controls, camera, projection);
       controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
       controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
       controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
@@ -472,7 +524,28 @@ export function ThreeViewport({
         controls.update();
         renderScene();
       };
+      const zoomBy = (distanceScale: number) => {
+        if (disposed || controls === undefined) return;
+        const offset = camera.position.clone().sub(controls.target);
+        const currentDistance = offset.length();
+        if (!Number.isFinite(currentDistance) || currentDistance <= 0) {
+          resetView();
+          return;
+        }
+        const nextDistance = THREE.MathUtils.clamp(
+          currentDistance * distanceScale,
+          controls.minDistance,
+          controls.maxDistance,
+        );
+        camera.position
+          .copy(controls.target)
+          .addScaledVector(offset.normalize(), nextDistance);
+        controls.update();
+        renderScene();
+      };
       resetViewRef.current = resetView;
+      zoomInRef.current = () => zoomBy(0.8);
+      zoomOutRef.current = () => zoomBy(1.25);
       if (!updateSelection(selectedCargoIdRef.current)) return dispose;
       resizeObserver = new ResizeObserver(resizeAndRender);
       resizeObserver.observe(container);
@@ -484,15 +557,25 @@ export function ThreeViewport({
 
     return () => {
       resetViewRef.current = () => undefined;
+      zoomInRef.current = () => undefined;
+      zoomOutRef.current = () => undefined;
       dispose();
     };
   }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
 
   return (
     <div className="viewport" ref={containerRef}>
-      <button className="viewport__reset" type="button" onClick={() => resetViewRef.current()}>
-        視点を初期位置へ戻す
-      </button>
+      <div className="viewport__camera-controls" role="group" aria-label="3D表示の視点操作">
+        <button type="button" aria-label="拡大" onClick={() => zoomInRef.current()}>
+          ＋
+        </button>
+        <button type="button" aria-label="縮小" onClick={() => zoomOutRef.current()}>
+          －
+        </button>
+        <button type="button" onClick={() => resetViewRef.current()}>
+          荷室全体を表示
+        </button>
+      </div>
       <canvas
         ref={canvasRef}
         role="img"

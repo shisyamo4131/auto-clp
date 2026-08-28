@@ -75,6 +75,13 @@
 - 独立レビューでblocking所見0件を確認した。最終差分で全単体848件、全ブラウザ64件、型、lint、build、データ契約、対象単体76件、対象ブラウザ4件が個別に成功した。buildは既知の1 MB級chunk警告を保持するが、本修正の失敗ではない。
 - 人間による同じfixtureの再試用は未実施である。したがって実装・自動回帰上は解決済みだが、人間観察結果そのものを書き換えない。
 
+## Explicit Zoom and Recovery Resolution
+
+- `CP-PHASE1-SCENE-CAMERA-001` で、3D表示内に `＋` / `－` と「荷室全体を表示」を追加し、既存ホイール操作を維持した。
+- 初期表示と復元は荷室境界だけを基準にし、遠方の修正途中積荷を全体fitへ含めない。cameraのfarと最大移動距離は全投影範囲から導出し、遠方積荷を描画・移動可能範囲から除外しない。
+- camera操作はProject、履歴、JSONへ保存せず、極端座標の純粋境界試験、荷室表示のブラウザ画像回帰、案件・履歴非変更、305 / 320 / 375 px表示で検証した。最終差分で全単体849件・全ブラウザ65件、型、lint、buildが個別に成功し、独立レビューでblocking所見0件を確認した。
+- 実Chromeでの人間による操作感と、極端座標の積荷へ縮小・平行移動で再到達する手動操作は未確認である。
+
 ## Remaining and Unverified
 
 - `acceptance.md` の正確な全fixtureを人間が再現した証拠。
@@ -84,7 +91,7 @@
 - 自由なZ drag、横倒し4向き、touch/coarse pointer、最低GPU、正式対応ブラウザ。
 - 実務利用者による代表ケース、合否、日程、評価担当。
 - Snackbar、scene-local layout、canvas回転、可読な向き表示の設計・実装・回帰。
-- `＋` / `－`、荷室基準の視点復元、非永続仮置き場、保存Navigation Drawerの設計・実装・回帰。
+- 非永続仮置き場と保存Navigation Drawerの設計・実装・回帰。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 

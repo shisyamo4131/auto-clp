@@ -7,6 +7,8 @@ import {
   domainPointToScene,
   MM_TO_SCENE_UNIT,
   projectContainerToScene,
+  sceneBoundsReachRadius,
+  sceneContainerBounds,
   sceneFloorDragPositionMm,
   sceneProjectionBounds,
   type ProjectSceneProjection,
@@ -309,6 +311,60 @@ describe("sceneProjectionBounds", () => {
     expect(bounds.radius).toBeCloseTo(Math.hypot(1.001, 1.003, 1) / 2, 12);
     expectBoxWithinProjectionBounds(projection.container, bounds);
     expect(projection).toEqual(original);
+  });
+
+  it("keeps container-only camera bounds stable when cargo is at coordinate extremes", () => {
+    const base = projectFixture();
+    const project: Project = {
+      ...base,
+      cargoes: [
+        {
+          id: "remote-cargo",
+          name: "匿名遠方積荷",
+          dimensionsMm: { lengthMm: 1, widthMm: 1, heightMm: 1 },
+          massGrams: 1,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH"],
+        },
+      ],
+      containers: [base.containers[0]!],
+      placements: [
+        {
+          cargoId: "remote-cargo",
+          containerId: "container-1",
+          positionMm: {
+            xMm: 1_000_000,
+            yMm: -1_000_000,
+            zMm: 1_000_000,
+          },
+          orientation: "LWH",
+        },
+      ],
+    };
+    const result = projectContainerToScene(project, "container-1");
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    const original = structuredClone(result.projection);
+
+    const containerBounds = sceneContainerBounds(result.projection);
+    const allBounds = sceneProjectionBounds(result.projection);
+
+    expectVectorClose(containerBounds.min, { x: 0, y: 0, z: -1 });
+    expectVectorClose(containerBounds.max, { x: 1.001, y: 1.003, z: 0 });
+    expectVectorClose(containerBounds.center, { x: 0.5005, y: 0.5015, z: -0.5 });
+    expect(containerBounds.radius).toBeCloseTo(
+      Math.hypot(1.001, 1.003, 1) / 2,
+      12,
+    );
+    expect(allBounds.max.x).toBeGreaterThan(1_000);
+    expect(allBounds.max.y).toBeGreaterThan(1_000);
+    expect(allBounds.max.z).toBeGreaterThan(999);
+    expect(sceneBoundsReachRadius(containerBounds.center, allBounds)).toBeGreaterThan(
+      1_000,
+    );
+    expect(result.projection).toEqual(original);
   });
 
   it("unions cargoes beyond every domain face at the schema coordinate extremes", () => {

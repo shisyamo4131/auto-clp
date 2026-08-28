@@ -46,6 +46,19 @@ export interface SceneProjectionBounds {
   readonly radius: number;
 }
 
+export function sceneBoundsReachRadius(
+  origin: SceneVector3,
+  bounds: SceneProjectionBounds,
+): number {
+  return (
+    Math.hypot(
+      bounds.center.x - origin.x,
+      bounds.center.y - origin.y,
+      bounds.center.z - origin.z,
+    ) + bounds.radius
+  );
+}
+
 export type ProjectSceneProjectionError =
   | {
       readonly code: "scene.container-not-found";
@@ -61,10 +74,12 @@ export type ProjectSceneProjectionResult =
   | { readonly ok: true; readonly projection: ProjectSceneProjection }
   | { readonly ok: false; readonly error: ProjectSceneProjectionError };
 
-export function sceneProjectionBounds(
-  projection: ProjectSceneProjection,
+function sceneBoxBounds(
+  boxes: readonly {
+    readonly center: SceneVector3;
+    readonly dimensions: SceneVector3;
+  }[],
 ): SceneProjectionBounds {
-  const boxes = [projection.container, ...projection.cargoes];
   let minX = Number.POSITIVE_INFINITY;
   let minY = Number.POSITIVE_INFINITY;
   let minZ = Number.POSITIVE_INFINITY;
@@ -96,6 +111,24 @@ export function sceneProjectionBounds(
     center,
     radius: Math.hypot(maxX - minX, maxY - minY, maxZ - minZ) / 2,
   };
+}
+
+/**
+ * Returns bounds for restoring a useful container-centred camera view. Cargoes
+ * are intentionally excluded because correction-in-progress placements can be
+ * at the canonical coordinate extremes.
+ */
+export function sceneContainerBounds(
+  projection: ProjectSceneProjection,
+): SceneProjectionBounds {
+  return sceneBoxBounds([projection.container]);
+}
+
+/** Returns the union used by callers that need every projected object. */
+export function sceneProjectionBounds(
+  projection: ProjectSceneProjection,
+): SceneProjectionBounds {
+  return sceneBoxBounds([projection.container, ...projection.cargoes]);
 }
 
 export function domainPointToScene(point: PositionMm): SceneVector3 {

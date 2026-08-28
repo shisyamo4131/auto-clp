@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { inflateSync } from "node:zlib";
 
 const previewName = "積荷を選択・床面移動できる3Dプレビュー";
 
@@ -14,12 +15,20 @@ async function addContainer(page: Page, name: string, lengthMm = "6000") {
   await page.getByRole("button", { name: "候補を保存" }).click();
 }
 
-async function addInteractiveCargo(page: Page, name: string) {
+async function addInteractiveCargo(
+  page: Page,
+  name: string,
+  dimensions: {
+    readonly lengthMm?: string;
+    readonly widthMm?: string;
+    readonly heightMm?: string;
+  } = {},
+) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await page.getByLabel("積荷名").fill(name);
-  await page.getByLabel("長さ", { exact: true }).fill("1800");
-  await page.getByLabel("幅", { exact: true }).fill("1400");
-  await page.getByLabel("高さ", { exact: true }).fill("1000");
+  await page.getByLabel("長さ", { exact: true }).fill(dimensions.lengthMm ?? "1800");
+  await page.getByLabel("幅", { exact: true }).fill(dimensions.widthMm ?? "1400");
+  await page.getByLabel("高さ", { exact: true }).fill(dimensions.heightMm ?? "1000");
   await page.getByLabel("重量").fill("1.005");
   await page.getByRole("button", { name: "積荷を保存" }).click();
 }
@@ -127,6 +136,119 @@ async function expectNoHorizontalOverflow(page: Page) {
     return root.scrollWidth > root.clientWidth;
   });
   expect(overflows).toBe(false);
+}
+
+interface ContainerFrameMeasurement {
+  readonly count: number;
+  readonly height: number;
+  readonly width: number;
+}
+
+function paethPredictor(left: number, up: number, upperLeft: number): number {
+  const estimate = left + up - upperLeft;
+  const leftDistance = Math.abs(estimate - left);
+  const upDistance = Math.abs(estimate - up);
+  const upperLeftDistance = Math.abs(estimate - upperLeft);
+  if (leftDistance <= upDistance && leftDistance <= upperLeftDistance) return left;
+  return upDistance <= upperLeftDistance ? up : upperLeft;
+}
+
+function measureContainerFrame(image: Buffer): ContainerFrameMeasurement {
+  const idatChunks: Buffer[] = [];
+  let width = 0;
+  let height = 0;
+  let channels = 0;
+  for (let offset = 8; offset < image.length; ) {
+    const length = image.readUInt32BE(offset);
+    const type = image.toString("ascii", offset + 4, offset + 8);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    if (type === "IHDR") {
+      width = image.readUInt32BE(dataStart);
+      height = image.readUInt32BE(dataStart + 4);
+      const bitDepth = image[dataStart + 8];
+      const colorType = image[dataStart + 9];
+      const interlace = image[dataStart + 12];
+      if (bitDepth !== 8 || interlace !== 0 || (colorType !== 2 && colorType !== 6)) {
+        throw new Error("Unsupported screenshot PNG format");
+      }
+      channels = colorType === 6 ? 4 : 3;
+    } else if (type === "IDAT") {
+      idatChunks.push(image.subarray(dataStart, dataEnd));
+    }
+    offset = dataEnd + 4;
+  }
+  if (width === 0 || height === 0 || channels === 0 || idatChunks.length === 0) {
+    throw new Error("Incomplete screenshot PNG");
+  }
+
+  const filtered = inflateSync(Buffer.concat(idatChunks));
+  const stride = width * channels;
+  const pixels = Buffer.alloc(stride * height);
+  let sourceOffset = 0;
+  for (let y = 0; y < height; y += 1) {
+    const filter = filtered[sourceOffset++]!;
+    const rowOffset = y * stride;
+    for (let x = 0; x < stride; x += 1) {
+      const encoded = filtered[sourceOffset++]!;
+      const left = x >= channels ? pixels[rowOffset + x - channels]! : 0;
+      const up = y > 0 ? pixels[rowOffset - stride + x]! : 0;
+      const upperLeft = y > 0 && x >= channels
+        ? pixels[rowOffset - stride + x - channels]!
+        : 0;
+      const predictor =
+        filter === 0
+          ? 0
+          : filter === 1
+            ? left
+            : filter === 2
+              ? up
+              : filter === 3
+                ? Math.floor((left + up) / 2)
+                : filter === 4
+                  ? paethPredictor(left, up, upperLeft)
+                  : Number.NaN;
+      if (!Number.isFinite(predictor)) throw new Error("Unsupported PNG row filter");
+      pixels[rowOffset + x] = (encoded + predictor) & 0xff;
+    }
+  }
+
+  let count = 0;
+  let minX = width;
+  let minY = height;
+  let maxX = -1;
+  let maxY = -1;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const pixelOffset = y * stride + x * channels;
+      const red = pixels[pixelOffset]!;
+      const green = pixels[pixelOffset + 1]!;
+      const blue = pixels[pixelOffset + 2]!;
+      if (green >= 60 && green >= red + 15 && blue >= red + 15) {
+        count += 1;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+  return {
+    count,
+    height: count === 0 ? 0 : maxY - minY + 1,
+    width: count === 0 ? 0 : maxX - minX + 1,
+  };
+}
+
+function expectSameContainerFrame(
+  actual: ContainerFrameMeasurement,
+  baseline: ContainerFrameMeasurement,
+) {
+  expect(baseline.count).toBeGreaterThan(100);
+  expect(actual.count).toBeGreaterThanOrEqual(baseline.count * 0.85);
+  expect(actual.count).toBeLessThanOrEqual(baseline.count * 1.15);
+  expect(Math.abs(actual.width - baseline.width)).toBeLessThanOrEqual(4);
+  expect(Math.abs(actual.height - baseline.height)).toBeLessThanOrEqual(4);
 }
 
 test("shows an empty unjudged scene with a supported canvas", async ({ page }) => {
@@ -300,10 +422,73 @@ test("selects cargo, clears on blank space, and keeps clicks and camera controls
   await page.mouse.down();
   await page.mouse.move(blankPoint.x + 45, blankPoint.y - 35, { steps: 3 });
   await page.mouse.up();
+  const beforeWheel = await canvas.screenshot();
   await page.mouse.wheel(0, -240);
-  await page.getByRole("button", { name: "視点を初期位置へ戻す" }).click();
+  const afterWheel = await canvas.screenshot();
+  expect(afterWheel.equals(beforeWheel)).toBe(false);
+  const historyBeforeCameraButtons = await page
+    .locator(".project-history__summary")
+    .textContent();
+  const beforeZoom = await canvas.screenshot();
+  await page.getByRole("button", { name: "拡大" }).click();
+  const afterZoom = await canvas.screenshot();
+  expect(afterZoom.equals(beforeZoom)).toBe(false);
+  const initialContainerView = await canvas.screenshot();
+  const zoomOut = page.getByRole("button", { name: "縮小" });
+  for (let index = 0; index < 6; index += 1) {
+    await zoomOut.click();
+  }
+  const zoomedOutView = await canvas.screenshot();
+  expect(zoomedOutView.equals(initialContainerView)).toBe(false);
+  await page.getByRole("button", { name: "荷室全体を表示" }).click();
   expect(await placementSummary(row)).toBe(originalSummary);
+  expect(await page.locator(".project-history__summary").textContent()).toBe(
+    historyBeforeCameraButtons,
+  );
   await expect(sceneSelect).toBeEnabled();
+});
+
+test("restores a container-sized view when cargo is saved at an extreme coordinate", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await addInteractiveCargo(page, "合成遠方積荷", {
+    lengthMm: "100000",
+    widthMm: "100000",
+    heightMm: "100000",
+  });
+  await addContainer(page, "合成遠方候補");
+  const canvas = page.getByRole("img", { name: previewName });
+  await expect(canvas).toBeVisible();
+  const baselineContainerFrame = measureContainerFrame(await canvas.screenshot());
+  const panel = page.locator(".placement-panel");
+  await panel.getByRole("button", { name: "配置を追加: 合成遠方積荷" }).click();
+  await page.getByLabel("X最小角").fill("1000000");
+  await page.getByLabel("Y最小角").fill("0");
+  await page.getByLabel("Z最小角").fill("0");
+  await panel.getByRole("button", { name: "配置を保存" }).click();
+  const row = panel
+    .getByRole("list", { name: "選択候補の配置一覧" })
+    .getByRole("listitem");
+  await expect(row.locator("span")).toContainText(
+    "最小角 X 1000000・Y 0・Z 0 mm",
+  );
+  const initialExtremeContainerFrame = measureContainerFrame(await canvas.screenshot());
+  expectSameContainerFrame(initialExtremeContainerFrame, baselineContainerFrame);
+  const placementBeforeCameraActions = await placementSummary(row);
+  const historyBeforeCameraActions = await page
+    .locator(".project-history__summary")
+    .textContent();
+
+  await page.getByRole("button", { name: "縮小" }).click();
+  await page.getByRole("button", { name: "荷室全体を表示" }).click();
+
+  const restoredContainerFrame = measureContainerFrame(await canvas.screenshot());
+  expectSameContainerFrame(restoredContainerFrame, baselineContainerFrame);
+  expect(await placementSummary(row)).toBe(placementBeforeCameraActions);
+  expect(await page.locator(".project-history__summary").textContent()).toBe(
+    historyBeforeCameraActions,
+  );
 });
 
 test("commits one fine-pointer floor drag and synchronizes the placement form", async ({
@@ -712,6 +897,10 @@ test("keeps the scene workspace within 305, 320, and 375 pixel viewports", async
   );
   await addContainer(page, "狭幅表示用合成候補");
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
+  await expect(page.getByRole("group", { name: "3D表示の視点操作" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "拡大" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "縮小" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "荷室全体を表示" })).toBeVisible();
   await expectNoHorizontalOverflow(page);
 
   for (const width of [320, 375]) {
