@@ -11,6 +11,7 @@ export interface ProjectHistoryControlsProps {
   readonly onUndo: () => boolean;
   readonly redoAction?: ProjectHistoryAction;
   readonly undoAction?: ProjectHistoryAction;
+  readonly compact?: boolean;
 }
 
 const actionCopy = {
@@ -63,6 +64,7 @@ export function ProjectHistoryControls({
   onUndo,
   redoAction,
   undoAction,
+  compact = false,
 }: ProjectHistoryControlsProps) {
   const [announcement, setAnnouncement] = useState<HistoryAnnouncement>();
 
@@ -72,6 +74,7 @@ export function ProjectHistoryControls({
         return false;
       }
       const activeElement = document.activeElement;
+      const scrollPosition = { x: window.scrollX, y: window.scrollY };
       const changed = direction === "undo" ? onUndo() : onRedo();
       if (!changed) {
         return false;
@@ -83,15 +86,27 @@ export function ProjectHistoryControls({
             ? "直前の操作を取り消しました。"
             : "取り消した操作をやり直しました。",
       });
+      const restoreScrollPosition = () => {
+        window.scrollTo(scrollPosition.x, scrollPosition.y);
+      };
       queueMicrotask(() => {
+        restoreScrollPosition();
         if (activeElement instanceof HTMLElement && !activeElement.isConnected) {
           document
             .getElementById(
               direction === "undo" ? "project-history-undo" : "project-history-redo",
             )
-            ?.focus();
+            ?.focus({ preventScroll: true });
         }
       });
+      requestAnimationFrame(() => {
+        restoreScrollPosition();
+        requestAnimationFrame(() => {
+          restoreScrollPosition();
+          requestAnimationFrame(restoreScrollPosition);
+        });
+      });
+      window.setTimeout(restoreScrollPosition, 120);
       return true;
     },
     [busy, commitRevision, onRedo, onUndo],
@@ -151,6 +166,52 @@ export function ProjectHistoryControls({
     activeAnnouncement === undefined
       ? nextActionSummary
       : `${activeAnnouncement} ${nextActionSummary}`;
+
+  if (compact) {
+    return (
+      <section
+        className="project-history project-history--compact"
+        role="group"
+        aria-label="案件全体の履歴"
+      >
+        <button
+          id="project-history-undo"
+          type="button"
+          disabled={busy || !canUndo}
+          aria-label="元に戻す"
+          aria-keyshortcuts="Control+Z Meta+Z"
+          aria-describedby={busy ? "project-history-busy" : undefined}
+          onClick={() => run("undo")}
+        >
+          <span aria-hidden="true">↶</span>
+        </button>
+        <button
+          id="project-history-redo"
+          type="button"
+          disabled={busy || !canRedo}
+          aria-label="やり直す"
+          aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
+          aria-describedby={busy ? "project-history-busy" : undefined}
+          onClick={() => run("redo")}
+        >
+          <span aria-hidden="true">↷</span>
+        </button>
+        <p className="project-history__summary visually-hidden" aria-live="polite" aria-atomic="true">
+          {summary}
+        </p>
+        <p
+          id="project-history-busy"
+          className="project-history__busy visually-hidden"
+          data-active={busy ? "true" : "false"}
+          aria-hidden={busy ? undefined : true}
+        >
+          {busy
+            ? "未保存入力、削除確認、または3D移動中は履歴を変更しません。"
+            : "案件操作の履歴は現在利用できます。"}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="project-history" aria-labelledby="project-history-title">

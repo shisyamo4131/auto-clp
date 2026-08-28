@@ -19,6 +19,8 @@ import {
   sceneContainerBounds,
   sceneFloorDragPositionMm,
   sceneProjectionBounds,
+  stagedCargoOverlapsContainerFloor,
+  xAxisQuarterTurnOrientation,
   type ProjectSceneProjection,
   type SceneVector3,
 } from "./project-scene";
@@ -108,6 +110,18 @@ describe("project scene coordinate adapter", () => {
   ] as const)("maps floor quarter turn %s to %s", (orientation, expected) => {
     expect(floorQuarterTurnOrientation(orientation)).toBe(expected);
     expect(floorQuarterTurnOrientation(expected)).toBe(orientation);
+  });
+
+  it.each([
+    ["LWH", "LHW"],
+    ["LHW", "LWH"],
+    ["WLH", "WHL"],
+    ["WHL", "WLH"],
+    ["HLW", "HWL"],
+    ["HWL", "HLW"],
+  ] as const)("maps X-axis quarter turn %s to %s", (orientation, expected) => {
+    expect(xAxisQuarterTurnOrientation(orientation)).toBe(expected);
+    expect(xAxisQuarterTurnOrientation(expected)).toBe(orientation);
   });
 
   it("uses the approved scale and maps domain axes to Three.js axes", () => {
@@ -312,6 +326,199 @@ describe("project scene coordinate adapter", () => {
       }
     }
     expect(project).toEqual(original);
+  });
+
+  it("projects a session-only staged position and allowed orientation override", () => {
+    const base = projectFixture();
+    const cargo = {
+      ...base.cargoes[0]!,
+      allowedOrientations: ["LWH", "LHW"] as const,
+    };
+    const project: Project = {
+      ...base,
+      cargoes: [cargo],
+      containers: [base.containers[0]!],
+      placements: [],
+    };
+    const original = structuredClone(project);
+
+    const result = projectContainerToScene(project, "container-1", {
+      [cargo.id]: {
+        orientation: "LHW",
+        positionMm: { xMm: 250, yMm: -900, zMm: 0 },
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.projection.cargoes[0]).toMatchObject({
+        kind: "staged",
+        orientation: "LHW",
+        positionMm: { xMm: 250, yMm: -900, zMm: 0 },
+      });
+      expect(result.projection.cargoes[0]?.dimensions).toEqual(
+        domainDimensionsToScene(orientedDimensions(cargo, "LHW")),
+      );
+    }
+    expect(project).toEqual(original);
+  });
+
+  it.each([
+    [{ xMm: -101, yMm: 0, zMm: 0 }, false],
+    [{ xMm: -100, yMm: 0, zMm: 0 }, true],
+    [{ xMm: 0, yMm: -203, zMm: 0 }, false],
+    [{ xMm: 0, yMm: -202, zMm: 0 }, true],
+  ] as const)(
+    "classifies staged floor contact at %o as positive overlap=%s",
+    (positionMm, expected) => {
+      const project = projectFixture();
+      expect(
+        stagedCargoOverlapsContainerFloor(
+          project.cargoes[0]!,
+          positionMm,
+          "LWH",
+          project.containers[0]!,
+        ),
+      ).toBe(expected);
+    },
+  );
+
+  it("detects Z-axis and X-axis staged rotations that would enter the container floor", () => {
+    const container = projectFixture().containers[0]!;
+    const zRotationCargo = {
+      ...projectFixture().cargoes[0]!,
+      dimensionsMm: { lengthMm: 500, widthMm: 1_400, heightMm: 300 },
+      allowedOrientations: ORIENTATIONS,
+    };
+    expect(
+      stagedCargoOverlapsContainerFloor(
+        zRotationCargo,
+        { xMm: -600, yMm: 0, zMm: 0 },
+        "LWH",
+        container,
+      ),
+    ).toBe(false);
+    expect(
+      stagedCargoOverlapsContainerFloor(
+        zRotationCargo,
+        { xMm: -600, yMm: 0, zMm: 0 },
+        "WLH",
+        container,
+      ),
+    ).toBe(true);
+
+    const xRotationCargo = {
+      ...zRotationCargo,
+      dimensionsMm: { lengthMm: 500, widthMm: 400, heightMm: 1_400 },
+    };
+    expect(
+      stagedCargoOverlapsContainerFloor(
+        xRotationCargo,
+        { xMm: 100, yMm: -500, zMm: 0 },
+        "LWH",
+        container,
+      ),
+    ).toBe(false);
+    expect(
+      stagedCargoOverlapsContainerFloor(
+        xRotationCargo,
+        { xMm: 100, yMm: -500, zMm: 0 },
+        "LHW",
+        container,
+      ),
+    ).toBe(true);
+  });
+
+  it("falls back to a deterministic fully outside grid after a staged override becomes overlapping", () => {
+    const base = projectFixture();
+    const cargo = {
+      ...base.cargoes[0]!,
+      dimensionsMm: { lengthMm: 500, widthMm: 1_400, heightMm: 300 },
+      allowedOrientations: ["LWH", "WLH"] as const,
+    };
+    const project: Project = {
+      ...base,
+      cargoes: [cargo],
+      containers: [base.containers[0]!],
+      placements: [],
+    };
+
+    const result = projectContainerToScene(project, "container-1", {
+      [cargo.id]: {
+        orientation: "WLH",
+        positionMm: { xMm: -600, yMm: 0, zMm: 0 },
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const stagedCargo = result.projection.cargoes[0]!;
+      expect(stagedCargo.orientation).toBe("WLH");
+      expect(stagedCargo.positionMm).toEqual({ xMm: -1_500, yMm: 250, zMm: 0 });
+      expect(
+        stagedCargoOverlapsContainerFloor(
+          cargo,
+          stagedCargo.positionMm,
+          stagedCargo.orientation,
+          base.containers[0]!,
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("revalidates an older staged position after cargo dimensions expand", () => {
+    const base = projectFixture();
+    const cargo = {
+      ...base.cargoes[0]!,
+      dimensionsMm: { lengthMm: 800, widthMm: 200, heightMm: 300 },
+    };
+    const project: Project = {
+      ...base,
+      cargoes: [cargo],
+      containers: [base.containers[0]!],
+      placements: [],
+    };
+
+    const result = projectContainerToScene(project, "container-1", {
+      [cargo.id]: {
+        orientation: "LWH",
+        positionMm: { xMm: -600, yMm: 0, zMm: 0 },
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.projection.cargoes[0]?.positionMm).toEqual({
+        xMm: -900,
+        yMm: 400,
+        zMm: 0,
+      });
+    }
+  });
+
+  it("falls back to the first allowed staged orientation after cargo settings change", () => {
+    const base = projectFixture();
+    const project: Project = {
+      ...base,
+      cargoes: [base.cargoes[0]!],
+      containers: [base.containers[0]!],
+      placements: [],
+    };
+
+    const result = projectContainerToScene(project, "container-1", {
+      "cargo-1": {
+        orientation: "LHW",
+        positionMm: { xMm: -500, yMm: 250, zMm: 0 },
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.projection.cargoes[0]).toMatchObject({
+        orientation: "LWH",
+        positionMm: { xMm: -500, yMm: 250, zMm: 0 },
+      });
+    }
   });
 
   it.each([0, 1, 1_000])(

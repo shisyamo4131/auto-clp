@@ -161,6 +161,22 @@ h1 {
   visibility: hidden;
 }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.project-history--compact {
+  display: contents;
+}
+
 .project-persistence-entry {
   display: flex;
   min-width: 0;
@@ -655,7 +671,8 @@ h1 {
 }
 
 .viewport__camera-controls button[aria-label="拡大"],
-.viewport__camera-controls button[aria-label="縮小"] {
+.viewport__camera-controls button[aria-label="縮小"],
+.project-history--compact button {
   padding-inline: 0.6rem;
   font-size: 1.15rem;
   font-weight: 750;
@@ -665,10 +682,10 @@ h1 {
 .viewport__cargo-action {
   position: absolute;
   z-index: 3;
-  display: grid;
+  display: flex;
   width: max-content;
   max-width: calc(100% - 1rem);
-  gap: 0.25rem;
+  gap: 0.3rem;
   padding: 0.4rem;
   border: 1px solid rgba(255, 230, 154, 0.82);
   border-radius: 0.55rem;
@@ -678,18 +695,31 @@ h1 {
 }
 
 .viewport__cargo-action button {
+  display: grid;
+  width: 2.75rem;
   min-height: 2.75rem;
+  padding: 0.45rem;
+  place-items: center;
   border-color: rgba(255, 230, 154, 0.82);
   background: rgba(31, 49, 67, 0.96);
   pointer-events: auto;
 }
 
-.viewport__cargo-action span {
-  max-width: 17rem;
-  color: #d8e7f2;
-  font-size: 0.72rem;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
+.viewport__cargo-action > div {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.viewport__cargo-action svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: currentColor;
+}
+
+.viewport__cargo-action text {
+  fill: #07111f;
+  font-size: 7px;
+  font-weight: 850;
 }
 
 .viewport__staging-label {
@@ -712,6 +742,7 @@ h1 {
 .scene-workspace {
   min-width: 0;
   border-top: 1px solid rgba(132, 172, 195, 0.16);
+  overflow-anchor: none;
 }
 
 .scene-workspace__controls {
@@ -786,6 +817,29 @@ h1 {
   margin: 0;
 }
 
+.scene-workspace__secondary {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  padding: 0 clamp(1.25rem, 3vw, 2rem) clamp(1rem, 3vw, 1.5rem);
+}
+
+.scene-workspace__fallback-history {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.scene-workspace__fallback-history .project-history--compact {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.scene-workspace__fallback-history button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.7rem;
+}
+
 .scene-selection-card {
   display: grid;
   min-width: 0;
@@ -823,6 +877,23 @@ h1 {
   gap: 0.65rem;
 }
 
+.scene-selection-card__heading {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.scene-selection-card__facts {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 0.75fr);
+  gap: 0.55rem 1rem;
+  align-items: start;
+}
+
 .scene-selection-card__cargo-name {
   font-size: 1.05rem;
   line-height: 1.45;
@@ -841,16 +912,21 @@ h1 {
 }
 
 .scene-selection-card__position {
-  display: grid;
+  display: flex;
   min-width: 0;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
 }
 
 .scene-selection-card__position > div {
-  display: grid;
+  display: flex;
   min-width: 0;
-  grid-template-columns: 1.5rem minmax(0, 1fr);
-  gap: 0.5rem;
+  gap: 0.35rem;
+}
+
+.scene-selection-card__position-note {
+  color: #a8bdcf;
+  line-height: 1.45;
 }
 
 .scene-selection-card__position dt {
@@ -1531,12 +1607,17 @@ legend {
   .automatic-proposal,
   .scene-workspace__controls,
   .scene-workspace__history,
+  .scene-workspace__secondary,
   .scene-selection-card,
   .placement-panel,
   .physical-validation,
   .editor-card,
   fieldset {
     padding: 0.8rem;
+  }
+
+  .scene-selection-card__facts {
+    grid-template-columns: 1fr;
   }
 
   .project-persistence {

@@ -128,10 +128,8 @@ test("undoes and redoes settings, cargo, container, and placement CRUD without W
   const canonical = page.getByTestId("canonical-project-settings");
 
   await expect(page.locator(".project-history")).toHaveCount(1);
-  await expect(
-    page.getByRole("heading", { name: "案件全体の操作" }),
-  ).toBeVisible();
-  await expect(page.locator(".scene-workspace__history > .project-history")).toHaveCount(1);
+  await expect(page.getByRole("group", { name: "案件全体の履歴" })).toBeVisible();
+  await expect(page.locator(".project-history")).toHaveCount(1);
   await expect(undo).toBeDisabled();
   await expect(redo).toBeDisabled();
   await expect(undo).toHaveAttribute("aria-keyshortcuts", "Control+Z Meta+Z");

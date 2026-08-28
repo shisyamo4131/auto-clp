@@ -41,6 +41,8 @@ const ORIENTATION_COPY: Record<Orientation, string> = {
   HWL: "X=高さ・Y=幅・Z=長さ",
 };
 
+const UPRIGHT_ORIENTATIONS: readonly Orientation[] = ["LWH", "WLH"];
+
 const EMPTY_CARGO_DRAFT: CargoDraft = {
   name: "",
   lengthMm: "",
@@ -570,6 +572,11 @@ function CargoManager({
   };
 
   const orientationIssue = issues.find((issue) => isIssueFor(issue, "allowedOrientations"));
+  const uprightOnly =
+    draft.allowedOrientations.length > 0 &&
+    draft.allowedOrientations.every((orientation) =>
+      UPRIGHT_ORIENTATIONS.includes(orientation),
+    );
 
   return (
     <section className="editor-card" aria-labelledby="cargo-title">
@@ -650,7 +657,22 @@ function CargoManager({
           </fieldset>
           <fieldset>
             <legend>許可する向き</legend>
-            <p className="field-help">コードは元の長さ・幅・高さを世界X・Y・Z軸へ割り当てる順序です。横倒しを含む4向きは明示的に選択してください。</p>
+            <label className="check-row check-row--emphasis">
+              <input
+                type="checkbox"
+                checked={uprightOnly}
+                onChange={(event) => {
+                  setDraft({
+                    ...draft,
+                    allowedOrientations: event.target.checked
+                      ? [...UPRIGHT_ORIENTATIONS]
+                      : [...ORIENTATIONS],
+                  });
+                }}
+              />
+              <span><strong>天地無用</strong> — 高さを上向きに保ち、X軸回転を禁止する</span>
+            </label>
+            <p className="field-help">天地無用は既存の許可向きへ反映します。向きコードは元の長さ・幅・高さを荷室X・Y・Z軸へ割り当て、面の上下反転までは区別しません。必要なら下で個別に調整できます。</p>
             <div
               className="orientation-grid"
               aria-invalid={orientationIssue === undefined ? undefined : true}

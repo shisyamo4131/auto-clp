@@ -213,6 +213,32 @@ test("supports keyboard operation and focuses an invalid orientation group", asy
   );
 });
 
+test("maps the 天地無用 convenience to the existing upright orientation set", async ({
+  page,
+}) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  await page.getByRole("button", { name: "積荷を追加" }).click();
+  await fillCargo(page, "天地無用合成積荷");
+  const upright = page.getByLabel(/天地無用/);
+  const lhw = page.getByLabel(/LHW/);
+  const whl = page.getByLabel(/WHL/);
+
+  await expect(upright).toBeChecked();
+  await expect(lhw).not.toBeChecked();
+  await upright.uncheck();
+  await expect(lhw).toBeChecked();
+  await expect(whl).toBeChecked();
+  await upright.check();
+  await expect(lhw).not.toBeChecked();
+  await expect(whl).not.toBeChecked();
+  await expect(page.getByLabel(/LWH/)).toBeChecked();
+  await expect(page.getByLabel(/WLH/)).toBeChecked();
+  await page.getByRole("button", { name: "積荷を保存" }).click();
+  await expect(page.getByRole("list", { name: "積荷一覧" })).toContainText(
+    "天地無用合成積荷",
+  );
+});
+
 test("has no horizontal page overflow at narrow widths", async ({ page }) => {
   await page.setViewportSize({ width: 305, height: 900 });
   await page.goto("/?forceWebgl2=unsupported");

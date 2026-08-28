@@ -135,6 +135,32 @@ Automated verification covers page scrolling over the canvas without camera, Pro
 
 Implementation and required automated gates are complete in the primary working directory; the exact immutable commit is the commit containing this updated record. External communication, deployment, external writes, real data, destructive actions, and unrelated specification changes remain unapproved.
 
+## Scene Workbench Follow-up
+
+- Checkpoint: `CP-PHASE1-SCENE-WORKBENCH-001`
+- Approval state: **Implemented and automated verification complete; human re-trial pending**
+- Approved on: 2026-08-28
+- Baseline: `6ea83a1b08ad772a4838c897976cd0232f697221`
+
+仕様0.12.0版の実Chrome再試用で、利用者はwheel page scroll、明示zoom、完全drag-out、Undo/Redo、不適合表示を確認した。その上で次の操作上の問題を報告し、変更を明示承認した。
+
+1. 未配置積荷が固定位置へ戻るため、積荷Aを右、Bを左へ退避してCを扱う人間の段取りができない。荷室外全体を自由な作業スペースにする。
+2. Undo/Redoでpageとcameraが動く。buttonをzoomと並べ、同じ見た目にする。
+3. 回転を大きな説明付きbuttonでなくicon-onlyにし、X軸とZ軸の2種類を提供する。天地無用ではX軸回転を防ぐ。
+4. 選択cardは積荷名を見出しとし、「選択中の積荷」と `大きさ:` を除き、寸法と座標をcompactに整理する。
+5. 多数積荷から意図した対象を識別できる経路を提供する。
+6. 将来は、未配置作業状態を保つ複数候補tabと積荷画像を検討する。いずれも今回の実装範囲には含めない。
+
+実装は、初回gridを残しながら荷室外dropのcargo ID別poseをUI sessionだけに保持する。荷室内へ全体が入れば `placement.add`、一部だけ重なる曖昧なdropは直前位置、全体が外なら自由作業位置となる。配置済み完全drag-outはdrop poseを保持して一回の `placement.delete` とし、Undo/Redoで元配置と同じ外側poseを往復する。外側poseと外側回転はProject、JSON、IndexedDB、物理判定、案件履歴へ入らない。
+
+X/Z回転は既存 `allowedOrientations` だけを使い、天地無用を `LWH` / `WLH` の入力補助として実装した。したがってSchema `0.1.0` は変更しない。orientation codeは面の表裏を持たないため、天地無用は横倒し防止に限定し、上下反転保証とは表示しない。
+
+履歴buttonはviewport内で `＋` / `－` と同じcompact toolbarへ一組だけ統合した。同一候補のProject更新でcamera position/targetを保持し、履歴実行前のpage scrollを復元する。配置・物理panelをviewport後方へ移し、積荷picker、icon-only X/Z回転、積荷名見出し、prefixなし寸法、compact X/Y/Z cardを追加した。
+
+純粋試験は全6向きのX/Z mapping、session override、X/Y面接触0と1 mm正面積境界、許可向き・寸法変更後fallbackを含む。browser回帰は荷室外自由移動の非履歴、picker、荷室内配置、完全drag-out、荷室外X/Z回転の成功と重なり拒否、天地無用、camera/page保持、icon/ARIA、wheel、touch、WebGL fallback、305/320/375 pxを含む。最終差分は全単体922件・全browser80件、型、lint、build、データ契約、文書、ガバナンス、diff検査を個別に通過した。独立レビューでは、回転・寸法編集後に荷室床面へ入り込むsession poseとADR routing漏れが見つかり、回転拒否、投影時fallback、境界回帰、文書mapを追加して解消した。
+
+仕様は0.13.0、ADR 0017はAccepted、Schemaは0.1.0、進捗は98%を維持する。進捗を増やさない理由は、完了済み3D milestoneの操作改善であり、実務利用者受入の残り2点を満たす新しい人間証拠ではないためである。
+
 ## Remaining and Unverified
 
 - `acceptance.md` の正確な全fixtureを人間が再現した証拠。
@@ -145,7 +171,8 @@ Implementation and required automated gates are complete in the primary working 
 - 実務利用者による代表ケース、合否、日程、評価担当。
 - scene-local layout、結果指向の向き表示、座標フォーム導線、案件履歴の人間による再試用。
 - 非永続仮置き場の人間による見つけやすさ・掴みやすさ・荷室内dropの再試用。
-- `CP-PHASE1-SCENE-FEEDBACK-001` の仕様0.12.0・ADR 0015・実装・自動試験は完了したが、人間によるwheel scroll、完全drag-out、`大きさ` copyの再試用は未実施。
+- `CP-PHASE1-SCENE-FEEDBACK-001` は人間再試用でwheel scroll、camera button、完全drag-out、Undo/Redo、不適合表示を確認した。固定仮置き、履歴時のpage/camera移動、回転・cardの大きさが後続改善として観察された。
+- `CP-PHASE1-SCENE-WORKBENCH-001` の荷室外自由作業位置、picker、X/Z回転、天地無用、compact toolbar/card、camera/page保持は自動検証済みだが、人間再試用は未実施。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 

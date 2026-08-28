@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)
 
 ## Contract Scope
 
 この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、案件操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定、Projectを変更しない自動提案探索とpreview UI、再検証付きの配置一括適用と一履歴操作のUndo/Redoは実装済みである。操作履歴、UI状態、Three.jsオブジェクト、物理判定と自動提案の結果は本契約へ保存しない。
 
-仕様版 `0.12.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `0.13.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -59,16 +59,18 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 - 開口面は `x = 0`、床は `z = 0`。開口のY範囲は `[(W - openingWidth) / 2, (W + openingWidth) / 2]`、Z範囲は `[0, openingHeight]` とし、差が奇数mmでも描画または比較のために丸めない。
 - `positionMm` は、`orientation` 適用後の軸整列積荷直方体の最小X・Y・Z角である。向き適用後の寸法を `(dx, dy, dz)` とすると、占有範囲は `[x, x + dx] × [y, y + dy] × [z, z + dz]` になる。
 
-## Derived Staging State
+## Derived Outside-workbench State
 
-- `placements` のどこからも参照されない積荷だけを、選択コンテナの負X側開口外へ非永続の仮置き表示として派生する。他の候補へ配置済みの積荷は含めない。
-- 仮置き位置、scene用中心、選択、drag preview、仮置き件数はProjectフィールドではなく、JSON、IndexedDB、履歴、物理判定へ保存しない。
-- 仮置き向きは積荷の先頭許可向き、Zは0 mmとし、案件の積荷順、100 mm間隔、最大向き適用寸法から決定的な非重複グリッドを派生する。
-- 仮置きからのfine-pointer dropは、向き適用後AABB全体が対象コンテナの生の内部範囲へ入った場合だけ既存の配置追加commandへ渡す。失敗、取消、競合はProjectを変更せず、フォームによる正確な配置追加・微調整をfallbackとして維持する。
+- `placements` のどこからも参照されない積荷だけを、選択コンテナ外の非永続作業スペースへ表示する。他の候補へ配置済みの積荷は含めない。
+- 初回位置は積荷の先頭許可向き、Z=0 mm、案件の積荷順、100 mm間隔、最大向き適用寸法から負X側の決定的な非重複gridとして派生する。
+- 利用者が積荷全体を荷室外へdropした後は、SceneWorkspaceがcargo IDごとの `positionMm` とorientation overrideを現在のUI sessionだけに保持し、Project→scene adapterへ一方向に渡す。不許可になったoverride向きは積荷の先頭許可向きへfallbackする。向きまたは寸法編集後のAABBが荷室床面と正面積で重なるoverride位置は採用せず、新しい向き適用後寸法で完全に荷室外となる決定的初期gridへfallbackする。
+- 作業位置、作業向き、scene用中心、選択、drag preview、件数はProjectフィールドではなく、JSON、IndexedDB、案件履歴、物理判定へ保存しない。読込のscene barrierで破棄する。
+- 荷室外からのfine-pointer dropは、向き適用後AABB全体が対象コンテナの生の内部範囲へ入った場合だけ既存の配置追加commandへ渡す。AABB全体が荷室外ならsession位置を更新する。一部だけ床面へ正面積で重なるdrop、取消、競合はProjectを変更せず直前のsession位置を保持する。
+- 配置済み積荷の完全drag-outは、drop位置と向きをsession overrideへ記録してから既存の配置削除commandへ渡す。Undo中はoverrideを保持したまま配置を表示し、Redoで同じ外側位置を再利用する。荷室外のX/Z回転は、回転後AABBが荷室床面と正面積で重ならない場合だけsession overrideへ反映し、重なる場合はProject・履歴・物理結果・直前poseを変えず拒否する。
 - 向き変更時は既定で最小角を保持し、暗黙の平行移動や丸めを行わない。床置きは `z = 0` である。
 - 正規データと判定は整数mmを維持する。Three.js表示では派生値だけを `1 mm = 0.001 scene unit` で変換し、mesh中心を最小角と向き適用後寸法から計算する。0.5mmの表示中心を正規案件へ逆流させない。
 - canvas dragは正規最小角を開始値として保持し、scene上のpointer差分をdomain X/Y差分へ写像して最近接1 mmへ正負対称に量子化する。mesh中心やtransformを保存値として読まず、Z・向きを保持し、既存application commandが成功した場合だけProjectを置換する。
-- 配置済みdragの量子化後X/Y占有範囲は、生の荷室床面 `[0, L] × [0, W]` との正面積重なりで配置保持を決める。X/Yのどちらも厳密に正の共通長を持つ場合だけ保持し、一部はみ出しは不適合な配置として保存する。面・辺だけの接触を含む0面積では既存配置を削除し、非永続仮置きへ戻す。Zはこのinteraction境界へ含めない。
+- 配置済みdragの量子化後X/Y占有範囲は、生の荷室床面 `[0, L] × [0, W]` との正面積重なりで配置保持を決める。X/Yのどちらも厳密に正の共通長を持つ場合だけ保持し、一部はみ出しは不適合な配置として保存する。面・辺だけの接触を含む0面積ではdrop poseを非永続作業状態へ保持して既存配置を削除する。Zはこのinteraction境界へ含めない。
 - 負座標や外側配置は修正途中の状態として保存できる。将来の境界判定では不適合となるが、scene投影は適合性を判定または保証しない。
 
 検証済みserializer、座標値を生成する配置UI・application command、利用者向けJSON入出力UI、手動端末保存は実装済みである。座標契約の採択時点ではSchema `0.1.0` の初回意味確定としてJSONの形と版を変更せず、その後の配置・保存実装も同じ契約を維持している。既存外部データが後から判明した場合は意味を推測して再解釈せず、新Schema版と明示的な移行を設計する。
@@ -129,7 +131,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | `persistence/project-json`、`persistence/project-file` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し、標準File読込source、固定名Blob download | 3D描画、直接UI更新、案件名のファイル名反映 |
 | `persistence/project-store` | 実装済み: IndexedDB `current-project` 単一枠のtransaction完了後save、load、delete、未対応・open・read・write・delete失敗 | 自動保存、Project解釈、UI更新、外部通信 |
 | `persistence/project-import-preflight-client`、`workers/project-import-preflight` | 実装済み: one-shot module Workerで全候補を置換前に判定し、応答検証後に必ずWorkerを終了 | DOM、IndexedDB、同期fallback、理由の保存 |
-| `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置への純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointerによる床面方向drag・純粋なno-op/update/delete分類・正面積境界での仮置き復帰・視点操作。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
+| `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointerによる床面方向drag・純粋なno-op/update/delete分類・完全drag-out作業位置・X/Z軸別90度回転・同一候補のcamera保持。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
 | `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認、非永続の3D候補・積荷選択、配置追加・整数座標・許可向き・取り外しフォーム、canvas直接操作と正確な移動・向きのキーボード対応フォームfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、案件履歴ボタン・ショートカット・状態通知・入力中lock、手動端末保存・読込・削除、JSON入出力、固定code状態・削除focus管理 | 幾何・制約計算と正規入力変換の再実装 |
 | `ui/automatic-proposal-session`、`ui/automatic-proposal-view`、`ui/useAutomaticProposalSession`、`ui/AutomaticProposalPanel` | 実装済み: Project参照とinteraction generationを捕捉するセッション、取消・stale・retry・遅延結果mask、source ProjectとのID再相関、React hook、固定安全copy、25件単位のpreview、identityを一度だけ取得する確認付き適用、適用済み・変更なし表示。AppはProject/scene/persistenceのbusy、変更、一履歴commitを接続する | 探索だけでのProject/history変更、永続化、Scene選択の変更 |
 | `workers` | 実装済み: 物理判定のローカルmodule Worker。自動提案は正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答mask、Appからの実Worker接続まで実装 | DOM、React状態の直接操作、外部通信 |

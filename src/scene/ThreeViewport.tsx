@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
@@ -24,15 +24,25 @@ interface ThreeViewportProps {
     deltaScene: Pick<SceneVector3, "x" | "z">,
   ) => CargoDragCommitResult;
   readonly onCargoDragStateChange: (active: boolean) => void;
-  readonly onCargoFloorRotation: () => void;
+  readonly onCargoXAxisRotation: () => void;
+  readonly onCargoZAxisRotation: () => void;
   readonly onCargoSelectionChange: (cargoId?: string) => void;
   readonly onRendererError: () => void;
   readonly onRendererReady: () => void;
   readonly projection: ProjectSceneProjection | null;
-  readonly rotationDisabled: boolean;
-  readonly rotationExplanation: string;
+  readonly historyControls: ReactNode;
+  readonly xRotationDisabled: boolean;
+  readonly xRotationExplanation: string;
+  readonly zRotationDisabled: boolean;
+  readonly zRotationExplanation: string;
   readonly selectedCargoId?: string;
   readonly statusDescriptionId: string;
+}
+
+interface CameraViewState {
+  readonly containerId: string;
+  readonly position: readonly [number, number, number];
+  readonly target: readonly [number, number, number];
 }
 
 interface CargoVisual {
@@ -231,19 +241,32 @@ function pointerIsFine(event: PointerEvent): boolean {
   return window.matchMedia?.("(any-pointer: fine)").matches ?? event.pointerType === "mouse";
 }
 
+function AxisRotationIcon({ axis }: { readonly axis: "X" | "Z" }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+      <path d="M17.7 6.3A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.76-4.24L13 11h8V3l-3.3 3.3Z" />
+      <text x="12" y="15.25" textAnchor="middle">{axis}</text>
+    </svg>
+  );
+}
+
 export function ThreeViewport({
   forceInitialRenderError = false,
   interactionDisabled,
   onCargoDragCancel,
   onCargoDragCommit,
   onCargoDragStateChange,
-  onCargoFloorRotation,
+  onCargoXAxisRotation,
+  onCargoZAxisRotation,
   onCargoSelectionChange,
   onRendererError,
   onRendererReady,
   projection,
-  rotationDisabled,
-  rotationExplanation,
+  historyControls,
+  xRotationDisabled,
+  xRotationExplanation,
+  zRotationDisabled,
+  zRotationExplanation,
   selectedCargoId,
   statusDescriptionId,
 }: ThreeViewportProps) {
@@ -257,6 +280,7 @@ export function ThreeViewport({
   const zoomOutRef = useRef<() => void>(() => undefined);
   const selectedCargoIdRef = useRef(selectedCargoId);
   const updateSelectionRef = useRef<(cargoId?: string) => void>(() => undefined);
+  const cameraViewRef = useRef<CameraViewState | undefined>(undefined);
   const selectedCargoKind = projection?.cargoes.find(
     (cargo) => cargo.cargoId === selectedCargoId,
   )?.kind;
@@ -558,7 +582,16 @@ export function ThreeViewport({
       camera.aspect = width / height;
       const initialTarget = fitCamera(camera, projection);
       controls = new OrbitControls(camera, canvas);
-      controls.target.copy(initialTarget);
+      const savedView = cameraViewRef.current;
+      if (
+        projection !== null &&
+        savedView?.containerId === projection.container.id
+      ) {
+        camera.position.set(...savedView.position);
+        controls.target.set(...savedView.target);
+      } else {
+        controls.target.copy(initialTarget);
+      }
       configureCameraDistanceLimits(controls, camera, projection);
       controls.enableZoom = false;
       controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
@@ -566,7 +599,18 @@ export function ThreeViewport({
       controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
       controls.screenSpacePanning = true;
       controls.update();
-      controls.addEventListener("change", renderScene);
+      const renderAndRememberView = () => {
+        if (projection !== null && controls !== undefined) {
+          cameraViewRef.current = {
+            containerId: projection.container.id,
+            position: [camera.position.x, camera.position.y, camera.position.z],
+            target: [controls.target.x, controls.target.y, controls.target.z],
+          };
+        }
+        renderScene();
+      };
+      controls.addEventListener("change", renderAndRememberView);
+      renderAndRememberView();
       canvas.style.touchAction = "pan-y";
 
       updateRotationControlPosition = () => {
@@ -575,8 +619,7 @@ export function ThreeViewport({
         if (
           disposed ||
           renderer === undefined ||
-          visual === undefined ||
-          visual.kind === "staged"
+          visual === undefined
         ) {
           hideRotationControl();
           return;
@@ -691,8 +734,9 @@ export function ThreeViewport({
         ref={cameraControlsRef}
         className="viewport__camera-controls"
         role="group"
-        aria-label="3D表示の視点操作"
+        aria-label="3D作業の操作"
       >
+        {historyControls}
         <button type="button" aria-label="拡大" onClick={() => zoomInRef.current()}>
           ＋
         </button>
@@ -708,25 +752,32 @@ export function ThreeViewport({
         className="viewport__cargo-action"
         style={{ visibility: "hidden" }}
       >
-        {selectedCargoId === undefined || selectedCargoKind !== "placed" ? null : (
-          <>
-          <button
-            type="button"
-            disabled={rotationDisabled}
-            aria-describedby="viewport-floor-rotation-explanation"
-            onClick={onCargoFloorRotation}
-          >
-            床面で90°回転
-          </button>
-          <span id="viewport-floor-rotation-explanation">
-            {rotationExplanation}
-          </span>
-          </>
+        {selectedCargoId === undefined || selectedCargoKind === undefined ? null : (
+          <div role="group" aria-label="選択した積荷の回転">
+            <button
+              type="button"
+              disabled={xRotationDisabled}
+              aria-label="X軸を中心に90°回転"
+              title={xRotationExplanation}
+              onClick={onCargoXAxisRotation}
+            >
+              <AxisRotationIcon axis="X" />
+            </button>
+            <button
+              type="button"
+              disabled={zRotationDisabled}
+              aria-label="Z軸を中心に90°回転"
+              title={zRotationExplanation}
+              onClick={onCargoZAxisRotation}
+            >
+              <AxisRotationIcon axis="Z" />
+            </button>
+          </div>
         )}
       </div>
       {stagedCargoCount === 0 ? null : (
         <div className="viewport__staging-label">
-          仮置き場 <strong>{stagedCargoCount}件</strong>
+          荷室外の作業スペース <strong>{stagedCargoCount}件</strong>
         </div>
       )}
       <canvas

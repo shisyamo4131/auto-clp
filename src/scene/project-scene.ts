@@ -32,6 +32,22 @@ export function floorQuarterTurnOrientation(
   return FLOOR_QUARTER_TURN_ORIENTATION[orientation];
 }
 
+const X_AXIS_QUARTER_TURN_ORIENTATION = {
+  LWH: "LHW",
+  LHW: "LWH",
+  WLH: "WHL",
+  WHL: "WLH",
+  HLW: "HWL",
+  HWL: "HLW",
+} as const satisfies Record<Orientation, Orientation>;
+
+/** Returns the dimensionally distinct partner after a 90-degree X-axis turn. */
+export function xAxisQuarterTurnOrientation(
+  orientation: Orientation,
+): Orientation {
+  return X_AXIS_QUARTER_TURN_ORIENTATION[orientation];
+}
+
 export interface SceneVector3 {
   readonly x: number;
   readonly y: number;
@@ -67,6 +83,36 @@ export interface ScenePlacedCargoProjection extends SceneCargoProjectionBase {
 
 export interface SceneStagedCargoProjection extends SceneCargoProjectionBase {
   readonly kind: "staged";
+}
+
+export interface SceneStagingOverride {
+  readonly orientation: Orientation;
+  readonly positionMm: PositionMm;
+}
+
+export function stagedCargoOverlapsContainerFloor(
+  cargo: Cargo,
+  positionMm: PositionMm,
+  orientation: Orientation,
+  container: Container,
+): boolean {
+  const dimensions = orientedDimensions(cargo, orientation);
+  return hasPositiveAreaOverlap(
+    {
+      min: positionMm,
+      max: {
+        xMm: positionMm.xMm + dimensions.xMm,
+        yMm: positionMm.yMm + dimensions.yMm,
+      },
+    },
+    {
+      min: { xMm: 0, yMm: 0 },
+      max: {
+        xMm: container.internalDimensionsMm.lengthMm,
+        yMm: container.internalDimensionsMm.widthMm,
+      },
+    },
+  );
 }
 
 export type SceneCargoProjection =
@@ -267,7 +313,8 @@ function centerFromBounds(
 
 function stagedCargoesToScene(
   project: Project,
-  containerWidthMm: number,
+  container: Container,
+  overrides: Readonly<Record<string, SceneStagingOverride>>,
 ): SceneStagedCargoProjection[] {
   const placedCargoIds = new Set(
     project.placements.map((placement) => placement.cargoId),
@@ -276,10 +323,16 @@ function stagedCargoesToScene(
     .filter((cargo) => !placedCargoIds.has(cargo.id))
     .map((cargo) => {
       const orientation = cargo.allowedOrientations[0]!;
+      const override = overrides[cargo.id];
+      const effectiveOrientation =
+        override !== undefined && cargo.allowedOrientations.includes(override.orientation)
+          ? override.orientation
+          : orientation;
       return {
         cargo,
-        dimensions: orientedDimensions(cargo, orientation),
-        orientation,
+        dimensions: orientedDimensions(cargo, effectiveOrientation),
+        orientation: effectiveOrientation,
+        override,
       };
     });
   if (staged.length === 0) {
@@ -295,12 +348,14 @@ function stagedCargoesToScene(
   );
   const gridWidthY =
     columnCount * maxFootprintY + (columnCount - 1) * STAGING_GAP_MM;
-  const gridStartY = Math.floor((containerWidthMm - gridWidthY) / 2);
+  const gridStartY = Math.floor(
+    (container.internalDimensionsMm.widthMm - gridWidthY) / 2,
+  );
 
-  return staged.map(({ cargo, dimensions, orientation }, index) => {
+  return staged.map(({ cargo, dimensions, orientation, override }, index) => {
     const column = index % columnCount;
     const row = Math.floor(index / columnCount);
-    const positionMm = {
+    const defaultPositionMm = {
       xMm:
         -STAGING_GAP_MM -
         (row + 1) * maxFootprintX -
@@ -309,6 +364,16 @@ function stagedCargoesToScene(
         gridStartY + column * (maxFootprintY + STAGING_GAP_MM),
       zMm: 0,
     };
+    const positionMm =
+      override !== undefined &&
+      !stagedCargoOverlapsContainerFloor(
+        cargo,
+        override.positionMm,
+        orientation,
+        container,
+      )
+        ? override.positionMm
+        : defaultPositionMm;
     return {
       kind: "staged",
       cargoId: cargo.id,
@@ -324,6 +389,7 @@ function stagedCargoesToScene(
 export function projectContainerToScene(
   project: Project,
   containerId: string,
+  stagingOverrides: Readonly<Record<string, SceneStagingOverride>> = {},
 ): ProjectSceneProjectionResult {
   const container = project.containers.find((candidate) => candidate.id === containerId);
   if (container === undefined) {
@@ -370,7 +436,11 @@ export function projectContainerToScene(
   }
 
   cargoes.push(
-    ...stagedCargoesToScene(project, container.internalDimensionsMm.widthMm),
+    ...stagedCargoesToScene(
+      project,
+      container,
+      stagingOverrides,
+    ),
   );
 
   return {

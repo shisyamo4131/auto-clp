@@ -6,7 +6,11 @@ import {
   updatePlacement,
 } from "../application/project-command";
 import type { ProjectHistoryCommitHandler } from "../application/project-history";
-import { isPlacementWithinContainer, placementBounds } from "../domain/geometry";
+import {
+  hasPositiveAreaOverlap,
+  isPlacementWithinContainer,
+  placementBounds,
+} from "../domain/geometry";
 import type { Project } from "../domain/model";
 import { PhysicalValidationPanel } from "../ui/PhysicalValidationPanel";
 import {
@@ -26,6 +30,9 @@ import {
   placedFloorDragDisposition,
   projectContainerToScene,
   sceneFloorDragPositionMm,
+  stagedCargoOverlapsContainerFloor,
+  xAxisQuarterTurnOrientation,
+  type SceneStagingOverride,
   type SceneVector3,
 } from "./project-scene";
 import { ThreeViewport, type CargoDragCommitResult } from "./ThreeViewport";
@@ -67,6 +74,9 @@ export function SceneWorkspace({
   const [canvasDragActive, setCanvasDragActive] = useState(false);
   const [selectedCargoId, setSelectedCargoId] = useState<string>();
   const [canvasStatus, setCanvasStatus] = useState("");
+  const [stagingOverrides, setStagingOverrides] = useState<
+    Record<string, SceneStagingOverride>
+  >({});
   const placementPanelRef = useRef<PlacementPanelHandle>(null);
   const selectedContainer = project.containers.find(
     (container) => container.id === selectedContainerId,
@@ -95,12 +105,31 @@ export function SceneWorkspace({
     };
   }, [project.containers]);
 
+  useEffect(() => {
+    const cargoIds = new Set(project.cargoes.map((cargo) => cargo.id));
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setStagingOverrides((current) => {
+        const next = Object.fromEntries(
+          Object.entries(current).filter(([cargoId]) => cargoIds.has(cargoId)),
+        );
+        return Object.keys(next).length === Object.keys(current).length
+          ? current
+          : next;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [project.cargoes]);
+
   const projectionResult = useMemo(
     () =>
       effectiveContainerId === undefined
         ? undefined
-        : projectContainerToScene(project, effectiveContainerId),
-    [effectiveContainerId, project],
+        : projectContainerToScene(project, effectiveContainerId, stagingOverrides),
+    [effectiveContainerId, project, stagingOverrides],
   );
   const projection = projectionResult?.ok === true ? projectionResult.projection : null;
   const placementCount =
@@ -120,13 +149,21 @@ export function SceneWorkspace({
       placement.cargoId === selectedCargoId &&
       placement.containerId === effectiveContainerId,
   );
-  const nextFloorOrientation =
-    selectedPlacement === undefined
+  const selectedOrientation = selectedProjection?.orientation;
+  const nextZOrientation =
+    selectedOrientation === undefined
       ? undefined
-      : floorQuarterTurnOrientation(selectedPlacement.orientation);
-  const floorRotationAllowed =
-    nextFloorOrientation !== undefined &&
-    selectedCargo?.allowedOrientations.includes(nextFloorOrientation) === true;
+      : floorQuarterTurnOrientation(selectedOrientation);
+  const nextXOrientation =
+    selectedOrientation === undefined
+      ? undefined
+      : xAxisQuarterTurnOrientation(selectedOrientation);
+  const zRotationAllowed =
+    nextZOrientation !== undefined &&
+    selectedCargo?.allowedOrientations.includes(nextZOrientation) === true;
+  const xRotationAllowed =
+    nextXOrientation !== undefined &&
+    selectedCargo?.allowedOrientations.includes(nextXOrientation) === true;
   const interactionActive = placementInteractionActive || canvasDragActive;
   const coordinateActionDisabled =
     externalInteractionActive || interactionActive || effectiveContainerId === undefined;
@@ -216,14 +253,14 @@ export function SceneWorkspace({
         if (effectiveContainerId === undefined) {
           return {
             ok: false,
-            message: "配置先の候補が見つからないため、積荷を仮置き場へ戻しました。",
+            message: "配置先の候補が見つからないため、積荷を荷室外の作業スペースへ戻しました。",
           };
         }
         if (project.placements.some((placement) => placement.cargoId === cargoId)) {
           return {
             ok: false,
             message:
-              "対象の積荷は既に配置されているため、重複配置せず仮置き場へ戻しました。",
+              "対象の積荷は既に配置されているため、重複配置せず荷室外の作業スペースへ戻しました。",
           };
         }
         const cargo = project.cargoes.find((candidate) => candidate.id === cargoId);
@@ -234,7 +271,7 @@ export function SceneWorkspace({
           return {
             ok: false,
             message:
-              "対象の積荷または候補が最新の案件に見つからないため、仮置き場へ戻しました。",
+              "対象の積荷または候補が最新の案件に見つからないため、荷室外の作業スペースへ戻しました。",
           };
         }
         const nextPosition = sceneFloorDragPositionMm(
@@ -245,11 +282,8 @@ export function SceneWorkspace({
           nextPosition.xMm === projectedCargo.positionMm.xMm &&
           nextPosition.yMm === projectedCargo.positionMm.yMm
         ) {
-          return {
-            ok: false,
-            message:
-              "積荷は移動していないため配置せず、仮置き場に残しました。荷室内までドラッグしてください。",
-          };
+          setCanvasStatus("荷室外の作業スペースで位置は変わりませんでした。");
+          return { ok: true, message: "" };
         }
         const placement = {
           cargoId,
@@ -264,11 +298,37 @@ export function SceneWorkspace({
             container.internalDimensionsMm,
           )
         ) {
-          return {
-            ok: false,
-            message:
-              "積荷全体が荷室内に入っていないため配置せず、仮置き場へ戻しました。",
-          };
+          const partiallyOverlapsFloor = hasPositiveAreaOverlap(
+            {
+              min: { xMm: bounds.min.xMm, yMm: bounds.min.yMm },
+              max: { xMm: bounds.max.xMm, yMm: bounds.max.yMm },
+            },
+            {
+              min: { xMm: 0, yMm: 0 },
+              max: {
+                xMm: container.internalDimensionsMm.lengthMm,
+                yMm: container.internalDimensionsMm.widthMm,
+              },
+            },
+          );
+          if (partiallyOverlapsFloor) {
+            return {
+              ok: false,
+              message:
+                "積荷を配置する場合は全体を荷室内へ、退避する場合は全体を荷室外へ移動してください。直前の作業位置を保持しました。",
+            };
+          }
+          setStagingOverrides((current) => ({
+            ...current,
+            [cargoId]: {
+              orientation: projectedCargo.orientation,
+              positionMm: nextPosition,
+            },
+          }));
+          setCanvasStatus(
+            `${cargo.name}を荷室外の作業スペースへ移動しました。この位置は現在の作業中だけ保持されます。`,
+          );
+          return { ok: true, message: "" };
         }
         const result = addPlacement(project, cargoId, effectiveContainerId, {
           xMm: String(nextPosition.xMm),
@@ -280,7 +340,7 @@ export function SceneWorkspace({
           return {
             ok: false,
             message:
-              "配置座標が保存可能な範囲にないか対象が変わったため、仮置き場へ戻しました。",
+              "配置座標が保存可能な範囲にないか対象が変わったため、荷室外の作業スペースへ戻しました。",
           };
         }
         const transition = onProjectCommit({
@@ -292,13 +352,13 @@ export function SceneWorkspace({
           return {
             ok: false,
             message:
-              "案件が更新されたため配置を保存できませんでした。積荷を仮置き場へ戻しました。",
+              "案件が更新されたため配置を保存できませんでした。積荷を荷室外の作業スペースへ戻しました。",
           };
         }
         if (!transition.changed) {
           return {
             ok: false,
-            message: "配置は変更されなかったため、積荷を仮置き場へ戻しました。",
+            message: "配置は変更されなかったため、積荷を荷室外の作業スペースへ戻しました。",
           };
         }
         setCanvasStatus(
@@ -345,7 +405,7 @@ export function SceneWorkspace({
           return {
             ok: false,
             message:
-              "対象の配置が最新の案件に見つからないため、仮置き場へ戻せず元の配置を保持しました。",
+              "対象の配置が最新の案件に見つからないため、荷室外の作業スペースへ戻せず元の配置を保持しました。",
           };
         }
         const transition = onProjectCommit({
@@ -360,8 +420,15 @@ export function SceneWorkspace({
               "案件が更新されたため配置を削除できませんでした。元の配置を確認してやり直してください。",
           };
         }
+        setStagingOverrides((current) => ({
+          ...current,
+          [cargoId]: {
+            orientation: placement.orientation,
+            positionMm: nextPosition,
+          },
+        }));
         setCanvasStatus(
-          `${cargo.name}を荷室の床面から完全に外へ移動したため、配置を削除して仮置き場へ戻しました。`,
+          `${cargo.name}を荷室の床面から完全に外へ移動したため、配置を削除して荷室外の作業スペースへ移しました。`,
         );
         return { ok: true, message: "" };
       }
@@ -401,10 +468,14 @@ export function SceneWorkspace({
     [effectiveContainerId, onProjectCommit, project, projection],
   );
 
-  const handleCargoFloorRotation = useCallback(() => {
+  const handleCargoRotation = useCallback((axis: "X" | "Z") => {
+    const rotationProjection = projection?.cargoes.find(
+      (candidate) => candidate.cargoId === selectedCargoId,
+    );
     if (
       selectedCargoId === undefined ||
-      effectiveContainerId === undefined
+      effectiveContainerId === undefined ||
+      rotationProjection === undefined
     ) {
       setCanvasStatus("回転する積荷が選択されていません。");
       return;
@@ -412,21 +483,67 @@ export function SceneWorkspace({
     const cargo = project.cargoes.find(
       (candidate) => candidate.id === selectedCargoId,
     );
+    if (cargo === undefined) {
+      setCanvasStatus(
+        "対象の積荷が最新の案件に見つからないため、回転しませんでした。",
+      );
+      return;
+    }
+    const nextOrientation =
+      axis === "X"
+        ? xAxisQuarterTurnOrientation(rotationProjection.orientation)
+        : floorQuarterTurnOrientation(rotationProjection.orientation);
+    if (!cargo.allowedOrientations.includes(nextOrientation)) {
+      setCanvasStatus(
+        axis === "X"
+          ? "この積荷ではX軸回転後の向きが許可されていません。天地無用または許可する向きを確認してください。"
+          : "この積荷ではZ軸回転後の向きが許可されていません。許可する向きを確認してください。",
+      );
+      return;
+    }
+    if (rotationProjection.kind === "staged") {
+      const container = project.containers.find(
+        (candidate) => candidate.id === effectiveContainerId,
+      );
+      if (container === undefined) {
+        setCanvasStatus(
+          "対象の候補が最新の案件に見つからないため、回転しませんでした。",
+        );
+        return;
+      }
+      if (
+        stagedCargoOverlapsContainerFloor(
+          cargo,
+          rotationProjection.positionMm,
+          nextOrientation,
+          container,
+        )
+      ) {
+        setCanvasStatus(
+          `${cargo.name}はこの位置で${axis}軸回転すると荷室と一部重なるため、回転しませんでした。荷室から離して再度操作してください。`,
+        );
+        return;
+      }
+      setStagingOverrides((current) => ({
+        ...current,
+        [selectedCargoId]: {
+          orientation: nextOrientation,
+          positionMm: rotationProjection.positionMm,
+        },
+      }));
+      setCanvasStatus(
+        `${cargo.name}を荷室外の作業スペースで${axis}軸中心に90°回転しました。この向きは現在の作業中だけ保持されます。`,
+      );
+      return;
+    }
     const placement = project.placements.find(
       (candidate) =>
         candidate.cargoId === selectedCargoId &&
         candidate.containerId === effectiveContainerId,
     );
-    if (cargo === undefined || placement === undefined) {
+    if (placement === undefined) {
       setCanvasStatus(
         "対象の配置が最新の案件に見つからないため、回転を保存しませんでした。",
-      );
-      return;
-    }
-    const nextOrientation = floorQuarterTurnOrientation(placement.orientation);
-    if (!cargo.allowedOrientations.includes(nextOrientation)) {
-      setCanvasStatus(
-        "この積荷では床面90°回転後の向きが許可されていません。積荷設定を確認してください。",
       );
       return;
     }
@@ -458,9 +575,9 @@ export function SceneWorkspace({
       return;
     }
     setCanvasStatus(
-      `${cargo.name}を床面で90°回転しました。最小角X ${placement.positionMm.xMm}・Y ${placement.positionMm.yMm}・Z ${placement.positionMm.zMm} mmは保持しています。物理判定の再計算を開始しました。`,
+      `${cargo.name}を${axis}軸中心に90°回転しました。最小角X ${placement.positionMm.xMm}・Y ${placement.positionMm.yMm}・Z ${placement.positionMm.zMm} mmは保持しています。物理判定の再計算を開始しました。`,
     );
-  }, [effectiveContainerId, onProjectCommit, project, selectedCargoId]);
+  }, [effectiveContainerId, onProjectCommit, project, projection, selectedCargoId]);
 
   return (
     <section className="scene-workspace" aria-labelledby="scene-workspace-title">
@@ -506,6 +623,27 @@ export function SceneWorkspace({
           </div>
         )}
 
+        {projection === null || projection.cargoes.length === 0 ? null : (
+          <div className="scene-workspace__field">
+            <label htmlFor="scene-cargo-select">操作する積荷</label>
+            <select
+              id="scene-cargo-select"
+              value={selectedCargoId ?? ""}
+              disabled={interactionActive}
+              onChange={(event) => {
+                handleCargoSelectionChange(event.target.value || undefined);
+              }}
+            >
+              <option value="">3D表示から選択</option>
+              {projection.cargoes.map((cargo) => (
+                <option key={cargo.cargoId} value={cargo.cargoId}>
+                  {cargo.name}（{cargo.kind === "placed" ? "配置済み" : "荷室外"}）
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <p
           id="scene-workspace-status"
           className="scene-workspace__status"
@@ -514,31 +652,20 @@ export function SceneWorkspace({
         >
           {effectiveContainerId === undefined
             ? "候補0件、配置0件。物理判定の対象はありません。"
-            : `選択中の候補: ${project.containers.find((container) => container.id === effectiveContainerId)?.name ?? "不明な候補"}。配置${placementCount}件。仮置き場${stagedCount}件。${selectedCargo === undefined ? "積荷は未選択です。" : `選択中の積荷: ${selectedCargo.name}。`}物理判定は保存済み配置だけから自動更新されます。${canvasStatus === "" ? "" : ` ${canvasStatus}`}`}
+            : `選択中の候補: ${project.containers.find((container) => container.id === effectiveContainerId)?.name ?? "不明な候補"}。配置${placementCount}件。荷室外${stagedCount}件。${selectedCargo === undefined ? "積荷は未選択です。" : `選択中の積荷: ${selectedCargo.name}。`}物理判定は保存済み配置だけから自動更新されます。${canvasStatus === "" ? "" : ` ${canvasStatus}`}`}
         </p>
 
         <p id="scene-workspace-interaction-help" className="scene-workspace__status">
           {rendererMounted
-            ? "3Dでは積荷をクリックまたはタップして選択できます。仮置き場の積荷は、細かいポインターで荷室内へ全体をドラッグすると初めて配置されます。配置済み積荷のドラッグは床面方向へ移動し、荷室の床面から完全に外へ出すと仮置き場へ戻ります。空白の左ドラッグで回転、右ドラッグで平行移動し、＋と－で拡大・縮小します。ホイールはページをスクロールします。正確な座標と向きは下のフォームで編集できます。"
+            ? "3Dでは積荷を直接選ぶか、上の一覧から選択できます。荷室外の積荷は作業スペース内で自由に退避でき、全体を荷室内へ入れると配置されます。配置済み積荷を床面から完全に外へ出すと、そのdrop位置で未配置になります。空白の左ドラッグで視点回転、右ドラッグで平行移動し、＋と－で拡大・縮小します。ホイールはページをスクロールします。正確な座標と向きは3D下のフォームで編集できます。"
             : "3D表示を利用できない場合も、下のフォームで座標と向きを編集できます。"}
         </p>
 
-        <PlacementPanel
-          ref={placementPanelRef}
-          externalInteractionActive={externalInteractionActive || canvasDragActive}
-          historyRevision={historyRevision}
-          onInteractionChange={setPlacementInteractionActive}
-          onProjectCommit={onProjectCommit}
-          onSelectedCargoChange={setSelectedCargoId}
-          project={project}
-          selectedCargoId={selectedCargoId}
-          selectedContainerId={effectiveContainerId}
-        />
-
-        <PhysicalValidationPanel
-          containerId={effectiveContainerId}
-          project={project}
-        />
+        {rendererMounted ? null : (
+          <div className="scene-workspace__fallback-history">
+            <ProjectHistoryControls {...historyControls} compact />
+          </div>
+        )}
 
         {projectionResult !== undefined && !projectionResult.ok ? (
           <p className="scene-workspace__error" role="alert">
@@ -551,31 +678,39 @@ export function SceneWorkspace({
         </p>
       </div>
 
-      <div className="scene-workspace__history">
-        <ProjectHistoryControls {...historyControls} />
-      </div>
-
       {rendererMounted ? (
         <ThreeViewport
           forceInitialRenderError={forceInitialRenderError}
+          historyControls={<ProjectHistoryControls {...historyControls} compact />}
           interactionDisabled={placementInteractionActive}
           onCargoDragCancel={handleCargoDragCancel}
           onCargoDragCommit={handleCargoDragCommit}
           onCargoDragStateChange={handleCargoDragStateChange}
-          onCargoFloorRotation={handleCargoFloorRotation}
+          onCargoXAxisRotation={() => handleCargoRotation("X")}
+          onCargoZAxisRotation={() => handleCargoRotation("Z")}
           onCargoSelectionChange={handleCargoSelectionChange}
           onRendererError={onRendererError}
           onRendererReady={onRendererReady}
           projection={projection}
-          rotationDisabled={interactionActive || !floorRotationAllowed}
-          rotationExplanation={
+          xRotationDisabled={interactionActive || !xRotationAllowed}
+          xRotationExplanation={
             canvasDragActive
-              ? "積荷の移動を完了すると回転できます。"
+              ? "積荷の移動を完了するとX軸回転できます。"
               : placementInteractionActive
-              ? "配置の編集または削除確認を完了すると回転できます。"
-              : floorRotationAllowed
-                ? "選択した積荷の最小角と高さを保ったまま、床面上で90°回転します。"
-                : "この積荷では床面90°回転後の向きが許可されていません。"
+              ? "配置の編集または削除確認を完了するとX軸回転できます。"
+              : xRotationAllowed
+                ? "X軸を中心に90°回転します。"
+                : "天地無用または許可する向きにより、X軸回転は利用できません。"
+          }
+          zRotationDisabled={interactionActive || !zRotationAllowed}
+          zRotationExplanation={
+            canvasDragActive
+              ? "積荷の移動を完了するとZ軸回転できます。"
+              : placementInteractionActive
+              ? "配置の編集または削除確認を完了するとZ軸回転できます。"
+              : zRotationAllowed
+                ? "Z軸を中心に床面上で90°回転します。"
+                : "許可する向きにより、Z軸回転は利用できません。"
           }
           selectedCargoId={selectedCargoId}
           statusDescriptionId="scene-workspace-status scene-workspace-interaction-help"
@@ -584,49 +719,53 @@ export function SceneWorkspace({
 
       <section
         className="scene-selection-card"
-        aria-labelledby="scene-selection-card-title"
+        aria-label={selectedCargo?.name ?? "積荷情報"}
       >
-          <div>
-            <p className="eyebrow">SELECTED CARGO</p>
-            <h4 id="scene-selection-card-title">選択中の積荷</h4>
-          </div>
           {selectedCargo === undefined || selectedProjection === undefined ? (
             <p className="scene-selection-card__empty">
               3D表示で積荷を選ぶと、大きさと位置、正確な座標入力への入口を表示します。
             </p>
           ) : (
             <div className="scene-selection-card__content">
-              <strong className="scene-selection-card__cargo-name">
-                {selectedCargo.name}
-              </strong>
-              <p className="scene-selection-card__state">
-                {selectedProjection.kind === "staged"
-                  ? "未配置（仮置き場）"
-                  : "荷室内に配置済み"}
-              </p>
-              {selectedPresentation === undefined ? null : (
-                <p className="scene-selection-card__size">
-                  大きさ: {selectedPresentation.sizeCopy}
+              <div className="scene-selection-card__heading">
+                <h4 className="scene-selection-card__cargo-name">
+                  {selectedCargo.name}
+                </h4>
+                <p className="scene-selection-card__state">
+                  {selectedProjection.kind === "staged"
+                    ? "荷室外（未配置）"
+                    : "荷室内に配置済み"}
                 </p>
-              )}
-              {selectedProjection.kind === "placed" && selectedPlacement !== undefined ? (
-                <>
+              </div>
+              <div className="scene-selection-card__facts">
+                {selectedPresentation === undefined ? null : (
+                  <p className="scene-selection-card__size">
+                    {selectedPresentation.sizeCopy}
+                  </p>
+                )}
+                {selectedProjection.kind === "placed" && selectedPlacement !== undefined ? (
                   <dl className="scene-selection-card__position">
                     <div>
                       <dt>X</dt>
-                      <dd>入口から手前面まで {selectedPlacement.positionMm.xMm} mm</dd>
+                      <dd>{selectedPlacement.positionMm.xMm} mm</dd>
                     </div>
                     <div>
                       <dt>Y</dt>
-                      <dd>
-                        入口から見て右壁から右側面まで {selectedPlacement.positionMm.yMm} mm
-                      </dd>
+                      <dd>{selectedPlacement.positionMm.yMm} mm</dd>
                     </div>
                     <div>
                       <dt>Z</dt>
-                      <dd>床から下面まで {selectedPlacement.positionMm.zMm} mm</dd>
+                      <dd>{selectedPlacement.positionMm.zMm} mm</dd>
                     </div>
                   </dl>
+                ) : (
+                  <p className="scene-selection-card__position-note">
+                    位置と向きは現在の作業中だけ保持されます。
+                  </p>
+                )}
+              </div>
+              {selectedProjection.kind === "placed" && selectedPlacement !== undefined ? (
+                <>
                   <details className="scene-selection-card__details">
                     <summary>保存上の詳細</summary>
                     <p>保存上の向きコード: {selectedPlacement.orientation}</p>
@@ -661,6 +800,25 @@ export function SceneWorkspace({
             </div>
           )}
       </section>
+
+      <div className="scene-workspace__secondary">
+        <PlacementPanel
+          ref={placementPanelRef}
+          externalInteractionActive={externalInteractionActive || canvasDragActive}
+          historyRevision={historyRevision}
+          onInteractionChange={setPlacementInteractionActive}
+          onProjectCommit={onProjectCommit}
+          onSelectedCargoChange={setSelectedCargoId}
+          project={project}
+          selectedCargoId={selectedCargoId}
+          selectedContainerId={effectiveContainerId}
+        />
+
+        <PhysicalValidationPanel
+          containerId={effectiveContainerId}
+          project={project}
+        />
+      </div>
     </section>
   );
 }

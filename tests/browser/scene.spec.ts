@@ -23,6 +23,7 @@ async function addInteractiveCargo(
     readonly widthMm?: string;
     readonly heightMm?: string;
     readonly singleOrientation?: boolean;
+    readonly allowTipping?: boolean;
   } = {},
 ) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
@@ -31,6 +32,9 @@ async function addInteractiveCargo(
   await page.getByLabel("幅", { exact: true }).fill(dimensions.widthMm ?? "1400");
   await page.getByLabel("高さ", { exact: true }).fill(dimensions.heightMm ?? "1000");
   await page.getByLabel("重量").fill("1.005");
+  if (dimensions.allowTipping === true) {
+    await page.getByLabel(/天地無用/).uncheck();
+  }
   if (dimensions.singleOrientation === true) {
     await page.getByLabel(/WLH/).uncheck();
   }
@@ -143,7 +147,18 @@ async function locateStagedCargoOnCanvas(canvas: Locator) {
 async function selectStagedCargoOnCanvas(page: Page, canvas: Locator) {
   const located = await locateStagedCargoOnCanvas(canvas);
   await page.mouse.click(located.point.x, located.point.y);
-  return located;
+  const selectedBounds = await canvas.boundingBox();
+  if (selectedBounds === null) {
+    throw new Error("3D canvas disappeared after staged cargo selection");
+  }
+  return {
+    bounds: selectedBounds,
+    point: {
+      x: selectedBounds.x + selectedBounds.width * located.warmCargo.centerXRatio,
+      y: selectedBounds.y + selectedBounds.height * located.warmCargo.centerYRatio,
+    },
+    warmCargo: located.warmCargo,
+  };
 }
 
 async function placementSummary(row: Locator) {
@@ -409,14 +424,14 @@ test("stages an unplaced cargo and commits one in-container drag through history
   const historySummary = page.locator(".project-history__summary");
   const emptyPlacement = page.getByText("この候補に配置された積荷はありません。");
 
-  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
-  await expect(status).toContainText("配置0件。仮置き場1件");
+  await expect(page.locator(".viewport__staging-label")).toHaveText("荷室外の作業スペース 1件");
+  await expect(status).toContainText("配置0件。荷室外1件");
   await expect(emptyPlacement).toBeVisible();
   await expect(page.locator(".physical-validation__summary")).toHaveText(
     "適合：この候補には配置済みの積荷がありません。",
   );
   const historyBefore = await historySummary.textContent();
-  const { bounds, point, warmCargo } = await selectStagedCargoOnCanvas(page, canvas);
+  const { point, warmCargo } = await selectStagedCargoOnCanvas(page, canvas);
   expect(warmCargo.centerXRatio).toBeGreaterThan(0);
   expect(warmCargo.centerXRatio).toBeLessThan(1);
   expect(warmCargo.centerYRatio).toBeGreaterThan(0);
@@ -424,22 +439,25 @@ test("stages an unplaced cargo and commits one in-container drag through history
   expect(warmCargo.widthRatio).toBeGreaterThan(0);
   expect(warmCargo.heightRatio).toBeGreaterThan(0);
   await expect(status).toContainText("選択中の積荷: 合成仮置き積荷");
-  await expect(page.getByRole("button", { name: "床面で90°回転" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Z軸を中心に90°回転" })).toBeVisible();
 
   await page.mouse.move(point.x, point.y);
   await page.mouse.down();
-  await page.mouse.move(point.x - 24, point.y - 8, { steps: 3 });
+  await page.mouse.move(point.x + 5, point.y, { steps: 3 });
   await page.mouse.up();
-  await expect(status).toContainText("積荷全体が荷室内に入っていないため配置せず");
+  await expect(status).toContainText("荷室外の作業スペースへ移動しました");
   await expect(emptyPlacement).toBeVisible();
-  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+  await expect(page.locator(".viewport__staging-label")).toHaveText("荷室外の作業スペース 1件");
   expect(await historySummary.textContent()).toBe(historyBefore);
 
-  await page.mouse.move(point.x, point.y);
+  const relocated = await selectStagedCargoOnCanvas(page, canvas);
+  await page.mouse.move(relocated.point.x, relocated.point.y);
   await page.mouse.down();
-  await page.mouse.move(bounds.x + bounds.width * 0.52, bounds.y + bounds.height * 0.58, {
-    steps: 8,
-  });
+  await page.mouse.move(
+    relocated.bounds.x + relocated.bounds.width * 0.52,
+    relocated.bounds.y + relocated.bounds.height * 0.58,
+    { steps: 8 },
+  );
   await expect(status).toContainText("床面に平行な配置移動をプレビュー中です");
   await expect(emptyPlacement).toBeVisible();
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
@@ -457,22 +475,28 @@ test("stages an unplaced cargo and commits one in-container drag through history
     "奥行方向 500 × 横幅方向 400 × 高さ方向 300 mm",
   );
   await expect(status).toContainText("合成仮置き積荷を荷室内");
-  await expect(status).toContainText("配置1件。仮置き場0件");
+  await expect(status).toContainText("配置1件。荷室外0件");
   await expect(page.locator(".viewport__staging-label")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "床面で90°回転" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Z軸を中心に90°回転" })).toBeVisible();
   await expect(historySummary).toContainText("次に元に戻せる操作: 配置の追加");
 
+  const scrollBeforeUndo = await page.evaluate<number>("scrollY");
   await page.getByRole("button", { name: "元に戻す" }).click();
+  await page.waitForTimeout(150);
+  expect(await page.evaluate<number>("scrollY")).toBe(scrollBeforeUndo);
   await expect(emptyPlacement).toBeVisible();
   await expect(status).toContainText("選択中の積荷: 合成仮置き積荷");
-  await expect(status).toContainText("配置0件。仮置き場1件");
-  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
-  await expect(page.getByRole("button", { name: "床面で90°回転" })).toHaveCount(0);
+  await expect(status).toContainText("配置0件。荷室外1件");
+  await expect(page.locator(".viewport__staging-label")).toHaveText("荷室外の作業スペース 1件");
+  await expect(page.getByRole("button", { name: "Z軸を中心に90°回転" })).toBeVisible();
 
+  const scrollBeforeRedo = await page.evaluate<number>("scrollY");
   await page.getByRole("button", { name: "やり直す" }).click();
+  await page.waitForTimeout(150);
+  expect(await page.evaluate<number>("scrollY")).toBe(scrollBeforeRedo);
   await expect(row).toHaveCount(1);
   await expect(row).toHaveAttribute("aria-current", "true");
-  await expect(page.getByRole("button", { name: "床面で90°回転" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Z軸を中心に90°回転" })).toBeVisible();
 });
 
 test("returns a fully dragged-out placement to staging as one undoable deletion", async ({
@@ -494,8 +518,8 @@ test("returns a fully dragged-out placement to staging as one undoable deletion"
   await page.mouse.up();
 
   await expect(row).toHaveCount(0);
-  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
-  await expect(status).toContainText("配置を削除して仮置き場へ戻しました");
+  await expect(page.locator(".viewport__staging-label")).toHaveText("荷室外の作業スペース 1件");
+  await expect(status).toContainText("荷室外の作業スペースへ移しました");
   await expect(page.locator(".physical-validation__summary")).toHaveText(
     "適合：この候補には配置済みの積荷がありません。",
   );
@@ -511,7 +535,7 @@ test("returns a fully dragged-out placement to staging as one undoable deletion"
 
   await page.getByRole("button", { name: "やり直す" }).click();
   await expect(row).toHaveCount(0);
-  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+  await expect(page.locator(".viewport__staging-label")).toHaveText("荷室外の作業スペース 1件");
 });
 
 test("shows result-oriented scene actions and opens the existing coordinate form", async ({
@@ -534,21 +558,16 @@ test("shows result-oriented scene actions and opens the existing coordinate form
   const historySummary = history.locator(".project-history__summary");
   const emptyPlacement = page.getByText("この候補に配置された積荷はありません。");
   await expect(card).toContainText(cargoName);
-  await expect(card).toContainText("未配置（仮置き場）");
+  await expect(card).toContainText("荷室外（未配置）");
   await expect(card.locator(".scene-selection-card__size")).toHaveText(
-    "大きさ: 奥行方向 500 × 横幅方向 400 × 高さ方向 300 mm",
+    "奥行方向 500 × 横幅方向 400 × 高さ方向 300 mm",
   );
   await expect(card).not.toContainText("入口から手前面まで");
   await expect(card).not.toContainText("保存上の向きコード");
   await expect(action).toBeEnabled();
   await expect(history).toHaveCount(1);
-  await expect(history.getByRole("heading", { name: "案件全体の操作" })).toBeVisible();
-  expect(
-    await page.locator(".scene-workspace__history").evaluate((element) =>
-      element.firstElementChild?.classList.contains("project-history") === true &&
-      element.nextElementSibling?.classList.contains("viewport") === true,
-    ),
-  ).toBe(true);
+  await expect(history.getByRole("button", { name: "元に戻す" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "3D作業の操作" })).toContainText("＋");
 
   await page.getByRole("button", { name: "元に戻す" }).focus();
   await page.keyboard.press("Tab");
@@ -619,16 +638,16 @@ test("shows result-oriented scene actions and opens the existing coordinate form
   await expect(historySummary).toContainText("次に元に戻せる操作: 配置の追加。");
   await expect(card).toContainText("荷室内に配置済み");
   await expect(card.locator(".scene-selection-card__size")).toHaveText(
-    "大きさ: 奥行方向 400 × 横幅方向 500 × 高さ方向 300 mm",
+    "奥行方向 400 × 横幅方向 500 × 高さ方向 300 mm",
   );
   await expect(card.locator(".scene-selection-card__position")).toContainText(
-    "入口から手前面まで 100 mm",
+    "X100 mm",
   );
   await expect(card.locator(".scene-selection-card__position")).toContainText(
-    "入口から見て右壁から右側面まで 200 mm",
+    "Y200 mm",
   );
   await expect(card.locator(".scene-selection-card__position")).toContainText(
-    "床から下面まで 0 mm",
+    "Z0 mm",
   );
   await expect(card.locator(".scene-selection-card__size")).not.toContainText("WLH");
   await expect(card.getByText("保存上の詳細", { exact: true })).toBeVisible();
@@ -659,7 +678,7 @@ test("shows result-oriented scene actions and opens the existing coordinate form
   await expect(fineTune).toBeEnabled();
 
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(card).toContainText("未配置（仮置き場）");
+  await expect(card).toContainText("荷室外（未配置）");
   await expect(card).not.toContainText("入口から手前面まで");
   await expect(card.getByRole("button", { name: "座標を入力して配置" })).toBeVisible();
 });
@@ -729,7 +748,7 @@ test("does not stage cargo that is already placed in another container", async (
   await page.getByLabel("表示する候補").selectOption({ label: "合成別候補" });
 
   await expect(page.locator("#scene-workspace-status")).toContainText(
-    "選択中の候補: 合成別候補。配置0件。仮置き場0件",
+    "選択中の候補: 合成別候補。配置0件。荷室外0件",
   );
   await expect(page.locator(".viewport__staging-label")).toHaveCount(0);
   await expect(page.getByText("この候補に配置された積荷はありません。")).toBeVisible();
@@ -747,7 +766,7 @@ test("keeps scene selection stable across add, edit, switch, and delete", async 
   const sceneSelect = page.getByLabel("表示する候補");
   const physicalSummary = page.locator(".physical-validation__summary");
   await expect(sceneSelect).toHaveValue("container-1");
-  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。荷室外0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
   await expect(physicalSummary).toHaveText("適合：この候補には配置済みの積荷がありません。");
 
   await addContainer(page, "合成候補B", "7001");
@@ -759,7 +778,7 @@ test("keeps scene selection stable across add, edit, switch, and delete", async 
   await expect(capabilityStatus.getByRole("img", { name: previewName })).toHaveCount(0);
   const capabilityCopy = await capabilityStatus.textContent();
   await sceneSelect.selectOption({ label: "合成候補B" });
-  await expect(sceneStatus).toHaveText("選択中の候補: 合成候補B。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。");
+  await expect(sceneStatus).toHaveText("選択中の候補: 合成候補B。配置0件。荷室外0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。");
   await expect(capabilityStatus).toHaveText(capabilityCopy ?? "");
   await expect(physicalSummary).toHaveText("適合：この候補には配置済みの積荷がありません。");
 
@@ -768,13 +787,13 @@ test("keeps scene selection stable across add, edit, switch, and delete", async 
   await page.getByLabel("内部長さ").fill("8001");
   await page.getByRole("button", { name: "候補の変更を保存: 合成候補B" }).click();
   await expect(sceneSelect).toHaveValue("container-2");
-  await expect(page.getByText("選択中の候補: 合成候補B更新。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 合成候補B更新。配置0件。荷室外0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
 
   await page.getByRole("button", { name: "削除: 合成候補B更新" }).click();
   await page.getByRole("button", { name: "削除を確定: 合成候補B更新" }).click();
   await expect(sceneSelect).toHaveValue("container-1");
-  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 合成候補A。配置0件。荷室外0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
 });
 
 test("selects cargo, clears on blank space, and keeps clicks and camera controls non-mutating", async ({
@@ -908,7 +927,10 @@ test("selects cargo, clears on blank space, and keeps clicks and camera controls
     )
     .not.toBe(scrollBeforeWheel.y);
   const afterWheel = await canvas.screenshot();
-  expect(afterWheel.equals(beforeWheel)).toBe(true);
+  expectSameContainerFrame(
+    measureContainerFrame(afterWheel),
+    measureContainerFrame(beforeWheel),
+  );
   expect(await page.locator(".project-history__summary").textContent()).toBe(
     historyBeforeCameraButtons,
   );
@@ -936,9 +958,9 @@ test("rotates a selected cargo once beside the mesh and preserves its minimum co
 }) => {
   await page.goto("/");
   const { canvas, row, status } = await createInteractiveScene(page);
-  const rotationButton = page.getByRole("button", { name: "床面で90°回転" });
+  const rotationButton = page.getByRole("button", { name: "Z軸を中心に90°回転" });
   const rotationCard = page.locator(".viewport__cargo-action");
-  const cameraControls = page.getByRole("group", { name: "3D表示の視点操作" });
+  const cameraControls = page.getByRole("group", { name: "3D作業の操作" });
   await expect(rotationButton).toHaveCount(0);
   const originalSummary = await placementSummary(row);
   const cargoPoint = await selectCargoOnCanvas(page, canvas, row);
@@ -1000,13 +1022,22 @@ test("rotates a selected cargo once beside the mesh and preserves its minimum co
     "位置: 入口から手前面まで 2100 mm / 入口から見て右壁から右側面まで 500 mm / 床から下面まで 250 mm",
   );
   await expect(row).toHaveAttribute("aria-current", "true");
-  await expect(status).toContainText("床面で90°回転しました");
+  await expect(status).toContainText("Z軸中心に90°回転しました");
   await expect(status).toContainText("最小角X 2100・Y 500・Z 250 mmは保持しています");
   await expect(page.locator(".project-history__summary")).toContainText(
     "次に元に戻せる操作: 配置の更新。",
   );
 
+  const scrollBeforeUndo = await page.evaluate<number>("scrollY");
+  const frameBeforeUndo = measureContainerFrame(await canvas.screenshot());
   await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect
+    .poll(() => page.evaluate<number>("scrollY"))
+    .toBe(scrollBeforeUndo);
+  expectSameContainerFrame(
+    measureContainerFrame(await canvas.screenshot()),
+    frameBeforeUndo,
+  );
   expect(await placementSummary(row)).toBe(originalSummary);
   await expect(page.locator(".project-history__summary")).toContainText(
     "次にやり直せる操作: 配置の更新。",
@@ -1043,7 +1074,110 @@ test("rotates a selected cargo once beside the mesh and preserves its minimum co
   ).toBe(false);
 });
 
-test("explains why floor rotation is unavailable for a single-orientation cargo", async ({
+test("rotates an explicitly tip-enabled cargo around X and keeps the action undoable", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await addInteractiveCargo(page, "X軸回転合成積荷", {
+    lengthMm: "500",
+    widthMm: "400",
+    heightMm: "300",
+    allowTipping: true,
+  });
+  await addContainer(page, "X軸回転合成候補");
+  await placeCargo(page, "X軸回転合成積荷", {
+    xMm: "100",
+    yMm: "200",
+    zMm: "0",
+  });
+  const panel = page.locator(".placement-panel");
+  const row = panel
+    .getByRole("list", { name: "選択候補の配置一覧" })
+    .getByRole("listitem");
+  await page.getByLabel("操作する積荷").selectOption({ label: "X軸回転合成積荷（配置済み）" });
+  const xRotation = page.getByRole("button", { name: "X軸を中心に90°回転" });
+
+  await expect(xRotation).toBeEnabled();
+  await xRotation.click();
+  await expect(row.locator(".placement-list__details")).toContainText(
+    "保存上の向きコード: LHW",
+  );
+  await expect(page.locator("#scene-workspace-status")).toContainText(
+    "X軸中心に90°回転しました",
+  );
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(row.locator(".placement-list__details")).toContainText(
+    "保存上の向きコード: LWH",
+  );
+});
+
+test("rotates staged cargo around X and Z without changing Project history", async ({ page }) => {
+  await page.goto("/");
+  await addInteractiveCargo(page, "荷室外軸回転積荷", {
+    lengthMm: "500",
+    widthMm: "400",
+    heightMm: "300",
+    allowTipping: true,
+  });
+  await addContainer(page, "荷室外軸回転候補");
+  await page
+    .getByLabel("操作する積荷")
+    .selectOption({ label: "荷室外軸回転積荷（荷室外）" });
+  const card = page.getByRole("region", { name: "荷室外軸回転積荷" });
+  const historySummary = page.locator(".project-history__summary");
+  const historyBefore = await historySummary.textContent();
+
+  await page.getByRole("button", { name: "X軸を中心に90°回転" }).click();
+  await expect(card).toContainText("奥行方向 500 × 横幅方向 300 × 高さ方向 400 mm");
+  await expect(page.locator("#scene-workspace-status")).toContainText(
+    "荷室外の作業スペースでX軸中心に90°回転しました",
+  );
+  expect(await historySummary.textContent()).toBe(historyBefore);
+
+  await page.getByRole("button", { name: "Z軸を中心に90°回転" }).click();
+  await expect(card).toContainText("奥行方向 300 × 横幅方向 500 × 高さ方向 400 mm");
+  await expect(page.locator("#scene-workspace-status")).toContainText(
+    "荷室外の作業スペースでZ軸中心に90°回転しました",
+  );
+  expect(await historySummary.textContent()).toBe(historyBefore);
+  await expect(page.locator(".viewport__staging-label")).toHaveText(
+    "荷室外の作業スペース 1件",
+  );
+  await expect(page.locator(".physical-validation__summary")).toHaveText(
+    "適合：この候補には配置済みの積荷がありません。",
+  );
+});
+
+test("rejects a staged rotation that would overlap the container floor", async ({ page }) => {
+  await page.goto("/");
+  await addInteractiveCargo(page, "境界回転積荷", {
+    lengthMm: "500",
+    widthMm: "1400",
+    heightMm: "300",
+  });
+  await addContainer(page, "境界回転候補");
+  await page
+    .getByLabel("操作する積荷")
+    .selectOption({ label: "境界回転積荷（荷室外）" });
+  const card = page.getByRole("region", { name: "境界回転積荷" });
+  const historySummary = page.locator(".project-history__summary");
+  const historyBefore = await historySummary.textContent();
+
+  await page.getByRole("button", { name: "Z軸を中心に90°回転" }).click();
+  await expect(page.locator("#scene-workspace-status")).toContainText(
+    "この位置でZ軸回転すると荷室と一部重なるため、回転しませんでした",
+  );
+  await expect(card).toContainText("奥行方向 500 × 横幅方向 1400 × 高さ方向 300 mm");
+  expect(await historySummary.textContent()).toBe(historyBefore);
+  await expect(page.locator(".viewport__staging-label")).toHaveText(
+    "荷室外の作業スペース 1件",
+  );
+  await expect(page.locator(".physical-validation__summary")).toHaveText(
+    "適合：この候補には配置済みの積荷がありません。",
+  );
+});
+
+test("exposes icon-only X and Z rotation availability for a single-orientation cargo", async ({
   page,
 }) => {
   await page.goto("/");
@@ -1063,17 +1197,19 @@ test("explains why floor rotation is unavailable for a single-orientation cargo"
   const canvas = page.getByRole("img", { name: previewName });
   await selectCargoOnCanvas(page, canvas, row);
 
-  const rotationButton = page.getByRole("button", { name: "床面で90°回転" });
-  await expect(rotationButton).toBeVisible();
-  await expect(rotationButton).toBeDisabled();
-  await expect(
-    page.getByText("この積荷では床面90°回転後の向きが許可されていません。", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(rotationButton).toHaveAttribute(
-    "aria-describedby",
-    "viewport-floor-rotation-explanation",
+  const zRotationButton = page.getByRole("button", { name: "Z軸を中心に90°回転" });
+  const xRotationButton = page.getByRole("button", { name: "X軸を中心に90°回転" });
+  await expect(zRotationButton).toBeVisible();
+  await expect(zRotationButton).toBeDisabled();
+  await expect(xRotationButton).toBeVisible();
+  await expect(xRotationButton).toBeDisabled();
+  await expect(zRotationButton).toHaveAttribute(
+    "title",
+    "許可する向きにより、Z軸回転は利用できません。",
+  );
+  await expect(xRotationButton).toHaveAttribute(
+    "title",
+    "天地無用または許可する向きにより、X軸回転は利用できません。",
   );
   await expect(row.locator(".placement-list__details")).toContainText(
     "保存上の向きコード: LWH",
@@ -1130,7 +1266,7 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   const { canvas, panel, row, sceneSelect, status } = await createInteractiveScene(page);
   const originalSummary = await placementSummary(row);
   const cargoPoint = await selectCargoOnCanvas(page, canvas, row);
-  const rotationButton = page.getByRole("button", { name: "床面で90°回転" });
+  const rotationButton = page.getByRole("button", { name: "Z軸を中心に90°回転" });
   const coordinateButton = page.getByRole("button", { name: "座標を微調整" });
   const editButton = panel.getByRole("button", { name: "編集: 合成canvas積荷" });
   const undo = page.getByRole("button", { name: "元に戻す" });
@@ -1431,7 +1567,7 @@ test("rejects a staged-cargo canvas add while import is active and rolls the pre
 
   await expect(status).toContainText("案件が更新されたため配置を保存できませんでした");
   await expect(emptyPlacement).toBeVisible();
-  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+  await expect(page.locator(".viewport__staging-label")).toHaveText("荷室外の作業スペース 1件");
   await expect(page.getByTestId("canonical-project-settings")).toContainText("新規案件");
   await page.evaluate(() => {
     const browserGlobal = globalThis as unknown as {
@@ -1442,7 +1578,7 @@ test("rejects a staged-cargo canvas add while import is active and rolls the pre
   await expect(persistenceStatus).toContainText("操作中に案件が更新されたため");
   expect(await historySummary.textContent()).toBe(historyBefore);
   await expect(emptyPlacement).toBeVisible();
-  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 1件");
+  await expect(page.locator(".viewport__staging-label")).toHaveText("荷室外の作業スペース 1件");
   await expect(page.getByTestId("canonical-project-settings")).toContainText("新規案件");
   await expect(page.getByText("置換を拒否する案件")).toHaveCount(0);
 });
@@ -1562,7 +1698,7 @@ test("keeps scene input available without WebGL and does not mount a canvas", as
   await expect(page.getByRole("img", { name: previewName })).toHaveCount(0);
   await addContainer(page, "非対応時の合成候補");
   await expect(page.getByLabel("表示する候補")).toHaveValue("container-1");
-  await expect(page.getByText("選択中の候補: 非対応時の合成候補。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
+  await expect(page.getByText("選択中の候補: 非対応時の合成候補。配置0件。荷室外0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。")).toBeVisible();
   await expect(page.locator(".physical-validation__summary")).toHaveText(
     "適合：この候補には配置済みの積荷がありません。",
   );
@@ -1702,8 +1838,18 @@ test("keeps the scene workspace within 305, 320, and 375 pixel viewports", async
   });
   await addContainer(page, "狭幅表示用合成候補");
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
-  await expect(page.locator(".viewport__staging-label")).toHaveText("仮置き場 2件");
-  await expect(page.getByRole("group", { name: "3D表示の視点操作" })).toBeVisible();
+  await expect(page.locator(".viewport__staging-label")).toHaveText("荷室外の作業スペース 2件");
+  const cargoPicker = page.getByLabel("操作する積荷");
+  await expect(cargoPicker.locator("option")).toHaveCount(3);
+  await cargoPicker.selectOption({ label: "狭幅仮置き積荷B（荷室外）" });
+  await expect(page.locator("#scene-workspace-status")).toContainText(
+    "選択中の積荷: 狭幅仮置き積荷B",
+  );
+  await expect(page.locator(".scene-selection-card")).toHaveAttribute(
+    "aria-label",
+    "狭幅仮置き積荷B",
+  );
+  await expect(page.getByRole("group", { name: "3D作業の操作" })).toBeVisible();
   await expect(page.getByRole("button", { name: "拡大" })).toBeVisible();
   await expect(page.getByRole("button", { name: "縮小" })).toBeVisible();
   await expect(page.getByRole("button", { name: "荷室全体を表示" })).toBeVisible();

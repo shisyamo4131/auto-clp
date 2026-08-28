@@ -27,5 +27,6 @@
 | [0014](0014-dedicated-floor-penetration-diagnostic.md) | 床突き抜けの専用診断 | Accepted | 2026-08-28 |
 | [0015](0015-scene-wheel-drag-out-and-size-copy.md) | 3D viewportのscroll・drag-out・大きさ表記 | Accepted | 2026-08-28 |
 | [0016](0016-project-coordination-and-session-capacity-routing.md) | プロジェクト調整とセッション容量経路 | Accepted | 2026-08-28 |
+| [0017](0017-scene-workbench-rotation-and-compact-controls.md) | 3D作業面・軸別回転・compact操作 | Accepted | 2026-08-28 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

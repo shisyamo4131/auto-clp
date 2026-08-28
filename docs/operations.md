@@ -2,12 +2,12 @@
 
 ## Current Availability
 
-- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、保存Navigation Drawerと操作単位のSnackbar、全候補の置換前Worker判定、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、3D直前の単一案件履歴と選択積荷の結果指向寸法・位置・座標フォーム導線、成功した案件変更を最大100件保持する非永続undo/redo、コンテナ包含・XY正面積重なり・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置と非永続仮置き場のThree.js描画、canvas積荷選択、fine pointerによる仮置きからの初回配置と配置済み床面方向drag・完全drag-out削除、選択積荷近傍の許可済み床面90°回転、viewport wheelのpage scroll、明示的な `＋` / `－` による拡大縮小、遠方積荷に左右されない荷室基準の視点復元、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
+- Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、保存Navigation Drawerと操作単位のSnackbar、全候補の置換前Worker判定、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、viewport内のcompactな単一案件履歴、積荷picker、選択積荷のcompactな寸法・座標card、成功した案件変更を最大100件保持する非永続undo/redo、コンテナ包含・XY正面積重なり・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置と荷室外作業スペースのThree.js描画、canvas積荷選択、fine pointerによる未配置積荷の自由な荷室外移動・初回配置と配置済み床面方向drag・完全drag-out削除、許可済みX/Z軸90°回転、天地無用入力補助、viewport wheelのpage scroll、明示的な `＋` / `－` による拡大縮小、同一候補更新時のcamera保持、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
 - Implemented foundation: ADR 0004に基づく、一候補へ全積荷を配置する純粋な決定的DFS、目的関数順位、候補点・attempt上限、cutoff/no-complete-plan、未確認理由保持。
 - Implemented transport: 正本Schema・意味検証後だけ探索するone-shot module Worker、固定code、厳格な応答検証、同期fallbackなしのclient、即時terminate取消と遅延・二重応答mask、Appからの実Worker接続。
 - Implemented orchestration, preview, and apply: React非依存の探索session、Project参照・interaction generationのstale判定、取消・retry・遅延結果mask、React hook/panel、Appのbusy・generation開始gate、source相関付き固定copy、25件pageの非永続preview DOM、Schema・意味・物理再検証付きの確認、一括適用、一回のUndo/Redo。WebGL非対応時も利用できる。
 - Verified technical evidence: AP-08代表規模は、Windows/headless Chromiumの記録環境で実Workerのcold 1回・warm 3回、決定性、main timer/rAF進行、native取消を初期性能gate内で検証した。記録は `evidence/automatic-proposal-ap08-1226b082.md`。一般端末SLA、最低GPU、実務受入、安全保証ではない。
-- Unavailable: 端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上のZ移動・取り外し、デプロイ、クラウド保存、外部API、実運用サポート。
+- Unavailable: 端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上のZ移動・取り外し、複数候補のtab切替とside-relative作業面、積荷画像、デプロイ、クラウド保存、外部API、実運用サポート。
 
 未実装機能を利用可能として案内してはならない。
 
@@ -21,9 +21,13 @@ ADR 0011で、軸別隙間を隣接表面間の実距離として扱い、配置
 
 Phase 1の計画済み判定は、完全な搬入経路、積荷別上載荷重、重心、軸重、床荷重、荷崩れ、固縛、動荷重を保証しない。これらは実装後も「未確認」として利用者へ区別して表示する。
 
-配置座標はADR 0010のコンテナ局所右手座標を使い、`positionMm` は向き適用後の積荷直方体の最小角とする。正規値は整数mmを維持し、描画用中心、scene縮尺、camera、候補・積荷選択を案件へ保存しない。Project→scene投影、フォームによる配置追加・移動・許可向き変更・取り外し、canvas上の積荷選択、非永続仮置きからの初回配置、fine pointerによるX/Y床面方向drag、選択mesh近傍のHTML操作による許可済みの床面90°回転、回転・平行移動、明示的な `＋` / `－` による拡大縮小、荷室だけを基準に初期表示と復元を行う「荷室全体を表示」を実装済みである。viewport上のwheelはcameraを変えずpage scrollへ渡す。案件全体で未配置の積荷だけを先頭許可向き・Z=0の決定的な暖色グリッドへ派生し、他候補へ配置済みなら重複表示しない。仮置き状態はProject、物理判定、履歴、保存へ含めず、向き適用後AABB全体が生の荷室内へ入ったdropだけを既存配置追加commandで一履歴操作として確定する。配置済みdragは量子化後X/Yが生の荷室床面と正面積で重なる間は部分はみ出しを含め配置更新として保存し、共通面積0なら既存配置を一回の `placement.delete` として削除して仮置きへ戻す。no-opとZだけの境界は削除せず、Undoは元位置・向きを復元し、Redoは仮置きへ戻す。床面回転は現在向きと同じ高さ軸を保つ相手向きだけを使い、許可集合に相手がなければ理由付きで無効にする。成功時は最小X/Y/Z角を保持した一回の配置更新としてUndo/Redoできる。cameraのfarと最大移動距離は全投影範囲を保持するため、外側の修正途中積荷と仮置きを初期の荷室fitへ含めず、縮小・平行移動で確認できる余地を残す。touch/coarse pointerは積荷選択だけを行い、canvas上の縦scrollを保持して、正確な配置・移動・向きにはキーボード操作可能なフォームを使う。drag中はProjectを変更せず、release時に正規開始位置とscene差分から最近接1 mmのX/Yを作り、Zと向きを保持して既存commandが成功した場合だけ保存する。負座標・外側配置はclampせず物理判定で不適合とし、理由を表示する。canvas上のZ移動は未実装である。
+配置座標はADR 0010のコンテナ局所右手座標を使い、`positionMm` は向き適用後の積荷直方体の最小角とする。正規値は整数mmを維持し、描画用中心、scene縮尺、camera、候補・積荷選択、荷室外の作業位置を案件へ保存しない。Project→scene投影、フォーム配置、canvas選択、fine pointerのX/Y床面drag、許可済みX/Z軸90°回転、視点回転・平行移動、明示 `＋` / `－`、荷室基準の「荷室全体を表示」を実装済みである。viewport上のwheelはcameraを変えずpage scrollへ渡す。
 
-案件全体のUndo/Redoは単一の操作UIを3D直前に置き、buttonと既存shortcutを同じ履歴handlerへ接続する。選択積荷のscene近傍カードは、配置済みなら向き適用後の奥行・横幅・高さ、入口・右壁・床からの最小面位置を表示し、仮置きなら保存座標を表示せず実寸法だけを示す。「座標を微調整」または「座標を入力して配置」は既存の配置フォームを開いてX入力へfocusし、draft、command、履歴をscene側へ複製しない。配置一覧と向き選択は結果指向の寸法と上向き元軸を先に示し、`LWH`等は保存上の詳細コードとして保持する。
+案件全体で未配置の積荷だけを初回は先頭許可向き・Z=0の決定的な暖色gridへ派生し、他候補へ配置済みなら重複表示しない。利用者が積荷全体を荷室外へdropした後はcargo IDごとの位置と向きをUI sessionだけに保持する。外側移動と回転はProject、物理判定、案件履歴、保存へ含めない。AABB全体が生の荷室内へ入ったdropだけを既存配置追加commandで一履歴操作として確定し、一部だけ床面へ重なるdropは直前の外側位置へ戻す。配置済みdragは正面積で重なる間は部分はみ出しを含め保存し、面積0ならdrop poseをsessionへ保持して一回の `placement.delete` とする。Undoは元配置、Redoは同じ外側poseを表示する。
+
+Z軸回転は高さ軸を保つ相手、X軸回転はY/Z割当を交換する相手を使い、どちらも積荷の許可集合内だけを有効にする。天地無用は許可集合を `LWH` / `WLH` に制限する入力補助であり、面の表裏は識別しない。配置済み回転は最小X/Y/Z角を保持した一回の配置更新、荷室外回転は回転後も荷室床面との正面積重なりが0の場合だけsession変更とする。重なる回転は直前poseを保持して拒否し、積荷編集で既存poseが重なる場合は新寸法の決定的外側gridへ戻す。cameraのfarと最大移動距離は全投影範囲への到達余地を保ち、同一候補のProject更新では現在cameraと注視点を復元する。touch/coarse pointerは積荷選択だけを行い、正確な配置・移動・向きにはキーボード操作可能なフォームを使う。canvas上のZ移動は未実装である。
+
+案件全体のUndo/Redoはviewport内で `＋` / `－` と同じ外観の単一操作UIとし、buttonと既存shortcutを同じ履歴handlerへ接続する。実行前後のpage scroll位置を復元し、WebGL 2非対応時はfallback領域へ同じ一組だけを置く。選択cardは積荷名を見出しとし、寸法prefixを付けず、配置済みなら向き適用後寸法とcompactなX/Y/Zを表示する。荷室外なら保存座標と混同せずsession状態であることを示す。「座標を微調整」または「座標を入力して配置」は既存フォームを開いてX入力へfocusし、draft、command、履歴をscene側へ複製しない。配置・物理panelはviewport後方へ置き、compactな積荷selectで多数のscene積荷をcamera移動なしに選択・highlightできる。
 
 案件履歴は、案件設定、積荷、候補、配置の成功した追加・更新・削除と、1回のcanvas床面dragを一つの操作として最大100件保持する。「元に戻す」「やり直す」ボタンに加え、Windows/Linuxでは `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y`、macOSでは `Command+Z` / `Command+Shift+Z` を利用できる。未保存入力、削除確認、drag中は履歴操作を無効にし、入力欄、選択欄、編集可能領域、独自入力コンポーネントのローカル履歴を優先する。失敗とno-opは履歴を変えず、undo後の新しい確定操作はredoを破棄する。履歴はメモリ内だけで、再読込、JSON書出し、端末保存には含めない。
 

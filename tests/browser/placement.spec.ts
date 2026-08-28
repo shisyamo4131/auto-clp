@@ -69,7 +69,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
     placementPanel.getByText("この候補に配置された積荷はありません。"),
   ).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補A。配置0件。仮置き場1件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
+    "選択中の候補: 合成配置候補A。配置0件。荷室外1件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
   );
   await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
     "適合：この候補には配置済みの積荷がありません。",
@@ -106,7 +106,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await expect(sceneSelect).toBeEnabled();
   await expect(placementPanel.getByText("位置: 入口から手前面まで -1000000 mm / 入口から見て右壁から右側面まで 1000000 mm / 床から下面まで -1 mm")).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補A。配置1件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
+    "選択中の候補: 合成配置候補A。配置1件。荷室外0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
   );
   await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
     "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
@@ -124,7 +124,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
 
   await sceneSelect.selectOption("container-2");
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補B。配置0件。仮置き場0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
+    "選択中の候補: 合成配置候補B。配置0件。荷室外0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
   );
   await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
     "適合：この候補には配置済みの積荷がありません。",
@@ -159,7 +159,7 @@ test("creates, edits, switches, cancels, and deletes a placement transactionally
   await expect(placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" })).toBeFocused();
   await expect(placementPanel.getByText("積荷は未配置一覧へ戻りました。")).toBeVisible();
   await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補A。配置0件。仮置き場1件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
+    "選択中の候補: 合成配置候補A。配置0件。荷室外1件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
   );
   await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
     "適合：この候補には配置済みの積荷がありません。",

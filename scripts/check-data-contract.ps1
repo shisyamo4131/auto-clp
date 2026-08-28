@@ -17,6 +17,7 @@ $physicalValidationDecisionPath = Join-Path $resolvedProject 'docs/decisions/001
 $persistenceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0013-manual-local-persistence-and-json-files.md'
 $floorPenetrationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0014-dedicated-floor-penetration-diagnostic.md'
 $sceneFeedbackDecisionPath = Join-Path $resolvedProject 'docs/decisions/0015-scene-wheel-drag-out-and-size-copy.md'
+$sceneWorkbenchDecisionPath = Join-Path $resolvedProject 'docs/decisions/0017-scene-workbench-rotation-and-compact-controls.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -54,6 +55,7 @@ foreach ($path in @(
     $persistenceDecisionPath,
     $floorPenetrationDecisionPath,
     $sceneFeedbackDecisionPath,
+    $sceneWorkbenchDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -171,7 +173,10 @@ foreach ($requiredText in @(
     '重なり面積が0',
     '一回の `placement.delete`',
     'viewport上のwheel入力はページscroll',
-    '共通label `大きさ`'
+    '非永続の作業スペース',
+    'X軸またはZ軸を中心に90度回転',
+    '寸法prefix `大きさ:` を表示しない',
+    '同一候補のProject更新ではcamera位置と注視点を保持'
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved scene-feedback contract text: $requiredText"
@@ -194,7 +199,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.12.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.13.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -255,7 +260,8 @@ if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
     -not $dataModel.Contains('decisions/0011-axis-clearance-semantics.md') -or
     -not $dataModel.Contains('decisions/0012-independent-physical-validation-diagnostics.md') -or
     -not $dataModel.Contains('decisions/0013-manual-local-persistence-and-json-files.md') -or
-    -not $dataModel.Contains('decisions/0014-dedicated-floor-penetration-diagnostic.md')) {
+    -not $dataModel.Contains('decisions/0014-dedicated-floor-penetration-diagnostic.md') -or
+    -not $dataModel.Contains('decisions/0017-scene-workbench-rotation-and-compact-controls.md')) {
     throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
 }
 
@@ -284,6 +290,23 @@ foreach ($requiredText in @(
 )) {
     if (-not $sceneFeedbackDecision.Contains($requiredText)) {
         throw "ADR 0015 does not contain the approved scene-feedback marker: $requiredText"
+    }
+}
+
+$sceneWorkbenchDecision = [IO.File]::ReadAllText($sceneWorkbenchDecisionPath)
+if ($sceneWorkbenchDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0017 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    'UI session',
+    'X軸90度回転',
+    'Z軸90度回転',
+    '天地無用',
+    'camera positionとOrbitControls target',
+    'Project Schema `0.1.0`'
+)) {
+    if (-not $sceneWorkbenchDecision.Contains($requiredText)) {
+        throw "ADR 0017 does not contain the approved scene-workbench marker: $requiredText"
     }
 }
 
@@ -518,6 +541,7 @@ foreach ($requiredText in @(
     persistence_decision_0013_accepted = $true
     floor_penetration_decision_0014_accepted = $true
     scene_feedback_decision_0015_accepted = $true
+    scene_workbench_decision_0017_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true
