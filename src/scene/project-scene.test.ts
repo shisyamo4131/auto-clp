@@ -5,6 +5,7 @@ import { PROJECT_SCHEMA_VERSION, type Project } from "../domain/model";
 import {
   domainDimensionsToScene,
   domainPointToScene,
+  floorQuarterTurnOrientation,
   MM_TO_SCENE_UNIT,
   projectContainerToScene,
   sceneBoundsReachRadius,
@@ -90,6 +91,18 @@ function expectBoxWithinProjectionBounds(
 }
 
 describe("project scene coordinate adapter", () => {
+  it.each([
+    ["LWH", "WLH"],
+    ["WLH", "LWH"],
+    ["LHW", "HLW"],
+    ["HLW", "LHW"],
+    ["WHL", "HWL"],
+    ["HWL", "WHL"],
+  ] as const)("maps floor quarter turn %s to %s", (orientation, expected) => {
+    expect(floorQuarterTurnOrientation(orientation)).toBe(expected);
+    expect(floorQuarterTurnOrientation(expected)).toBe(orientation);
+  });
+
   it("uses the approved scale and maps domain axes to Three.js axes", () => {
     expect(MM_TO_SCENE_UNIT).toBe(0.001);
     expect(domainPointToScene({ xMm: 1_000, yMm: 2_000, zMm: 3_000 })).toEqual({

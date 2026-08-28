@@ -24,10 +24,13 @@ interface ThreeViewportProps {
     deltaScene: Pick<SceneVector3, "x" | "z">,
   ) => CargoDragCommitResult;
   readonly onCargoDragStateChange: (active: boolean) => void;
+  readonly onCargoFloorRotation: () => void;
   readonly onCargoSelectionChange: (cargoId?: string) => void;
   readonly onRendererError: () => void;
   readonly onRendererReady: () => void;
   readonly projection: ProjectSceneProjection | null;
+  readonly rotationDisabled: boolean;
+  readonly rotationExplanation: string;
   readonly selectedCargoId?: string;
   readonly statusDescriptionId: string;
 }
@@ -226,15 +229,20 @@ export function ThreeViewport({
   onCargoDragCancel,
   onCargoDragCommit,
   onCargoDragStateChange,
+  onCargoFloorRotation,
   onCargoSelectionChange,
   onRendererError,
   onRendererReady,
   projection,
+  rotationDisabled,
+  rotationExplanation,
   selectedCargoId,
   statusDescriptionId,
 }: ThreeViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const cameraControlsRef = useRef<HTMLDivElement>(null);
+  const rotationControlRef = useRef<HTMLDivElement>(null);
   const interactionDisabledRef = useRef(interactionDisabled);
   const resetViewRef = useRef<() => void>(() => undefined);
   const zoomInRef = useRef<() => void>(() => undefined);
@@ -254,7 +262,14 @@ export function ThreeViewport({
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
-    if (container === null || canvas === null) {
+    const cameraControls = cameraControlsRef.current;
+    const rotationControl = rotationControlRef.current;
+    if (
+      container === null ||
+      canvas === null ||
+      cameraControls === null ||
+      rotationControl === null
+    ) {
       return;
     }
 
@@ -276,11 +291,16 @@ export function ThreeViewport({
         : addProjection(scene, projection, geometries, materials);
     scene.add(new THREE.HemisphereLight(0xc8f8ff, 0x1d2b44, 2.2));
 
+    const hideRotationControl = () => {
+      rotationControl.style.visibility = "hidden";
+    };
+    let updateRotationControlPosition: () => void = hideRotationControl;
     let reportRendererError: () => void = () => undefined;
     const renderScene = (): boolean => {
       if (disposed || renderer === undefined) return false;
       try {
         renderer.render(scene, camera);
+        updateRotationControlPosition();
         return true;
       } catch {
         reportRendererError();
@@ -442,6 +462,7 @@ export function ThreeViewport({
     const dispose = () => {
       if (disposed) return;
       disposed = true;
+      hideRotationControl();
       rollbackGesture("3D表示が更新されたため、未確定の配置移動を元に戻しました。");
       canvas.removeEventListener("pointerdown", handlePointerDown, true);
       canvas.removeEventListener("pointermove", handlePointerMove, true);
@@ -517,6 +538,71 @@ export function ThreeViewport({
       controls.addEventListener("change", renderScene);
       canvas.style.touchAction = "pan-y";
 
+      updateRotationControlPosition = () => {
+        const cargoId = selectedCargoIdRef.current;
+        const visual = cargoId === undefined ? undefined : cargoVisuals.get(cargoId);
+        if (disposed || renderer === undefined || visual === undefined) {
+          hideRotationControl();
+          return;
+        }
+        const anchor = visual.mesh.position.clone().project(camera);
+        if (
+          !Number.isFinite(anchor.x) ||
+          !Number.isFinite(anchor.y) ||
+          !Number.isFinite(anchor.z) ||
+          anchor.z < -1 ||
+          anchor.z > 1 ||
+          anchor.x < -1 ||
+          anchor.x > 1 ||
+          anchor.y < -1 ||
+          anchor.y > 1
+        ) {
+          hideRotationControl();
+          return;
+        }
+        const viewportWidth = Math.max(container.clientWidth, 1);
+        const viewportHeight = Math.max(container.clientHeight, 1);
+        const controlWidth = Math.min(rotationControl.offsetWidth, viewportWidth - 16);
+        const controlHeight = Math.min(rotationControl.offsetHeight, viewportHeight - 16);
+        const projectedX = ((anchor.x + 1) / 2) * viewportWidth;
+        const projectedY = ((1 - anchor.y) / 2) * viewportHeight;
+        let left = THREE.MathUtils.clamp(
+          projectedX - controlWidth / 2,
+          8,
+          Math.max(8, viewportWidth - controlWidth - 8),
+        );
+        let top = THREE.MathUtils.clamp(
+          projectedY - controlHeight - 12,
+          8,
+          Math.max(8, viewportHeight - controlHeight - 8),
+        );
+        const cameraLeft = cameraControls.offsetLeft;
+        const cameraTop = cameraControls.offsetTop;
+        const cameraRight = cameraLeft + cameraControls.offsetWidth;
+        const cameraBottom = cameraTop + cameraControls.offsetHeight;
+        const overlapsCameraControls =
+          left < cameraRight + 8 &&
+          left + controlWidth > cameraLeft - 8 &&
+          top < cameraBottom + 8 &&
+          top + controlHeight > cameraTop - 8;
+        if (overlapsCameraControls) {
+          const belowControls = cameraBottom + 8;
+          if (belowControls + controlHeight <= viewportHeight - 8) {
+            top = belowControls;
+          } else {
+            const leftOfControls = cameraLeft - controlWidth - 8;
+            if (leftOfControls < 8) {
+              hideRotationControl();
+              return;
+            }
+            left = leftOfControls;
+          }
+        }
+        rotationControl.style.left = `${left}px`;
+        rotationControl.style.top = `${top}px`;
+        rotationControl.style.visibility = "visible";
+      };
+
       const resetView = () => {
         if (disposed || controls === undefined) return;
         const target = fitCamera(camera, projection);
@@ -565,7 +651,12 @@ export function ThreeViewport({
 
   return (
     <div className="viewport" ref={containerRef}>
-      <div className="viewport__camera-controls" role="group" aria-label="3D表示の視点操作">
+      <div
+        ref={cameraControlsRef}
+        className="viewport__camera-controls"
+        role="group"
+        aria-label="3D表示の視点操作"
+      >
         <button type="button" aria-label="拡大" onClick={() => zoomInRef.current()}>
           ＋
         </button>
@@ -575,6 +666,27 @@ export function ThreeViewport({
         <button type="button" onClick={() => resetViewRef.current()}>
           荷室全体を表示
         </button>
+      </div>
+      <div
+        ref={rotationControlRef}
+        className="viewport__cargo-action"
+        style={{ visibility: "hidden" }}
+      >
+        {selectedCargoId === undefined ? null : (
+          <>
+          <button
+            type="button"
+            disabled={rotationDisabled}
+            aria-describedby="viewport-floor-rotation-explanation"
+            onClick={onCargoFloorRotation}
+          >
+            床面で90°回転
+          </button>
+          <span id="viewport-floor-rotation-explanation">
+            {rotationExplanation}
+          </span>
+          </>
+        )}
       </div>
       <canvas
         ref={canvasRef}

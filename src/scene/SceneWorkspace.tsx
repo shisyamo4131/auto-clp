@@ -6,6 +6,7 @@ import type { Project } from "../domain/model";
 import { PhysicalValidationPanel } from "../ui/PhysicalValidationPanel";
 import { PlacementPanel } from "../ui/PlacementPanel";
 import {
+  floorQuarterTurnOrientation,
   projectContainerToScene,
   sceneFloorDragPositionMm,
   type SceneVector3,
@@ -87,6 +88,18 @@ export function SceneWorkspace({
           (placement) => placement.containerId === effectiveContainerId,
         ).length;
   const selectedCargo = project.cargoes.find((cargo) => cargo.id === selectedCargoId);
+  const selectedPlacement = project.placements.find(
+    (placement) =>
+      placement.cargoId === selectedCargoId &&
+      placement.containerId === effectiveContainerId,
+  );
+  const nextFloorOrientation =
+    selectedPlacement === undefined
+      ? undefined
+      : floorQuarterTurnOrientation(selectedPlacement.orientation);
+  const floorRotationAllowed =
+    nextFloorOrientation !== undefined &&
+    selectedCargo?.allowedOrientations.includes(nextFloorOrientation) === true;
   const interactionActive = placementInteractionActive || canvasDragActive;
 
   useEffect(() => {
@@ -208,6 +221,67 @@ export function SceneWorkspace({
     [effectiveContainerId, onProjectCommit, project],
   );
 
+  const handleCargoFloorRotation = useCallback(() => {
+    if (
+      selectedCargoId === undefined ||
+      effectiveContainerId === undefined
+    ) {
+      setCanvasStatus("回転する積荷が選択されていません。");
+      return;
+    }
+    const cargo = project.cargoes.find(
+      (candidate) => candidate.id === selectedCargoId,
+    );
+    const placement = project.placements.find(
+      (candidate) =>
+        candidate.cargoId === selectedCargoId &&
+        candidate.containerId === effectiveContainerId,
+    );
+    if (cargo === undefined || placement === undefined) {
+      setCanvasStatus(
+        "対象の配置が最新の案件に見つからないため、回転を保存しませんでした。",
+      );
+      return;
+    }
+    const nextOrientation = floorQuarterTurnOrientation(placement.orientation);
+    if (!cargo.allowedOrientations.includes(nextOrientation)) {
+      setCanvasStatus(
+        "この積荷では床面90°回転後の向きが許可されていません。積荷設定を確認してください。",
+      );
+      return;
+    }
+    const result = updatePlacement(project, selectedCargoId, effectiveContainerId, {
+      xMm: String(placement.positionMm.xMm),
+      yMm: String(placement.positionMm.yMm),
+      zMm: String(placement.positionMm.zMm),
+      orientation: nextOrientation,
+    });
+    if (!result.ok) {
+      setCanvasStatus(
+        "回転後の向きを保存できないか対象が変わったため、配置は変更しませんでした。",
+      );
+      return;
+    }
+    const transition = onProjectCommit({
+      baseProject: project,
+      nextProject: result.project,
+      action: "placement.update",
+    });
+    if (!transition.ok) {
+      setCanvasStatus(
+        "案件が更新されたため回転を保存できませんでした。配置を確認してやり直してください。",
+      );
+      return;
+    }
+    if (!transition.changed) {
+      setCanvasStatus("積荷の向きは変わりませんでした。");
+      return;
+    }
+    setCanvasStatus(
+      `${cargo.name}を床面で90°回転しました。最小角X ${placement.positionMm.xMm}・Y ${placement.positionMm.yMm}・Z ${placement.positionMm.zMm} mmは保持しています。物理判定の再計算を開始しました。`,
+    );
+  }, [effectiveContainerId, onProjectCommit, project, selectedCargoId]);
+
   return (
     <section className="scene-workspace" aria-labelledby="scene-workspace-title">
       <div className="scene-workspace__controls">
@@ -303,10 +377,21 @@ export function SceneWorkspace({
           onCargoDragCancel={handleCargoDragCancel}
           onCargoDragCommit={handleCargoDragCommit}
           onCargoDragStateChange={handleCargoDragStateChange}
+          onCargoFloorRotation={handleCargoFloorRotation}
           onCargoSelectionChange={handleCargoSelectionChange}
           onRendererError={onRendererError}
           onRendererReady={onRendererReady}
           projection={projection}
+          rotationDisabled={interactionActive || !floorRotationAllowed}
+          rotationExplanation={
+            canvasDragActive
+              ? "積荷の移動を完了すると回転できます。"
+              : placementInteractionActive
+              ? "配置の編集または削除確認を完了すると回転できます。"
+              : floorRotationAllowed
+                ? "選択した積荷の最小角と高さを保ったまま、床面上で90°回転します。"
+                : "この積荷では床面90°回転後の向きが許可されていません。"
+          }
           selectedCargoId={selectedCargoId}
           statusDescriptionId="scene-workspace-status scene-workspace-interaction-help"
         />

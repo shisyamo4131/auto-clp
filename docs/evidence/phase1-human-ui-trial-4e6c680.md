@@ -82,6 +82,13 @@
 - camera操作はProject、履歴、JSONへ保存せず、極端座標の純粋境界試験、荷室表示のブラウザ画像回帰、案件・履歴非変更、305 / 320 / 375 px表示で検証した。最終差分で全単体849件・全ブラウザ65件、型、lint、buildが個別に成功し、独立レビューでblocking所見0件を確認した。
 - 実Chromeでの人間による操作感と、極端座標の積荷へ縮小・平行移動で再到達する手動操作は未確認である。
 
+## Contextual Floor Rotation Resolution
+
+- `CP-PHASE1-SCENE-ROTATION-001` で、3D上の配置積荷を選択すると、そのmesh近傍に「床面で90°回転」を表示するようにした。主要操作では `LWH` / `WLH` 等のコード解釈を要求しない。
+- 回転は `LWH` ↔ `WLH`、`LHW` ↔ `HLW`、`WHL` ↔ `HWL` の相手だけを使い、積荷の許可集合に相手がない場合は理由付きで無効にする。成功時は既存の配置commandを通し、最小X/Y/Z角を保持した一回の履歴操作としてUndo/Redoできる。
+- 操作はcamera・resize・drag previewへ追従し、画面外では隠れ、camera操作と重ならず、305 pxでも横overflowしない。キーボード確定後のfocus保持、drag中lock、単一許可向きもブラウザ回帰で確認した。最終差分で全単体855件・全ブラウザ67件、型、lint、buildが個別に成功し、独立レビューでblocking所見0件を確認した。
+- 実Chromeでの人間による位置・文言・連続操作の使いやすさ、touch/coarse pointer、screen readerは未確認である。
+
 ## Remaining and Unverified
 
 - `acceptance.md` の正確な全fixtureを人間が再現した証拠。
@@ -90,7 +97,7 @@
 - 試用中のconsole warning/error確認。
 - 自由なZ drag、横倒し4向き、touch/coarse pointer、最低GPU、正式対応ブラウザ。
 - 実務利用者による代表ケース、合否、日程、評価担当。
-- Snackbar、scene-local layout、canvas回転、可読な向き表示の設計・実装・回帰。
+- Snackbar、scene-local layout、配置フォーム等に残る向きコードの可読化の設計・実装・回帰。
 - 非永続仮置き場と保存Navigation Drawerの設計・実装・回帰。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。

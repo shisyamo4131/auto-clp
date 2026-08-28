@@ -1,11 +1,28 @@
 import { placementBounds } from "../domain/geometry";
 import type {
+  Orientation,
   OrientedDimensionsMm,
   PositionMm,
   Project,
 } from "../domain/model";
 
 export const MM_TO_SCENE_UNIT = 0.001;
+
+const FLOOR_QUARTER_TURN_ORIENTATION = {
+  LWH: "WLH",
+  WLH: "LWH",
+  LHW: "HLW",
+  HLW: "LHW",
+  WHL: "HWL",
+  HWL: "WHL",
+} as const satisfies Record<Orientation, Orientation>;
+
+/** Returns the one 90-degree floor-plane partner for a canonical orientation. */
+export function floorQuarterTurnOrientation(
+  orientation: Orientation,
+): Orientation {
+  return FLOOR_QUARTER_TURN_ORIENTATION[orientation];
+}
 
 export interface SceneVector3 {
   readonly x: number;

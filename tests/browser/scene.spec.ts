@@ -22,6 +22,7 @@ async function addInteractiveCargo(
     readonly lengthMm?: string;
     readonly widthMm?: string;
     readonly heightMm?: string;
+    readonly singleOrientation?: boolean;
   } = {},
 ) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
@@ -30,6 +31,9 @@ async function addInteractiveCargo(
   await page.getByLabel("幅", { exact: true }).fill(dimensions.widthMm ?? "1400");
   await page.getByLabel("高さ", { exact: true }).fill(dimensions.heightMm ?? "1000");
   await page.getByLabel("重量").fill("1.005");
+  if (dimensions.singleOrientation === true) {
+    await page.getByLabel(/WLH/).uncheck();
+  }
   await page.getByRole("button", { name: "積荷を保存" }).click();
 }
 
@@ -448,6 +452,154 @@ test("selects cargo, clears on blank space, and keeps clicks and camera controls
   await expect(sceneSelect).toBeEnabled();
 });
 
+test("rotates a selected cargo once beside the mesh and preserves its minimum corner through history", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const { canvas, row, status } = await createInteractiveScene(page);
+  const rotationButton = page.getByRole("button", { name: "床面で90°回転" });
+  const rotationCard = page.locator(".viewport__cargo-action");
+  const cameraControls = page.getByRole("group", { name: "3D表示の視点操作" });
+  await expect(rotationButton).toHaveCount(0);
+  const originalSummary = await placementSummary(row);
+  const cargoPoint = await selectCargoOnCanvas(page, canvas, row);
+
+  await expect(rotationButton).toBeVisible();
+  const canvasBounds = await canvas.boundingBox();
+  const cardBounds = await rotationCard.boundingBox();
+  const cameraControlsBounds = await cameraControls.boundingBox();
+  if (
+    canvasBounds === null ||
+    cardBounds === null ||
+    cameraControlsBounds === null
+  ) {
+    throw new Error("3D canvas or contextual rotation control has no bounding box");
+  }
+  expect(cardBounds.x).toBeGreaterThanOrEqual(canvasBounds.x);
+  expect(cardBounds.y).toBeGreaterThanOrEqual(canvasBounds.y);
+  expect(cardBounds.x + cardBounds.width).toBeLessThanOrEqual(
+    canvasBounds.x + canvasBounds.width,
+  );
+  expect(cardBounds.y + cardBounds.height).toBeLessThanOrEqual(
+    canvasBounds.y + canvasBounds.height,
+  );
+  expect(
+    cardBounds.x < cameraControlsBounds.x + cameraControlsBounds.width &&
+      cardBounds.x + cardBounds.width > cameraControlsBounds.x &&
+      cardBounds.y < cameraControlsBounds.y + cameraControlsBounds.height &&
+      cardBounds.y + cardBounds.height > cameraControlsBounds.y,
+  ).toBe(false);
+  const cargoControlMarginPx = 96;
+  expect(cargoPoint.x).toBeGreaterThanOrEqual(cardBounds.x - cargoControlMarginPx);
+  expect(cargoPoint.x).toBeLessThanOrEqual(
+    cardBounds.x + cardBounds.width + cargoControlMarginPx,
+  );
+  expect(cargoPoint.y).toBeGreaterThanOrEqual(cardBounds.y - cargoControlMarginPx);
+  expect(cargoPoint.y).toBeLessThanOrEqual(
+    cardBounds.y + cardBounds.height + cargoControlMarginPx,
+  );
+
+  await canvas.hover();
+  await page.mouse.wheel(0, -360);
+  await expect(row).toHaveAttribute("aria-current", "true");
+  await expect(rotationButton).toBeVisible();
+  await expect
+    .poll(async () => {
+      const trackedBounds = await rotationCard.boundingBox();
+      return trackedBounds === null
+        ? 0
+        : Math.hypot(
+            trackedBounds.x - cardBounds.x,
+            trackedBounds.y - cardBounds.y,
+          );
+    })
+    .toBeGreaterThan(2);
+
+  await rotationButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(rotationButton).toBeFocused();
+  await expect(row.locator("span")).toContainText(
+    "最小角 X 2100・Y 500・Z 250 mm / LWH",
+  );
+  await expect(row).toHaveAttribute("aria-current", "true");
+  await expect(status).toContainText("床面で90°回転しました");
+  await expect(status).toContainText("最小角X 2100・Y 500・Z 250 mmは保持しています");
+  await expect(page.locator(".project-history__summary")).toContainText(
+    "次に元に戻せる操作: 配置の更新。",
+  );
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  expect(await placementSummary(row)).toBe(originalSummary);
+  await expect(page.locator(".project-history__summary")).toContainText(
+    "次にやり直せる操作: 配置の更新。",
+  );
+  await page.getByRole("button", { name: "やり直す" }).click();
+  await expect(row.locator("span")).toContainText(
+    "最小角 X 2100・Y 500・Z 250 mm / LWH",
+  );
+
+  await page.setViewportSize({ width: 305, height: 900 });
+  await expect(rotationButton).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  const narrowCanvasBounds = await canvas.boundingBox();
+  const narrowCardBounds = await rotationCard.boundingBox();
+  const narrowCameraControlsBounds = await cameraControls.boundingBox();
+  if (
+    narrowCanvasBounds === null ||
+    narrowCardBounds === null ||
+    narrowCameraControlsBounds === null
+  ) {
+    throw new Error("Narrow 3D canvas or contextual rotation control has no bounding box");
+  }
+  expect(narrowCardBounds.x).toBeGreaterThanOrEqual(narrowCanvasBounds.x);
+  expect(narrowCardBounds.x + narrowCardBounds.width).toBeLessThanOrEqual(
+    narrowCanvasBounds.x + narrowCanvasBounds.width,
+  );
+  expect(
+    narrowCardBounds.x <
+      narrowCameraControlsBounds.x + narrowCameraControlsBounds.width &&
+      narrowCardBounds.x + narrowCardBounds.width > narrowCameraControlsBounds.x &&
+      narrowCardBounds.y <
+        narrowCameraControlsBounds.y + narrowCameraControlsBounds.height &&
+      narrowCardBounds.y + narrowCardBounds.height > narrowCameraControlsBounds.y,
+  ).toBe(false);
+});
+
+test("explains why floor rotation is unavailable for a single-orientation cargo", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await addInteractiveCargo(page, "向き固定合成積荷", {
+    singleOrientation: true,
+  });
+  await addContainer(page, "向き固定合成候補");
+  await placeCargo(page, "向き固定合成積荷", {
+    xMm: "2100",
+    yMm: "500",
+    zMm: "250",
+  });
+  const panel = page.locator(".placement-panel");
+  const row = panel
+    .getByRole("list", { name: "選択候補の配置一覧" })
+    .getByRole("listitem");
+  const canvas = page.getByRole("img", { name: previewName });
+  await selectCargoOnCanvas(page, canvas, row);
+
+  const rotationButton = page.getByRole("button", { name: "床面で90°回転" });
+  await expect(rotationButton).toBeVisible();
+  await expect(rotationButton).toBeDisabled();
+  await expect(
+    page.getByText("この積荷では床面90°回転後の向きが許可されていません。", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(rotationButton).toHaveAttribute(
+    "aria-describedby",
+    "viewport-floor-rotation-explanation",
+  );
+  await expect(row.locator("span")).toContainText("/ LWH");
+});
+
 test("restores a container-sized view when cargo is saved at an extreme coordinate", async ({
   page,
 }) => {
@@ -498,6 +650,7 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   const { canvas, panel, row, sceneSelect, status } = await createInteractiveScene(page);
   const originalSummary = await placementSummary(row);
   const cargoPoint = await selectCargoOnCanvas(page, canvas, row);
+  const rotationButton = page.getByRole("button", { name: "床面で90°回転" });
   const editButton = panel.getByRole("button", { name: "編集: 合成canvas積荷" });
   const undo = page.getByRole("button", { name: "元に戻す" });
   const redo = page.getByRole("button", { name: "やり直す" });
@@ -507,6 +660,7 @@ test("commits one fine-pointer floor drag and synchronizes the placement form", 
   await page.mouse.move(cargoPoint.x + 70, cargoPoint.y + 24, { steps: 4 });
   await expect(sceneSelect).toBeDisabled();
   await expect(editButton).toBeDisabled();
+  await expect(rotationButton).toBeDisabled();
   await expect(undo).toBeDisabled();
   await expect(redo).toBeDisabled();
   await expect(page.getByRole("button", { name: "端末へ保存" })).toBeDisabled();
