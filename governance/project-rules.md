@@ -17,7 +17,7 @@ Auto CLP は精密機器運送業者向けの3D積載シミュレーターです
 2. 要件、データ、制約、受入条件は `docs/specification.md` を読む。
 3. 作業順序と進捗は `docs/roadmaps/README.md` と `docs/roadmaps/auto-clp.md` を読む。
 4. 技術・製品判断は `docs/decisions/README.md` から関連ADRを読む。
-5. 検証、Git統合、長期タスク、復旧は `docs/operations.md` を読む。
+5. 検証と復旧は `docs/operations.md`、Git統合、長期タスク、容量確認、task交代は `docs/runbooks/project-coordination.md`、現在の引き継ぎ状態は `docs/handoffs/README.md` から最新記録を読む。
 6. 文書を追加・移動・改名・廃止する場合は `docs/README.md` と関連索引を同じ変更で更新する。
 
 ## Product and Domain Boundaries
@@ -68,3 +68,4 @@ Auto CLP は精密機器運送業者向けの3D積載シミュレーターです
 - コーディネーターの引き継ぎ提案基準は1セッション300 MiB。交代にはユーザー承認が必要で、フォークせず同じ基本名に連番を付けた新規タスクを使う。
 - 退任タスクは担当変更を検証後もCodexがアーカイブ・削除せず、ユーザーに手動削除可能と案内する。
 - 共通契約、`AGENTS.md`、全体権限・承認方針、調整責任、委任・Git統合、コールバック・引き継ぎ、安全境界の変更後は、影響するアクティブタスクを安全なチェックポイントで交代する。
+- `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認` は `docs/runbooks/project-coordination.md` へ経路指定し、現在task IDと `scripts/check-codex-session-size.ps1` を使う。最新sessionを推測しない。

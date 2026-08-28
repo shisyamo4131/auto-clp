@@ -1,7 +1,7 @@
 # Documentation Map
 
 - Status: Active
-- Last verified: 2026-08-27
+- Last verified: 2026-08-28
 - Authority: この文書は案内専用です。確定要件は `specification.md`、検証済み進捗は `roadmaps/` を正とします。
 
 ## How to Start Work
@@ -23,7 +23,8 @@
 | 自動提案 | [仕様](specification.md)、[ADR 0004](decisions/0004-optimization-objective.md)、[ロードマップ](roadmaps/auto-clp.md) | 決定性、性能、最適性評価の[証拠索引](evidence/README.md) |
 | テスト・レビュー | [仕様](specification.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 対象差分、独立した終了コード、UI証拠 |
 | 合成受入・実務試用 | [仕様](specification.md)、[Phase 1合成受入契約](acceptance.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 匿名データ、自動証拠、観察記録、実務試用との区別 |
-| ガバナンス・Git・引き継ぎ | [プロジェクト規則](../governance/project-rules.md)、[運用](operations.md) | 管理ハッシュ、Git差分、タスク状態 |
+| `容量チェック` / `タスク容量確認` / `セッション容量確認` / `session size / handoff threshold確認` | [プロジェクト調整runbook](runbooks/project-coordination.md)、[ADR 0016](decisions/0016-project-coordination-and-session-capacity-routing.md) | 現在task ID、`../scripts/check-codex-session-size.ps1`、独立した終了コード。最新sessionを推測しない |
+| ガバナンス・Git・引き継ぎ | [プロジェクト規則](../governance/project-rules.md)、[運用](operations.md)、[プロジェクト調整runbook](runbooks/project-coordination.md)、[handoff index](handoffs/README.md) | 管理ハッシュ、Git差分、タスク状態、最新handoff record |
 
 ## Document Authority
 
@@ -36,6 +37,8 @@
 | `roadmaps/` | 目標、残作業、完了条件、検証済み進捗 |
 | `decisions/` | 重要判断の状態と根拠 |
 | `operations.md` | 実装済み、計画済み、利用不可の運用 |
+| `runbooks/project-coordination.md` | checkpoint、callback、Git統合、task交代、session容量確認の実行手順 |
+| `handoffs/` | 一時task ID、baseline、pending checkpoint、ownership移転の記録 |
 | `acceptance.md` | Phase 1の匿名合成受入ケース、合格基準、観察記録 |
 | `evidence/` | 再現可能な技術検証記録。一般端末SLA、実務受入、安全保証とは区別 |
 | `../CHANGELOG.md` | 仕様・利用者・安全・運用に見える変更 |

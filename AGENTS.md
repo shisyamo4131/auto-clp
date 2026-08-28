@@ -1,10 +1,10 @@
 # AGENTS.md
 
 <!-- GENERATED FILE. DO NOT EDIT DIRECTLY. -->
-<!-- Common governance version: 1.3.0 -->
-<!-- Common governance SHA-256: d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10 -->
+<!-- Common governance version: 1.4.0 -->
+<!-- Common governance SHA-256: d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47 -->
 <!-- Edit project-specific rules in governance/project-rules.md, then validate. -->
-<!-- common-governance-version: 1.3.0 -->
+<!-- common-governance-version: 1.4.0 -->
 # Common Project Governance Contract
 
 This contract contains mandatory governance shared by every project created or migrated with `scaffold-project-governance`. A project may add stricter or more specific rules, but must not weaken, replace, or silently contradict this contract.
@@ -35,6 +35,13 @@ If any required item is missing, stale, contradictory, or unauthorized, remain r
 - Keep important documents reachable from a root or product/domain index. Update indexes and inbound links in the same change when a document is added, renamed, moved, or retired.
 - Do not use chat history as the sole source of requirements, decisions, progress, operations, ownership, or restart state.
 - Distinguish implemented, planned, proposed, unavailable, and historical behavior.
+
+## Session Capacity Routing
+
+- Treat `容量チェック`, `タスク容量確認`, `セッション容量確認`, and `session size / handoff threshold確認` as requests to measure the persisted Codex task/session file for the current task, not model token usage or context-window capacity.
+- Route the request through the project documentation map to a project-owned coordination/session-lifecycle procedure and project-local measurement command. Require the current task ID and exactly one matching session; never infer the newest or most recently modified session when parallel tasks may exist.
+- Report the identified task, session file, measured size, approved handoff threshold (300 MiB by default), usage percentage, handoff state, Codex-wide reference capacity and default 10 GiB warning threshold, scan completeness/errors, measurement time/source, command result, and independently observed exit status without exposing session contents or sensitive data.
+- Propose handoff only when the identified session reaches the approved per-session threshold. If the task ID is unknown, resolution yields zero or multiple sessions, the command fails, or the total scan is incomplete, report the condition and stop the affected decision instead of guessing.
 
 ## Approval and Specification Changes
 

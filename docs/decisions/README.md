@@ -25,5 +25,7 @@
 | [0012](0012-independent-physical-validation-diagnostics.md) | 物理制約の独立診断と集約 | Accepted | 2026-08-27 |
 | [0013](0013-manual-local-persistence-and-json-files.md) | 手動の端末内保存とJSONファイル入出力 | Accepted | 2026-08-28 |
 | [0014](0014-dedicated-floor-penetration-diagnostic.md) | 床突き抜けの専用診断 | Accepted | 2026-08-28 |
+| [0016](0016-project-coordination-and-session-capacity-routing.md) | プロジェクト調整とセッション容量経路 | Accepted | 2026-08-28 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。
+ADR 0015は承認済み・未実装の`CP-PHASE1-SCENE-FEEDBACK-001`がADR 0010を精緻化するために予約されている。

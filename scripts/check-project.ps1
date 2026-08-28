@@ -18,9 +18,13 @@ $requiredFiles = @(
     'docs/specification.md',
     'docs/data-model.md',
     'docs/operations.md',
+    'docs/runbooks/project-coordination.md',
+    'docs/handoffs/README.md',
+    'docs/handoffs/GOV14-AUTOCLP-01.md',
     'docs/roadmaps/README.md',
     'docs/roadmaps/auto-clp.md',
     'docs/decisions/README.md',
+    'docs/decisions/0016-project-coordination-and-session-capacity-routing.md',
     '.codex/config.toml',
     '.codex/agents/developer.toml',
     '.codex/agents/tester.toml',
@@ -80,6 +84,8 @@ $indexedDocuments = @(
     'specification.md',
     'data-model.md',
     'operations.md',
+    'runbooks/project-coordination.md',
+    'handoffs/README.md',
     'roadmaps/auto-clp.md',
     'decisions/README.md',
     '../CHANGELOG.md'
@@ -87,6 +93,83 @@ $indexedDocuments = @(
 foreach ($document in $indexedDocuments) {
     if (-not $docsIndex.Contains($document)) {
         throw "docs/README.md does not index: $document"
+    }
+}
+
+$coordinationRunbook = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/runbooks/project-coordination.md'))
+$capacityScript = [IO.File]::ReadAllText((Join-Path $resolvedProject 'scripts/check-codex-session-size.ps1'))
+$capacityAliases = @(
+    '容量チェック',
+    'タスク容量確認',
+    'セッション容量確認',
+    'session size / handoff threshold確認'
+)
+foreach ($alias in $capacityAliases) {
+    if (-not $docsIndex.Contains($alias)) {
+        throw "docs/README.md does not route capacity alias: $alias"
+    }
+    if (-not $coordinationRunbook.Contains($alias)) {
+        throw "Coordination runbook does not define capacity alias: $alias"
+    }
+}
+foreach ($requiredToken in @(
+    'powershell -ExecutionPolicy Bypass -File scripts/check-codex-session-size.ps1 -SessionId <current-task-id>',
+    '300 MiB',
+    '10 GiB',
+    'codex_scan_complete',
+    'codex_scan_error_count',
+    '最新または最終更新のsessionを推測'
+)) {
+    if (-not $coordinationRunbook.Contains($requiredToken)) {
+        throw "Coordination runbook is missing required capacity contract: $requiredToken"
+    }
+}
+foreach ($requiredToken in @(
+    'session_id',
+    'session_file',
+    'size_bytes',
+    'size_mib',
+    'threshold_bytes',
+    'threshold_mib',
+    'SessionId is required',
+    'Expected exactly one session',
+    'ThresholdBytes = 300MB',
+    'TotalThresholdBytes = 10GB',
+    'usage_percent',
+    'handoff_required',
+    'codex_root',
+    'codex_file_count',
+    'codex_total_bytes',
+    'codex_total_mib',
+    'codex_total_threshold_bytes',
+    'codex_total_threshold_mib',
+    'codex_total_warning',
+    'codex_top_level_bytes',
+    'codex_scan_complete',
+    'codex_scan_error_count',
+    'codex_total_measured_at_utc',
+    'codex_total_measurement_source',
+    'codex_total_cache_max_age_hours',
+    'measured_at_utc',
+    "selection = 'session_id'"
+)) {
+    if (-not $capacityScript.Contains($requiredToken)) {
+        throw "Session capacity script is missing required contract: $requiredToken"
+    }
+}
+if ($capacityScript -match '(?i)LastWriteTime|Sort-Object\s+.*(?:Length|CreationTime|LastAccessTime)') {
+    throw 'Session capacity script must not infer the newest session.'
+}
+foreach ($requiredToken in @(
+    'sessionをちょうど1件',
+    '300 MiBへ到達した場合',
+    '新規割当と自動reviewを停止',
+    '通常のtask間通信',
+    'managed restricted `workspace-write`',
+    '`approvals_reviewer=auto_review`'
+)) {
+    if (-not $coordinationRunbook.Contains($requiredToken)) {
+        throw "Coordination runbook is missing preserved lifecycle contract: $requiredToken"
     }
 }
 
