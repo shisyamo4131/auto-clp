@@ -19,6 +19,9 @@
 - 成功した案件変更だけを1件の履歴操作とし、失敗とno-opは履歴を増やさない。
 - WebGL 2を利用できない場合も、フォーム、物理判定、履歴、保存・再読込を利用できる。
 - キーボード操作と305、320、375 px幅で、主要操作、理由、確認、focusを失わない。
+- fine-pointer床面dragはno-opを先行し、両軸に正の共通長があるpartialを修正途中配置として保存し、面・辺・点接触を含むoutsideだけを荷室外作業状態にする。status出現でviewport位置を変えない。
+- 全積荷を検索・選択でき、他候補配置は所有候補へ切り替えてから扱う。積荷定義と配置は別dialog・別履歴で、配置取り外しと積荷削除をcascadeしない。
+- dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は形状とaccessible nameで区別でき、天地無用はXだけを無効にする。
 
 ## AC-01 Floor Layout and Manual Editing
 
@@ -96,7 +99,7 @@
 - AC-02: `tests/browser/acceptance.spec.ts` が正確な合成データで完全支持、Xを1 mmずらした支持不足、undo復元を実行する。
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` が履歴、IndexedDB、固定JSON往復、WebGL非対応fallbackを分担して実行する。
-- 2026-08-28時点の統合証拠は全単体922件、全ブラウザ80件、型、lint、build、データ契約、文書、ガバナンス検証の成功である。開発チーム内試用と実務利用者試用の証拠ではない。
+- 仕様0.14.0は、未配置・配置済み共通のdrag三状態分類、全積荷select、積荷・配置別dialog CRUD、非cascade削除、distinct X/Z icon、固定高statusを全単体928件・全browser69件の統合回帰へ含める。開発チーム内試用と実務利用者試用の証拠ではない。
 
 ## Observation Record Template
 

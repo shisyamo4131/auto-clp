@@ -9,6 +9,7 @@ import {
   type Project,
 } from "../domain/model";
 import {
+  classifyFloorFootprint,
   domainDimensionsToScene,
   domainPointToScene,
   floorQuarterTurnOrientation,
@@ -767,6 +768,50 @@ describe("placedFloorDragDisposition", () => {
           placedFloorDragDisposition(cargo, container, placement, boundary.contact),
         ).toBe("delete");
       }
+    },
+  );
+});
+
+describe("classifyFloorFootprint", () => {
+  const cargo = {
+    dimensionsMm: { lengthMm: 300, widthMm: 200, heightMm: 100 },
+  };
+  const container = {
+    internalDimensionsMm: { lengthMm: 1_000, widthMm: 800, heightMm: 600 },
+  };
+
+  it.each(ORIENTATIONS)(
+    "distinguishes contained, one-millimetre overlap, and contact for %s",
+    (orientation) => {
+      const dimensions = orientedDimensions(cargo, orientation);
+      expect(
+        classifyFloorFootprint(cargo, container, orientation, {
+          xMm: 0,
+          yMm: 0,
+          zMm: -999,
+        }),
+      ).toBe("xy-contained");
+      expect(
+        classifyFloorFootprint(cargo, container, orientation, {
+          xMm: -dimensions.xMm + 1,
+          yMm: 100,
+          zMm: 999,
+        }),
+      ).toBe("partial");
+      expect(
+        classifyFloorFootprint(cargo, container, orientation, {
+          xMm: -dimensions.xMm,
+          yMm: 100,
+          zMm: 0,
+        }),
+      ).toBe("outside");
+      expect(
+        classifyFloorFootprint(cargo, container, orientation, {
+          xMm: -dimensions.xMm + 1,
+          yMm: -dimensions.yMm,
+          zMm: 0,
+        }),
+      ).toBe("outside");
     },
   );
 });

@@ -66,6 +66,7 @@
 
 ### Changed
 
+- 仕様を0.14.0へ更新し、fine-pointer床面dragを未配置・配置済み共通の `xy-contained` / `partial` / `outside` に分類した。partialは修正途中の不適合配置として保存し、outsideだけを非永続作業位置または一回の配置削除とする。全Project積荷の検索select、compact選択cardのCRUD入口、積荷定義・配置別modal editor、非cascade削除、distinct X/Z icon、固定高statusを導入した。Schema 0.1.0と進捗98%は変更しない。
 - 仕様を0.13.0へ更新し、未配置積荷の荷室外drop位置・向きをUI session内で保持し、積荷pickerからcamera移動なしに選択できる作業スペースへ拡張した。回転はicon-onlyのX/Z軸操作とし、天地無用で横倒し向きを制限する。荷室へ正面積で重なる外側回転は拒否し、積荷編集後の無効な外側poseは決定的gridへ戻す。Undo/Redoをzoomと同じviewport toolbarへ移し、Project更新時のcameraと履歴実行時のpage位置を保持する。選択cardは積荷名を見出しとする2列compact表示へ整理し、寸法prefixを除いた。Schema 0.1.0と進捗98%は変更しない。
 - 複数候補をtab等で切り替えて荷室外の退避関係を維持するUIと、積荷画像・写真の表示は、承認済みだが未実装の将来要件として分離した。
 - 仕様を0.12.0へ更新し、viewport上のwheelはpage scroll、camera zoomは `＋` / `－` buttonだけとした。配置済みdragは量子化後のno-opを維持し、X/Y正面積overlapがあれば部分overhangを保存して物理診断へ渡し、面・辺接触を含む面積0なら一回の `placement.delete` として仮置きへ戻す。選択カードと配置一覧の寸法labelは `大きさ` に統一した。Schema 0.1.0と進捗98%は変更しない。

@@ -18,6 +18,7 @@ $persistenceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0013-manua
 $floorPenetrationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0014-dedicated-floor-penetration-diagnostic.md'
 $sceneFeedbackDecisionPath = Join-Path $resolvedProject 'docs/decisions/0015-scene-wheel-drag-out-and-size-copy.md'
 $sceneWorkbenchDecisionPath = Join-Path $resolvedProject 'docs/decisions/0017-scene-workbench-rotation-and-compact-controls.md'
+$sceneCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0018-scene-drag-classification-and-dialog-editors.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -56,6 +57,7 @@ foreach ($path in @(
     $floorPenetrationDecisionPath,
     $sceneFeedbackDecisionPath,
     $sceneWorkbenchDecisionPath,
+    $sceneCompactDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -168,15 +170,18 @@ foreach ($requiredText in @(
 }
 
 foreach ($requiredText in @(
-    'X/Y占有範囲が生の荷室床面',
-    '正面積で重なる場合は配置を保持',
-    '重なり面積が0',
+    '`xy-contained`、`partial`、`outside`',
+    '`partial` は修正途中の境界不適合配置',
+    '面・辺・点の接触を含め一方でも共通長0',
     '一回の `placement.delete`',
     'viewport上のwheel入力はページscroll',
     '非永続の作業スペース',
     'X軸またはZ軸を中心に90度回転',
     '寸法prefix `大きさ:` を表示しない',
-    '同一候補のProject更新ではcamera位置と注視点を保持'
+    '同一候補のProject更新ではcamera位置と注視点を保持',
+    '案件の全積荷を対象',
+    '共有modal shell上の別dialog',
+    'drag中の操作通知は固定高またはoverlay領域'
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved scene-feedback contract text: $requiredText"
@@ -199,7 +204,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.13.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.14.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -261,7 +266,8 @@ if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
     -not $dataModel.Contains('decisions/0012-independent-physical-validation-diagnostics.md') -or
     -not $dataModel.Contains('decisions/0013-manual-local-persistence-and-json-files.md') -or
     -not $dataModel.Contains('decisions/0014-dedicated-floor-penetration-diagnostic.md') -or
-    -not $dataModel.Contains('decisions/0017-scene-workbench-rotation-and-compact-controls.md')) {
+    -not $dataModel.Contains('decisions/0017-scene-workbench-rotation-and-compact-controls.md') -or
+    -not $dataModel.Contains('decisions/0018-scene-drag-classification-and-dialog-editors.md')) {
     throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
 }
 
@@ -294,8 +300,26 @@ foreach ($requiredText in @(
 }
 
 $sceneWorkbenchDecision = [IO.File]::ReadAllText($sceneWorkbenchDecisionPath)
-if ($sceneWorkbenchDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
-    throw 'ADR 0017 does not have Accepted status.'
+if ($sceneWorkbenchDecision -notmatch '(?m)^- Status:\s*Accepted\s*$' -or
+    -not $sceneWorkbenchDecision.Contains('Partial supersession: ADR 0018')) {
+    throw 'ADR 0017 does not identify its accepted status and partial ADR 0018 supersession.'
+}
+
+$sceneCompactDecision = [IO.File]::ReadAllText($sceneCompactDecisionPath)
+if ($sceneCompactDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0018 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '`xy-contained`',
+    '`partial`',
+    '`outside`',
+    '全Project積荷',
+    'focus trap',
+    'Project Schema `0.1.0`'
+)) {
+    if (-not $sceneCompactDecision.Contains($requiredText)) {
+        throw "ADR 0018 does not contain the approved compact-scene marker: $requiredText"
+    }
 }
 foreach ($requiredText in @(
     'UI session',
@@ -317,6 +341,7 @@ $sceneBrowserTest = [IO.File]::ReadAllText($sceneBrowserTestPath)
 foreach ($implementationMarker in @(
     @{ Name = 'geometry'; Text = $geometry; Required = 'export function hasPositiveAreaOverlap' },
     @{ Name = 'scene workspace overlap'; Text = $sceneWorkspace; Required = 'placedFloorDragDisposition(' },
+    @{ Name = 'scene workspace classifier'; Text = $sceneWorkspace; Required = 'classifyFloorFootprint(' },
     @{ Name = 'scene workspace deletion'; Text = $sceneWorkspace; Required = 'action: "placement.delete"' },
     @{ Name = 'viewport wheel policy'; Text = $threeViewport; Required = 'controls.enableZoom = false' },
     @{ Name = 'scene browser drag-out'; Text = $sceneBrowserTest; Required = 'returns a fully dragged-out placement to staging as one undoable deletion' }
@@ -542,6 +567,7 @@ foreach ($requiredText in @(
     floor_penetration_decision_0014_accepted = $true
     scene_feedback_decision_0015_accepted = $true
     scene_workbench_decision_0017_accepted = $true
+    scene_compact_decision_0018_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true

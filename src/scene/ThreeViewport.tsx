@@ -26,6 +26,7 @@ interface ThreeViewportProps {
   readonly onCargoDragStateChange: (active: boolean) => void;
   readonly onCargoXAxisRotation: () => void;
   readonly onCargoZAxisRotation: () => void;
+  readonly onRotationUnavailable: (message: string) => void;
   readonly onCargoSelectionChange: (cargoId?: string) => void;
   readonly onRendererError: () => void;
   readonly onRendererReady: () => void;
@@ -242,10 +243,18 @@ function pointerIsFine(event: PointerEvent): boolean {
 }
 
 function AxisRotationIcon({ axis }: { readonly axis: "X" | "Z" }) {
+  if (axis === "X") {
+    return (
+      <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+        <path d="M4 12a8 5 0 0 0 13.7 3.5l-1.8-.9A6 3.5 0 0 1 6 12a6 3.5 0 0 1 9.9-2.6L13 11h8V5l-3.2 1.8A8 5 0 0 0 4 12Z" />
+        <path d="M11 3h2v18h-2z" />
+      </svg>
+    );
+  }
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
-      <path d="M17.7 6.3A8 8 0 1 0 20 12h-2a6 6 0 1 1-1.76-4.24L13 11h8V3l-3.3 3.3Z" />
-      <text x="12" y="15.25" textAnchor="middle">{axis}</text>
+      <path d="M12 4a8 8 0 1 0 5.7 2.3l-1.5 1.5A6 6 0 1 1 18 12h-3l4 4 4-4h-3a8 8 0 0 0-8-8Z" />
+      <circle cx="12" cy="12" r="2" />
     </svg>
   );
 }
@@ -258,6 +267,7 @@ export function ThreeViewport({
   onCargoDragStateChange,
   onCargoXAxisRotation,
   onCargoZAxisRotation,
+  onRotationUnavailable,
   onCargoSelectionChange,
   onRendererError,
   onRendererReady,
@@ -756,22 +766,30 @@ export function ThreeViewport({
           <div role="group" aria-label="選択した積荷の回転">
             <button
               type="button"
-              disabled={xRotationDisabled}
+              aria-disabled={xRotationDisabled}
+              aria-describedby="viewport-x-rotation-reason"
               aria-label="X軸を中心に90°回転"
               title={xRotationExplanation}
-              onClick={onCargoXAxisRotation}
+              onClick={() => xRotationDisabled
+                ? onRotationUnavailable(xRotationExplanation)
+                : onCargoXAxisRotation()}
             >
               <AxisRotationIcon axis="X" />
             </button>
             <button
               type="button"
-              disabled={zRotationDisabled}
+              aria-disabled={zRotationDisabled}
+              aria-describedby="viewport-z-rotation-reason"
               aria-label="Z軸を中心に90°回転"
               title={zRotationExplanation}
-              onClick={onCargoZAxisRotation}
+              onClick={() => zRotationDisabled
+                ? onRotationUnavailable(zRotationExplanation)
+                : onCargoZAxisRotation()}
             >
               <AxisRotationIcon axis="Z" />
             </button>
+            <span className="visually-hidden" id="viewport-x-rotation-reason">{xRotationExplanation}</span>
+            <span className="visually-hidden" id="viewport-z-rotation-reason">{zRotationExplanation}</span>
           </div>
         )}
       </div>

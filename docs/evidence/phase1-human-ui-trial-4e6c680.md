@@ -173,6 +173,18 @@ X/Z回転は既存 `allowedOrientations` だけを使い、天地無用を `LWH`
 - 非永続仮置き場の人間による見つけやすさ・掴みやすさ・荷室内dropの再試用。
 - `CP-PHASE1-SCENE-FEEDBACK-001` は人間再試用でwheel scroll、camera button、完全drag-out、Undo/Redo、不適合表示を確認した。固定仮置き、履歴時のpage/camera移動、回転・cardの大きさが後続改善として観察された。
 - `CP-PHASE1-SCENE-WORKBENCH-001` の荷室外自由作業位置、picker、X/Z回転、天地無用、compact toolbar/card、camera/page保持は自動検証済みだが、人間再試用は未実施。
+
+## Compact Scene UX Follow-up
+
+- Checkpoint: `CP-PHASE1-SCENE-UX-COMPACT-001`
+- Date: 2026-08-29
+- Source: 同じ人間評価者による仕様0.13.0再試用と、確定前の3名による独立read-onlyレビュー
+
+評価者は荷室外自由退避、天地無用によるX軸回転制限、Z軸回転、camera button、完全drag-out、Undo/Redo、compact cardを概ね期待どおりと評価した。一方、drag status出現によるviewport移動、未配置partialだけのrollback、同形状のX/Z icon、座標フォームへのscroll、多数積荷で常設一覧がページを伸ばす点を課題とした。partialは開始位置によらず修正途中配置として保持し、数値編集はdialogへ、全積荷の検索・状態表示とCRUD入口は選択cardへまとめる案が提示された。
+
+確定前レビューは、no-op先行、X/Y三状態分類、Z除外、gesture以外への非適用、他候補所有権、dialogのfocus・dirty・busy、配置削除と積荷削除の非cascade、使用中向き削除拒否、狭幅、fixed status、distinct iconを明文化すれば整合すると判断した。指摘を反映した仕様をユーザーが明示承認し、仕様0.14.0とADR 0018へ確定した。Schema 0.1.0と進捗98%は維持する。
+
+実装は純粋 `classifyFloorFootprint`、全Project積荷select、compact選択card、共有modal shell、積荷定義・配置別editor、focus可能な `aria-disabled` X/Z icon、固定高statusを使用する。最終差分では全単体928件・全browser69件、型、lint、buildを個別に通過した。データ契約、文書、ガバナンス、diff検査もcommit前後に個別実行して記録する。人間による0.14.0版の再試用は未実施であり、自動検証結果は実務利用者受入または安全保証ではない。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 

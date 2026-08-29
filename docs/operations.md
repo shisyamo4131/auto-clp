@@ -23,11 +23,11 @@ Phase 1の計画済み判定は、完全な搬入経路、積荷別上載荷重�
 
 配置座標はADR 0010のコンテナ局所右手座標を使い、`positionMm` は向き適用後の積荷直方体の最小角とする。正規値は整数mmを維持し、描画用中心、scene縮尺、camera、候補・積荷選択、荷室外の作業位置を案件へ保存しない。Project→scene投影、フォーム配置、canvas選択、fine pointerのX/Y床面drag、許可済みX/Z軸90°回転、視点回転・平行移動、明示 `＋` / `－`、荷室基準の「荷室全体を表示」を実装済みである。viewport上のwheelはcameraを変えずpage scrollへ渡す。
 
-案件全体で未配置の積荷だけを初回は先頭許可向き・Z=0の決定的な暖色gridへ派生し、他候補へ配置済みなら重複表示しない。利用者が積荷全体を荷室外へdropした後はcargo IDごとの位置と向きをUI sessionだけに保持する。外側移動と回転はProject、物理判定、案件履歴、保存へ含めない。AABB全体が生の荷室内へ入ったdropだけを既存配置追加commandで一履歴操作として確定し、一部だけ床面へ重なるdropは直前の外側位置へ戻す。配置済みdragは正面積で重なる間は部分はみ出しを含め保存し、面積0ならdrop poseをsessionへ保持して一回の `placement.delete` とする。Undoは元配置、Redoは同じ外側poseを表示する。
+案件全体で未配置の積荷だけを初回は先頭許可向き・Z=0の決定的な暖色gridへ派生し、他候補へ配置済みなら重複表示しない。利用者が積荷全体を荷室外へdropした後はcargo IDごとの位置と向きをUI sessionだけに保持する。外側移動と回転はProject、物理判定、案件履歴、保存へ含めない。fine-pointer床面dragは量子化後のno-opを先に除き、X/Y footprintを完全包含・正面積partial・面積0 outsideへ分類する。未配置と配置済みの双方で完全包含またはpartialを一回の配置追加・更新として保存し、partialは境界不適合として再判定する。outsideは未配置ならsession poseだけ、配置済みなら一回の `placement.delete` とsession poseにする。Undoは元配置、Redoは同じ外側poseを表示する。
 
 Z軸回転は高さ軸を保つ相手、X軸回転はY/Z割当を交換する相手を使い、どちらも積荷の許可集合内だけを有効にする。天地無用は許可集合を `LWH` / `WLH` に制限する入力補助であり、面の表裏は識別しない。配置済み回転は最小X/Y/Z角を保持した一回の配置更新、荷室外回転は回転後も荷室床面との正面積重なりが0の場合だけsession変更とする。重なる回転は直前poseを保持して拒否し、積荷編集で既存poseが重なる場合は新寸法の決定的外側gridへ戻す。cameraのfarと最大移動距離は全投影範囲への到達余地を保ち、同一候補のProject更新では現在cameraと注視点を復元する。touch/coarse pointerは積荷選択だけを行い、正確な配置・移動・向きにはキーボード操作可能なフォームを使う。canvas上のZ移動は未実装である。
 
-案件全体のUndo/Redoはviewport内で `＋` / `－` と同じ外観の単一操作UIとし、buttonと既存shortcutを同じ履歴handlerへ接続する。実行前後のpage scroll位置を復元し、WebGL 2非対応時はfallback領域へ同じ一組だけを置く。選択cardは積荷名を見出しとし、寸法prefixを付けず、配置済みなら向き適用後寸法とcompactなX/Y/Zを表示する。荷室外なら保存座標と混同せずsession状態であることを示す。「座標を微調整」または「座標を入力して配置」は既存フォームを開いてX入力へfocusし、draft、command、履歴をscene側へ複製しない。配置・物理panelはviewport後方へ置き、compactな積荷selectで多数のscene積荷をcamera移動なしに選択・highlightできる。
+案件全体のUndo/Redoはviewport内で `＋` / `－` と同じ外観の単一操作UIとし、buttonと既存shortcutを同じ履歴handlerへ接続する。実行前後のpage scroll位置を復元し、WebGL 2非対応時はfallback領域へ同じ一組だけを置く。選択cardは積荷名を見出しとし、寸法prefixを付けず、配置済みなら向き適用後寸法とcompactなX/Y/Zを表示する。積荷selectは全Project積荷を検索し、現在候補、未配置、他候補を示す。他候補の配置を扱う前に所有候補へ明示切替する。積荷定義と配置は別modal editorで編集し、focus trap、背景inert、dirty破棄確認、内部scroll、狭幅、preventScroll focus復帰を維持する。dialog中は履歴、3D操作、候補切替、永続化、自動提案をbusyとして拒否する。配置取り外しと積荷削除は別確認・別履歴でcascadeしない。物理panelは維持する。
 
 案件履歴は、案件設定、積荷、候補、配置の成功した追加・更新・削除と、1回のcanvas床面dragを一つの操作として最大100件保持する。「元に戻す」「やり直す」ボタンに加え、Windows/Linuxでは `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y`、macOSでは `Command+Z` / `Command+Shift+Z` を利用できる。未保存入力、削除確認、drag中は履歴操作を無効にし、入力欄、選択欄、編集可能領域、独自入力コンポーネントのローカル履歴を優先する。失敗とno-opは履歴を変えず、undo後の新しい確定操作はredoを破棄する。履歴はメモリ内だけで、再読込、JSON書出し、端末保存には含めない。
 

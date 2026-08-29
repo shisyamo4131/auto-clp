@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)
 
 ## Contract Scope
 
 この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、案件操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定、Projectを変更しない自動提案探索とpreview UI、再検証付きの配置一括適用と一履歴操作のUndo/Redoは実装済みである。操作履歴、UI状態、Three.jsオブジェクト、物理判定と自動提案の結果は本契約へ保存しない。
 
-仕様版 `0.13.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `0.14.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -131,8 +131,8 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | `persistence/project-json`、`persistence/project-file` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し、標準File読込source、固定名Blob download | 3D描画、直接UI更新、案件名のファイル名反映 |
 | `persistence/project-store` | 実装済み: IndexedDB `current-project` 単一枠のtransaction完了後save、load、delete、未対応・open・read・write・delete失敗 | 自動保存、Project解釈、UI更新、外部通信 |
 | `persistence/project-import-preflight-client`、`workers/project-import-preflight` | 実装済み: one-shot module Workerで全候補を置換前に判定し、応答検証後に必ずWorkerを終了 | DOM、IndexedDB、同期fallback、理由の保存 |
-| `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointerによる床面方向drag・純粋なno-op/update/delete分類・完全drag-out作業位置・X/Z軸別90度回転・同一候補のcamera保持。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
-| `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・積荷・候補フォーム、一覧、警告、アクセシブルな編集・削除確認、非永続の3D候補・積荷選択、配置追加・整数座標・許可向き・取り外しフォーム、canvas直接操作と正確な移動・向きのキーボード対応フォームfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、案件履歴ボタン・ショートカット・状態通知・入力中lock、手動端末保存・読込・削除、JSON入出力、固定code状態・削除focus管理 | 幾何・制約計算と正規入力変換の再実装 |
+| `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointer床面dragのno-op先行と純粋な `xy-contained` / `partial` / `outside` 分類、完全drag-out作業位置、X/Z軸別90度回転、同一候補のcamera保持。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
+| `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・候補フォーム、全Project積荷の検索・選択、compact選択card、積荷定義と配置の別modal editor、非cascadeの配置取り外し・積荷削除、アクセシブルなfocus trap・dirty破棄確認・busy gate、canvas直接操作と正確な移動・向きのキーボードfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、案件履歴ボタン・ショートカット・状態通知、手動端末保存・読込・削除、JSON入出力 | 幾何・制約計算と正規入力変換の再実装 |
 | `ui/automatic-proposal-session`、`ui/automatic-proposal-view`、`ui/useAutomaticProposalSession`、`ui/AutomaticProposalPanel` | 実装済み: Project参照とinteraction generationを捕捉するセッション、取消・stale・retry・遅延結果mask、source ProjectとのID再相関、React hook、固定安全copy、25件単位のpreview、identityを一度だけ取得する確認付き適用、適用済み・変更なし表示。AppはProject/scene/persistenceのbusy、変更、一履歴commitを接続する | 探索だけでのProject/history変更、永続化、Scene選択の変更 |
 | `workers` | 実装済み: 物理判定のローカルmodule Worker。自動提案は正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答mask、Appからの実Worker接続まで実装 | DOM、React状態の直接操作、外部通信 |
 
@@ -145,6 +145,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - `isPlacementWithinContainer(bounds, internalDimensionsMm)` — 実装済み。正体積AABBが閉区間のコンテナ内部に全て含まれるかを判定し、境界等値を合格とする。隙間は扱わない。
 - `hasPositiveVolumeOverlap(first, second)` — 実装済み。全3軸で正の長さを共有する場合だけ重なりとし、面・辺・角だけの接触は重なりとしない。隙間と支持接触は扱わない。
 - `hasPositiveAreaOverlap(first, second)` — 実装済み。二つの有効な整数mm XY矩形が両軸で正の長さを共有する場合だけtrueを返し、面・辺・点だけの接触、gap、0または反転した矩形をfalseとする。配置済みdragの生床面との保持境界に使用する。
+- `classifyFloorFootprint(cargo, container, orientation, positionMm)` — 実装済み。向き適用後のX/Y footprintを生の荷室床面に対して `xy-contained`、`partial`、`outside` に純粋分類し、Zを参照しない。3D fine-pointer dragだけが利用する。
 - `isPlacementWithinContainerWithClearance(bounds, internalDimensionsMm, clearancesMm)` — 実装済み。生の包含を前提に、開口面・奥壁・Y両側壁・天井へ軸別隙間を片側ずつ要求し、床Zを例外とする。
 - `hasRequiredAxisClearance(first, second, clearancesMm)` — 実装済み。正体積の非支持ペアについて、少なくとも一つの分離軸の共有表面間距離が対応する隙間以上かを判定する。支持関係の識別と例外適用は `validatePlacementSet` が行う。
 - `createProjectHistory(initial)`、`commitProjectHistory(state, commit)`、`undoProjectHistory(state)`、`redoProjectHistory(state)` — 実装済み。検証済み `Project` の参照を構造共有し、stale base、no-op、履歴上限、分岐を決定的に扱う。引数とProjectを変更せず、I/Oや再検証を行わない。

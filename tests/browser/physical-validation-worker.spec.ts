@@ -237,7 +237,7 @@ test("terminates the completed last-candidate worker, clears old reasons, and ev
 
   await page.getByRole("button", { name: "削除: 削除前候補" }).click();
   await page.getByRole("button", { name: "削除を確定: 削除前候補" }).click();
-  await expect(page.getByText("候補0件、配置0件。物理判定の対象はありません。")).toBeVisible();
+  await expect(page.getByText("候補0件、積荷0件。")).toBeVisible();
   await expect(summary).toHaveText("判定対象なし：候補コンテナを追加してください。");
   await expect(panel.getByRole("region", { name: "不適合理由" })).toHaveCount(0);
   await expect(panel.getByRole("region", { name: "未確認理由" })).toHaveCount(0);
@@ -329,11 +329,11 @@ test("surfaces worker-failed as a retryable transport error without synchronous 
     "判定不能：物理判定の処理を開始または完了できませんでした。再試行してください。",
   );
   await expect(summary).not.toContainText("案件データの参照または意味整合性");
-  const placementPanel = page.locator(".placement-panel");
-  await placementPanel.getByRole("button", { name: "配置を追加: 失敗時積荷" }).click();
-  await placementPanel.getByRole("button", { name: "配置を保存" }).click();
-  await expect(placementPanel.locator(".action-status")).toHaveText(
-    "新しい配置を保存し、物理判定の再計算を開始しました。",
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await page.getByRole("button", { name: "座標を入力して配置" }).click();
+  await page.getByRole("button", { name: "配置を保存" }).click();
+  await expect(page.locator("#scene-workspace-action-status")).toContainText(
+    "座標で配置し、物理判定を再計算しています。",
   );
   await expect(summary).toHaveText(
     "判定不能：物理判定の処理を開始または完了できませんでした。再試行してください。",

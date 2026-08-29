@@ -261,6 +261,42 @@ export function sceneFloorDragPositionMm(
 }
 
 export type PlacedFloorDragDisposition = "no-op" | "update" | "delete";
+export type FloorFootprintDisposition = "outside" | "partial" | "xy-contained";
+
+/**
+ * Classifies an oriented cargo footprint against the raw container floor.
+ * Z is intentionally excluded: vertical invalidity remains a physical-validation concern.
+ */
+export function classifyFloorFootprint(
+  cargo: Pick<Cargo, "dimensionsMm">,
+  container: Pick<Container, "internalDimensionsMm">,
+  orientation: Orientation,
+  positionMm: PositionMm,
+): FloorFootprintDisposition {
+  const bounds = placementBounds(cargo, { orientation, positionMm });
+  const contained =
+    bounds.min.xMm >= 0 &&
+    bounds.max.xMm <= container.internalDimensionsMm.lengthMm &&
+    bounds.min.yMm >= 0 &&
+    bounds.max.yMm <= container.internalDimensionsMm.widthMm;
+  if (contained) return "xy-contained";
+
+  return hasPositiveAreaOverlap(
+    {
+      min: { xMm: bounds.min.xMm, yMm: bounds.min.yMm },
+      max: { xMm: bounds.max.xMm, yMm: bounds.max.yMm },
+    },
+    {
+      min: { xMm: 0, yMm: 0 },
+      max: {
+        xMm: container.internalDimensionsMm.lengthMm,
+        yMm: container.internalDimensionsMm.widthMm,
+      },
+    },
+  )
+    ? "partial"
+    : "outside";
+}
 
 /**
  * Classifies a quantized placed-cargo floor drag without changing Project state.
@@ -279,25 +315,14 @@ export function placedFloorDragDisposition(
     return "no-op";
   }
 
-  const nextBounds = placementBounds(cargo, {
-    orientation: placement.orientation,
-    positionMm: nextPositionMm,
-  });
-  return hasPositiveAreaOverlap(
-    {
-      min: { xMm: nextBounds.min.xMm, yMm: nextBounds.min.yMm },
-      max: { xMm: nextBounds.max.xMm, yMm: nextBounds.max.yMm },
-    },
-    {
-      min: { xMm: 0, yMm: 0 },
-      max: {
-        xMm: container.internalDimensionsMm.lengthMm,
-        yMm: container.internalDimensionsMm.widthMm,
-      },
-    },
-  )
-    ? "update"
-    : "delete";
+  return classifyFloorFootprint(
+    cargo,
+    container,
+    placement.orientation,
+    nextPositionMm,
+  ) === "outside"
+    ? "delete"
+    : "update";
 }
 
 function centerFromBounds(

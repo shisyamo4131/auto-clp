@@ -428,8 +428,7 @@ test("round-trips the single IndexedDB slot across reload, resets history, and d
   await page.getByRole("button", { name: "案件データを閉じる" }).click();
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await page.getByLabel("積荷名").fill("再読込で破棄するdraft");
-  await openPersistenceDrawer(page);
-  await expect(page.getByRole("button", { name: "端末保存を読込" })).toBeDisabled();
+  await expect(page.locator(".app-shell")).toHaveAttribute("inert", "");
   await page.reload();
   await openPersistenceDrawer(page);
   await expect(page.getByLabel("積荷名")).toHaveCount(0);
@@ -461,10 +460,10 @@ test("downloads the fixed JSON contract and reimports it without history or deri
   await page.getByRole("button", { name: "案件を保存" }).click();
   await addCargo(page, "匿名download積荷");
   await addContainer(page, "匿名download候補");
-  const panel = page.locator(".placement-panel");
-  await panel.getByRole("button", { name: "配置を追加: 匿名download積荷" }).click();
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await page.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByLabel("X最小角").fill("-1");
-  await panel.getByRole("button", { name: "配置を保存" }).click();
+  await page.getByRole("button", { name: "配置を保存" }).click();
   await expect(page.locator(".physical-validation__summary")).toContainText("不適合：");
   const historyBeforeExport = await page.locator(".project-history__summary").textContent();
 
@@ -639,14 +638,13 @@ test("rejects a delayed import and concurrent Project commit while preserving th
   expect(await historySummary.textContent()).toBe(historyBefore);
 });
 
-test("rejects delayed device replacement after a cancelled editor transition and preserves the stored slot", async ({
+test("blocks editor transitions while a delayed device replacement completes", async ({
   page,
 }) => {
   await installControlledPreflightWorker(page);
   await page.goto("/?forceWebgl2=unsupported");
   const canonical = page.getByTestId("canonical-project-settings");
   const status = page.locator(".project-persistence__status");
-  const historySummary = page.locator(".project-history__summary");
 
   await page.getByLabel("案件名").fill("端末保存元");
   await page.getByRole("button", { name: "案件を保存" }).click();
@@ -657,22 +655,16 @@ test("rejects delayed device replacement after a cancelled editor transition and
   await page.getByLabel("案件名").fill("現在保持する案件");
   await page.getByRole("button", { name: "案件を保存" }).click();
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeEnabled();
-  const historyBefore = await historySummary.textContent();
-
   await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末保存を読込" }).click();
   await expect(status).toContainText("処理中です");
   await expectControlledPreflightPending(page);
   await page.getByRole("button", { name: "案件データを閉じる" }).click();
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await page.getByLabel("積荷名").fill("取消す一時draft");
-  await page.getByRole("button", { name: "積荷編集をキャンセル" }).click();
-  await expect(page.getByText("取消す一時draft")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "積荷を追加" })).toHaveAttribute("aria-disabled", "true");
 
   await releaseControlledPreflight(page);
-  await expect(status).toContainText("操作中に案件が更新されたため");
-  await expect(canonical).toContainText("現在保持する案件");
-  expect(await historySummary.textContent()).toBe(historyBefore);
+  await expect(status).toContainText("端末内保存を読み込みました");
+  await expect(canonical).toContainText("端末保存元");
   await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末保存を読込" }).click();
   await expect(status).toContainText("処理中です");

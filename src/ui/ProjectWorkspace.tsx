@@ -24,10 +24,13 @@ import type {
 } from "../application/project-history";
 import { ORIENTATIONS, type Cargo, type Container, type Orientation, type Project } from "../domain/model";
 import type { ValidationIssue } from "../domain/validation";
+import type { CargoEditorIntent } from "./CargoEditorDialog";
 
 interface ProjectWorkspaceProps {
+  readonly externalInteractionActive?: boolean;
   readonly historyRevision: number;
   readonly onBusyChange: (busy: boolean) => void;
+  readonly onOpenCargoEditor?: (intent: CargoEditorIntent) => void;
   readonly onProjectCommit: ProjectHistoryCommitHandler;
   readonly project: Project;
 }
@@ -387,7 +390,7 @@ function ProjectSettings({
 
 type EditorMode = { readonly kind: "none" | "add" } | { readonly kind: "edit"; readonly id: string };
 
-function CargoManager({
+export function LegacyCargoManager({
   historyRevision,
   onBusyChange,
   onProjectCommit,
@@ -715,6 +718,43 @@ function CargoManager({
   );
 }
 
+function CompactCargoManager({
+  externalInteractionActive = false,
+  onOpenCargoEditor,
+  project,
+}: ProjectWorkspaceProps) {
+  return (
+    <section className="editor-card editor-card--compact" aria-labelledby="cargo-title">
+      <div className="section-heading">
+        <div>
+          <h2 id="cargo-title">積荷</h2>
+          <p>{project.cargoes.length} / 1,000件</p>
+        </div>
+        <button
+          id="cargo-add-button"
+          type="button"
+          className="secondary-button"
+          aria-disabled={
+            externalInteractionActive || project.cargoes.length >= 1000
+              ? true
+              : undefined
+          }
+          onClick={() => {
+            if (!externalInteractionActive && project.cargoes.length < 1000) {
+              onOpenCargoEditor?.({ kind: "add" });
+            }
+          }}
+        >
+          積荷を追加
+        </button>
+      </div>
+      <p className="empty-state">
+        積荷の検索・編集・削除は3D確認候補の「操作する積荷」と選択カードから行います。
+      </p>
+    </section>
+  );
+}
+
 function ContainerManager({
   historyRevision,
   onBusyChange,
@@ -970,8 +1010,10 @@ function ContainerManager({
 }
 
 export function ProjectWorkspace({
+  externalInteractionActive,
   historyRevision,
   onBusyChange,
+  onOpenCargoEditor,
   onProjectCommit,
   project,
 }: ProjectWorkspaceProps) {
@@ -1027,9 +1069,11 @@ export function ProjectWorkspace({
         project={project}
       />
       <div className="entity-columns">
-        <CargoManager
+        <CompactCargoManager
+          externalInteractionActive={externalInteractionActive}
           historyRevision={historyRevision}
           onBusyChange={reportCargoBusy}
+          onOpenCargoEditor={onOpenCargoEditor}
           onProjectCommit={onProjectCommit}
           project={project}
         />

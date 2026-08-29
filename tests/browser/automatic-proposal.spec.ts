@@ -346,17 +346,16 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
   await addCargo(page, "匿名積荷A");
   await addCargo(page, "匿名積荷B");
   await addContainer(page, "匿名AP02候補");
-  const placementPanel = page.locator(".placement-panel");
-  await placementPanel.getByRole("button", { name: "配置を追加: 匿名積荷A" }).click();
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await page.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByLabel("X最小角").fill("50");
-  await placementPanel.getByRole("button", { name: "配置を保存" }).click();
+  await page.getByRole("button", { name: "配置を保存" }).click();
   const panel = page.locator(".automatic-proposal");
   const history = page.locator(".project-history__summary");
   const canonical = page.getByTestId("canonical-project-settings");
-  const cargoList = page.getByRole("list", { name: "積荷一覧", exact: true });
+  const cargoList = page.getByLabel("操作する積荷");
   const containerList = page.getByRole("list", { name: "候補一覧" });
   const projectBefore = await canonical.textContent();
-  const cargoesBefore = await cargoList.textContent();
   const containersBefore = await containerList.textContent();
   const historyBefore = await history.textContent();
 
@@ -373,11 +372,9 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
   await expect(panel).toContainText("完全な搬入経路、構造・安定性、実積載の安全性を保証しません");
   expect(await history.textContent()).toBe(historyBefore);
   expect(await canonical.textContent()).toBe(projectBefore);
-  const placementList = placementPanel.getByRole("list", {
-    name: "選択候補の配置一覧",
-  });
-  await expect(placementList.getByRole("listitem")).toHaveCount(1);
-  await expect(placementList).toContainText("位置: 入口から手前面まで 50 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
+  const sceneStatus = page.locator("#scene-workspace-status");
+  await expect(sceneStatus).toContainText("配置1件");
+  await expect(page.locator(".scene-selection-card")).toContainText("50 mm");
 
   const applyButton = panel.getByRole("button", { name: "提案を適用", exact: true });
   await applyButton.click();
@@ -397,19 +394,16 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
   await expect(panel).toContainText("適用済み");
   await expect(panel.locator(".automatic-proposal__summary")).toBeFocused();
   await expect(history).toContainText("次に元に戻せる操作: 自動提案の一括適用。");
-  await expect(placementList.getByRole("listitem")).toHaveCount(2);
-  await expect(placementList).toContainText("位置: 入口から手前面まで 0 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
-  await expect(placementList).toContainText("位置: 入口から手前面まで 100 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
+  await expect(sceneStatus).toContainText("配置2件");
   expect(await canonical.textContent()).toBe(projectBefore);
-  expect(await cargoList.textContent()).toBe(cargoesBefore);
+  await expect(cargoList).toContainText("匿名積荷A");
+  await expect(cargoList).toContainText("匿名積荷B");
   expect(await containerList.textContent()).toBe(containersBefore);
 
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(placementList.getByRole("listitem")).toHaveCount(1);
-  await expect(placementList).toContainText("位置: 入口から手前面まで 50 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
+  await expect(sceneStatus).toContainText("配置1件");
   await page.getByRole("button", { name: "やり直す" }).click();
-  await expect(placementList.getByRole("listitem")).toHaveCount(2);
-  await expect(placementList).toContainText("位置: 入口から手前面まで 100 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm");
+  await expect(sceneStatus).toContainText("配置2件");
 });
 
 test("confirms a zero-current add, commits rapid double confirmation once, and keeps a same-plan reapply unchanged", async ({
@@ -420,9 +414,7 @@ test("confirms a zero-current add, commits rapid double confirmation once, and k
   await addContainer(page, "匿名単一候補");
   const panel = page.locator(".automatic-proposal");
   const history = page.locator(".project-history__summary");
-  const placementList = page
-    .locator(".placement-panel")
-    .getByRole("list", { name: "選択候補の配置一覧" });
+  const sceneStatus = page.locator("#scene-workspace-status");
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
@@ -436,13 +428,13 @@ test("confirms a zero-current add, commits rapid double confirmation once, and k
     clickable.click();
   });
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "applied");
-  await expect(placementList.getByRole("listitem")).toHaveCount(1);
+  await expect(sceneStatus).toContainText("配置1件");
   await expect(history).toContainText("次に元に戻せる操作: 自動提案の一括適用。");
 
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(placementList.getByRole("listitem")).toHaveCount(0);
+  await expect(sceneStatus).toContainText("配置0件");
   await page.getByRole("button", { name: "やり直す" }).click();
-  await expect(placementList.getByRole("listitem")).toHaveCount(1);
+  await expect(sceneStatus).toContainText("配置1件");
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "idle");
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
@@ -459,7 +451,7 @@ test("confirms a zero-current add, commits rapid double confirmation once, and k
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "unchanged");
   await expect(panel).toContainText("変更なし");
   expect(await history.textContent()).toBe(historyBeforeNoOp);
-  await expect(placementList.getByRole("listitem")).toHaveCount(1);
+  await expect(sceneStatus).toContainText("配置1件");
 });
 
 test("preserves all AP-03 warnings through real preview, confirmation, apply, and physical validation", async ({
@@ -584,11 +576,7 @@ test("closes confirmation on generation and persistence changes and shows fixed 
   );
   await expect(panel).not.toContainText("marker-sensitive-cargo");
   expect(await history.textContent()).toBe(historyBeforeDraft);
-  await expect(
-    page
-      .locator(".placement-panel")
-      .getByText("この候補に配置された積荷はありません。"),
-  ).toBeVisible();
+  await expect(page.locator("#scene-workspace-status")).toContainText("配置0件");
 });
 
 test("cancels a controlled slow worker responsively, ignores its late result, and retries", async ({
@@ -677,7 +665,7 @@ test("invalidates a running preview for Project commits, undo, redo, and generat
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(page.getByLabel("積荷名")).toBeFocused();
-  await page.getByRole("button", { name: "積荷編集をキャンセル" }).click();
+  await page.getByRole("button", { name: "キャンセル" }).click();
   await expect(canonical).toContainText("提案中に更新");
 });
 
@@ -722,7 +710,7 @@ test("disables start for a draft and exposes keyboard, live, busy, and narrow-sc
   await expect(start).toBeDisabled();
   await expect(start).toHaveAttribute("aria-describedby", "automatic-proposal-blocked");
   await expect(panel).toContainText("未保存入力、削除確認、3D移動、または保存処理");
-  await page.getByRole("button", { name: "積荷編集をキャンセル" }).click();
+  await page.getByRole("button", { name: "キャンセル" }).click();
 
   await expect(start).toBeEnabled();
   await start.press("Enter");

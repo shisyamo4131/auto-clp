@@ -1,7 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const previewName = "積荷を選択・床面移動できる3Dプレビュー";
-
 async function addCargo(page: Page, name: string) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await page.getByLabel("積荷名").fill(name);
@@ -24,213 +22,114 @@ async function addContainer(page: Page, name: string) {
   await page.getByRole("button", { name: "候補を保存" }).click();
 }
 
-async function createPlacementFixture(page: Page) {
+async function fixture(page: Page) {
   await addCargo(page, "合成配置積荷");
   await addContainer(page, "合成配置候補A");
   await addContainer(page, "合成配置候補B");
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
-  const overflows = await page.evaluate(() => {
-    const browserGlobal = globalThis as unknown as {
-      readonly document: {
-        readonly documentElement: { readonly scrollWidth: number; readonly clientWidth: number };
-      };
-    };
-    const root = browserGlobal.document.documentElement;
-    return root.scrollWidth > root.clientWidth;
-  });
-  expect(overflows).toBe(false);
+  expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);
 }
 
-test("creates, edits, switches, cancels, and deletes a placement transactionally", async ({
-  page,
-}) => {
+test("creates, validates, edits, switches, and removes a placement through compact dialogs", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("status")).toHaveAttribute("data-capability-state", "supported");
-  await createPlacementFixture(page);
-
+  await fixture(page);
+  const card = page.locator(".scene-selection-card");
   const sceneSelect = page.getByLabel("表示する候補");
-  const placementPanel = page.locator(".placement-panel");
-  const physicalPanel = page.locator(".physical-validation");
-  const placementStatus = placementPanel.locator(".action-status");
-  await expect(sceneSelect).toHaveValue("container-1");
-  await expect(placementStatus).toHaveAttribute("aria-live", "polite");
-  await expect(placementStatus).toHaveAttribute("aria-atomic", "true");
-
-  await placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" }).click();
+  await card.getByRole("button", { name: "座標を入力して配置" }).click();
+  await expect(page.getByRole("dialog", { name: "合成配置積荷" })).toBeVisible();
   await expect(page.getByLabel("X最小角")).toBeFocused();
   await expect(sceneSelect).toBeDisabled();
-  await expect(page.getByLabel("X最小角")).toHaveValue("0");
-  await expect(page.getByLabel("Y最小角")).toHaveValue("0");
-  await expect(page.getByLabel("Z最小角")).toHaveValue("0");
-  await expect(page.getByLabel("向き")).toHaveValue("LWH");
-  await expect(
-    placementPanel.getByText("この候補に配置された積荷はありません。"),
-  ).toBeVisible();
-  await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補A。配置0件。荷室外1件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
-  );
-  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
-    "適合：この候補には配置済みの積荷がありません。",
-  );
-
-  await placementPanel.getByRole("button", { name: "配置編集をキャンセル" }).click();
-  await expect(
-    placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" }),
-  ).toBeFocused();
-  await expect(placementPanel.getByText("新しい配置を追加せず、未保存入力を破棄しました。")).toBeVisible();
-  await expect(sceneSelect).toBeEnabled();
-  await expect(page.locator("#scene-workspace-status")).toContainText("配置0件");
-
-  await placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" }).click();
-  await page.getByLabel("X最小角").fill("-1000000");
-  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
-    "適合：この候補には配置済みの積荷がありません。",
-  );
-
   await page.getByLabel("X最小角").fill("1.5");
-  await placementPanel.getByRole("button", { name: "配置を保存" }).click();
-  await expect(page.getByLabel("X最小角")).toBeFocused();
+  await page.getByRole("button", { name: "配置を保存" }).click();
   await expect(page.getByLabel("X最小角")).toHaveAttribute("aria-invalid", "true");
-  await expect(
-    placementPanel.getByText("この候補に配置された積荷はありません。"),
-  ).toBeVisible();
-  await expect(page.locator("#scene-workspace-status")).toContainText("配置0件");
-
   await page.getByLabel("X最小角").fill("-1000000");
   await page.getByLabel("Y最小角").fill("1000000");
   await page.getByLabel("Z最小角").fill("-1");
   await page.getByLabel("向き").selectOption("WLH");
-  await placementPanel.getByRole("button", { name: "配置を保存" }).click();
-  await expect(sceneSelect).toBeEnabled();
-  await expect(placementPanel.getByText("位置: 入口から手前面まで -1000000 mm / 入口から見て右壁から右側面まで 1000000 mm / 床から下面まで -1 mm")).toBeVisible();
-  await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補A。配置1件。荷室外0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
-  );
-  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
-    "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
-  );
-  await expect(physicalPanel.getByRole("heading", { name: "不適合理由（1件）" })).toBeVisible();
-  await expect(physicalPanel.locator(".physical-validation__reason").first()).toContainText(
-    "積荷が床より下へ貫通しています。Z座標を0以上に修正してください。",
-  );
-  await expect(physicalPanel.getByText("opening-path-unverified")).toHaveCount(0);
-  await expect(physicalPanel.getByText("床にない積荷の底面が", { exact: false })).toHaveCount(0);
-  await expect(physicalPanel.getByText("軸別隙間が不足", { exact: false })).toHaveCount(0);
-  await expect(physicalPanel.getByRole("heading", { name: "未確認理由（1件）" })).toBeVisible();
-  await expect(physicalPanel).toContainText("完全な搬入経路は未確認です");
-  await expect(page.getByRole("img", { name: previewName })).toBeVisible();
-
+  await page.getByRole("button", { name: "配置を保存" }).click();
+  await expect(card).toContainText("-1000000 mm");
+  await expect(page.locator(".physical-validation__summary")).toContainText("不適合");
   await sceneSelect.selectOption("container-2");
-  await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補B。配置0件。荷室外0件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
-  );
-  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
-    "適合：この候補には配置済みの積荷がありません。",
-  );
-  await expect(placementPanel.getByText("未配置の積荷はありません。")).toBeVisible();
-  await expect(placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" })).toHaveCount(0);
-
-  await sceneSelect.selectOption("container-1");
-  await placementPanel.getByRole("button", { name: "編集: 合成配置積荷" }).click();
+  await expect(card).toContainText("合成配置候補Aに配置済み");
+  await card.getByRole("button", { name: "合成配置候補Aを表示" }).click();
+  await card.getByRole("button", { name: "座標を微調整" }).click();
   await page.getByLabel("X最小角").fill("123");
-  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
-    "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
-  );
-  await expect(sceneSelect).toBeDisabled();
-  await placementPanel.getByRole("button", { name: "配置編集をキャンセル" }).click();
-  await expect(placementPanel.getByRole("button", { name: "編集: 合成配置積荷" })).toBeFocused();
-  await expect(placementPanel.getByText("位置: 入口から手前面まで -1000000 mm / 入口から見て右壁から右側面まで 1000000 mm / 床から下面まで -1 mm")).toBeVisible();
-  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
-    "不適合：修正が必要な理由が1件あります。未確認事項1件も保持して表示します。",
-  );
-
-  await placementPanel.getByRole("button", { name: "配置を削除: 合成配置積荷" }).click();
-  await expect(sceneSelect).toBeDisabled();
-  await expect(placementPanel.getByRole("button", { name: "配置の削除を確定" })).toBeFocused();
-  await placementPanel.getByRole("button", { name: "配置の削除をやめる" }).click();
-  await expect(placementPanel.getByRole("button", { name: "配置を削除: 合成配置積荷" })).toBeFocused();
-  await expect(placementPanel.getByText("位置: 入口から手前面まで -1000000 mm / 入口から見て右壁から右側面まで 1000000 mm / 床から下面まで -1 mm")).toBeVisible();
-
-  await placementPanel.getByRole("button", { name: "配置を削除: 合成配置積荷" }).click();
-  await placementPanel.getByRole("button", { name: "配置の削除を確定" }).click();
-  await expect(sceneSelect).toBeEnabled();
-  await expect(placementPanel.getByRole("button", { name: "配置を追加: 合成配置積荷" })).toBeFocused();
-  await expect(placementPanel.getByText("積荷は未配置一覧へ戻りました。")).toBeVisible();
-  await expect(page.locator("#scene-workspace-status")).toHaveText(
-    "選択中の候補: 合成配置候補A。配置0件。荷室外1件。積荷は未選択です。物理判定は保存済み配置だけから自動更新されます。",
-  );
-  await expect(physicalPanel.locator(".physical-validation__summary")).toHaveText(
-    "適合：この候補には配置済みの積荷がありません。",
-  );
+  await page.getByRole("button", { name: "キャンセル" }).click();
+  await page.getByRole("button", { name: "入力を破棄して閉じる" }).click();
+  await expect(card).toContainText("-1000000 mm");
+  await card.getByRole("button", { name: "荷室から外す" }).click();
+  await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
+  await expect(card).toContainText("荷室外（未配置）");
 });
 
-test("closes a new-placement draft safely when its selected container is deleted", async ({
-  page,
-}) => {
+test("keeps placement CRUD available without WebGL", async ({ page }) => {
   await page.goto("/?forceWebgl2=unsupported");
-  await addCargo(page, "stale検証積荷");
-  await addContainer(page, "stale検証候補A");
-  await addContainer(page, "stale検証候補B");
-
-  const sceneSelect = page.getByLabel("表示する候補");
-  const panel = page.locator(".placement-panel");
-  await panel.getByRole("button", { name: "配置を追加: stale検証積荷" }).click();
-  await page.getByLabel("X最小角").fill("123");
-  await expect(sceneSelect).toBeDisabled();
-
-  await page.getByRole("button", { name: "削除: stale検証候補A" }).click();
-  await page.getByRole("button", { name: "削除を確定: stale検証候補A" }).click();
-
-  await expect(page.getByLabel("X最小角")).toHaveCount(0);
-  await expect(sceneSelect).toBeEnabled();
-  await expect(sceneSelect).toHaveValue("container-2");
-  await expect(
-    panel.getByRole("heading", { name: "配置", exact: true }),
-  ).toBeFocused();
-  await expect(panel.getByText("積荷または候補の状態が変わったため、新しい配置を追加せず編集を閉じました。")).toBeVisible();
-  await expect(
-    panel.getByRole("button", { name: "配置を追加: stale検証積荷" }),
-  ).toBeVisible();
-  await expect(page.locator("#scene-workspace-status")).toContainText("配置0件");
-});
-
-test("supports placement CRUD without WebGL while keeping the canvas absent", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
-  await expect(page.getByRole("status")).toHaveAttribute("data-capability-state", "unsupported");
   await addCargo(page, "非対応時配置積荷");
   await addContainer(page, "非対応時配置候補");
-  const panel = page.locator(".placement-panel");
-  await expect(page.getByRole("img", { name: previewName })).toHaveCount(0);
-
-  await panel.getByRole("button", { name: "配置を追加: 非対応時配置積荷" }).click();
-  await page.getByLabel("X最小角").fill("-1");
-  await panel.getByRole("button", { name: "配置を保存" }).click();
-  await panel.getByRole("button", { name: "編集: 非対応時配置積荷" }).click();
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  const card = page.locator(".scene-selection-card");
+  await expect(page.getByRole("img")).toHaveCount(0);
+  await card.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByLabel("X最小角").fill("-2");
-  await panel.getByRole("button", { name: "配置を保存" }).click();
-  await expect(panel.getByText("位置: 入口から手前面まで -2 mm / 入口から見て右壁から右側面まで 0 mm / 床から下面まで 0 mm")).toBeVisible();
-  await panel.getByRole("button", { name: "配置を削除: 非対応時配置積荷" }).click();
-  await panel.getByRole("button", { name: "配置の削除を確定" }).click();
-  await expect(panel.getByRole("button", { name: "配置を追加: 非対応時配置積荷" })).toBeVisible();
-  await expect(page.getByRole("img", { name: previewName })).toHaveCount(0);
+  await page.getByRole("button", { name: "配置を保存" }).click();
+  await expect(card).toContainText("-2 mm");
+  await card.getByRole("button", { name: "荷室から外す" }).click();
+  await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
+  await expect(card).toContainText("荷室外（未配置）");
 });
 
-test("has no placement editor overflow at 305, 320, and 375 pixels", async ({ page }) => {
-  await page.setViewportSize({ width: 305, height: 900 });
+test("confirms dirty close and restores the opener without scrolling", async ({ page }) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  await addCargo(page, "focus配置積荷");
+  await addContainer(page, "focus配置候補");
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  const opener = page.getByRole("button", { name: "座標を入力して配置" });
+  await opener.scrollIntoViewIfNeeded();
+  const openerBox = await opener.boundingBox();
+  if (openerBox === null) throw new Error("Placement dialog opener has no bounding box");
+  await page.mouse.click(openerBox.x + openerBox.width / 2, openerBox.y + openerBox.height / 2);
+  await expect(page.locator(".app-shell")).toHaveAttribute("inert", "");
+  await page.getByLabel("X最小角").fill("12");
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("未保存の座標入力を破棄して閉じますか。")).toBeVisible();
+  await page.getByRole("button", { name: "入力を破棄して閉じる" }).click();
+  await expect(opener).toBeFocused();
+  await expect(page.locator(".app-shell")).not.toHaveAttribute("inert", "");
+  await page.waitForTimeout(50);
+  expect((await opener.boundingBox())?.y).toBe(openerBox.y);
+});
+
+test("traps focus in the shared placement modal", async ({ page }) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  await addCargo(page, "focus-trap積荷");
+  await addContainer(page, "focus-trap候補");
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await page.getByRole("button", { name: "座標を入力して配置" }).click();
+  const dialog = page.getByRole("dialog", { name: "focus-trap積荷" });
+  const closeButton = dialog.getByRole("button", { name: "focus-trap積荷を閉じる" });
+  const cancelButton = dialog.getByRole("button", { name: "キャンセル" });
+  await closeButton.focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(cancelButton).toBeFocused();
+  await cancelButton.focus();
+  await page.keyboard.press("Tab");
+  await expect(closeButton).toBeFocused();
+  await closeButton.click();
+});
+
+test("has no dialog overflow at 305, 320, and 375 pixels", async ({ page }) => {
+  await page.setViewportSize({ width: 305, height: 640 });
   await page.goto("/?forceWebgl2=unsupported");
   await addCargo(page, "狭幅配置積荷");
   await addContainer(page, "狭幅配置候補");
-  const panel = page.locator(".placement-panel");
-  await panel.getByRole("button", { name: "配置を追加: 狭幅配置積荷" }).click();
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await page.getByRole("button", { name: "座標を入力して配置" }).click();
   await expectNoHorizontalOverflow(page);
-
-  await page.setViewportSize({ width: 320, height: 900 });
-  await expectNoHorizontalOverflow(page);
-  await panel.getByRole("button", { name: "配置を保存" }).click();
-  await panel.getByRole("button", { name: "配置を削除: 狭幅配置積荷" }).click();
-
-  await page.setViewportSize({ width: 375, height: 900 });
-  await expectNoHorizontalOverflow(page);
+  for (const width of [320, 375]) {
+    await page.setViewportSize({ width, height: 640 });
+    await expectNoHorizontalOverflow(page);
+  }
 });

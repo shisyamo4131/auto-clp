@@ -33,6 +33,11 @@ import type { WebGL2CapabilityCheck } from "./platform/webgl2";
 import { SceneWorkspace } from "./scene/SceneWorkspace";
 import { AutomaticProposalPanel } from "./ui/AutomaticProposalPanel";
 import type { AutomaticProposalApplyHandler } from "./ui/automatic-proposal-session";
+import {
+  CargoEditorDialog,
+  type CargoEditorIntent,
+  type CargoEditorRequest,
+} from "./ui/CargoEditorDialog";
 import { ProjectPersistencePanel } from "./ui/ProjectPersistencePanel";
 import { ProjectWorkspace } from "./ui/ProjectWorkspace";
 
@@ -106,7 +111,11 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   const [historyRevision, setHistoryRevision] = useState(0);
   const [historyCommitRevision, setHistoryCommitRevision] = useState(0);
   const [projectBarrierRevision, setProjectBarrierRevision] = useState(0);
-  const [busySources, setBusySources] = useState({ project: false, scene: false });
+  const [busySources, setBusySources] = useState({
+    cargoDialog: false,
+    project: false,
+    scene: false,
+  });
   const busySourcesRef = useRef(busySources);
   const [persistenceInteractionActive, setPersistenceInteractionActive] =
     useState(false);
@@ -117,6 +126,9 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     useState(0);
   const projectInteractionGenerationRef = useRef(0);
   const busyRef = useRef(false);
+  const cargoEditorSequence = useRef(0);
+  const [cargoEditorRequest, setCargoEditorRequest] =
+    useState<CargoEditorRequest>();
   const project = history.present;
 
   const bumpProjectInteractionGeneration = useCallback(() => {
@@ -150,7 +162,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   }, []);
 
   const handleBusyChange = useCallback(
-    (source: "project" | "scene", busy: boolean) => {
+    (source: "cargoDialog" | "project" | "scene", busy: boolean) => {
       const current = busySourcesRef.current;
       if (current[source] === busy) {
         return;
@@ -159,6 +171,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       busySourcesRef.current = next;
       bumpProjectInteractionGeneration();
       busyRef.current =
+        next.cargoDialog ||
         next.project ||
         next.scene ||
         persistenceInteractionRef.current ||
@@ -175,6 +188,23 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     (busy: boolean) => handleBusyChange("project", busy),
     [handleBusyChange],
   );
+  const handleOpenCargoEditor = useCallback(
+    (intent: CargoEditorIntent) => {
+      if (busyRef.current) return;
+      handleBusyChange("cargoDialog", true);
+      cargoEditorSequence.current += 1;
+      setCargoEditorRequest({
+        ...intent,
+        key: cargoEditorSequence.current,
+        returnScrollPosition: { left: window.scrollX, top: window.scrollY },
+      });
+    },
+    [handleBusyChange],
+  );
+  const handleCloseCargoEditor = useCallback(() => {
+    setCargoEditorRequest(undefined);
+    handleBusyChange("cargoDialog", false);
+  }, [handleBusyChange]);
   const handlePersistenceInteractionChange = useCallback(
     (active: boolean) => {
       if (persistenceInteractionRef.current === active) {
@@ -185,6 +215,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         bumpProjectInteractionGeneration();
       }
       busyRef.current =
+        busySourcesRef.current.cargoDialog ||
         busySourcesRef.current.project ||
         busySourcesRef.current.scene ||
         active ||
@@ -245,7 +276,12 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       operation: () => Promise<PersistenceOperationOutcome>,
     ): Promise<ProjectPersistenceActionResult> => {
       const sources = busySourcesRef.current;
-      if (sources.project || sources.scene || persistenceOperationRef.current) {
+      if (
+        sources.cargoDialog ||
+        sources.project ||
+        sources.scene ||
+        persistenceOperationRef.current
+      ) {
         return { ok: false, code: "persistence.operation-busy" };
       }
       if (historyRef.current.present !== baseProject) {
@@ -265,6 +301,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           const currentSources = busySourcesRef.current;
           if (
             historyRef.current.present !== baseProject ||
+            currentSources.cargoDialog ||
             currentSources.project ||
             currentSources.scene ||
             projectInteractionGenerationRef.current !== interactionGeneration
@@ -285,6 +322,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       } finally {
         persistenceOperationRef.current = false;
         busyRef.current =
+          busySourcesRef.current.cargoDialog ||
           busySourcesRef.current.project ||
           busySourcesRef.current.scene ||
           persistenceInteractionRef.current;
@@ -299,6 +337,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       project: historyRef.current.present,
       interactionGeneration: projectInteractionGenerationRef.current,
       startBlocked:
+        busySourcesRef.current.cargoDialog ||
         busySourcesRef.current.project ||
         busySourcesRef.current.scene ||
         persistenceInteractionRef.current ||
@@ -311,6 +350,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     (request) => {
       const currentSources = busySourcesRef.current;
       if (
+        currentSources.cargoDialog ||
         currentSources.project ||
         currentSources.scene ||
         persistenceInteractionRef.current ||
@@ -452,7 +492,10 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   const copy = stateCopy[state];
   const rendererMounted = state === "renderer-checking" || state === "supported";
   const externalPersistenceBusy =
-    busySources.project || busySources.scene || persistenceOperationActive;
+    busySources.cargoDialog ||
+    busySources.project ||
+    busySources.scene ||
+    persistenceOperationActive;
   const historyBusy = externalPersistenceBusy || persistenceInteractionActive;
 
   return (
@@ -501,6 +544,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         <SceneWorkspace
           key={`scene-${projectBarrierRevision}`}
           externalInteractionActive={
+            busySources.cargoDialog ||
             busySources.project ||
             persistenceInteractionActive ||
             persistenceOperationActive
@@ -520,6 +564,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           onRendererReady={handleRendererReady}
           historyRevision={historyRevision}
           onBusyChange={handleSceneBusyChange}
+          onOpenCargoEditor={handleOpenCargoEditor}
           onProjectCommit={handleProjectCommit}
           project={project}
           rendererMounted={rendererMounted}
@@ -534,12 +579,28 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       </aside>
 
       <ProjectWorkspace
+        externalInteractionActive={
+          busySources.cargoDialog ||
+          busySources.scene ||
+          persistenceInteractionActive ||
+          persistenceOperationActive
+        }
         key={`project-${projectBarrierRevision}`}
         historyRevision={historyRevision}
         onBusyChange={handleProjectBusyChange}
+        onOpenCargoEditor={handleOpenCargoEditor}
         onProjectCommit={handleProjectCommit}
         project={project}
       />
+      {cargoEditorRequest === undefined ? null : (
+        <CargoEditorDialog
+          key={cargoEditorRequest.key}
+          onClose={handleCloseCargoEditor}
+          onProjectCommit={handleProjectCommit}
+          project={project}
+          request={cargoEditorRequest}
+        />
+      )}
     </main>
   );
 }

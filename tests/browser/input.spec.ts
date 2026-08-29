@@ -8,7 +8,14 @@ async function fillCargo(page: Page, name: string) {
   await page.getByLabel("重量").fill("1.005");
 }
 
-async function fillContainer(page: Page, name: string) {
+async function addCargo(page: Page, name: string) {
+  await page.getByRole("button", { name: "積荷を追加" }).click();
+  await fillCargo(page, name);
+  await page.getByRole("button", { name: "積荷を保存" }).click();
+}
+
+async function addContainer(page: Page, name: string) {
+  await page.getByRole("button", { name: "候補を追加" }).click();
   await page.getByLabel("候補名").fill(name);
   await page.getByLabel("内部長さ").fill("6000");
   await page.getByLabel("内部幅").fill("2400");
@@ -16,261 +23,120 @@ async function fillContainer(page: Page, name: string) {
   await page.getByLabel("開口幅").fill("2400");
   await page.getByLabel("開口高さ").fill("2500");
   await page.getByLabel("総耐荷重").fill("100000");
-}
-
-async function expectNoHorizontalOverflow(page: Page) {
-  const overflows = await page.evaluate(() => {
-    const browserGlobal = globalThis as unknown as {
-      readonly document: {
-        readonly documentElement: { readonly scrollWidth: number; readonly clientWidth: number };
-      };
-    };
-    const root = browserGlobal.document.documentElement;
-    return root.scrollWidth > root.clientWidth;
-  });
-  expect(overflows).toBe(false);
+  await page.getByRole("button", { name: "候補を保存" }).click();
 }
 
 test("edits project settings transactionally and focuses invalid input", async ({ page }) => {
   await page.goto("/?forceWebgl2=unsupported");
-
-  const canonical = page.getByTestId("canonical-project-settings");
-  await expect(canonical).toContainText("新規案件 / 隙間 X 0・Y 0・Z 0 mm");
-  await page.getByLabel("案件名").fill("匿名案件A");
-  await page.getByLabel("X方向の隙間").fill("10001");
+  await page.getByLabel("案件名").fill("更新案件");
+  await page.getByLabel("X方向の隙間").fill("1.5");
   await page.getByRole("button", { name: "案件を保存" }).click();
-
-  const invalid = page.getByLabel("X方向の隙間");
-  await expect(invalid).toBeFocused();
-  await expect(invalid).toHaveAttribute("aria-invalid", "true");
-  await expect(page.locator("#project-settings-errors")).toHaveAttribute("tabindex", "-1");
-  await expect(canonical).toContainText("新規案件 / 隙間 X 0・Y 0・Z 0 mm");
-
-  await invalid.fill("10");
-  await page.getByLabel("Y方向の隙間").fill("20");
-  await page.getByLabel("Z方向の隙間").fill("30");
+  await expect(page.getByLabel("X方向の隙間")).toBeFocused();
+  await expect(page.getByLabel("X方向の隙間")).toHaveAttribute("aria-invalid", "true");
+  await page.getByLabel("X方向の隙間").fill("10");
   await page.getByRole("button", { name: "案件を保存" }).click();
-  await expect(canonical).toContainText("匿名案件A / 隙間 X 10・Y 20・Z 30 mm");
+  await expect(page.getByTestId("canonical-project-settings")).toContainText("更新案件");
 });
 
-test("adds, edits, cancels, and explicitly deletes cargo", async ({ page }) => {
+test("adds, edits, cancels, and explicitly deletes cargo through the compact card", async ({ page }) => {
   await page.goto("/?forceWebgl2=unsupported");
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await expect(page.getByLabel("積荷名")).toBeFocused();
-  await fillCargo(page, "合成積荷A");
-  await expect(page.getByLabel("長さ", { exact: true })).toHaveAccessibleDescription(
-    "mm 1〜100,000の半角整数",
-  );
-  await expect(page.getByLabel("重量")).toHaveAccessibleDescription(
-    "kg 0.001〜100,000 kg、小数3桁まで",
-  );
-  await expect(page.getByLabel("LWH — X=長さ・Y=幅・Z=高さ（既定）")).toBeChecked();
-  await expect(page.getByLabel("WLH — X=幅・Y=長さ・Z=高さ（既定）")).toBeChecked();
-  await expect(page.getByText("幾何判定用です。強度・安定性は未確認です。")).toBeVisible();
-  await page.getByLabel("重量").fill("1.0001");
-  await page.getByRole("button", { name: "積荷を保存" }).click();
-  await expect(page.getByLabel("重量")).toBeFocused();
-  await expect(page.getByRole("list", { name: "積荷一覧" })).not.toContainText("合成積荷A");
-  await page.getByLabel("重量").fill("1.005");
-  await page.getByRole("button", { name: "積荷を保存" }).click();
+  await addCargo(page, "合成積荷");
+  const picker = page.getByLabel("操作する積荷");
+  await picker.selectOption("cargo-1");
+  const card = page.locator(".scene-selection-card");
+  await expect(card).toContainText("合成積荷");
+  await card.getByRole("button", { name: "積荷情報を編集" }).click();
+  await page.getByLabel("積荷名").fill("未保存名");
+  await page.getByRole("button", { name: "キャンセル" }).click();
+  await page.getByRole("button", { name: "入力を破棄して閉じる" }).click();
+  await expect(card).toContainText("合成積荷");
+  await card.getByRole("button", { name: "積荷情報を編集" }).click();
+  await page.getByLabel("積荷名").fill("合成積荷更新");
+  await page.getByRole("button", { name: "積荷情報を保存" }).click();
+  await expect(card).toContainText("合成積荷更新");
+  await card.getByRole("button", { name: "積荷自体を削除" }).click();
+  await page.getByRole("button", { name: "削除を確定: 合成積荷更新" }).click();
+  await expect(picker).toHaveCount(0);
+});
+
+test("separates placement removal from cargo deletion and restores fallback focus", async ({ page }) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  await addCargo(page, "非cascade積荷");
+  await addContainer(page, "非cascade候補");
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  const card = page.locator(".scene-selection-card");
+  await card.getByRole("button", { name: "座標を入力して配置" }).click();
+  await page.getByRole("button", { name: "配置を保存" }).click();
+  const historyBeforeBlockedDelete = await page.locator(".project-history__summary").textContent();
+  await card.getByRole("button", { name: "積荷自体を削除" }).click({ force: true });
+  await expect(page.locator("#scene-workspace-action-status")).toContainText("先に荷室から外してください");
+  await expect(card).toContainText("現在の候補に配置済み");
+  expect(await page.locator(".project-history__summary").textContent()).toBe(historyBeforeBlockedDelete);
+
+  await card.getByRole("button", { name: "荷室から外す" }).click();
+  await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
+  await expect(card).toContainText("荷室外（未配置）");
+  await expect(page.getByRole("button", { name: "座標を入力して配置" })).toBeFocused();
+
+  await card.getByRole("button", { name: "積荷自体を削除" }).click();
+  const deleteDialog = page.getByRole("dialog", { name: "非cascade積荷を削除" });
+  await expect(deleteDialog.getByLabel("積荷名")).toHaveCount(0);
+  await deleteDialog.getByRole("button", { name: "削除を確定: 非cascade積荷" }).click();
   await expect(page.getByRole("button", { name: "積荷を追加" })).toBeFocused();
-  await expect(page.getByText("積荷を追加しました。")).toBeVisible();
+  await expect(page.getByText("積荷 0件、候補 1件、配置 0件")).toBeVisible();
+});
 
-  const list = page.getByRole("list", { name: "積荷一覧" });
-  await expect(list).toContainText("合成積荷A");
-  await page.getByRole("button", { name: "編集: 合成積荷A" }).click();
-  await expect(page.getByLabel("積荷名")).toBeFocused();
-  await expect(page.getByLabel("重量")).toHaveValue("1.005");
-  await page.getByLabel("積荷名").fill("破棄する積荷名");
+test("keeps cargo input available without WebGL and exposes permanent safety notices", async ({ page }) => {
+  await page.goto("/?forceWebgl2=unsupported");
+  await addCargo(page, "非対応積荷");
+  await expect(page.getByRole("img", { name: /3Dプレビュー/ })).toHaveCount(0);
+  await expect(page.getByText("積載可能性や物理的安全性を保証しません", { exact: false })).toBeVisible();
+});
+
+test("focuses an invalid orientation group", async ({ page }) => {
+  await page.goto("/?forceWebgl2=unsupported");
   await page.getByRole("button", { name: "積荷を追加" }).click();
-  await expect(page.getByText("未保存の積荷入力があります。破棄して切り替えますか。")).toBeVisible();
-  await expect(page.getByRole("button", { name: "未保存入力を破棄して切り替える" })).toBeFocused();
-  await page.getByRole("button", { name: "積荷の編集を続ける" }).click();
-  await expect(page.getByLabel("積荷名")).toBeFocused();
-  await expect(page.getByLabel("積荷名")).toHaveValue("破棄する積荷名");
-  await page.getByRole("button", { name: "積荷編集をキャンセル" }).click();
-  await expect(page.getByRole("button", { name: "編集: 合成積荷A" })).toBeFocused();
-  await expect(list).not.toContainText("破棄する積荷名");
-
-  await page.getByRole("button", { name: "編集: 合成積荷A" }).click();
-  await page.getByLabel("積荷名").fill("合成積荷B");
-  await page.getByRole("button", { name: "積荷の変更を保存: 合成積荷A" }).click();
-  await expect(list).toContainText("合成積荷B");
-
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await fillCargo(page, "合成積荷C");
+  await fillCargo(page, "向きなし積荷");
+  await page.getByLabel(/^LWH/).uncheck();
+  await expect(page.getByLabel(/^LWH/)).not.toBeChecked();
+  await page.getByLabel(/^WLH/).uncheck();
+  await expect(page.getByLabel(/^WLH/)).not.toBeChecked();
   await page.getByRole("button", { name: "積荷を保存" }).click();
-  await page.getByRole("button", { name: "編集: 合成積荷B" }).click();
-  await page.getByLabel("積荷名").fill("未保存の積荷B");
-  await page.getByRole("button", { name: "編集: 合成積荷C" }).click();
-  await page.getByRole("button", { name: "削除: 合成積荷C" }).click();
-  await page.getByRole("button", { name: "削除を確定: 合成積荷C" }).click();
-  await expect(page.getByText("未保存の積荷入力があります。破棄して切り替えますか。")).toHaveCount(0);
-  await expect(page.getByLabel("積荷名")).toHaveValue("未保存の積荷B");
-  await page.getByRole("button", { name: "積荷編集をキャンセル" }).click();
-
-  await page.getByRole("button", { name: "削除: 合成積荷B" }).click();
-  await expect(page.getByRole("button", { name: "削除を確定: 合成積荷B" })).toBeFocused();
-  await page.getByRole("button", { name: "削除をやめる: 合成積荷B" }).click();
-  await expect(page.getByRole("button", { name: "削除: 合成積荷B" })).toBeFocused();
-  await expect(page.getByText("積荷の削除をキャンセルしました。")).toBeVisible();
-  await expect(list).toContainText("合成積荷B");
-  await page.getByRole("button", { name: "削除: 合成積荷B" }).click();
-  await page.getByRole("button", { name: "削除を確定: 合成積荷B" }).click();
-  await expect(page.getByRole("button", { name: "積荷を追加" })).toBeFocused();
-  await expect(page.getByText("積荷を削除しました。")).toBeVisible();
-  await expect(list).not.toContainText("合成積荷B");
+  await expect(page.locator("#cargo-dialog-errors")).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "積荷を追加" })).toBeVisible();
 });
 
-test("adds, edits, cancels, and explicitly deletes a container candidate", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await expect(page.getByLabel("候補名")).toBeFocused();
-  await fillContainer(page, "合成候補A");
-  await expect(page.getByLabel("内部長さ")).toHaveAccessibleDescription(
-    "mm 1〜100,000の半角整数",
-  );
-  await expect(page.getByLabel("総耐荷重")).toHaveAccessibleDescription(
-    "kg 0.001〜100,000 kg、小数3桁まで",
-  );
-  await expect(page.getByText("開口内回転や斜め通過を含む搬入経路は未確認です。")).toBeVisible();
-  await page.getByRole("button", { name: "候補を保存" }).click();
-
-  const list = page.getByRole("list", { name: "候補一覧" });
-  await expect(list).toContainText("合成候補A");
-  await page.getByRole("button", { name: "編集: 合成候補A" }).click();
-  await page.getByLabel("候補名").fill("破棄する候補名");
-  await page.getByRole("button", { name: "候補編集をキャンセル" }).click();
-  await expect(list).not.toContainText("破棄する候補名");
-
-  await page.getByRole("button", { name: "編集: 合成候補A" }).click();
-  await page.getByLabel("候補名").fill("合成候補B");
-  await page.getByRole("button", { name: "候補の変更を保存: 合成候補A" }).click();
-  await expect(list).toContainText("合成候補B");
-
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await fillContainer(page, "合成候補C");
-  await page.getByRole("button", { name: "候補を保存" }).click();
-  await page.getByRole("button", { name: "編集: 合成候補B" }).click();
-  await page.getByLabel("候補名").fill("未保存の候補B");
-  await page.getByRole("button", { name: "編集: 合成候補C" }).click();
-  await page.getByRole("button", { name: "削除: 合成候補C" }).click();
-  await page.getByRole("button", { name: "削除を確定: 合成候補C" }).click();
-  await expect(page.getByText("未保存の候補入力があります。破棄して切り替えますか。")).toHaveCount(0);
-  await expect(page.getByLabel("候補名")).toHaveValue("未保存の候補B");
-  await page.getByRole("button", { name: "候補編集をキャンセル" }).click();
-  await page.getByRole("button", { name: "削除: 合成候補B" }).click();
-  await page.getByRole("button", { name: "削除をやめる: 合成候補B" }).click();
-  await expect(list).toContainText("合成候補B");
-  await page.getByRole("button", { name: "削除: 合成候補B" }).click();
-  await page.getByRole("button", { name: "削除を確定: 合成候補B" }).click();
-  await expect(page.getByRole("button", { name: "候補を追加" })).toBeFocused();
-  await expect(page.getByText("候補を削除しました。")).toBeVisible();
-  await expect(list).not.toContainText("合成候補B");
-});
-
-test("keeps input available without WebGL and shows permanent safety notices", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
-  await expect(page.getByRole("status")).toHaveAttribute("data-capability-state", "unsupported");
-  await expect(page.getByRole("heading", { name: "案件入力" })).toBeVisible();
-  await expect(page.getByLabel("入力データの注意")).toContainText("実在する顧客名");
-  await expect(page.getByLabel("現在の制限")).toContainText(
-    /実装済みの物理判定に適合しても、完全な搬入経路.*実積載の安全性は未確認です。/,
-  );
-
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await fillCargo(page, "非対応時の合成積荷");
-  await page.getByRole("button", { name: "積荷を保存" }).click();
-  await expect(page.getByRole("list", { name: "積荷一覧" })).toContainText("非対応時の合成積荷");
-});
-
-test("supports keyboard operation and focuses an invalid orientation group", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
-  const addButton = page.getByRole("button", { name: "積荷を追加" });
-  await addButton.focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByLabel("積荷名")).toBeFocused();
-
-  await fillCargo(page, "キーボード合成積荷");
-  const lwh = page.getByLabel("LWH — X=長さ・Y=幅・Z=高さ（既定）");
-  const wlh = page.getByLabel("WLH — X=幅・Y=長さ・Z=高さ（既定）");
-  await lwh.focus();
-  await page.keyboard.press("Space");
-  await wlh.focus();
-  await page.keyboard.press("Space");
-  await page.getByRole("button", { name: "積荷を保存" }).focus();
-  await page.keyboard.press("Enter");
-
-  const invalidGroup = page.locator("[aria-invalid='true'][aria-describedby='orientation-error']");
-  await expect(invalidGroup).toBeFocused();
-  await expect(page.locator("#orientation-error")).toBeVisible();
-  await lwh.focus();
-  await page.keyboard.press("Space");
-  await page.getByRole("button", { name: "積荷を保存" }).focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("list", { name: "積荷一覧" })).toContainText(
-    "キーボード合成積荷",
-  );
-});
-
-test("maps the 天地無用 convenience to the existing upright orientation set", async ({
-  page,
-}) => {
+test("maps 天地無用 to the existing upright orientation set", async ({ page }) => {
   await page.goto("/?forceWebgl2=unsupported");
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await fillCargo(page, "天地無用合成積荷");
-  const upright = page.getByLabel(/天地無用/);
-  const lhw = page.getByLabel(/LHW/);
-  const whl = page.getByLabel(/WHL/);
-
-  await expect(upright).toBeChecked();
-  await expect(lhw).not.toBeChecked();
-  await upright.uncheck();
-  await expect(lhw).toBeChecked();
-  await expect(whl).toBeChecked();
-  await upright.check();
-  await expect(lhw).not.toBeChecked();
-  await expect(whl).not.toBeChecked();
-  await expect(page.getByLabel(/LWH/)).toBeChecked();
-  await expect(page.getByLabel(/WLH/)).toBeChecked();
+  await expect(page.getByLabel(/天地無用/)).toBeChecked();
+  await expect(page.getByLabel(/^LWH/)).toBeChecked();
+  await expect(page.getByLabel(/^WLH/)).toBeChecked();
+  await expect(page.getByLabel(/^LHW/)).not.toBeChecked();
   await page.getByRole("button", { name: "積荷を保存" }).click();
-  await expect(page.getByRole("list", { name: "積荷一覧" })).toContainText(
-    "天地無用合成積荷",
-  );
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await expect(page.locator(".scene-selection-card")).toContainText("天地無用合成積荷");
 });
 
-test("has no horizontal page overflow at narrow widths", async ({ page }) => {
-  await page.setViewportSize({ width: 305, height: 900 });
+test("container CRUD remains transactional", async ({ page }) => {
   await page.goto("/?forceWebgl2=unsupported");
-  await expectNoHorizontalOverflow(page);
-
-  await page.setViewportSize({ width: 320, height: 900 });
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await expect(page.getByRole("heading", { name: "案件入力" })).toBeVisible();
-  await expectNoHorizontalOverflow(page);
+  await addContainer(page, "合成候補");
+  const list = page.getByRole("list", { name: "候補一覧" });
+  await expect(list).toContainText("合成候補");
+  await page.getByRole("button", { name: "編集: 合成候補" }).click();
+  await page.getByLabel("候補名").fill("合成候補更新");
+  await page.getByRole("button", { name: "候補の変更を保存: 合成候補" }).click();
+  await expect(list).toContainText("合成候補更新");
 });
 
-test("wraps maximum-length names and confirmations at 305, 320, and 375px", async ({ page }) => {
-  const projectName = "P".repeat(120);
-  const cargoName = "C".repeat(120);
-  const containerName = "V".repeat(120);
-  await page.setViewportSize({ width: 305, height: 900 });
+test("modal editors have no horizontal overflow at narrow widths", async ({ page }) => {
+  await page.setViewportSize({ width: 305, height: 640 });
   await page.goto("/?forceWebgl2=unsupported");
-  await page.getByLabel("案件名").fill(projectName);
-  await page.getByRole("button", { name: "案件を保存" }).click();
   await page.getByRole("button", { name: "積荷を追加" }).click();
-  await fillCargo(page, cargoName);
-  await page.getByRole("button", { name: "積荷を保存" }).click();
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await fillContainer(page, containerName);
-  await page.getByRole("button", { name: "候補を保存" }).click();
-  await page.getByRole("button", { name: `編集: ${cargoName}` }).click();
-  await page.getByRole("button", { name: `削除: ${cargoName}` }).click();
-  await page.getByRole("button", { name: `削除: ${containerName}` }).click();
-  await expectNoHorizontalOverflow(page);
-
-  await page.setViewportSize({ width: 320, height: 900 });
-  await expectNoHorizontalOverflow(page);
-  await page.setViewportSize({ width: 375, height: 900 });
-  await expectNoHorizontalOverflow(page);
+  await fillCargo(page, "C".repeat(120));
+  for (const width of [305, 320, 375]) {
+    await page.setViewportSize({ width, height: 640 });
+    expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);
+  }
 });

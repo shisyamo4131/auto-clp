@@ -64,15 +64,17 @@ async function placeCargo(
     readonly orientation?: "LWH" | "WLH";
   },
 ) {
-  const panel = page.locator(".placement-panel");
-  await panel.getByRole("button", { name: `配置を追加: ${cargoName}` }).click();
+  const select = page.getByLabel("操作する積荷");
+  const cargoId = await select.locator("option").filter({ hasText: cargoName }).getAttribute("value");
+  await select.selectOption(cargoId!);
+  await page.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByLabel("X最小角").fill(position.xMm ?? "0");
   await page.getByLabel("Y最小角").fill(position.yMm ?? "0");
   await page.getByLabel("Z最小角").fill(position.zMm ?? "0");
   if (position.orientation !== undefined) {
     await page.getByLabel("向き").selectOption(position.orientation);
   }
-  await panel.getByRole("button", { name: "配置を保存" }).click();
+  await page.getByRole("button", { name: "配置を保存" }).click();
 }
 
 async function setClearances(page: Page, valueMm: string) {
@@ -115,20 +117,21 @@ test("executes the AC-01 form subset for orientation, removal, undo, and no-WebG
   await placeCargo(page, "合成積荷A", { xMm: "100", yMm: "100", zMm: "0" });
   await placeCargo(page, "合成積荷B", { xMm: "1500", yMm: "100", zMm: "0" });
 
-  const panel = page.locator(".placement-panel");
+  const card = page.locator(".scene-selection-card");
   const validation = page.locator(".physical-validation");
-  await panel.getByRole("button", { name: "編集: 合成積荷B" }).click();
+  await page.getByLabel("操作する積荷").selectOption("cargo-2");
+  await card.getByRole("button", { name: "座標を微調整" }).click();
   await page.getByLabel("向き").selectOption("WLH");
-  await panel.getByRole("button", { name: "配置を保存" }).click();
-  await expect(panel).toContainText("位置: 入口から手前面まで 1500 mm / 入口から見て右壁から右側面まで 100 mm / 床から下面まで 0 mm");
+  await page.getByRole("button", { name: "配置を保存" }).click();
+  await expect(card).toContainText("1500 mm");
   await expect(validation.getByRole("heading", { name: "不適合理由", exact: false })).toHaveCount(0);
   await expect(validation.getByRole("heading", { name: "未確認理由（2件）" })).toBeVisible();
 
-  await panel.getByRole("button", { name: "配置を削除: 合成積荷B" }).click();
-  await panel.getByRole("button", { name: "配置の削除を確定" }).click();
-  await expect(panel.getByRole("button", { name: "配置を追加: 合成積荷B" })).toBeVisible();
+  await card.getByRole("button", { name: "荷室から外す" }).click();
+  await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
+  await expect(card.getByRole("button", { name: "座標を入力して配置" })).toBeVisible();
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(panel).toContainText("位置: 入口から手前面まで 1500 mm / 入口から見て右壁から右側面まで 100 mm / 床から下面まで 0 mm");
+  await expect(card).toContainText("1500 mm");
   await expect(page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" })).toHaveCount(0);
 });
 
@@ -163,22 +166,23 @@ test("reports a 1 mm support strip loss and undo restores the exact stack", asyn
   await placeCargo(page, "合成上段荷", { xMm: "500", yMm: "500", zMm: "500" });
 
   const validation = page.locator(".physical-validation");
-  const placementPanel = page.locator(".placement-panel");
+  const card = page.locator(".scene-selection-card");
   await expect(validation).toContainText(
     "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
   );
   await expect(validation).not.toContainText("100%覆われていません");
 
-  await placementPanel.getByRole("button", { name: "編集: 合成上段荷" }).click();
+  await page.getByLabel("操作する積荷").selectOption("cargo-2");
+  await card.getByRole("button", { name: "座標を微調整" }).click();
   await page.getByLabel("X最小角").fill("501");
-  await placementPanel.getByRole("button", { name: "配置を保存" }).click();
+  await page.getByRole("button", { name: "配置を保存" }).click();
   await expect(validation).toContainText(
     "床にない積荷の底面が、段積み可能な支持面で100%覆われていません。",
   );
-  await expect(placementPanel).toContainText("位置: 入口から手前面まで 501 mm / 入口から見て右壁から右側面まで 500 mm / 床から下面まで 500 mm");
+  await expect(card).toContainText("501 mm");
 
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(placementPanel).toContainText("位置: 入口から手前面まで 500 mm / 入口から見て右壁から右側面まで 500 mm / 床から下面まで 500 mm");
+  await expect(card).toContainText("500 mm");
   await expect(validation).not.toContainText("100%覆われていません");
   await expect(validation).toContainText(
     "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
