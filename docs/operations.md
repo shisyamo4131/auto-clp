@@ -3,7 +3,7 @@
 ## Current Availability
 
 - Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、案件JSON Schema `0.1.0`、完全なreadonly案件型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、保存Navigation Drawerと操作単位のSnackbar、全候補の置換前Worker判定、案件・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、viewport内のcompactな単一案件履歴、積荷picker、選択積荷のcompactな寸法・座標card、成功した案件変更を最大100件保持する非永続undo/redo、コンテナ包含・XY正面積重なり・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置と荷室外作業スペースのThree.js描画、canvas積荷選択、fine pointerによる未配置積荷の自由な荷室外移動・初回配置と配置済み床面方向drag・完全drag-out削除、許可済みX/Z軸90°回転、天地無用入力補助、viewport wheelのpage scroll、明示的な `＋` / `－` による拡大縮小、同一候補更新時のcamera保持、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
-- Implemented support refinement: fine pointer dragの床・支持可能上面へのZ snap、単一支持面内のX/Y clamp、条件未確認・不適合preview、支持候補強調、単独支持・複数支持・隙間・張り出し・支持可否混在・接触不成立の派生判定。旧XY和集合100% helperは回帰用に保持するが、現行の支持区分には使用しない。
+- Implemented support refinement: fine pointer dragの床・支持可能上面へのZ snap、単一支持面内のX/Y clamp、条件未確認・不適合preview、操作対象以外のほぼ透明な中立面と灰色点線、緑・黄点線による支持候補強調、単独支持・複数支持・隙間・張り出し・支持可否混在・接触不成立の派生判定。旧XY和集合100% helperは回帰用に保持するが、現行の支持区分には使用しない。
 - Implemented foundation: ADR 0004に基づく、一候補へ全積荷を配置する純粋な決定的DFS、目的関数順位、候補点・attempt上限、cutoff/no-complete-plan、未確認理由保持。
 - Implemented transport: 正本Schema・意味検証後だけ探索するone-shot module Worker、固定code、厳格な応答検証、同期fallbackなしのclient、即時terminate取消と遅延・二重応答mask、Appからの実Worker接続。
 - Implemented orchestration, preview, and apply: React非依存の探索session、Project参照・interaction generationのstale判定、取消・retry・遅延結果mask、React hook/panel、Appのbusy・generation開始gate、source相関付き固定copy、25件pageの非永続preview DOM、Schema・意味・物理再検証付きの確認、一括適用、一回のUndo/Redo。WebGL非対応時も利用できる。
@@ -14,13 +14,13 @@
 
 包含・重なり・隙間込み境界・非支持ペア軸別隙間・単独支持・支持条件未確認・支持接触不成立の低レベルgeometry基盤と、同一コンテナの対象抽出、参照解決、支持隙間例外、対象ID、理由コード、集約状態を返す純粋判定は実装済みである。床を下へ越える配置は専用 `floor-penetration` を先頭理由とし、他面だけの境界外 `outside-container` と区別する。判定はローカルmodule Workerでメインスレッド外に実行し、集約状態と件数を先に、理由を不適合・未確認ごとに25件ずつ表示する。候補や案件が変わった場合は旧Workerを終了して旧結果を表示せず、Worker障害時は物理的不適合と混同せず判定不能と再試行を表示する。
 
-矩形開口のY・Z断面判定、許可向き抽出、寸法適合または搬入経路未確認の理由・対象ID・集約とUI表示は実装済みである。寸法上通る結果も完全な搬入経路を保証しない。
+矩形開口のY・Z断面判定、許可向き抽出、どの許可向きでも寸法上通らない場合の不適合理由・対象ID・集約とUI表示は実装済みである。寸法上通る場合は積荷ごとの理由を生成せず、完全な搬入経路を保証しない範囲を恒常的な注意で示す。
 
 総質量・耐荷重の数学評価と、対象コンテナの配置・積荷参照を解決して超過理由・対象IDを付ける高位判定とUI表示は実装済みである。積荷別上載荷重、荷重分布、重心、軸重、床強度は評価しない。
 
 ADR 0011で、軸別隙間を隣接表面間の実距離として扱い、配置後は開口面・奥壁・Y両側壁・天井へ各設定値、床・支持面へ0 mmを要求する意味を確定した。積荷間では設定値を2倍にせず、非支持ペアはいずれか一つの分離軸で必要距離を満たせばよい。低レベル判定に加えて支持関係の識別・例外、対象ID、理由コード、集約、UI表示も実装済みである。
 
-Phase 1の計画済み判定は、完全な搬入経路、積荷別上載荷重、重心、軸重、床荷重、荷崩れ、固縛、動荷重を保証しない。これらは実装後も「未確認」として利用者へ区別して表示する。
+Phase 1は、完全な搬入経路、積荷別上載荷重、重心、軸重、床荷重、荷崩れ、固縛、動荷重を保証しない。完全な搬入経路は具体的な要望と入力契約が確定するまで積荷ごとの未確認理由にせず、恒常的な範囲説明だけを維持する。その他は実装済みの支持判定で必要な場合だけ未確認理由として区別する。
 
 配置座標はADR 0010のコンテナ局所右手座標を使い、`positionMm` は向き適用後の積荷直方体の最小角とする。正規値は整数mmを維持し、描画用中心、scene縮尺、camera、候補・積荷選択、荷室外の作業位置を案件へ保存しない。Project→scene投影、フォーム配置、canvas選択、fine pointerのX/Y dragと床・支持可能上面への決定的Z snap、許可済みX/Z軸90°回転、視点回転・平行移動、明示 `＋` / `－`、荷室基準の「荷室全体を表示」を実装済みである。viewport上のwheelはcameraを変えずpage scrollへ渡す。
 

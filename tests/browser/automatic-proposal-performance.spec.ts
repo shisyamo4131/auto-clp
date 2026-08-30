@@ -148,19 +148,7 @@ function assertReadyCompleteResponse(response: unknown, requestId: number) {
         isRecord(placement.positionMm),
     ),
   ).toBe(true);
-  expect(result.plan.unverifiedReasons).toHaveLength(20);
-  expect(
-    result.plan.unverifiedReasons.every(
-      (reason) =>
-        isRecord(reason) &&
-        reason.status === "unverified" &&
-        reason.code === "opening-path-unverified" &&
-        isRecord(reason.target) &&
-        reason.target.kind === "cargo" &&
-        Array.isArray(reason.relatedCargoIds) &&
-        reason.relatedCargoIds.length === 0,
-    ),
-  ).toBe(true);
+  expect(result.plan.unverifiedReasons).toEqual([]);
 }
 
 async function importProject(page: Page) {

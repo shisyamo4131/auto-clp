@@ -95,7 +95,6 @@ const INVALID_REASON_CODES = new Set([
 ]);
 
 const UNVERIFIED_REASON_CODES = new Set([
-  "opening-path-unverified",
   "structure-stability-unverified",
   "support-conditions-unverified",
 ]);

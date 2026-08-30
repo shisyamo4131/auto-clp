@@ -241,6 +241,21 @@ function measureContainerFrame(image: Buffer) {
   return { count, height: maxY - minY + 1, width: maxX - minX + 1 };
 }
 
+function countTurquoisePixels(image: Buffer) {
+  const { channels, height, pixels, stride, width } = decodePng(image);
+  let count = 0;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = y * stride + x * channels;
+      const red = pixels[offset]!;
+      const green = pixels[offset + 1]!;
+      const blue = pixels[offset + 2]!;
+      if (green >= red + 25 && blue >= red + 25) count += 1;
+    }
+  }
+  return count;
+}
+
 function expectSameContainerFrame(
   actual: ReturnType<typeof measureContainerFrame>,
   expected: ReturnType<typeof measureContainerFrame>,
@@ -422,6 +437,34 @@ test("snaps a staged cargo onto a containing support surface and keeps the drop 
   await expect(card).toContainText("荷室外（未配置）");
   await page.getByRole("button", { name: "やり直す" }).click();
   await expect(card).toContainText("500 mm");
+});
+
+test("renders drag focus and restores normal cargo rendering after cancel", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await addCargo(page, "集中表示の背景積荷");
+  await addCargo(page, "集中表示の操作積荷");
+  await addContainer(page, "集中表示候補");
+  await place(page, "cargo-1", "2400", "700");
+  await page.getByLabel("操作する積荷").selectOption("cargo-2");
+
+  const canvas = page.getByRole("img", { name: previewName });
+  const staged = await locateStagedCargoOnCanvas(canvas);
+  const before = countTurquoisePixels(await canvas.screenshot());
+
+  await page.mouse.move(staged.point.x, staged.point.y);
+  await page.mouse.down();
+  await page.mouse.move(staged.point.x + 12, staged.point.y, { steps: 6 });
+  const during = countTurquoisePixels(await canvas.screenshot());
+  expect(Math.abs(during - before)).toBeGreaterThan(20);
+
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  const restored = countTurquoisePixels(await canvas.screenshot());
+  expect(Math.abs(restored - before)).toBeLessThanOrEqual(
+    Math.max(10, Math.round(before * 0.03)),
+  );
 });
 
 test("keeps placed selection no-op and partial drag atomic while preserving camera and page", async ({ page }) => {

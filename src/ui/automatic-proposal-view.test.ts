@@ -119,12 +119,6 @@ function completeResult(
       unverifiedReasons: [
         {
           status: "unverified" as const,
-          code: "opening-path-unverified" as const,
-          target: { kind: "cargo" as const, id: "cargo-a" },
-          relatedCargoIds: [],
-        },
-        {
-          status: "unverified" as const,
           code: "structure-stability-unverified" as const,
           target: { kind: "cargo" as const, id: "cargo-b" },
           relatedCargoIds: ["cargo-a"],
@@ -350,14 +344,14 @@ describe("automaticProposalView ready statuses", () => {
         proposalPlacementCount: 2,
         requestAttemptCount: result.attempts.requestAttemptCount,
         candidateCount: result.attempts.candidates.length,
-        unverifiedCount: 2,
+        unverifiedCount: 1,
         algorithmVersion: AUTOMATIC_PROPOSAL_ALGORITHM_VERSION,
         effectiveLimits: result.effectiveLimits,
       },
     });
   });
 
-  it("maps opening and structure reasons to target and related names", () => {
+  it("maps a structure reason to target and related names", () => {
     const project = projectFixture({
       cargoes: [cargo("cargo-a", "Alpha"), cargo("cargo-b", "Beta")],
     });
@@ -367,14 +361,6 @@ describe("automaticProposalView ready statuses", () => {
     );
 
     expect(view.unverifiedReasons.rows).toEqual([
-      {
-        code: "opening-path-unverified",
-        message: "完全な搬入経路は未確認です。",
-        targetCargoId: "cargo-a",
-        targetCargoName: "Alpha",
-        relatedCargoLabels: [],
-        relatedCargoTotal: 0,
-      },
       {
         code: "structure-stability-unverified",
         message: "支持後の構造・安定性は未確認です。",
@@ -422,7 +408,7 @@ describe("automaticProposalView source correlation", () => {
     }],
     ["unknown related cargo", (result: Record<string, unknown>) => {
       const reasons = (result.plan as { unverifiedReasons: Array<{ relatedCargoIds: string[] }> }).unverifiedReasons;
-      reasons[1]!.relatedCargoIds = ["marker-unknown-related"];
+      reasons[0]!.relatedCargoIds = ["marker-unknown-related"];
     }],
   ] as const)("turns %s into generic failure without reflection", (_label, mutate) => {
     const project = projectFixture();
@@ -502,9 +488,9 @@ function largeFixture() {
   }));
   const reasons = cargoes.map(({ id }) => ({
     status: "unverified" as const,
-    code: "opening-path-unverified" as const,
+    code: "structure-stability-unverified" as const,
     target: { kind: "cargo" as const, id },
-    relatedCargoIds: [],
+    relatedCargoIds: [id],
   }));
   const candidates = containers.map(({ id }, index) => ({
     containerId: id,
@@ -574,7 +560,7 @@ describe("automaticProposalView pagination and purity", () => {
   it("retains long anonymous labels as data for wrapping without truncation", () => {
     const longName = "長".repeat(500);
     const project = projectFixture({
-      cargoes: [cargo("cargo-a", longName), cargo("cargo-b", "Beta")],
+      cargoes: [cargo("cargo-a", longName), cargo("cargo-b", longName)],
       containers: [container("container-a"), container("container-b", longName)],
     });
 

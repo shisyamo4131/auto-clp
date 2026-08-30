@@ -5,6 +5,7 @@
 - Status: Accepted
 - Related specification: Automatic Proposal
 - Supersedes: None
+- Refinement: ADR 0020 removes the per-cargo opening-path warning from otherwise complete plans while preserving the global non-guarantee notice.
 
 ## Context
 
@@ -24,7 +25,7 @@
 ### Feasibility and Objective
 
 - 完全案は、対象候補へ全積荷を一度ずつ配置し、案件Schemaと意味整合性を満たし、正本の `validatePlacementSet` が計算可能で不適合理由0件でなければならない。
-- `opening-path-unverified` と `structure-stability-unverified` を含む未確認理由は提案を拒否せず、previewと適用確認に保持する。提案は実積載の安全性、完全な搬入経路、構造・安定性を保証しない。
+- `structure-stability-unverified` または `support-conditions-unverified` を含む未確認理由は提案を拒否せず、previewと適用確認に保持する。ADR 0020により寸法適合時の搬入経路は積荷ごとの理由にせず、提案が実積載の安全性、完全な搬入経路、構造・安定性を保証しない範囲は恒常的な注意で示す。
 - 完全案を得た候補は、内部容積、内部床面積、内部長さ、内部幅、内部高さ、候補IDの昇順で辞書式に比較する。表示名、入力配列順、現在のscene選択を順位へ使わない。
 - 一つの候補内では固定ヒューリスティックが最初に得た完全案を採用する。提案はこの固定手順で見つけた最良既知案であり、全配置組合せに対する大域最適性を主張しない。
 

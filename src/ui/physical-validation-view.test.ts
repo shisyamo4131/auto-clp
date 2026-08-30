@@ -105,10 +105,6 @@ const invalidCopies = [
 
 const unverifiedCopies = [
   [
-    "opening-path-unverified",
-    "矩形開口の寸法には収まりますが、回転・斜め通過・車内旋回を含む完全な搬入経路は未確認です。",
-  ],
-  [
     "structure-stability-unverified",
     "単一積荷の上面による幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
   ],
@@ -237,9 +233,9 @@ describe("toPhysicalValidationView", () => {
     };
     const unverifiedReason: PhysicalValidationReason = {
       status: "unverified",
-      code: "opening-path-unverified",
+      code: "structure-stability-unverified",
       target: { kind: "cargo", id: "cargo-known" },
-      relatedCargoIds: [],
+      relatedCargoIds: ["cargo-related-a"],
     };
 
     expect(toPhysicalValidationView(projectFixture())).toMatchObject({
@@ -341,9 +337,9 @@ describe("toPhysicalValidationView", () => {
     const reasons: readonly PhysicalValidationReason[] = [
       {
         status: "unverified",
-        code: "opening-path-unverified",
+        code: "support-conditions-unverified",
         target: { kind: "cargo", id: "cargo-known" },
-        relatedCargoIds: [],
+        relatedCargoIds: ["cargo-related-a"],
       },
       {
         status: "invalid",

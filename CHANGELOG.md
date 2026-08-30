@@ -4,6 +4,7 @@
 
 ### Added
 
+- drag中だけ操作対象以外の積荷をほぼ透明な中立面・灰色点線とし、支持候補を緑または黄の点線で示して終了時に通常表示へ戻す集中表示とADR 0020。
 - 床または支持可能な積荷上面へ3D drag中のZをsnapし、単一支持面内のX/Y制限、条件未確認preview、候補強調、一回のUndo/Redoを提供する支持面操作とADR 0019。
 - 共通ガバナンス1.4.0の容量経路に対応するプロジェクト調整runbook、exact-task session測定script、handoff index/record、ADR 0016。
 - 共通ガバナンス1.3.0とプロジェクト固有ルール。
@@ -67,6 +68,7 @@
 
 ### Changed
 
+- 仕様を0.16.0へ更新し、矩形開口の寸法不適合だけを積荷別理由として表示し、完全な搬入経路と安全を保証しない範囲は恒常的な注意へ集約した。Schema 0.1.0と進捗98%は変更しない。
 - 支持判定を、複数面の100%和集合から、単一上面のX/Y完全包含、複数支持・隙間・張り出し・支持可否混在の `support-conditions-unverified`、支持接触不成立の不適合へ変更。自動提案は床置きまたは単独支持だけを生成する。
 - 仕様を0.14.0へ更新し、fine-pointer床面dragを未配置・配置済み共通の `xy-contained` / `partial` / `outside` に分類した。partialは修正途中の不適合配置として保存し、outsideだけを非永続作業位置または一回の配置削除とする。全Project積荷の検索select、compact選択cardのCRUD入口、積荷定義・配置別modal editor、非cascade削除、distinct X/Z icon、固定高statusを導入した。Schema 0.1.0と進捗98%は変更しない。
 - 仕様を0.13.0へ更新し、未配置積荷の荷室外drop位置・向きをUI session内で保持し、積荷pickerからcamera移動なしに選択できる作業スペースへ拡張した。回転はicon-onlyのX/Z軸操作とし、天地無用で横倒し向きを制限する。荷室へ正面積で重なる外側回転は拒否し、積荷編集後の無効な外側poseは決定的gridへ戻す。Undo/Redoをzoomと同じviewport toolbarへ移し、Project更新時のcameraと履歴実行時のpage位置を保持する。選択cardは積荷名を見出しとする2列compact表示へ整理し、寸法prefixを除いた。Schema 0.1.0と進捗98%は変更しない。
@@ -123,6 +125,8 @@
 - 並行ブラウザ試験が固定portの別runnerへ誤接続し、所有していないserverの停止後に連鎖失敗できた実行基盤を、runner所有の動的loopback serverと固有Playwright output directoryへ分離。成功時だけ一時成果物を削除し、失敗時は診断pathを保持する。
 
 ### Removed
+
+- 寸法上矩形開口に収まる積荷ごとに生成していた `opening-path-unverified` 理由と重複メッセージ。
 
 ### Security
 

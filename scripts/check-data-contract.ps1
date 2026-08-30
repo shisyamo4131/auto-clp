@@ -20,6 +20,7 @@ $sceneFeedbackDecisionPath = Join-Path $resolvedProject 'docs/decisions/0015-sce
 $sceneWorkbenchDecisionPath = Join-Path $resolvedProject 'docs/decisions/0017-scene-workbench-rotation-and-compact-controls.md'
 $sceneCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0018-scene-drag-classification-and-dialog-editors.md'
 $supportSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0019-support-surface-snap-and-conditional-support.md'
+$actionableOpeningDecisionPath = Join-Path $resolvedProject 'docs/decisions/0020-actionable-opening-diagnostics-and-drag-focus.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -40,6 +41,7 @@ $automaticProposalEvidenceIndexPath = Join-Path $resolvedProject 'docs/evidence/
 $automaticProposalEvidencePath = Join-Path $resolvedProject 'docs/evidence/automatic-proposal-ap08-1226b082.md'
 $appPath = Join-Path $resolvedProject 'src/App.tsx'
 $geometryPath = Join-Path $resolvedProject 'src/domain/geometry.ts'
+$placementValidationPath = Join-Path $resolvedProject 'src/domain/validation.ts'
 $sceneWorkspacePath = Join-Path $resolvedProject 'src/scene/SceneWorkspace.tsx'
 $threeViewportPath = Join-Path $resolvedProject 'src/scene/ThreeViewport.tsx'
 $sceneBrowserTestPath = Join-Path $resolvedProject 'tests/browser/scene.spec.ts'
@@ -60,6 +62,7 @@ foreach ($path in @(
     $sceneWorkbenchDecisionPath,
     $sceneCompactDecisionPath,
     $supportSnapDecisionPath,
+    $actionableOpeningDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -80,6 +83,7 @@ foreach ($path in @(
     $automaticProposalEvidencePath,
     $appPath,
     $geometryPath,
+    $placementValidationPath,
     $sceneWorkspacePath,
     $threeViewportPath,
     $sceneBrowserTestPath
@@ -184,6 +188,8 @@ foreach ($requiredText in @(
     '案件の全積荷を対象',
     '共有modal shell上の別dialog',
     'drag中の操作通知は固定高またはoverlay領域'
+    '操作対象以外の積荷は面をほぼ透明な中立色、辺を灰色の点線'
+    '寸法上通る場合は積荷ごとの理由を生成せず'
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved scene-feedback contract text: $requiredText"
@@ -206,7 +212,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.15.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.16.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -270,7 +276,8 @@ if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
     -not $dataModel.Contains('decisions/0014-dedicated-floor-penetration-diagnostic.md') -or
     -not $dataModel.Contains('decisions/0017-scene-workbench-rotation-and-compact-controls.md') -or
     -not $dataModel.Contains('decisions/0018-scene-drag-classification-and-dialog-editors.md') -or
-    -not $dataModel.Contains('ADR 0019')) {
+    -not $dataModel.Contains('decisions/0019-support-surface-snap-and-conditional-support.md') -or
+    -not $dataModel.Contains('decisions/0020-actionable-opening-diagnostics-and-drag-focus.md')) {
     throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
 }
 
@@ -330,6 +337,23 @@ $supportSnapDecision = [IO.File]::ReadAllText($supportSnapDecisionPath)
 if ($supportSnapDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0019 does not have Accepted status.'
 }
+
+$actionableOpeningDecision = [IO.File]::ReadAllText($actionableOpeningDecisionPath)
+if ($actionableOpeningDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0020 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '`opening-no-fitting-orientation`',
+    '`opening-path-unverified` を生成・保存・Worker転送・表示しない',
+    '恒常的で簡潔な注意として維持',
+    '面をほぼ透明な中立色、辺を灰色の点線',
+    '単独支持候補を緑、支持条件未確認候補を黄の点線',
+    'Project、JSON、Schema `0.1.0`、保存データ、進捗は変更しない'
+)) {
+    if (-not $actionableOpeningDecision.Contains($requiredText)) {
+        throw "ADR 0020 does not contain the approved actionable-diagnostic marker: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     '単独支持成立',
     '`support-conditions-unverified`',
@@ -358,6 +382,7 @@ foreach ($requiredText in @(
 }
 
 $geometry = [IO.File]::ReadAllText($geometryPath)
+$placementValidation = [IO.File]::ReadAllText($placementValidationPath)
 $sceneWorkspace = [IO.File]::ReadAllText($sceneWorkspacePath)
 $threeViewport = [IO.File]::ReadAllText($threeViewportPath)
 $sceneBrowserTest = [IO.File]::ReadAllText($sceneBrowserTestPath)
@@ -369,11 +394,17 @@ foreach ($implementationMarker in @(
     @{ Name = 'scene workspace classifier'; Text = $sceneWorkspace; Required = 'classifyFloorFootprint(' },
     @{ Name = 'scene workspace deletion'; Text = $sceneWorkspace; Required = 'action: "placement.delete"' },
     @{ Name = 'viewport wheel policy'; Text = $threeViewport; Required = 'controls.enableZoom = false' },
+    @{ Name = 'viewport dotted focus'; Text = $threeViewport; Required = 'new THREE.LineDashedMaterial' },
+    @{ Name = 'viewport drag de-emphasis'; Text = $threeViewport; Required = 'visual.mesh.material.opacity = 0.08' },
+    @{ Name = 'scene browser drag focus'; Text = $sceneBrowserTest; Required = 'renders drag focus and restores normal cargo rendering after cancel' },
     @{ Name = 'scene browser drag-out'; Text = $sceneBrowserTest; Required = 'returns a fully dragged-out placement to staging as one undoable deletion' }
 )) {
     if (-not $implementationMarker.Text.Contains($implementationMarker.Required)) {
         throw "$($implementationMarker.Name) does not contain the approved implementation marker: $($implementationMarker.Required)"
     }
+}
+if ($placementValidation.Contains('opening-path-unverified')) {
+    throw 'Physical validation still generates or types the retired per-cargo opening-path reason.'
 }
 
 $clearanceDecision = [IO.File]::ReadAllText($clearanceDecisionPath)
@@ -594,6 +625,7 @@ foreach ($requiredText in @(
     scene_workbench_decision_0017_accepted = $true
     scene_compact_decision_0018_accepted = $true
     support_snap_decision_0019_accepted = $true
+    actionable_opening_decision_0020_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true

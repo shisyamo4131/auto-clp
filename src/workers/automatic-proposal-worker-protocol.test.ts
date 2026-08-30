@@ -37,12 +37,6 @@ function plan(containerId = "container-1") {
     unverifiedReasons: [
       {
         status: "unverified",
-        code: "opening-path-unverified",
-        target: { kind: "cargo", id: "cargo-support" },
-        relatedCargoIds: [],
-      },
-      {
-        status: "unverified",
         code: "structure-stability-unverified",
         target: { kind: "cargo", id: "cargo-upper" },
         relatedCargoIds: ["cargo-support"],
@@ -328,6 +322,7 @@ describe("isAutomaticProposalWorkerResponse", () => {
     ["unsafe coordinate", (value: Record<string, unknown>) => { const placements = nested(nested(value, "result"), "plan").placements as Array<Record<string, unknown>>; nested(placements[0], "positionMm").xMm = 1_000_001; }],
     ["NaN coordinate", (value: Record<string, unknown>) => { const placements = nested(nested(value, "result"), "plan").placements as Array<Record<string, unknown>>; nested(placements[0], "positionMm").xMm = Number.NaN; }],
     ["unknown reason", (value: Record<string, unknown>) => { const reasons = nested(nested(value, "result"), "plan").unverifiedReasons as Array<Record<string, unknown>>; reasons[0]!.code = "unknown"; }],
+    ["retired opening-path reason", (value: Record<string, unknown>) => { const reasons = nested(nested(value, "result"), "plan").unverifiedReasons as Array<Record<string, unknown>>; reasons[0]!.code = "opening-path-unverified"; reasons[0]!.relatedCargoIds = []; }],
     ["unknown reason target", (value: Record<string, unknown>) => { const reasons = nested(nested(value, "result"), "plan").unverifiedReasons as Array<Record<string, unknown>>; nested(reasons[0], "target").id = "cargo-unknown"; }],
     ["duplicate placement cargo", (value: Record<string, unknown>) => { const placements = nested(nested(value, "result"), "plan").placements as Array<Record<string, unknown>>; placements[1]!.cargoId = placements[0]!.cargoId; }],
     ["placement container mismatch", (value: Record<string, unknown>) => { const placements = nested(nested(value, "result"), "plan").placements as Array<Record<string, unknown>>; placements[1]!.containerId = "container-other"; }],
@@ -366,15 +361,15 @@ describe("isAutomaticProposalWorkerResponse", () => {
         ...((proposalPlan.unverifiedReasons as unknown[]) ?? []),
         {
           status: "unverified",
-          code: "opening-path-unverified",
+          code: "support-conditions-unverified",
           target: { kind: "cargo", id: "cargo-upper" },
-          relatedCargoIds: [],
+          relatedCargoIds: ["cargo-support"],
         },
         {
           status: "unverified",
-          code: "opening-path-unverified",
+          code: "structure-stability-unverified",
           target: { kind: "cargo", id: "cargo-support" },
-          relatedCargoIds: [],
+          relatedCargoIds: ["cargo-upper"],
         },
         {
           status: "unverified",

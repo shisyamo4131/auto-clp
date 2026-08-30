@@ -52,7 +52,6 @@ const CUTOFF_SOURCES = new Set<AutomaticProposalCutoffSource>([
 ]);
 const ORIENTATION_SET = new Set<Orientation>(ORIENTATIONS);
 const UNVERIFIED_REASON_CODES = new Set([
-  "opening-path-unverified",
   "structure-stability-unverified",
   "support-conditions-unverified",
 ]);
@@ -154,9 +153,7 @@ function isUnverifiedReason(
     return false;
   }
 
-  return value.code === "opening-path-unverified"
-    ? value.relatedCargoIds.length === 0
-    : value.relatedCargoIds.length > 0;
+  return value.relatedCargoIds.length > 0;
 }
 
 function isPlan(value: unknown): value is AutomaticProposalPlan {

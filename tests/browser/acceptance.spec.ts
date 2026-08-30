@@ -125,7 +125,7 @@ test("executes the AC-01 form subset for orientation, removal, undo, and no-WebG
   await page.getByRole("button", { name: "配置を保存" }).click();
   await expect(card).toContainText("1500 mm");
   await expect(validation.getByRole("heading", { name: "不適合理由", exact: false })).toHaveCount(0);
-  await expect(validation.getByRole("heading", { name: "未確認理由（2件）" })).toBeVisible();
+  await expect(validation.getByRole("heading", { name: "未確認理由", exact: false })).toHaveCount(0);
 
   await card.getByRole("button", { name: "荷室から外す" }).click();
   await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
@@ -288,6 +288,6 @@ test("suppresses the human-trial floor-derived support message through the Worke
     "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
   );
   await expect(
-    validation.getByRole("heading", { name: "未確認理由（2件）" }),
-  ).toBeVisible();
+    validation.getByRole("heading", { name: "未確認理由", exact: false }),
+  ).toHaveCount(0);
 });

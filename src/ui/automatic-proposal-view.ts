@@ -38,7 +38,6 @@ export interface AutomaticProposalPlacementViewRow {
 
 export interface AutomaticProposalUnverifiedViewRow {
   readonly code:
-    | "opening-path-unverified"
     | "structure-stability-unverified"
     | "support-conditions-unverified";
   readonly message: string;
@@ -422,11 +421,9 @@ function unverifiedRows(
     return {
       code: reason.code,
       message:
-        reason.code === "opening-path-unverified"
-          ? "完全な搬入経路は未確認です。"
-          : reason.code === "structure-stability-unverified"
-            ? "支持後の構造・安定性は未確認です。"
-            : "複数支持、隙間、張り出し等の支持条件は未確認です。",
+        reason.code === "structure-stability-unverified"
+          ? "支持後の構造・安定性は未確認です。"
+          : "複数支持、隙間、張り出し等の支持条件は未確認です。",
       targetCargoId: target.id,
       targetCargoName: target.name,
       relatedCargoLabels: reason.relatedCargoIds

@@ -384,9 +384,6 @@ function payloadExceededReason(
 }
 
 describe("validatePlacementSet", () => {
-  const pathReason = (id: string): PhysicalValidationReason =>
-    unverifiedCargoReason("opening-path-unverified", id);
-
   it("returns valid for an empty selected container", () => {
     expect(validatePlacementSet(physicalProject(), "container-1")).toEqual({
       kind: "evaluated",
@@ -448,8 +445,8 @@ describe("validatePlacementSet", () => {
     expect(validatePlacementSet(project, "container-1")).toEqual({
       kind: "evaluated",
       containerId: "container-1",
-      status: "unverified",
-      reasons: [pathReason("cargo-a")],
+      status: "valid",
+      reasons: [],
     });
   });
 
@@ -481,7 +478,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason(expectedCode, "cargo-a"),
-        pathReason("cargo-a"),
       ],
     });
   });
@@ -503,8 +499,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("outside-container", "cargo-a"),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
       ],
     });
   });
@@ -526,8 +520,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-a"),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
       ],
     });
   });
@@ -545,8 +537,8 @@ describe("validatePlacementSet", () => {
     expect(validatePlacementSet(project, "container-1")).toEqual({
       kind: "evaluated",
       containerId: "container-1",
-      status: "unverified",
-      reasons: [pathReason("cargo-a")],
+      status: "valid",
+      reasons: [],
     });
   });
 
@@ -564,7 +556,7 @@ describe("validatePlacementSet", () => {
     {
       label: "exact X clearance",
       secondXmm: 20,
-      expectedStatus: "unverified",
+      expectedStatus: "valid",
       pairReason: undefined,
     },
     {
@@ -592,8 +584,6 @@ describe("validatePlacementSet", () => {
     });
     const reasons = [
       ...(pairReason === undefined ? [] : [pairReason]),
-      pathReason("cargo-a"),
-      pathReason("cargo-b"),
     ];
 
     expect(validatePlacementSet(project, "container-1")).toEqual({
@@ -623,8 +613,6 @@ describe("validatePlacementSet", () => {
       containerId: "container-1",
       status: "unverified",
       reasons: [
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
         unverifiedCargoReason(
           "structure-stability-unverified",
           "cargo-b",
@@ -650,7 +638,6 @@ describe("validatePlacementSet", () => {
       containerId: "container-1",
       status: "invalid",
       reasons: [
-        pathReason("cargo-b"),
         invalidCargoReason("support-contact-invalid", "cargo-b"),
       ],
     });
@@ -679,8 +666,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-b"]),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
         invalidCargoReason("support-contact-invalid", "cargo-b", ["cargo-a"]),
       ],
     });
@@ -706,8 +691,6 @@ describe("validatePlacementSet", () => {
       containerId: "container-1",
       status: "unverified",
       reasons: [
-        pathReason("cargo-a"),
-        pathReason("cargo-u"),
         unverifiedCargoReason(
           "support-conditions-unverified",
           "cargo-u",
@@ -740,9 +723,6 @@ describe("validatePlacementSet", () => {
       containerId: "container-1",
       status: "unverified",
       reasons: [
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
-        pathReason("cargo-u"),
         unverifiedCargoReason(
           "support-conditions-unverified",
           "cargo-u",
@@ -775,9 +755,6 @@ describe("validatePlacementSet", () => {
       containerId: "container-1",
       status: "unverified",
       reasons: [
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
-        pathReason("cargo-u"),
         unverifiedCargoReason(
           "support-conditions-unverified",
           "cargo-u",
@@ -806,8 +783,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-a"),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
         unverifiedCargoReason(
           "structure-stability-unverified",
           "cargo-b",
@@ -859,8 +834,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-a"),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
       ],
     });
   });
@@ -934,9 +907,6 @@ describe("validatePlacementSet", () => {
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-a"),
         invalidCargoReason("floor-penetration", "cargo-b"),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
-        pathReason("cargo-u"),
       ],
     });
   });
@@ -965,9 +935,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-b"),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
-        pathReason("cargo-u"),
         unverifiedCargoReason(
           "support-conditions-unverified",
           "cargo-u",
@@ -1001,9 +968,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-b"),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
-        pathReason("cargo-u"),
         unverifiedCargoReason(
           "support-conditions-unverified",
           "cargo-u",
@@ -1039,9 +1003,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-b"),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
-        pathReason("cargo-u"),
         unverifiedCargoReason(
           "structure-stability-unverified",
           "cargo-u",
@@ -1071,8 +1032,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("outside-container", "cargo-u"),
-        pathReason("cargo-a"),
-        pathReason("cargo-u"),
         unverifiedCargoReason(
           "structure-stability-unverified",
           "cargo-u",
@@ -1101,7 +1060,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("outside-container", "cargo-u"),
-        pathReason("cargo-u"),
       ],
     });
   });
@@ -1124,8 +1082,8 @@ describe("validatePlacementSet", () => {
     expect(validatePlacementSet(project, "container-1")).toEqual({
       kind: "evaluated",
       containerId: "container-1",
-      status: "unverified",
-      reasons: [pathReason("cargo-a")],
+      status: "valid",
+      reasons: [],
     });
   });
 
@@ -1176,8 +1134,8 @@ describe("validatePlacementSet", () => {
     expect(validatePlacementSet(project, "container-1")).toEqual({
       kind: "evaluated",
       containerId: "container-1",
-      status: "unverified",
-      reasons: [pathReason("cargo-a"), pathReason("cargo-b")],
+      status: "valid",
+      reasons: [],
     });
   });
 
@@ -1203,8 +1161,6 @@ describe("validatePlacementSet", () => {
       containerId: "container-1",
       status: "invalid",
       reasons: [
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
         payloadExceededReason("container-1", ["cargo-a", "cargo-b"]),
       ],
     });
@@ -1246,7 +1202,6 @@ describe("validatePlacementSet", () => {
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-a"),
         invalidCargoReason("opening-no-fitting-orientation", "cargo-a"),
-        pathReason("cargo-b"),
         unverifiedCargoReason(
           "structure-stability-unverified",
           "cargo-b",
@@ -1275,8 +1230,6 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("positive-volume-overlap", "cargo-a", ["cargo-b"]),
-        pathReason("cargo-a"),
-        pathReason("cargo-b"),
       ],
     };
 

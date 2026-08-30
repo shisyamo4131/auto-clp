@@ -80,15 +80,6 @@ function ap02Placements(): readonly Placement[] {
   ];
 }
 
-function openingReasons(ids: readonly string[] = ["cargo-a", "cargo-b"]) {
-  return ids.map((id) => ({
-    status: "unverified" as const,
-    code: "opening-path-unverified" as const,
-    target: { kind: "cargo" as const, id },
-    relatedCargoIds: [],
-  }));
-}
-
 type CompleteResult = Extract<
   AutomaticProposalResult,
   { readonly status: "complete" | "complete-with-cutoff" }
@@ -138,7 +129,7 @@ function resultFor(
       containerId: "container-a",
       placements,
       invalidReasonCount: 0 as const,
-      unverifiedReasons: openingReasons(),
+      unverifiedReasons: [],
     },
   };
   return status === "complete"
@@ -177,7 +168,6 @@ function ap03Fixture() {
     },
   ];
   const reasons = [
-    ...openingReasons(["support", "upper"]),
     {
       status: "unverified" as const,
       code: "structure-stability-unverified" as const,
@@ -270,9 +260,9 @@ describe("prepareAutomaticProposalApply", () => {
           containerId: "container-a",
           placementCount: 2,
           replacedPlacementCount: 1,
-          unverifiedReasonCount: 2,
+          unverifiedReasonCount: 0,
         },
-        unverifiedReasons: openingReasons(),
+        unverifiedReasons: [],
       });
       if (!prepared.ok || !prepared.changed) {
         throw new Error("Expected a changed AP-02 plan");
@@ -292,7 +282,7 @@ describe("prepareAutomaticProposalApply", () => {
     },
   );
 
-  it("preserves the authoritative AP-03 two opening and one structure warnings exactly", () => {
+  it("preserves the authoritative AP-03 structure warning exactly", () => {
     const { project, reasons, result } = ap03Fixture();
 
     const prepared = prepareAutomaticProposalApply(project, project, result);
@@ -304,7 +294,7 @@ describe("prepareAutomaticProposalApply", () => {
         containerId: "container-a",
         placementCount: 2,
         replacedPlacementCount: 0,
-        unverifiedReasonCount: 3,
+        unverifiedReasonCount: 1,
       },
       unverifiedReasons: reasons,
     });
@@ -502,7 +492,6 @@ describe("prepareAutomaticProposalApply", () => {
       plan: {
         ...baseResult.plan,
         unverifiedReasons: [
-          ...openingReasons(["support-a", "support-b", "upper"]),
           {
             status: "unverified" as const,
             code: "support-conditions-unverified" as const,
@@ -535,15 +524,25 @@ describe("prepareAutomaticProposalApply", () => {
   });
 
   it.each([
-    ["missing", () => openingReasons().slice(0, 1)],
-    ["reordered", () => [...openingReasons()].reverse()],
-    ["duplicate", () => [openingReasons()[0]!, openingReasons()[0]!]],
+    ["missing", (reasons: readonly unknown[]) => reasons.slice(0, 0)],
+    ["duplicate", (reasons: readonly unknown[]) => [reasons[0]!, reasons[0]!]],
+    [
+      "changed relation",
+      (reasons: readonly unknown[]) => [
+        {
+          ...(reasons[0] as Record<string, unknown>),
+          relatedCargoIds: ["upper"],
+        },
+      ],
+    ],
   ] as const)("rejects %s unverified reasons", (_label, unverifiedReasons) => {
-    const project = ap02Project();
-    const result = resultFor();
+    const { project, reasons, result } = ap03Fixture();
+    if (result.status !== "complete" && result.status !== "complete-with-cutoff") {
+      throw new Error("Expected a complete AP-03 result");
+    }
     const mismatch = {
       ...result,
-      plan: { ...result.plan, unverifiedReasons: unverifiedReasons() },
+      plan: { ...result.plan, unverifiedReasons: unverifiedReasons(reasons) },
     } as AutomaticProposalResult;
 
     expectFailurePreserves({

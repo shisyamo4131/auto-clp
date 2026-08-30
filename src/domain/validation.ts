@@ -31,7 +31,6 @@ export type InvalidPhysicalReasonCode =
   | "payload-capacity-exceeded";
 
 export type UnverifiedPhysicalReasonCode =
-  | "opening-path-unverified"
   | "structure-stability-unverified"
   | "support-conditions-unverified";
 
@@ -613,13 +612,6 @@ export function validatePlacementSet(
       appendReason({
         status: "invalid",
         code: "opening-no-fitting-orientation",
-        target,
-        relatedCargoIds: [],
-      });
-    } else {
-      appendReason({
-        status: "unverified",
-        code: "opening-path-unverified",
         target,
         relatedCargoIds: [],
       });

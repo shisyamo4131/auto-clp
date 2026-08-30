@@ -76,7 +76,7 @@ describe("PhysicalValidationWorkerEngine", () => {
         kind: "evaluated",
         status: "invalid",
         invalidCount: 3,
-        unverifiedCount: 3,
+        unverifiedCount: 0,
         placementCount: 3,
       },
     });
@@ -157,7 +157,7 @@ describe("PhysicalValidationWorkerEngine", () => {
     expect(response).not.toHaveProperty("summary.reasons");
   });
 
-  it("serves ordered maximum-size first, middle, and last pages for both statuses", () => {
+  it("serves ordered maximum-size first, middle, and last invalid-reason pages", () => {
     const engine = new PhysicalValidationWorkerEngine();
     const project = projectFixture(51);
     const domain = validatePlacementSet(project, "container-1");
@@ -165,42 +165,32 @@ describe("PhysicalValidationWorkerEngine", () => {
       throw new Error("Fixture must be evaluable");
     }
     const expectedInvalid = domain.reasons.filter((reason) => reason.status === "invalid");
-    const expectedUnverified = domain.reasons.filter(
-      (reason) => reason.status === "unverified",
-    );
-
     expect(evaluate(engine, project)).toMatchObject({
       summary: {
         invalidCount: 1_275,
-        unverifiedCount: 51,
+        unverifiedCount: 0,
         placementCount: 51,
       },
     });
 
-    for (const [status, reasons, offsets] of [
-      ["invalid", expectedInvalid, [0, 625, 1_250]],
-      ["unverified", expectedUnverified, [0, 25, 50]],
-    ] as const) {
-      for (const offset of offsets) {
-        const response = page(engine, status, offset);
-        expect(response).toEqual({
-          type: "reason-page-ready",
-          generation: 1,
-          requestId: offset + 1,
-          status,
+    for (const offset of [0, 625, 1_250]) {
+      const response = page(engine, "invalid", offset);
+      expect(response).toEqual({
+        type: "reason-page-ready",
+        generation: 1,
+        requestId: offset + 1,
+        status: "invalid",
+        offset,
+        total: expectedInvalid.length,
+        reasons: expectedInvalid.slice(
           offset,
-          total: reasons.length,
-          reasons: reasons.slice(offset, offset + PHYSICAL_VALIDATION_REASON_PAGE_SIZE),
-        });
-        if (offset < 50 || status === "invalid") {
-          expect(response).toHaveProperty(
-            "reasons.length",
-            PHYSICAL_VALIDATION_REASON_PAGE_SIZE,
-          );
-        } else {
-          expect(response).toHaveProperty("reasons.length", 1);
-        }
-      }
+          offset + PHYSICAL_VALIDATION_REASON_PAGE_SIZE,
+        ),
+      });
+      expect(response).toHaveProperty(
+        "reasons.length",
+        PHYSICAL_VALIDATION_REASON_PAGE_SIZE,
+      );
     }
   });
 

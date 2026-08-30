@@ -1,7 +1,7 @@
 # Phase 1 Synthetic Acceptance Contract
 
 - Status: Active
-- Last updated: 2026-08-28
+- Last updated: 2026-08-30
 - Scope: Phase 1 — ローカル3D手動配置試作
 - Data classification: 匿名の合成データのみ
 
@@ -38,7 +38,7 @@
 2. 取り消しで初期値 `(100, 100, 0)`、やり直しで指定値 `(200, 100, 0)` が正確に復元される。
 3. 配置フォームで積荷Bを `WLH` に変更する。不許可向きは選択できない。
 4. 積荷Bを確認付きで取り外し、取り消しで復元する。
-5. 不適合理由は0件で、各積荷の `opening-path-unverified` は保持され、安全保証ではない注意が表示される。
+5. 不適合理由と積荷ごとの搬入経路未確認理由は0件で、完全な搬入経路と安全を保証しない恒常的な注意が表示される。
 
 ### Acceptance Observation
 
@@ -55,7 +55,7 @@
 
 ### Steps and Expected Results
 
-1. 完全一致配置では不適合理由が0件となる。単一上面のX/Y完全包含による幾何学的単独支持が成立し、両積荷の `opening-path-unverified` と、上段の `structure-stability-unverified` は残る。
+1. 完全一致配置では不適合理由が0件となる。単一上面のX/Y完全包含による幾何学的単独支持が成立し、上段の `structure-stability-unverified` だけが残る。
 2. 上段Xを501 mmへ変更する。底面が1 mmだけ支持面から張り出し、不適合ではなく `support-conditions-unverified` が1件表示される。構造剛性、支持位置、重心、許容支持間隔の確認を促し、支持接触に対するpair隙間理由は追加しない。
 3. 取り消しでX=500 mmへ戻し、単独支持と構造・安定性未確認の表示を復元する。
 
@@ -72,7 +72,7 @@
 1. `floor-penetration` を対象積荷の先頭の不適合理由として表示し、Zを0以上へ直すよう案内する。
 2. 同じ座標原因から積荷自身の隙間・支持不足、pair重なり・隙間不足を連鎖表示しない。
 3. 座標と独立する `opening-no-fitting-orientation` と `payload-capacity-exceeded` を同時に保持する。
-4. 搬入経路未確認は、開口寸法自体が不適合のため表示しない。
+4. 搬入経路未確認は積荷ごとの理由として表示せず、完全な搬入経路を保証しない範囲は恒常的な注意で確認できる。
 5. 床以外の壁・天井境界違反は従来どおり `outside-container` として区別する。
 
 ## AC-04 Recovery, Portability, and No-WebGL Fallback
@@ -99,7 +99,7 @@
 - AC-02: `tests/browser/acceptance.spec.ts` が正確な合成データで単独支持、Xを1 mmずらした条件未確認の張り出し、undo復元を実行する。`tests/browser/scene.spec.ts` が支持面への実drag snapと一回のUndo/Redoを実行する。
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` が履歴、IndexedDB、固定JSON往復、WebGL非対応fallbackを分担して実行する。
-- 仕様0.15.0は、未配置・配置済み共通のdrag三状態分類、床・支持面snap、単一支持面内clamp、支持条件未確認、全積荷select、積荷・配置別dialog CRUD、非cascade削除、distinct X/Z icon、固定高statusを全単体938件・全browser70件の統合回帰へ含める。開発チーム内試用と実務利用者試用の証拠ではない。
+- 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 
 ## Observation Record Template
 
@@ -118,7 +118,7 @@
 
 - AP-01 Candidate objective: 共通して隙間0、積荷1個 `50×50×50 mm`、1,000 g、`LWH` のみを使う。容積比較は `small=200×100×100` が `large=300×100×100` に勝つ。同容積比較は `floor-small=100×100×200` が `floor-large=200×100×100` に勝つ。同容積・床面積比較は `length-small=100×200×100` が `length-large=200×100×100` に勝つ。同寸法比較は入力配列と表示名を入れ替えても `container-a` が `container-b` に勝つ。各候補の開口と耐荷重は積荷を許容する値とする。
 - AP-02 Complete plan only: 隙間0、候補 `200×100×100 mm`、開口 `100×100 mm`、耐荷重2,000 g、積荷 `cargo-a` と `cargo-b` を各 `100×100×100 mm`、1,000 g、`LWH` のみとする。期待案は `(0,0,0)` と `(100,0,0)` に各積荷を一度ずつ置く。同じ出力から一方欠落、重複、未知ID、候補混在を作り、適用境界ですべて拒否する。候補長さを199 mmにした派生fixtureでは部分案を適用不可とする。
-- AP-03 Unverified preserved: 隙間0、候補 `100×100×200 mm`、開口 `100×200 mm`、耐荷重2,001 gとする。`support` は `100×100×100 mm`、1,001 g、支持可、`upper` は同寸法、1,000 g、支持不可とする。期待案はsupportを `(0,0,0)`、upperを `(0,0,100)` に置き、不適合0、搬入経路未確認2件、upperの構造・安定性未確認1件をpreviewと適用確認に保持する。
+- AP-03 Unverified preserved: 隙間0、候補 `100×100×200 mm`、開口 `100×200 mm`、耐荷重2,001 gとする。`support` は `100×100×100 mm`、1,001 g、支持可、`upper` は同寸法、1,000 g、支持不可とする。期待案はsupportを `(0,0,0)`、upperを `(0,0,100)` に置き、不適合0、upperの構造・安定性未確認1件をpreviewと適用確認に保持する。寸法適合した両積荷の搬入経路理由は生成しない。
 - AP-04 Cutoff semantics: 純粋なattempt予算fixtureで候補1〜10,000回目を評価し10,001回目を拒否、要求1〜1,000,000回目を評価し1,000,001回目を拒否する。9,999回で自然終了、10,000回目で自然終了、10,000回後に未探索あり、上限ちょうどで成功を別々に固定する。より優先される候補が完全案なしcutoff、次候補が完全案の集約fixtureでは `complete-with-cutoff`、次候補選択、目的上最良未確認の専用警告、適用可とする。順位を逆転した時は劣後候補を探索せず通常成功とする。
 - AP-05 No complete plan: 隙間0、積荷 `101×100×100 mm`、1,000 g、`LWH` のみと、各 `100×100×100 mm`、開口 `100×100 mm`、耐荷重1,000 gの不可能候補2個を使う。向き事前filterでattempt 0、全候補探索済み、`no-complete-plan`、cutoffなし、適用不可、実積載不能の非証明copyを期待する。
 - AP-06 Preview and apply: 探索、preview、取消、失敗、staleでは現在Projectと履歴を同一参照で保持し、確認付き適用だけが配置を一括置換する。Undo/Redoで探索前後を正確に往復する。

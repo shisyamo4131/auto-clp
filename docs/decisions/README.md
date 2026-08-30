@@ -30,5 +30,6 @@
 | [0017](0017-scene-workbench-rotation-and-compact-controls.md) | 3D作業面・軸別回転・compact操作 | Accepted | 2026-08-28 |
 | [0018](0018-scene-drag-classification-and-dialog-editors.md) | 3D drag三状態分類とdialog編集 | Accepted | 2026-08-29 |
 | [0019](0019-support-surface-snap-and-conditional-support.md) | 支持面snapと支持条件未確認 | Accepted | 2026-08-30 |
+| [0020](0020-actionable-opening-diagnostics-and-drag-focus.md) | 実行可能な開口診断とdrag集中表示 | Accepted | 2026-08-30 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

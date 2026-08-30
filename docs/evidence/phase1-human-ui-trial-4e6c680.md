@@ -172,7 +172,7 @@ X/Z回転は既存 `allowedOrientations` だけを使い、天地無用を `LWH`
 - scene-local layout、結果指向の向き表示、座標フォーム導線、案件履歴の人間による再試用。
 - 非永続仮置き場の人間による見つけやすさ・掴みやすさ・荷室内dropの再試用。
 - `CP-PHASE1-SCENE-FEEDBACK-001` は人間再試用でwheel scroll、camera button、完全drag-out、Undo/Redo、不適合表示を確認した。固定仮置き、履歴時のpage/camera移動、回転・cardの大きさが後続改善として観察された。
-- `CP-PHASE1-SCENE-WORKBENCH-001` の荷室外自由作業位置、picker、X/Z回転、天地無用、compact toolbar/card、camera/page保持は自動検証済みだが、人間再試用は未実施。
+- `CP-PHASE1-SCENE-WORKBENCH-001` の荷室外自由作業位置、picker、X/Z回転、天地無用、compact toolbar/card、camera/page保持は人間再試用で期待どおりと確認された。後続の支持面snapも下記の再試用で確認済みである。
 
 ## Compact Scene UX Follow-up
 
@@ -185,6 +185,18 @@ X/Z回転は既存 `allowedOrientations` だけを使い、天地無用を `LWH`
 確定前レビューは、no-op先行、X/Y三状態分類、Z除外、gesture以外への非適用、他候補所有権、dialogのfocus・dirty・busy、配置削除と積荷削除の非cascade、使用中向き削除拒否、狭幅、fixed status、distinct iconを明文化すれば整合すると判断した。指摘を反映した仕様をユーザーが明示承認し、仕様0.14.0とADR 0018へ確定した。Schema 0.1.0と進捗98%は維持する。
 
 実装は純粋 `classifyFloorFootprint`、全Project積荷select、compact選択card、共有modal shell、積荷定義・配置別editor、focus可能な `aria-disabled` X/Z icon、固定高statusを使用する。最終差分では全単体928件・全browser69件、型、lint、buildを個別に通過した。データ契約、文書、ガバナンス、diff検査もcommit前後に個別実行して記録する。人間による0.14.0版の再試用は未実施であり、自動検証結果は実務利用者受入または安全保証ではない。
+
+## Support Snap Human Re-trial and Opening-message Follow-up
+
+- Date: 2026-08-30
+- Evaluator: 同じ人間のプロジェクト評価者
+- Environment: ローカルChrome、`http://127.0.0.1:4174/`、匿名合成データ
+
+評価者は、単一支持面上へのdrag snapと面内移動、小さい支持面による支持条件未確認、複数支持・隙間・張り出しの条件未確認、接触面なし・Z不一致・支持不可面・立体重複の不適合、dropの一回履歴とUndo/Redoを含む6項目をすべて期待どおりと確認した。これにより仕様0.15.0の支持面操作に関する案内付き人間再試用は合格とする。ただし、実積載の構造強度・安定性・安全性を保証する証拠ではない。
+
+同じ試用で、寸法上開口に収まる積荷ごとに同一の搬入経路未確認メッセージが多数表示されることと、drag中に他積荷が通常色のままで操作対象を追いにくいことが改善点となった。評価者は、現段階で完全な搬入経路の追加要件を確認できないため個別メッセージを廃止し、具体的な将来要望が生じた時に改めて設計する方針と、drag対象以外をほぼ透明な中立面・灰色点線、支持候補を緑または黄の点線とする仕様を承認した。仕様0.16.0とADR 0020へ反映し、恒常的な非保証注意は維持する。新しいdrag集中表示の人間再試用は未実施である。
+
+自動回帰では、寸法適合時の理由0件、寸法不適合の専用理由、旧Worker理由の拒否、支持理由と自動提案の保持、drag中の描画変化と取消後復元を含め、全単体939件・全browser71件が成功した。型、lint、build、文書・データ・ガバナンス検査も別々に確認する。これは新しい集中表示の人間試用または実積載の安全証明ではない。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 

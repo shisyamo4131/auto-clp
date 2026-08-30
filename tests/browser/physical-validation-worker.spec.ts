@@ -518,7 +518,7 @@ test("keeps all 1000-placement reasons in the real module Worker and yields the 
       kind: "evaluated",
       status: "invalid",
       invalidCount: 499_500,
-      unverifiedCount: 1_000,
+      unverifiedCount: 0,
       placementCount: 1_000,
     },
   });
@@ -527,8 +527,8 @@ test("keeps all 1000-placement reasons in the real module Worker and yields the 
     { status: "invalid", offset: 0, total: 499_500, count: 25 },
     { status: "invalid", offset: 249_750, total: 499_500, count: 25 },
     { status: "invalid", offset: 499_475, total: 499_500, count: 25 },
-    { status: "unverified", offset: 0, total: 1_000, count: 25 },
-    { status: "unverified", offset: 975, total: 1_000, count: 25 },
+    { status: "unverified", offset: 0, total: 0, count: 0 },
+    { status: "unverified", offset: 975, total: 0, count: 0 },
   ]);
   expect(
     measurement.timerTicks > 0 ||

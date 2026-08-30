@@ -332,18 +332,6 @@ describe("automatic proposal complete plans", () => {
     expect(result.plan.unverifiedReasons).toEqual([
       {
         status: "unverified",
-        code: "opening-path-unverified",
-        target: { kind: "cargo", id: "support" },
-        relatedCargoIds: [],
-      },
-      {
-        status: "unverified",
-        code: "opening-path-unverified",
-        target: { kind: "cargo", id: "upper" },
-        relatedCargoIds: [],
-      },
-      {
-        status: "unverified",
         code: "structure-stability-unverified",
         target: { kind: "cargo", id: "upper" },
         relatedCargoIds: ["support"],

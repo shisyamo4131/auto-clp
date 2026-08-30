@@ -5,6 +5,7 @@
 - Related specification: Placement and Validation, Automatic Proposal
 - Supersedes: ADR 0008の「複数支持面の和集合が底面を100%覆えば幾何支持成立」とする規則
 - Refines: ADR 0010、0011、0012、0015、0017、0018
+- Refinement: ADR 0020 changes drag candidate emphasis to dotted focus outlines and removes the unrelated per-cargo opening-path diagnostic.
 
 ## Context
 

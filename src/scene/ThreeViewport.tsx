@@ -69,6 +69,10 @@ interface CargoVisual {
   readonly kind: "placed" | "staged";
   readonly mesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>;
   readonly outline: THREE.LineSegments<THREE.EdgesGeometry, THREE.LineBasicMaterial>;
+  readonly focusOutline: THREE.LineSegments<
+    THREE.EdgesGeometry,
+    THREE.LineDashedMaterial
+  >;
 }
 
 interface CargoPointerGesture {
@@ -242,12 +246,29 @@ function addProjection(
     outline.renderOrder = 1;
     cargoMesh.add(outline);
 
+    const focusOutlineMaterial = new THREE.LineDashedMaterial({
+      color: 0xb9c1ca,
+      dashSize: 0.035,
+      gapSize: 0.02,
+      opacity: 0.9,
+      transparent: true,
+    });
+    const focusOutline = new THREE.LineSegments(
+      outlineGeometry,
+      focusOutlineMaterial,
+    );
+    focusOutline.computeLineDistances();
+    focusOutline.visible = false;
+    focusOutline.renderOrder = 2;
+    cargoMesh.add(focusOutline);
+
     geometries.push(cargoGeometry, outlineGeometry);
-    materials.push(cargoMaterial, outlineMaterial);
+    materials.push(cargoMaterial, outlineMaterial, focusOutlineMaterial);
     cargoVisuals.set(cargo.cargoId, {
       kind: cargo.kind,
       mesh: cargoMesh,
       outline,
+      focusOutline,
     });
   }
 
@@ -398,8 +419,33 @@ export function ThreeViewport({
         visual.mesh.material.emissive.setHex(
           selected ? (staged ? 0x4a260c : 0x123c3a) : 0x000000,
         );
+        visual.mesh.material.depthWrite = true;
         visual.outline.visible = selected;
         visual.outline.material.color.setHex(staged ? 0xffd19a : 0xffe69a);
+        visual.focusOutline.visible = false;
+        visual.focusOutline.material.color.setHex(0xb9c1ca);
+      }
+    };
+    const applyDragFocusVisuals = (
+      draggedCargoId: string,
+      supporterIds: readonly string[],
+      supporterColor: number,
+    ): void => {
+      for (const [candidateId, visual] of cargoVisuals) {
+        if (candidateId === draggedCargoId) continue;
+        visual.mesh.material.color.setHex(0xb9c1ca);
+        visual.mesh.material.opacity = 0.08;
+        visual.mesh.material.emissive.setHex(0x000000);
+        visual.mesh.material.depthWrite = false;
+        visual.outline.visible = false;
+        visual.focusOutline.visible = true;
+        visual.focusOutline.material.color.setHex(0xb9c1ca);
+      }
+      for (const supporterId of supporterIds) {
+        const supporter = cargoVisuals.get(supporterId);
+        if (supporter === undefined || supporterId === draggedCargoId) continue;
+        supporter.focusOutline.visible = true;
+        supporter.focusOutline.material.color.setHex(supporterColor);
       }
     };
     const updateSelection = (cargoId?: string): boolean => {
@@ -514,6 +560,11 @@ export function ThreeViewport({
       });
       gesture.lastPreview = preview;
       applySelectionVisuals(selectedCargoIdRef.current);
+      applyDragFocusVisuals(
+        gesture.cargoId,
+        preview.supporterIds,
+        preview.state === "single-support" ? 0x55d68b : 0xedb852,
+      );
       gesture.mesh.position.copy(gesture.startMeshPosition);
       gesture.mesh.position.x += preview.sceneDelta.x;
       gesture.mesh.position.y += preview.sceneDelta.y;
@@ -533,14 +584,6 @@ export function ThreeViewport({
         draggedVisual.mesh.material.color.setHex(stateColor);
         draggedVisual.mesh.material.emissive.setHex(
           preview.state === "invalid" ? 0x4a0f16 : 0x162c22,
-        );
-      }
-      for (const supporterId of preview.supporterIds) {
-        const supporter = cargoVisuals.get(supporterId);
-        if (supporter === undefined) continue;
-        supporter.outline.visible = true;
-        supporter.outline.material.color.setHex(
-          preview.state === "single-support" ? 0x55d68b : 0xedb852,
         );
       }
       renderScene();
