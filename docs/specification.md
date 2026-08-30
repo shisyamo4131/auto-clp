@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-08-30
-- Specification version: 0.17.0
+- Specification version: 0.17.1
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -72,7 +72,7 @@
 - 3D viewport上のwheel入力はページscrollへ渡し、cameraを拡大・縮小しない。cameraの拡大・縮小は明示的な `＋` / `－` buttonだけで行い、「荷室全体を表示」を維持する。
 - 積荷の検索と選択はscene投影ではなく案件の全積荷を対象とし、未配置、現在候補へ配置済み、他候補へ配置済みを識別する。候補0件、WebGL 2非対応でも利用でき、選択だけではcameraを自動移動しない。他候補の積荷は所有候補へ明示切替した後だけ配置編集または取り外しできる。
 - 配置済み・荷室外の積荷は、許可向き集合内でX軸またはZ軸を中心に90度回転できる。Z軸遷移は `LWH↔WLH`、`LHW↔HLW`、`WHL↔HWL`、X軸遷移は `LWH↔LHW`、`WLH↔WHL`、`HLW↔HWL` とする。配置済み回転は最小角を保持した一回の配置更新、荷室外回転はsession状態だけの変更とする。荷室外回転後のX/Y占有範囲が荷室床面と正面積で重なる場合は回転を拒否して直前poseを保持する。積荷寸法または許可向きの編集で既存session poseが同条件を失った場合は、新しい向き適用後寸法で完全に荷室外となる決定的初期位置へ戻す。
-- X/Z回転はUndo/Redo、`＋` / `－` と同じviewport固定toolbarへ常時表示する44 px以上のicon-only buttonとする。両軸とも一本の軸線へ矢印が回り込む同じSVGを使い、X軸iconだけをZ軸iconに対して90度回して軸を区別し、回転前後でbutton位置を変えない。積荷未選択、操作中、許可向きなし、天地無用では該当操作をfocus可能な `aria-disabled` controlとし、axis別のaccessible name、説明参照、title、操作statusで理由を示す。天地無用はX軸回転だけを無効にする。
+- X/Z回転はUndo/Redo、`＋` / `－` と同じviewport固定toolbarへ常時表示する44 px以上のicon-only buttonとする。両軸とも一本の軸線へ矢印が回り込む同じSVGを使い、X軸iconだけをZ軸iconに対して90度回して軸を区別し、回転前後でbutton位置を変えない。積荷未選択、操作中、許可向きなし、天地無用では該当操作をfocus可能な `aria-disabled` controlとし、axis別のaccessible name、説明参照、title、操作statusで理由を示す。使用可は3Dの青緑線および積荷色と混同しない明るい紫色の背景・枠・前景、使用不可は暗い低彩度の背景・枠・前景とし、opacity差だけに依存せず視覚的に区別する。天地無用はX軸回転だけを無効にする。
 - 選択積荷cardは積荷名を見出しとし、「選択中の積荷」と寸法prefix `大きさ:` を表示しない。向き適用後寸法とcompactなX/Y/Zをdesktopでは2列、狭幅では1列にし、座標の意味と保存上の向きcodeは詳細表示へ残す。配置一覧も寸法prefixを表示しない。
 - 多数積荷でページを縦へ伸ばす積荷・配置一覧と常設編集フォームは主作業面へ置かない。積荷追加入口と全積荷select、選択cardの編集・取り外し・削除入口を維持し、積荷定義と配置座標は共有modal shell上の別dialog、別draft、別保存履歴として編集する。物理判定一覧は維持する。
 - dialogはfocus trap、背景のinert化、内部scroll、305 / 320 / 375 px対応、scrollbar shift防止、`preventScroll`付きfocus復帰を備える。clean状態のEscapeは閉じ、dirty状態は破棄確認を要求する。dialog表示中は履歴、3D drag・回転、候補切替、永続化・JSON読込、自動提案をbusy gateで拒否する。

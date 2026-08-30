@@ -549,6 +549,13 @@ test("keeps axis rotation controls fixed, always visible, and distinguishable by
   await place(page);
   await expect(x).toHaveAttribute("aria-disabled", "true");
   await expect(z).not.toHaveAttribute("aria-disabled", "true");
+  await expect(x).toHaveCSS("background-color", "rgb(9, 19, 30)");
+  await expect(x).toHaveCSS("border-color", "rgb(52, 70, 87)");
+  await expect(x).toHaveCSS("color", "rgb(102, 120, 135)");
+  await expect(x).toHaveCSS("opacity", "1");
+  await expect(z).toHaveCSS("background-color", "rgb(75, 43, 111)");
+  await expect(z).toHaveCSS("border-color", "rgb(230, 184, 255)");
+  await expect(z).toHaveCSS("color", "rgb(255, 242, 255)");
   await x.focus();
   await expect(x).toBeFocused();
   expect(await x.locator("path").first().getAttribute("d")).toBe(await z.locator("path").first().getAttribute("d"));

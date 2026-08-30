@@ -46,6 +46,7 @@ $placementValidationPath = Join-Path $resolvedProject 'src/domain/validation.ts'
 $sceneWorkspacePath = Join-Path $resolvedProject 'src/scene/SceneWorkspace.tsx'
 $threeViewportPath = Join-Path $resolvedProject 'src/scene/ThreeViewport.tsx'
 $sceneBrowserTestPath = Join-Path $resolvedProject 'tests/browser/scene.spec.ts'
+$stylesPath = Join-Path $resolvedProject 'src/styles.css'
 
 foreach ($path in @(
     $schemaPath,
@@ -88,7 +89,8 @@ foreach ($path in @(
     $placementValidationPath,
     $sceneWorkspacePath,
     $threeViewportPath,
-    $sceneBrowserTestPath
+    $sceneBrowserTestPath,
+    $stylesPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
@@ -195,6 +197,7 @@ foreach ($requiredText in @(
     '同じviewport固定toolbarへ常時表示'
     '一本の軸線へ矢印が回り込む同じSVG'
     '回転前後でbutton位置を変えない'
+    'opacity差だけに依存せず視覚的に区別する'
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved scene-feedback contract text: $requiredText"
@@ -217,7 +220,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.17.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.17.1' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -358,6 +361,7 @@ foreach ($requiredText in @(
     '一本の軸線へ矢印が回り込む同じSVG glyph',
     'X軸glyphだけをZ軸glyphに対して90度回して',
     '積荷未選択時も常時表示',
+    'opacity差だけに依存せず',
     'Project、JSON、IndexedDB、Schema `0.1.0`',
     '回転前後でbutton位置は変えない'
 )) {
@@ -409,6 +413,7 @@ $placementValidation = [IO.File]::ReadAllText($placementValidationPath)
 $sceneWorkspace = [IO.File]::ReadAllText($sceneWorkspacePath)
 $threeViewport = [IO.File]::ReadAllText($threeViewportPath)
 $sceneBrowserTest = [IO.File]::ReadAllText($sceneBrowserTestPath)
+$styles = [IO.File]::ReadAllText($stylesPath)
 foreach ($implementationMarker in @(
     @{ Name = 'geometry'; Text = $geometry; Required = 'export function hasPositiveAreaOverlap' },
     @{ Name = 'geometric support'; Text = $geometry; Required = 'export function assessGeometricSupport' },
@@ -421,6 +426,8 @@ foreach ($implementationMarker in @(
     @{ Name = 'viewport drag de-emphasis'; Text = $threeViewport; Required = 'visual.mesh.material.opacity = 0.08' },
     @{ Name = 'viewport fixed rotation toolbar'; Text = $threeViewport; Required = 'className="viewport__rotation-controls"' },
     @{ Name = 'viewport common axis rotation icon'; Text = $threeViewport; Required = 'M4 12a8 5 0 0 0 13.7 3.5' },
+    @{ Name = 'viewport enabled rotation contrast'; Text = $styles; Required = 'background: #4b2b6f' },
+    @{ Name = 'viewport disabled rotation contrast'; Text = $styles; Required = 'background: #09131e' },
     @{ Name = 'scene browser drag focus'; Text = $sceneBrowserTest; Required = 'renders drag focus and restores normal cargo rendering after cancel' },
     @{ Name = 'scene browser fixed rotation'; Text = $sceneBrowserTest; Required = 'keeps axis rotation controls fixed, always visible, and distinguishable by orientation' },
     @{ Name = 'scene browser drag-out'; Text = $sceneBrowserTest; Required = 'returns a fully dragged-out placement to staging as one undoable deletion' }

@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-08-30
-- Related specification: `../specification.md` 0.17.0
+- Related specification: `../specification.md` 0.17.1
 - Refines: ADR 0017
 - Supersedes: ADR 0018のX/Zで異なるSVG pathを使う表示規則
 
@@ -15,6 +15,7 @@
 - X軸、Z軸回転buttonはUndo/Redo、`＋` / `－`、「荷室全体を表示」と同じviewport固定toolbarへ置く。選択mesh、camera、resize、回転結果へ追従させず、回転前後でbutton位置は変えない。
 - 両軸に一本の軸線へ矢印が回り込む同じSVG glyphを使い、X軸glyphだけをZ軸glyphに対して90度回して見せる。axisの意味は `X軸を中心に90°回転` / `Z軸を中心に90°回転` のaccessible nameとtitleでも明示する。
 - 両buttonは積荷未選択時も常時表示する。未選択、drag・dialog・保存等のbusy、該当する許可向きなし、天地無用では、focus可能な `aria-disabled` controlとして理由を説明参照、title、操作statusへ返す。
+- 使用可は3Dの青緑線および積荷色と混同しない明るい紫色の背景・枠・前景、使用不可は暗い低彩度の背景・枠・前景とする。opacity差だけに依存せず、icon-onlyでも可否を一目で区別できるようにする。
 - Z軸は床面内回転、X軸は横倒し方向の回転とし、orientation遷移、最小角、Project履歴、荷室外session pose、重なり拒否、天地無用がXだけを制限する規則はADR 0017から変更しない。
 
 ## Rationale
@@ -26,7 +27,7 @@
 - Users: 回転、Undo/Redo、拡大・縮小を同じ作業領域で見つけられ、回転後も同じ位置から続けて操作できる。
 - Data: Project、JSON、IndexedDB、Schema `0.1.0`、orientation code、履歴の意味は変更しない。
 - Implementation: mesh投影位置のDOM計算を除去し、固定toolbar内へ常設のaxis回転groupを置く。X iconはCSSで90度回す。
-- Tests: 未選択時の常設・無効理由、同一SVG pathと90度差、天地無用、busy、連続回転後のbutton位置、向き更新とUndo/Redo、狭幅を回帰する。
+- Tests: 未選択時の常設・無効理由、同一SVG pathと90度差、使用可・不可の背景・枠・前景色、天地無用、busy、連続回転後のbutton位置、向き更新とUndo/Redo、狭幅を回帰する。
 
 ## Compatibility, Migration, and Rollback
 

@@ -703,6 +703,23 @@ h1 {
   width: 2.75rem;
   padding: 0.45rem;
   place-items: center;
+  border-color: #e6b8ff;
+  color: #fff2ff;
+  background: #4b2b6f;
+  box-shadow: inset 0 0 0 1px rgba(255, 242, 255, 0.16), 0 0 0.65rem rgba(230, 184, 255, 0.24);
+  opacity: 1;
+}
+
+.viewport__rotation-controls button:hover:not([aria-disabled="true"]) {
+  background: #62408a;
+}
+
+.viewport__rotation-controls button[aria-disabled="true"] {
+  border-color: #344657;
+  color: #667887;
+  background: #09131e;
+  box-shadow: none;
+  opacity: 1;
 }
 
 .viewport__rotation-icon {
