@@ -677,15 +677,83 @@ h1 {
   line-height: 1.65;
 }
 
-.webgl-rescue__actions {
-  display: flex;
-  flex-wrap: wrap;
+.webgl-rescue__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
   gap: 0.75rem;
+  margin-top: 1rem;
 }
 
-.webgl-rescue__status {
-  min-height: 1.65em;
+.webgl-rescue__option {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  border: 1px solid rgba(132, 172, 195, 0.26);
+  border-radius: 0.75rem;
+  background: rgba(11, 29, 45, 0.72);
+}
+
+.webgl-rescue__option h4,
+.webgl-rescue__recovery h4 {
+  margin: 0 0 0.35rem;
+}
+
+.webgl-rescue__option p {
+  margin: 0 0 0.8rem;
+}
+
+.webgl-rescue__option button {
+  width: 100%;
+  margin-top: auto;
+}
+
+.webgl-rescue__filename {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.65rem;
+  border-radius: 0.55rem;
+  background: rgba(3, 12, 22, 0.65);
+  font-size: 0.85rem;
+}
+
+.webgl-rescue__filename span {
+  color: #91a9bb;
+}
+
+.webgl-rescue__filename code {
+  color: #edf7ff;
+  overflow-wrap: anywhere;
+}
+
+.webgl-rescue__feedback {
   margin: 1rem 0 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(132, 172, 195, 0.35);
+  border-radius: 0.65rem;
+  background: rgba(8, 24, 38, 0.92);
+}
+
+.webgl-rescue p.webgl-rescue__feedback--success {
+  border-color: rgba(73, 219, 201, 0.72);
+  color: #d7fff9;
+}
+
+.webgl-rescue p.webgl-rescue__feedback--error {
+  border-color: rgba(255, 118, 111, 0.72);
+  color: #ffe1df;
+}
+
+.webgl-rescue__recovery {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(132, 172, 195, 0.24);
+}
+
+.webgl-rescue__recovery ol {
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.4rem;
+  color: #b8cad8;
+  line-height: 1.65;
 }
 
 .renderer-probe {

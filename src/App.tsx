@@ -20,6 +20,7 @@ import type { Project } from "./domain/model";
 import {
   downloadProjectJson,
   PROJECT_DEVICE_RESCUE_FILENAME,
+  PROJECT_EXPORT_FILENAME,
   projectJsonSourceFromFile,
 } from "./persistence/project-file";
 import { preflightImportedProject } from "./persistence/project-import-preflight-client";
@@ -99,11 +100,11 @@ const stateCopy: Record<AppState, { readonly title: string; readonly detail: str
   },
   unsupported: {
     title: "Auto CLPを利用できません",
-    detail: "WebGL 2を利用できないため、案件の編集・配置・判定・自動提案・保存操作を停止しました。対応ブラウザとGPU設定を確認して再読み込みしてください。",
+    detail: "WebGL 2を利用できないため、作業データの編集・配置・判定・自動提案・保存操作を停止しました。対応ブラウザとGPU設定を確認して再読み込みしてください。",
   },
   "renderer-error": {
     title: "Auto CLPの操作を停止しました",
-    detail: "3D表示の初期化・描画、またはWebGLコンテキストで障害が発生しました。案件操作を再開せず、ブラウザのGPU設定を確認して再読み込みしてください。",
+    detail: "3D表示の初期化・描画、またはWebGLコンテキストで障害が発生しました。作業を再開せず、ブラウザのGPU設定を確認して再読み込みしてください。",
   },
 };
 
@@ -515,15 +516,18 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     if (!serialized.ok) {
       return {
         ok: false,
-        message: "現在案件を安全なJSONへ変換できなかったため、救出しませんでした。",
+        message: "現在の作業データをファイルへ変換できなかったため、ダウンロードを開始しませんでした。",
       };
     }
     const downloaded = downloadProjectJson(serialized.json);
     return downloaded.ok
-      ? { ok: true, message: "現在案件のJSON救出を開始しました。" }
+      ? {
+          ok: true,
+          message: `ダウンロードを開始しました。ファイル名: ${PROJECT_EXPORT_FILENAME}。ブラウザのダウンロード一覧またはダウンロードフォルダーを確認してください。`,
+        }
       : {
           ok: false,
-          message: "このブラウザでは現在案件のJSONをダウンロードできませんでした。",
+          message: "このブラウザでは現在の作業データをダウンロードできませんでした。",
         };
   }, []);
 
@@ -532,8 +536,8 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     if (!stored.ok) {
       const message =
         stored.code === "project-store.not-found"
-          ? "救出できる端末保存はありません。"
-          : "端末保存を読み取れなかったため、現在の案件へ読み込まず終了しました。";
+          ? "端末に保存済みのデータはありません。ダウンロードは開始していません。"
+          : "端末に保存済みのデータを読み取れなかったため、ダウンロードを開始しませんでした。";
       return { ok: false, message };
     }
     const downloaded = downloadProjectJson(
@@ -541,10 +545,13 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       PROJECT_DEVICE_RESCUE_FILENAME,
     );
     return downloaded.ok
-      ? { ok: true, message: "端末保存のJSON救出を開始しました。" }
+      ? {
+          ok: true,
+          message: `ダウンロードを開始しました。ファイル名: ${PROJECT_DEVICE_RESCUE_FILENAME}。ブラウザのダウンロード一覧またはダウンロードフォルダーを確認してください。`,
+        }
       : {
           ok: false,
-          message: "このブラウザでは端末保存のJSONをダウンロードできませんでした。",
+          message: "このブラウザでは端末に保存済みのデータをダウンロードできませんでした。",
         };
   }, []);
 
@@ -717,41 +724,101 @@ function WebGLRescuePanel({
   onRescueDevice,
 }: WebGLRescuePanelProps) {
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState(
-    "編集や保存はできません。必要な場合だけ、案件を変更せずJSONとして救出できます。",
-  );
+  const [progressMessage, setProgressMessage] = useState<string>();
+  const [feedback, setFeedback] = useState<RescueResult>();
 
-  const run = async (action: () => Promise<RescueResult>) => {
+  const run = async (action: () => Promise<RescueResult>, pendingMessage: string) => {
     if (busy) return;
     setBusy(true);
+    setFeedback(undefined);
+    setProgressMessage(pendingMessage);
     try {
       const result = await action();
-      setMessage(result.message);
+      setFeedback(result);
     } finally {
+      setProgressMessage(undefined);
       setBusy(false);
     }
   };
 
   return (
     <div className="webgl-rescue" aria-labelledby="webgl-rescue-title">
-      <h3 id="webgl-rescue-title">読み取り専用のJSON救出</h3>
+      <h3 id="webgl-rescue-title">作業データをファイルへ退避</h3>
       <p>
-        救出は現在案件または端末保存をファイルへ複製するだけです。案件の読込・編集・削除・端末保存の上書きは行いません。
+        退避したファイルは、3D表示の復旧後にAuto CLPのJSON読込で戻せます。この画面で作業データを変更したり、端末保存を上書きしたりすることはありません。
       </p>
-      <div className="webgl-rescue__actions">
-        <button type="button" disabled={busy} onClick={() => void run(onRescueCurrent)}>
-          現在案件をJSON救出
-        </button>
-        <button type="button" disabled={busy} onClick={() => void run(onRescueDevice)}>
-          端末保存をJSON救出
-        </button>
+      <div className="webgl-rescue__options">
+        <section className="webgl-rescue__option" aria-labelledby="current-data-title">
+          <h4 id="current-data-title">現在の作業データ</h4>
+          <p>
+            この画面が現在保持している作業内容です。作業中に3D表示が停止した場合は、障害直前の内容を含みます。
+          </p>
+          <p className="webgl-rescue__filename">
+            <span>保存されるファイル</span>
+            <code>{PROJECT_EXPORT_FILENAME}</code>
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void run(onRescueCurrent, "現在の作業データを準備しています…")
+            }
+          >
+            現在の作業データをダウンロード
+          </button>
+        </section>
+        <section className="webgl-rescue__option" aria-labelledby="device-data-title">
+          <h4 id="device-data-title">端末に保存済みのデータ</h4>
+          <p>
+            以前「端末へ保存」を実行した時点の内容です。その後の未保存の作業は含みません。
+          </p>
+          <p className="webgl-rescue__filename">
+            <span>保存されるファイル</span>
+            <code>{PROJECT_DEVICE_RESCUE_FILENAME}</code>
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void run(onRescueDevice, "端末に保存済みのデータを準備しています…")
+            }
+          >
+            端末保存済みデータをダウンロード
+          </button>
+        </section>
+      </div>
+      {progressMessage === undefined ? null : (
+        <p
+          className="webgl-rescue__feedback webgl-rescue__feedback--pending"
+          role="status"
+          aria-live="polite"
+          data-rescue-outcome="pending"
+        >
+          {progressMessage}
+        </p>
+      )}
+      {feedback === undefined ? null : (
+        <p
+          className={`webgl-rescue__feedback webgl-rescue__feedback--${feedback.ok ? "success" : "error"}`}
+          role={feedback.ok ? "status" : "alert"}
+          aria-live={feedback.ok ? "polite" : "assertive"}
+          data-rescue-outcome={feedback.ok ? "success" : "error"}
+        >
+          {feedback.message}
+        </p>
+      )}
+      <div className="webgl-rescue__recovery">
+        <h4>ダウンロード後の手順</h4>
+        <ol>
+          <li>必要な作業データをダウンロードします。</li>
+          <li>ブラウザまたはGPU設定を確認します。</li>
+          <li>3D表示を再確認してページを再読み込みします。</li>
+          <li>必要な場合は、退避したファイルをJSON読込で戻します。</li>
+        </ol>
         <button type="button" disabled={busy} onClick={() => window.location.reload()}>
-          再読み込み
+          3D表示を再確認して再読み込み
         </button>
       </div>
-      <p className="webgl-rescue__status" role="status" aria-live="polite">
-        {message}
-      </p>
     </div>
   );
 }

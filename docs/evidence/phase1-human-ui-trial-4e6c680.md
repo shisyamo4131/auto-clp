@@ -269,9 +269,22 @@ AをZ=0へ修正すると床貫通が消え、A上面Z=600とB下面Z=600の単�
 
 この記録は新しい阻止・救出画面の人間試用合格を意味しない。実装後に、非対応・初期描画失敗・context lossの全面停止、通常操作が露出しないこと、現在案件・端末保存の固定名救出、救出後もProjectと保存内容が変わらないこと、再読込による復旧を別途確認する。
 
+### Required-WebGL Rescue Usability Follow-up
+
+- Date: 2026-08-30
+- Evaluator: 同じ人間のプロジェクト評価者
+- Environment: ローカルin-app Browser、`http://127.0.0.1:4175/` の強制WebGL 2非対応確認枠
+- Initial result: 阻止動作とdownloadは概ね想定どおり、救出の意味と結果通知は不合格
+
+評価者は「現在案件をJSON救出」と「端末保存をJSON救出」を試したが、特に端末保存側は画面上の変化がほとんどなく、何が起きたか、押すと何が得られるか、次に何をすべきかを画面だけでは理解できないと評価した。「JSON救出」は内部実装寄りの語であり、現在メモリ内データと以前の端末保存の違いも操作前に説明されていなかった。
+
+仕様1.0.1では、画面名を「作業データをファイルへ退避」、選択肢を「現在の作業データ」と「端末に保存済みのデータ」とし、各データに含まれる時点、未保存作業の扱い、固定出力名、復旧後のJSON読込を操作前に表示する。click後はdownload完了を断定せず、開始、ファイル名、browserのdownload一覧またはfolder確認を持続表示する。復旧手順と「3D表示を再確認して再読み込み」も同じ画面に置く。
+
+自動回帰は成功・端末保存なし・305 px overflow・初期描画失敗・context lossを含む能力試験6件、全browser 73件、全単体945件、typecheck、lint、buildに合格した。全browserの初回2回は、無関係なWorker試験が20 msだけの中間表示を操作完了後に直接読むtiming依存で各1件失敗し、同試験を最終結果とMutationObserverによるstale結果不在の検証へ修正した後、対象4件と全73件が合格した。Codexによる実画面確認では375 pxの二つの退避card、固定名、復旧手順に横overflowや表示欠落はなかった。buildは既知のlarge-chunk advisoryだけを保持する。新画面の評価者本人による再試用は未実施である。
+
 ## Remaining Follow-up
 
-- 正式fixture、評価者区分、WebGL必須阻止・読み取り専用救出画面の人間観察。
+- 正式fixture、評価者区分、仕様1.0.1のWebGL必須阻止・作業データ退避画面の人間再観察。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 
 ## Repository and Local Side Effects

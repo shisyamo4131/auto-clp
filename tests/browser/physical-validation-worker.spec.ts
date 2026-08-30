@@ -183,9 +183,6 @@ test("masks old generations and ignores terminated workers and stale page reques
   await page.getByLabel("表示する候補").selectOption("container-2");
   const panel = page.locator(".physical-validation");
   await expect(panel.locator(".physical-validation__summary")).toHaveText(
-    "判定中：保存済み配置の物理判定を計算しています。",
-  );
-  await expect(panel.locator(".physical-validation__summary")).toHaveText(
     "不適合：修正が必要な理由が36件あります。未確認事項0件も保持して表示します。",
   );
   const group = panel.getByRole("region", { name: "不適合理由" });
