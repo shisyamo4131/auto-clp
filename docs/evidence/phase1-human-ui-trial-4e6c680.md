@@ -224,7 +224,24 @@ X/Z回転は既存 `allowedOrientations` だけを使い、天地無用を `LWH`
 
 続く人間再試用で、荷室外の操作荷FをZ軸回転すると未選択の操作荷Hが動くことが確認された。原因は、初期gridが現在向きの全体最大X/Y寸法を再計算し、Fの `300×220` から `220×300 mm` への交換でoverrideを持たないHの既定位置まで再投影していたためである。仕様0.18.1ではgridセルを各積荷の許可向き全体から得る最大X/Y footprintで固定し、回転対象以外のsession位置を維持する。Project、端末保存、JSON、Schema `0.1.0`、物理判定、案件履歴は変更しない。
 
-修正後の同じ端末保存をローカルin-app Browserへ再読込し、H選択時の画面を記録してからFをZ軸回転し、Hを再選択した画面と比較した。Hの表示位置は維持され、Fの向きだけが変わった。純粋投影試験はFのoverride前後でB・D・Hの各 `positionMm` が不変で、Hが `{ xMm: -800, yMm: 500, zMm: 0 }` を保持することを固定した。全単体944件・全browser 71件、typecheck、lint、buildが成功し、buildは既知のlarge-chunk advisoryだけを保持する。評価者本人による修正後の再試用は未実施である。
+修正後の同じ端末保存をローカルin-app Browserへ再読込し、H選択時の画面を記録してからFをZ軸回転し、Hを再選択した画面と比較した。Hの表示位置は維持され、Fの向きだけが変わった。純粋投影試験はFのoverride前後でB・D・Hの各 `positionMm` が不変で、Hが `{ xMm: -800, yMm: 500, zMm: 0 }` を保持することを固定した。全単体944件・全browser 71件、typecheck、lint、buildが成功し、buildは既知のlarge-chunk advisoryだけを保持する。
+
+### Orientation and Staging Stability Final Re-trial
+
+- Date: 2026-08-30
+- Evaluator: 同じ人間のプロジェクト評価者
+- Environment: ローカルChrome、`http://127.0.0.1:4174/`、端末保存済みの匿名合成データ「支持面スナップ試験 0.15」
+- Build: specification `0.18.1`、Schema `0.1.0`、commit `55b79923b3026c51dc54930fcc030bb48e0ea6d0`
+- Result: guided human re-trial pass
+
+評価者は、操作荷B（小）の天地無用でX軸回転が理由付きで無効、Z軸回転が有効となること、操作荷D（大）ではX/Z両軸を回転できることを確認した。回転buttonはUndo/Redo・拡大縮小と同じ固定toolbarに留まり、連続操作時に位置が動かなかった。使用可は拡大・縮小と同じ強調枠、使用不可は低彩度表示で、未選択時は両軸とも使用不可となり、紫色の塗り分けは残っていない。
+
+積荷editorでは向き設定が天地無用だけで、操作荷BはON、操作荷DはOFFとして再読込後も維持された。操作荷FのZ軸回転ではFの向きだけが変わり、操作荷Hを含む他の未配置積荷は動かなかった。Fを繰り返し回転しても同じ結果であった。再読込によりProject外のsessionだけの回転・作業位置が初期化される境界も期待どおりと評価された。
+
+この合格は、仕様0.18.1の回転方針、button状態、端末再読込、荷室外grid安定性に対する案内付き人間再試験である。正式な実務利用者受入、実積載の安全性、狭幅・キーボード・WebGL非対応の残項目、または `HUT-01` 修正後fixtureの人間再試用を完了したことは意味しない。進捗は98%を維持する。
+
+## Remaining Follow-up
+
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 

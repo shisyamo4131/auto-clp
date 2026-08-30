@@ -91,7 +91,7 @@
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
 - canvas追加操作の判断: AC-01とAC-04で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。
 - 現在のUI-assisted観察: Codex UIテスターによる[部分観察](evidence/phase1-development-ui-trial-8c8ece2.md)では、AC-01〜03、通常経路のJSON再読込、WebGL非対応fallbackでのZ編集・物理判定・履歴・端末保存、305 / 320 / 375 px、主要focus、console 0件を画面操作で確認し、向き・削除・JSON・自動提案controlは有効状態だけを確認した。Z・向き・取り外しはフォームで発見できたためcanvas側追加操作の根拠にはしないが、exact floor dragは3回の誤座標commitを要し、狭幅時の向き補足文とともに改善候補となった。WebGL非対応時の向き変更・取り外し・JSON往復、自然なTab順と確認後focus、人間による安全表示理解は未観察で、人間試用または実務受入の証拠ではない。
-- 現在の人間観察: 人間のプロジェクト評価者による[案内付き部分評価と再試用](evidence/phase1-human-ui-trial-4e6c680.md)では、匿名派生ケースの3D床面移動、正確な座標修正、向き、配置削除・Undo、完全支持・1 mm支持不足、床突き抜け、端末保存・読込、JSON往復に加え、仕様0.12.0版のwheel page scroll、camera button、完全drag-out、Undo/Redo、不適合表示をChromeで確認した。再試用では、固定仮置き場、履歴時のpage/camera移動、大きな回転controlと選択card、多数積荷の識別が改善点となった。`CP-PHASE1-SCENE-WORKBENCH-001` で荷室外自由作業位置、積荷picker、X/Z回転、天地無用、compact toolbar/card、camera/page保持を自動検証したが、この新UIの人間再試用は未実施である。正式AC-03の数値・構成による人間再現、正式fixture、狭幅・Tab・fallback、評価者区分も未確認のため、実務利用者受入ではない。
+- 現在の人間観察: 人間のプロジェクト評価者による[案内付き部分評価と再試用](evidence/phase1-human-ui-trial-4e6c680.md)では、匿名派生ケースの3D床面移動、正確な座標修正、向き、配置削除・Undo、完全支持・1 mm支持不足、床突き抜け、端末保存・読込、JSON往復に加え、仕様0.12.0版のwheel page scroll、camera button、完全drag-out、Undo/Redo、不適合表示をChromeで確認した。改善後の再試用では、仕様0.18.1の固定X/Z回転button、天地無用だけの向き設定、使用可否の枠表示、端末再読込、F回転時のHを含む他積荷の位置維持を期待どおりと判定した。正式AC-03の数値・構成による `HUT-01` 修正後の人間再現、正式fixture、狭幅・Tab・fallback、評価者区分は未確認のため、実務利用者受入ではない。
 
 ### Current Automated Mapping
 
