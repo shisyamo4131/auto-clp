@@ -69,11 +69,18 @@ export function ModalShell({
       const fallbackTarget = fallbackFocusIdsAtOpen
         .map((id) => document.getElementById(id))
         .find((element): element is HTMLElement => element instanceof HTMLElement && element.isConnected);
-      const returnTarget = opener?.isConnected ? opener : fallbackTarget;
+      const openerIsUsable =
+        opener?.isConnected === true &&
+        opener !== document.body &&
+        opener !== document.documentElement &&
+        opener.getClientRects().length > 0 &&
+        opener.closest("[hidden], [inert]") === null;
+      const returnTarget = openerIsUsable ? opener : fallbackTarget;
       returnTarget?.focus({ preventScroll: true });
       window.scrollTo(returnScroll.left, returnScroll.top);
       window.requestAnimationFrame(() => {
-        if (opener?.isConnected && openerViewportY !== undefined) {
+        if (returnTarget?.isConnected) returnTarget.focus({ preventScroll: true });
+        if (openerIsUsable && openerViewportY !== undefined) {
           window.scrollBy(0, opener.getBoundingClientRect().y - openerViewportY);
         } else {
           window.scrollTo(returnScroll.left, returnScroll.top);

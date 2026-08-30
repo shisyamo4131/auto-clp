@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-08-30
-- Specification version: 1.0.2
+- Specification version: 1.1.0
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -67,6 +67,15 @@
 - Phase 1では負X側端面に一つの軸整列矩形開口を持ち、床面に接して幅方向中央へ配置する。保存する開口データは幅と高さとする。
 - 開口部判定は積荷を許可向きの一つへ固定し、開口面に直角な直線で通す寸法モデルとする。開口内回転、斜め通過、斜路、扉厚、段差、車内旋回、既配置積荷を避ける経路は「経路未確認」とする。
 
+### Application Shell and Primary Workflow
+
+- 3D viewportを通常画面の主作業面とし、最上部のApplication BarにはNavigation Drawerを開くmenu button、`Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chipを置く。現在のCLP名はCLP設定dialogの入口とする。
+- 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`は一つのNavigation Drawerへまとめる。常設の保存cardとCLP設定cardは置かない。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
+- 旧3D候補cardの外枠と見出しは置かない。表示候補selectorはviewport上部へ、全CLP積荷を名前またはIDで検索する入力、未配置・現在候補・他候補の状態付き積荷selector、件数はviewport下部へoverlayする。overlayの出現、検索結果、操作statusはcanvasの寸法またはページ上の位置を変えない。
+- viewport上部の候補selectorと、Undo/Redo、X/Z回転、拡大・縮小、全体表示toolbarは共通の非重複領域へ置く。305 / 320 / 375 pxでは複数行へ積み、下部の積荷検索・selector・件数も複数行にして水平overflowを起こさない。overlay外のcanvas操作領域を残す。
+- compactな操作statusと非保証注意、物理判定、自動配置案の順で3D viewportの後へ置く。積荷とコンテナ・車両候補の登録cardは維持する。
+- `新規CLP` はSchema制約内の衝突しない新しい `projectId` を持つ空CLPを作成し、CLP設定dialogを開く。現在CLPに最後の端末保存またはJSON書出し以後の変更がある場合は、対象と結果を説明する破棄確認を必須とする。新規作成はUndo/Redoへ入れず、旧履歴、draft、選択、camera、drag preview、Worker結果を破棄するhistory barrierとする。作成直後の空CLPを新しい保存基準とする。
+
 ### Placement and Validation
 
 - 利用者は3D空間で積荷を選択し、移動、回転、取り外しができる。
@@ -127,6 +136,7 @@
 - CLP設定、積荷、候補コンテナ、配置の追加・更新・削除と、3D上の一回の床面方向dragによる配置更新または配置削除を、成功してCLPを変更した単位ごとに最大100件まで取り消し・やり直しできる。
 - 取り消し・やり直しは検証済みCLP状態を復元し、入力不正、参照不整合、失敗、同一状態へのno-opを履歴へ追加しない。取り消した後に別のCLP変更を確定した場合は、その時点のやり直し履歴を破棄する。
 - 未保存のフォーム入力、削除確認、3D移動preview、候補・積荷の選択、camera、Worker結果と理由ページは履歴へ含めない。未保存入力、削除確認、または3D移動中はCLP履歴の操作を無効にし、入力途中の値を暗黙に破棄しない。
+- 新規CLPの作成、端末読込、JSON読込は履歴へ追加せず、成功時に過去・未来をともに破棄するbarrierとする。新規作成前の未保存変更は明示確認なしに破棄しない。
 - ボタンに加えて、Windows/Linuxでは `Ctrl+Z`、`Ctrl+Shift+Z`、`Ctrl+Y`、macOSでは `Command+Z`、`Command+Shift+Z` を提供する。入力欄、選択欄、編集可能領域、独自入力コンポーネントが処理するキー操作をCLP履歴が奪わない。
 - 操作履歴は現在の実行セッションだけに保持し、CLP JSON、端末保存、再読込の対象にしない。
 
@@ -205,7 +215,7 @@
 - 対応ブラウザと最低GPU性能。
 - 実務利用者試用の評価担当、日程、合否記録。
 
-自動提案の目的関数、決定性、探索上限、打切り、適用境界はADR 0004、正規単位と値域とPhase 1の開口部モデルはADR 0005・0006、旧積荷別許可向きはADR 0007、支持と荷重の基礎はADR 0008、軸別固定隙間の意味はADR 0011、物理制約の独立診断と集約はADR 0012、床突き抜けの専用診断はADR 0014、3D作業面・軸別回転はADR 0017、drag三状態分類とdialog編集はADR 0018、支持面snapと支持区分の改定はADR 0019、実行可能な開口診断とdrag集中表示はADR 0020、固定回転toolbarと軸iconはADR 0021、天地無用だけの向き方針と旧データ正規化はADR 0022、WebGL 2必須運用と読み取り専用救出はADR 0023、利用者向けCLP用語はADR 0024で確定した。匿名の合成受入契約は `acceptance.md` を正とする。完全な搬入経路、積荷別上載荷重、支持位置、重心、許容支持間隔、軸重、床荷重、荷崩れ、固縛、動荷重が代表ケースで必要になった場合は、後継ADRで範囲を拡張する。
+自動提案の目的関数、決定性、探索上限、打切り、適用境界はADR 0004、正規単位と値域とPhase 1の開口部モデルはADR 0005・0006、旧積荷別許可向きはADR 0007、支持と荷重の基礎はADR 0008、軸別固定隙間の意味はADR 0011、物理制約の独立診断と集約はADR 0012、床突き抜けの専用診断はADR 0014、3D作業面・軸別回転はADR 0017、drag三状態分類とdialog編集はADR 0018、支持面snapと支持区分の改定はADR 0019、実行可能な開口診断とdrag集中表示はADR 0020、固定回転toolbarと軸iconはADR 0021、天地無用だけの向き方針と旧データ正規化はADR 0022、WebGL 2必須運用と読み取り専用救出はADR 0023、利用者向けCLP用語はADR 0024、3D主作業面を優先するApplication ShellはADR 0025で確定した。匿名の合成受入契約は `acceptance.md` を正とする。完全な搬入経路、積荷別上載荷重、支持位置、重心、許容支持間隔、軸重、床荷重、荷崩れ、固縛、動荷重が代表ケースで必要になった場合は、後継ADRで範囲を拡張する。
 
 ## Specification Change Rules
 

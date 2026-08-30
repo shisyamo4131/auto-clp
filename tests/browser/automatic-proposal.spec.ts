@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openPersistenceDrawer, openProjectSettings, saveProjectName } from "./ui-helpers";
 
 const proposalWorkerFragment = "automatic-proposal.worker";
 
@@ -319,7 +320,7 @@ test("runs the real worker for no-cargo and no-candidates without changing the p
   const canonical = page.getByTestId("canonical-project-settings");
 
   await expect(panel).toBeVisible();
-  await expect(page.getByRole("heading", { name: "3D表示を利用できます" })).toBeVisible();
+  await expect(page.getByRole("status", { name: "3D 利用可" })).toBeVisible();
   const initialHistory = await history.textContent();
   const initialProject = await canonical.textContent();
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
@@ -540,22 +541,24 @@ test("closes confirmation on generation and persistence changes and shows fixed 
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
   await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
   const historyBeforeDraft = await history.textContent();
+  await openProjectSettings(page);
   await page.getByLabel("CLP名").fill("未保存変更");
   await expect(panel.getByRole("alert")).toHaveCount(0);
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
   await page.getByLabel("CLP名").fill("新規CLP");
+  await page.getByRole("button", { name: "CLP設定を閉じる" }).click();
   await expect(history).toHaveText(historyBeforeDraft ?? "");
 
   await panel.getByRole("button", { name: "現在のCLPで再試行" }).click();
   await releaseProposal(page);
   await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
-  await page.getByRole("button", { name: "CLPデータを開く" }).click();
+  await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末へ保存" }).click();
   await expect(page.locator(".project-persistence__status")).toHaveText(
     "現在のCLPをこの端末へ保存しました。",
   );
-  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
+  await page.getByRole("button", { name: "メニューを閉じる" }).click();
   await expect(panel.getByRole("alert")).toHaveCount(0);
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(history).toHaveText(historyBeforeDraft ?? "");
@@ -641,8 +644,7 @@ test("invalidates a running preview for Project commits, undo, redo, and generat
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expectPendingCount(page, 1);
-  await page.getByLabel("CLP名").fill("提案中に更新");
-  await page.getByRole("button", { name: "CLPを保存" }).click();
+  await saveProjectName(page, "提案中に更新");
   await expect(canonical).toContainText("提案中に更新");
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await releaseProposal(page, 0);
@@ -679,11 +681,11 @@ test("invalidates a running proposal when persistence starts and after a valid J
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expectPendingCount(page, 1);
-  await page.getByRole("button", { name: "CLPデータを開く" }).click();
+  await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末へ保存" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(persistenceStatus).toHaveText("現在のCLPをこの端末へ保存しました。");
-  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
+  await page.getByRole("button", { name: "メニューを閉じる" }).click();
 
   await panel.getByRole("button", { name: "現在のCLPで再試行" }).click();
   await expectPendingCount(page, 2);

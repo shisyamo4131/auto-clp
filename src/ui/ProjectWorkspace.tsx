@@ -29,6 +29,7 @@ import {
 } from "../domain/orientation-policy";
 import type { ValidationIssue } from "../domain/validation";
 import type { CargoEditorIntent } from "./CargoEditorDialog";
+import { ModalShell } from "./ModalShell";
 
 interface ProjectWorkspaceProps {
   readonly externalInteractionActive?: boolean;
@@ -242,47 +243,37 @@ function projectSettingsDraftFrom(project: Project): ProjectSettingsDraft {
   };
 }
 
-function ProjectSettings({
-  historyRevision,
-  onBusyChange,
+interface ProjectSettingsDialogProps {
+  readonly onClose: () => void;
+  readonly onProjectCommit: ProjectHistoryCommitHandler;
+  readonly project: Project;
+}
+
+export function ProjectSettingsDialog({
+  onClose,
   onProjectCommit,
   project,
-}: ProjectWorkspaceProps) {
+}: ProjectSettingsDialogProps) {
   const [draft, setDraft] = useState<ProjectSettingsDraft>(() =>
     projectSettingsDraftFrom(project),
   );
   const [issues, setIssues] = useState<readonly ValidationIssue[]>([]);
   const [status, setStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
-  const appliedHistoryRevision = useRef(historyRevision);
+  const [discardConfirmation, setDiscardConfirmation] = useState(false);
   const dirty =
     draft.name !== project.name ||
     draft.clearanceXmm !== String(project.clearancesMm.xMm) ||
     draft.clearanceYmm !== String(project.clearancesMm.yMm) ||
     draft.clearanceZmm !== String(project.clearancesMm.zMm);
 
-  useEffect(() => {
-    onBusyChange(dirty);
-    return () => onBusyChange(false);
-  }, [dirty, onBusyChange]);
-
-  useEffect(() => {
-    if (appliedHistoryRevision.current === historyRevision) {
+  const requestClose = () => {
+    if (dirty) {
+      setDiscardConfirmation(true);
       return;
     }
-    appliedHistoryRevision.current = historyRevision;
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (!cancelled) {
-        setDraft(projectSettingsDraftFrom(project));
-        setIssues([]);
-        setStatus("");
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [historyRevision, project]);
+    onClose();
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -304,20 +295,19 @@ function ProjectSettings({
       return;
     }
     if (result.ok) {
-      setDraft(projectSettingsDraftFrom(result.project));
-      setStatus(
-        result.project === project
-          ? "CLP設定に変更はありません。"
-          : "CLP設定を保存しました。",
-      );
+      onClose();
+      return;
     }
-    focusElement("project-save-button");
   };
 
   return (
-    <section className="editor-card" aria-labelledby="project-settings-title">
-      <h2 id="project-settings-title">CLP設定</h2>
-      <p className="section-help">入力中の文字列は「CLPを保存」を押すまでCLPデータへ反映しません。</p>
+    <ModalShell
+      fallbackFocusIds={["current-project-settings-button", "app-navigation-button"]}
+      initialFocusId="project-name"
+      onRequestClose={requestClose}
+      title="CLP設定"
+    >
+      <p className="section-help">CLP名と固定隙間を編集します。保存するまでCLPデータへ反映しません。</p>
       <form ref={formRef} onSubmit={submit} noValidate>
         <ErrorSummary id="project-settings-errors" issues={issues} />
         <fieldset>
@@ -373,13 +363,22 @@ function ProjectSettings({
             />
           </div>
         </fieldset>
-        <button id="project-save-button" className="primary-button" type="submit">CLPを保存</button>
+        <div className="button-row">
+          <button id="project-save-button" className="primary-button" type="submit">CLPを保存</button>
+          <button type="button" onClick={requestClose}>閉じる</button>
+        </div>
       </form>
       <p className="action-status" aria-live="polite" aria-atomic="true">{status}</p>
-      <p className="canonical-summary" data-testid="canonical-project-settings">
-        確定済み: {project.name} / 隙間 X {project.clearancesMm.xMm}・Y {project.clearancesMm.yMm}・Z {project.clearancesMm.zMm} mm
-      </p>
-    </section>
+      {discardConfirmation ? (
+        <div className="confirm-panel" role="alert">
+          <p>保存していないCLP設定があります。変更を破棄して閉じますか。</p>
+          <div className="button-row">
+            <button className="danger-button" type="button" onClick={onClose}>変更を破棄</button>
+            <button type="button" onClick={() => setDiscardConfirmation(false)}>編集を続ける</button>
+          </div>
+        </div>
+      ) : null}
+    </ModalShell>
   );
 }
 
@@ -714,7 +713,7 @@ function CompactCargoManager({
         </button>
       </div>
       <p className="empty-state">
-        積荷の検索・編集・削除は3D確認候補の「操作する積荷」と選択カードから行います。
+        積荷の選択・編集・削除は3D表示内の「操作する積荷」と選択カードから行います。
       </p>
     </section>
   );
@@ -983,7 +982,6 @@ export function ProjectWorkspace({
   project,
 }: ProjectWorkspaceProps) {
   const [busyEditors, setBusyEditors] = useState({
-    settings: false,
     cargo: false,
     container: false,
   });
@@ -995,10 +993,6 @@ export function ProjectWorkspace({
     },
     [],
   );
-  const reportSettingsBusy = useCallback(
-    (busy: boolean) => reportEditorBusy("settings", busy),
-    [reportEditorBusy],
-  );
   const reportCargoBusy = useCallback(
     (busy: boolean) => reportEditorBusy("cargo", busy),
     [reportEditorBusy],
@@ -1007,7 +1001,7 @@ export function ProjectWorkspace({
     (busy: boolean) => reportEditorBusy("container", busy),
     [reportEditorBusy],
   );
-  const busy = busyEditors.settings || busyEditors.cargo || busyEditors.container;
+  const busy = busyEditors.cargo || busyEditors.container;
 
   useEffect(() => {
     onBusyChange(busy);
@@ -1027,12 +1021,9 @@ export function ProjectWorkspace({
       <aside className="privacy-note" aria-label="入力データの注意">
         実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しないでください。
       </aside>
-      <ProjectSettings
-        historyRevision={historyRevision}
-        onBusyChange={reportSettingsBusy}
-        onProjectCommit={onProjectCommit}
-        project={project}
-      />
+      <p className="visually-hidden" data-testid="canonical-project-settings">
+        確定済み: {project.name} / 隙間 X {project.clearancesMm.xMm}・Y {project.clearancesMm.yMm}・Z {project.clearancesMm.zMm} mm
+      </p>
       <div className="entity-columns">
         <CompactCargoManager
           externalInteractionActive={externalInteractionActive}

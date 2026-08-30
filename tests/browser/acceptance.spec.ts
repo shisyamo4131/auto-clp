@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openProjectSettings } from "./ui-helpers";
 
 interface CargoInput {
   readonly lengthMm?: string;
@@ -76,6 +77,7 @@ async function placeCargo(
 }
 
 async function setClearances(page: Page, valueMm: string) {
+  await openProjectSettings(page);
   await page.getByLabel("X方向の隙間").fill(valueMm);
   await page.getByLabel("Y方向の隙間").fill(valueMm);
   await page.getByLabel("Z方向の隙間").fill(valueMm);

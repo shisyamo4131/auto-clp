@@ -25,6 +25,7 @@ $fixedRotationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0021-fix
 $orientationPolicyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0022-upright-only-orientation-policy.md'
 $webglRequiredDecisionPath = Join-Path $resolvedProject 'docs/decisions/0023-webgl-required-operation-and-read-only-rescue.md'
 $clpTerminologyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0024-user-facing-clp-terminology.md'
+$viewerFirstShellDecisionPath = Join-Path $resolvedProject 'docs/decisions/0025-viewer-first-application-shell.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -216,8 +217,8 @@ $automaticProposalPanel = [IO.File]::ReadAllText($automaticProposalPanelPath)
 foreach ($contract in @(
     @{ Name = 'CLP settings'; Text = $projectWorkspace; Required = @('CLP INPUT', 'CLP設定', 'CLP名', 'CLPを保存') },
     @{ Name = 'CLP history'; Text = $projectHistoryControls; Required = @('CLP-WIDE HISTORY', 'CLP全体の操作') },
-    @{ Name = 'CLP persistence'; Text = $projectPersistencePanel; Required = @('CLP DATA', 'CLPデータを開く') },
-    @{ Name = 'CLP scene'; Text = $sceneWorkspace; Required = @('CLP SCENE', 'CLP入力でコンテナ・車両候補を追加') },
+    @{ Name = 'CLP persistence'; Text = $projectPersistencePanel; Required = @('CLPメニュー', '新規CLP', 'CLP設定') },
+    @{ Name = 'CLP scene'; Text = $sceneWorkspace; Required = @('3D積載作業', '操作する積荷', '積荷を検索') },
     @{ Name = 'Placement proposal'; Text = $automaticProposalPanel; Required = @('配置案を適用', '配置案（未適用）') }
 )) {
     foreach ($requiredText in $contract.Required) {
@@ -270,7 +271,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.0.2' 'Approved specification version'
+Assert-Equal $specificationVersion '1.1.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -294,6 +295,33 @@ foreach ($requiredText in @(
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved operation-history contract text: $requiredText"
+    }
+}
+$viewerFirstShellDecision = [IO.File]::ReadAllText($viewerFirstShellDecisionPath)
+if ($viewerFirstShellDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0025 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    'Application Bar',
+    'Navigation Drawer',
+    '全CLP積荷',
+    'history barrier',
+    '新しい衝突しない `projectId`',
+    'JSON Schema `0.1.0`'
+)) {
+    if (-not $viewerFirstShellDecision.Contains($requiredText)) {
+        throw "ADR 0025 does not contain the approved viewer-first shell marker: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    '### Application Shell and Primary Workflow',
+    '3D viewportを通常画面の主作業面',
+    'Navigation Drawer',
+    '全CLP積荷',
+    'history barrier'
+)) {
+    if (-not $specification.Contains($requiredText)) {
+        throw "Specification does not contain the approved viewer-first shell marker: $requiredText"
     }
 }
 
@@ -692,7 +720,7 @@ foreach ($contract in @(
     @{ Name = 'React hook'; Text = $automaticProposalHook; Required = @('useSyncExternalStore', 'visibleSnapshot', 'interactionGeneration') },
     @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '配置案を適用', '配置が変わる場合は、1回の取り消しで元へ戻せます。') },
     @{ Name = 'App integration'; Text = $app; Required = @('handleAutomaticProposalApply', 'automatic-proposal.apply', 'persistenceOperationRef.current') },
-    @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '自動提案の一括適用', '3D表示を利用できます') }
+    @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '自動提案の一括適用', '3D 利用可') }
     @{ Name = 'AP-08 performance test'; Text = $automaticProposalPerformanceTest; Required = @('automatic-proposal.worker.ts', 'cold-1', 'warm-${iteration - 1}', 'expectedAttemptCount = 210', 'AP08_EVIDENCE_JSON=', 'terminateLatencyMs', '/^[0-9a-f]{40}$/') }
 )) {
     foreach ($requiredText in $contract.Required) {
@@ -781,6 +809,7 @@ foreach ($requiredText in @(
     orientation_policy_decision_0022_accepted = $true
     webgl_required_decision_0023_accepted = $true
     clp_terminology_decision_0024_accepted = $true
+    viewer_first_shell_decision_0025_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true

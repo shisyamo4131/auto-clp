@@ -31,6 +31,7 @@ export interface CargoDragPreviewResult {
 }
 
 interface ThreeViewportProps {
+  readonly bottomOverlay?: ReactNode;
   readonly forceInitialRenderError?: boolean;
   readonly interactionDisabled: boolean;
   readonly onCargoDragCancel: (message: string) => void;
@@ -57,6 +58,7 @@ interface ThreeViewportProps {
   readonly zRotationExplanation: string;
   readonly selectedCargoId?: string;
   readonly statusDescriptionId: string;
+  readonly topOverlay?: ReactNode;
 }
 
 interface CameraViewState {
@@ -297,6 +299,7 @@ function AxisRotationIcon({ axis }: { readonly axis: "X" | "Z" }) {
 }
 
 export function ThreeViewport({
+  bottomOverlay,
   forceInitialRenderError = false,
   interactionDisabled,
   onCargoDragCancel,
@@ -317,6 +320,7 @@ export function ThreeViewport({
   zRotationExplanation,
   selectedCargoId,
   statusDescriptionId,
+  topOverlay,
 }: ThreeViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -601,6 +605,9 @@ export function ThreeViewport({
       }
     };
     const handleWindowBlur = () => rollbackGesture("ウィンドウの操作が中断されたため、配置の移動を元に戻しました。");
+    const handleWheel = (event: WheelEvent) => {
+      event.stopImmediatePropagation();
+    };
 
     const dispose = () => {
       if (disposed) return;
@@ -612,6 +619,7 @@ export function ThreeViewport({
       canvas.removeEventListener("pointercancel", handlePointerCancel, true);
       canvas.removeEventListener("lostpointercapture", handleLostPointerCapture, true);
       canvas.removeEventListener("webglcontextlost", handleContextLost);
+      container.removeEventListener("wheel", handleWheel, true);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("blur", handleWindowBlur);
       resizeObserver?.disconnect();
@@ -638,6 +646,7 @@ export function ThreeViewport({
     canvas.addEventListener("pointercancel", handlePointerCancel, true);
     canvas.addEventListener("lostpointercapture", handleLostPointerCapture, true);
     canvas.addEventListener("webglcontextlost", handleContextLost);
+    container.addEventListener("wheel", handleWheel, { capture: true, passive: true });
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("blur", handleWindowBlur);
 
@@ -749,13 +758,17 @@ export function ThreeViewport({
 
   return (
     <div className="viewport" ref={containerRef}>
-      <div
-        className="viewport__camera-controls"
-        role="group"
-        aria-label="3D作業の操作"
-      >
-        {historyControls}
-        <div className="viewport__rotation-controls" role="group" aria-label="選択した積荷の回転">
+      <div className="viewport__top-controls">
+        {topOverlay === undefined ? null : (
+          <div className="viewport__overlay viewport__overlay--top">{topOverlay}</div>
+        )}
+        <div
+          className="viewport__camera-controls"
+          role="group"
+          aria-label="3D作業の操作"
+        >
+          {historyControls}
+          <div className="viewport__rotation-controls" role="group" aria-label="選択した積荷の回転">
           <button
             type="button"
             aria-disabled={xRotationDisabled}
@@ -782,21 +795,25 @@ export function ThreeViewport({
           </button>
           <span className="visually-hidden" id="viewport-x-rotation-reason">{xRotationExplanation}</span>
           <span className="visually-hidden" id="viewport-z-rotation-reason">{zRotationExplanation}</span>
+          </div>
+          <button type="button" aria-label="拡大" onClick={() => zoomInRef.current()}>
+            ＋
+          </button>
+          <button type="button" aria-label="縮小" onClick={() => zoomOutRef.current()}>
+            －
+          </button>
+          <button type="button" onClick={() => resetViewRef.current()}>
+            荷室全体を表示
+          </button>
         </div>
-        <button type="button" aria-label="拡大" onClick={() => zoomInRef.current()}>
-          ＋
-        </button>
-        <button type="button" aria-label="縮小" onClick={() => zoomOutRef.current()}>
-          －
-        </button>
-        <button type="button" onClick={() => resetViewRef.current()}>
-          荷室全体を表示
-        </button>
       </div>
       {stagedCargoCount === 0 ? null : (
         <div className="viewport__staging-label">
           荷室外の作業スペース <strong>{stagedCargoCount}件</strong>
         </div>
+      )}
+      {bottomOverlay === undefined ? null : (
+        <div className="viewport__overlay viewport__overlay--bottom">{bottomOverlay}</div>
       )}
       <canvas
         ref={canvasRef}

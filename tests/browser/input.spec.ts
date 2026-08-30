@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openProjectSettings } from "./ui-helpers";
 
 async function fillCargo(page: Page, name: string) {
   await page.getByLabel("積荷名").fill(name);
@@ -28,6 +29,7 @@ async function addContainer(page: Page, name: string) {
 
 test("edits project settings transactionally and focuses invalid input", async ({ page }) => {
   await page.goto("/");
+  await openProjectSettings(page);
   await page.getByLabel("CLP名").fill("更新CLP");
   await page.getByLabel("X方向の隙間").fill("1.5");
   await page.getByRole("button", { name: "CLPを保存" }).click();

@@ -2,6 +2,8 @@
 
 ## Current Availability
 
+- Implemented viewer-first shell: Application Barにmenu、現在CLP名、小さな3D能力Chipを置き、新規CLP・CLP設定・端末保存・JSONを単一Navigation Drawerへ集約する。CLP設定はdialog、候補selectorはviewport上部、全CLP積荷の名前/ID検索・状態付きselectorはviewport下部overlayとし、3Dの寸法と位置を動かさない。未保存変更付きの新規CLPは破棄確認後、UUID付きの新 `projectId` と空履歴を作るbarrierとし、CLP設定dialogを開く。
+
 - Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、CLP JSON Schema `0.1.0`、完全なreadonly CLP型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、保存Navigation Drawerと操作単位のSnackbar、全候補の置換前Worker判定、CLP・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、viewport内のcompactな単一CLP履歴、積荷picker、選択積荷のcompactな寸法・座標card、成功したCLP変更を最大100件保持する非永続undo/redo、コンテナ包含・XY正面積重なり・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置と荷室外作業スペースのThree.js描画、canvas積荷選択、fine pointerによる未配置積荷の自由な荷室外移動・初回配置と配置済み床面方向drag・完全drag-out削除、許可済みX/Z軸90°回転、天地無用入力補助、viewport wheelのpage scroll、明示的な `＋` / `－` による拡大縮小、同一候補更新時のcamera保持、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
 - Implemented support refinement: fine pointer dragの床・支持可能上面へのZ snap、単一支持面内のX/Y clamp、条件未確認・不適合preview、操作対象以外のほぼ透明な中立面と灰色点線、緑・黄点線による支持候補強調、単独支持・複数支持・隙間・張り出し・支持可否混在・接触不成立の派生判定。旧XY和集合100% helperは回帰用に保持するが、現行の支持区分には使用しない。
 - Implemented rotation-toolbar refinement: X/Z回転はUndo/Redo・拡大縮小と同じviewport固定toolbarへ常設する。一本の軸線へ矢印が回り込む同一SVGをXだけ90度回して区別し、未選択・天地無用のX軸・busyではfocus可能な理由付き `aria-disabled` とする。Z軸床面回転は常に許可し、使用可は拡大・縮小と同じ青緑の強調枠、使用不可は低彩度の枠・iconで区別する。紫色の塗り分けは使わず、回転前後でbutton位置は変えない。
@@ -32,6 +34,8 @@ Z軸回転は高さ軸を保つ相手を使い、積荷選択中かつbusyでな
 CLP全体のUndo/Redoはviewport内で `＋` / `－` と同じ外観の単一操作UIとし、buttonと既存shortcutを同じ履歴handlerへ接続する。実行前後のpage scroll位置を復元する。WebGL 2非対応または描画障害時は履歴を含むCLP操作を停止する。選択cardは積荷名を見出しとし、寸法prefixを付けず、配置済みなら向き適用後寸法とcompactなX/Y/Zを表示する。積荷selectは全Project積荷を検索し、現在候補、未配置、他候補を示す。他候補の配置を扱う前に所有候補へ明示切替する。積荷定義と配置は別modal editorで編集し、focus trap、背景inert、dirty破棄確認、内部scroll、狭幅、preventScroll focus復帰を維持する。dialog中は履歴、3D操作、候補切替、永続化、自動提案をbusyとして拒否する。配置取り外しと積荷削除は別確認・別履歴でcascadeしない。物理panelは維持する。
 
 CLP履歴は、CLP設定、積荷、候補、配置の成功した追加・更新・削除と、1回のcanvas dragを一つの操作として最大100件保持する。「元に戻す」「やり直す」ボタンに加え、Windows/Linuxでは `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y`、macOSでは `Command+Z` / `Command+Shift+Z` を利用できる。未保存入力、削除確認、drag中は履歴操作を無効にし、入力欄、選択欄、編集可能領域、独自入力コンポーネントのローカル履歴を優先する。失敗とno-opは履歴を変えず、undo後の新しい確定操作はredoを破棄する。履歴はメモリ内だけで、再読込、JSON書出し、端末保存には含めない。
+
+新規CLP、端末読込、JSON読込はUndo対象ではなく、成功時に旧の過去・未来履歴、draft、選択、camera、drag preview、Worker結果を破棄するbarrierである。新規CLPは最後の端末保存またはJSON書出し以後の変更がある場合に破棄確認し、作成直後の空CLPを新しい保存基準とする。Drawerから設定dialogへ移った後は、Application BarのCLP名またはmenuへfocusを戻す。
 
 ## Preparation
 

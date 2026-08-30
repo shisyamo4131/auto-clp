@@ -34,6 +34,7 @@ import {
 import type { WebGL2CapabilityCheck } from "./platform/webgl2";
 import { SceneWorkspace } from "./scene/SceneWorkspace";
 import { AutomaticProposalPanel } from "./ui/AutomaticProposalPanel";
+import { ApplicationBar } from "./ui/ApplicationBar";
 import type { AutomaticProposalApplyHandler } from "./ui/automatic-proposal-session";
 import {
   CargoEditorDialog,
@@ -41,7 +42,7 @@ import {
   type CargoEditorRequest,
 } from "./ui/CargoEditorDialog";
 import { ProjectPersistencePanel } from "./ui/ProjectPersistencePanel";
-import { ProjectWorkspace } from "./ui/ProjectWorkspace";
+import { ProjectSettingsDialog, ProjectWorkspace } from "./ui/ProjectWorkspace";
 
 type AppState =
   | "checking"
@@ -116,6 +117,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     createProjectHistory(createInitialProject()),
   );
   const historyRef = useRef(history);
+  const [savedProject, setSavedProject] = useState(history.present);
   const [historyRevision, setHistoryRevision] = useState(0);
   const [historyCommitRevision, setHistoryCommitRevision] = useState(0);
   const [projectBarrierRevision, setProjectBarrierRevision] = useState(0);
@@ -137,6 +139,8 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   const cargoEditorSequence = useRef(0);
   const [cargoEditorRequest, setCargoEditorRequest] =
     useState<CargoEditorRequest>();
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
   const project = history.present;
 
   const bumpProjectInteractionGeneration = useCallback(() => {
@@ -329,6 +333,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
             return { ok: false, code: "persistence.stale-base" };
           }
           const nextHistory = createProjectHistory(outcome.replacement);
+          setSavedProject(outcome.replacement);
           historyRef.current = nextHistory;
           bumpProjectInteractionGeneration();
           setHistory(nextHistory);
@@ -430,15 +435,18 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   );
 
   const handleSaveDevice = useCallback(
-    (baseProject: Project) =>
-      runPersistenceOperation(baseProject, async () => {
+    async (baseProject: Project) => {
+      const result = await runPersistenceOperation(baseProject, async () => {
         const serialized = serializeProjectForPersistence(baseProject);
         if (!serialized.ok) {
           return serialized;
         }
         const saved = await saveProjectJsonToDevice(serialized.json);
         return saved.ok ? { ok: true } : storeFailure(saved.code);
-      }),
+      });
+      if (result.ok) setSavedProject(baseProject);
+      return result;
+    },
     [runPersistenceOperation],
   );
 
@@ -471,8 +479,8 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   );
 
   const handleExportFile = useCallback(
-    (baseProject: Project) =>
-      runPersistenceOperation(baseProject, async () => {
+    async (baseProject: Project) => {
+      const result = await runPersistenceOperation(baseProject, async () => {
         const serialized = serializeProjectForPersistence(baseProject);
         if (!serialized.ok) {
           return serialized;
@@ -488,9 +496,53 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
               ? "persistence.file-export-unavailable"
               : "persistence.file-download-failed",
         };
-      }),
+      });
+      if (result.ok) setSavedProject(baseProject);
+      return result;
+    },
     [runPersistenceOperation],
   );
+
+  const handleOpenProjectSettings = useCallback(() => {
+    const sources = busySourcesRef.current;
+    if (
+      !operationalRef.current ||
+      sources.cargoDialog ||
+      sources.project ||
+      sources.scene ||
+      persistenceOperationRef.current
+    ) return;
+    handleBusyChange("project", true);
+    setProjectSettingsOpen(true);
+  }, [handleBusyChange]);
+
+  const handleCloseProjectSettings = useCallback(() => {
+    setProjectSettingsOpen(false);
+    handleBusyChange("project", false);
+  }, [handleBusyChange]);
+
+  const handleCreateNewProject = useCallback(() => {
+    const sources = busySourcesRef.current;
+    if (
+      !operationalRef.current ||
+      sources.cargoDialog ||
+      sources.project ||
+      sources.scene ||
+      persistenceOperationRef.current
+    ) return;
+    const nextProject = createInitialProject(`project-${crypto.randomUUID()}`);
+    const nextHistory = createProjectHistory(nextProject);
+    setSavedProject(nextProject);
+    historyRef.current = nextHistory;
+    bumpProjectInteractionGeneration();
+    setHistory(nextHistory);
+    setHistoryRevision((current) => current + 1);
+    setHistoryCommitRevision((current) => current + 1);
+    setProjectBarrierRevision((current) => current + 1);
+    setNavigationOpen(false);
+    handleBusyChange("project", true);
+    setProjectSettingsOpen(true);
+  }, [bumpProjectInteractionGeneration, handleBusyChange]);
 
   const handleImportFile = useCallback(
     (baseProject: Project, file: File) =>
@@ -600,17 +652,13 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     const rescueAvailable = state === "unsupported" || state === "renderer-error";
     return (
       <main className="app-shell app-shell--blocked">
-        <header className="hero">
-          <p className="eyebrow">LOCAL 3D LOADING WORKSPACE</p>
-          <h1>Auto CLP</h1>
-        </header>
+        <ApplicationBar capabilityState={state} />
         <section className={`capability capability--${state} capability--blocking`}>
           <div
             className="capability__copy"
             role={rescueAvailable ? "alert" : "status"}
             aria-live={rescueAvailable ? "assertive" : "polite"}
             aria-labelledby="capability-title"
-            data-capability-state={state}
           >
             <span className="status-dot" aria-hidden="true" />
             <div>
@@ -636,22 +684,40 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
 
   return (
     <main className="app-shell">
-      <header className="hero">
-        <p className="eyebrow">LOCAL 3D LOADING WORKSPACE</p>
-        <h1>Auto CLP</h1>
-        <p className="lede">精密機器輸送の積載案を、端末内で安全側に検討するための試作環境です。</p>
-      </header>
+      <ApplicationBar
+        capabilityState={state}
+        drawerOpen={navigationOpen}
+        navigationDisabled={busySources.cargoDialog || busySources.project || busySources.scene}
+        onOpenNavigation={() => setNavigationOpen(true)}
+        onOpenProjectSettings={handleOpenProjectSettings}
+        projectName={project.name}
+        projectSettingsDisabled={externalPersistenceBusy}
+      />
 
       <ProjectPersistencePanel
         busy={externalPersistenceBusy}
+        hasUnsavedChanges={project !== savedProject}
+        onCreateNewProject={handleCreateNewProject}
         onDeleteDevice={handleDeleteDevice}
         onExportFile={handleExportFile}
         onImportFile={handleImportFile}
         onInteractionChange={handlePersistenceInteractionChange}
         onLoadDevice={handleLoadDevice}
+        onOpenChange={setNavigationOpen}
+        onOpenProjectSettings={handleOpenProjectSettings}
         onSaveDevice={handleSaveDevice}
+        open={navigationOpen}
         project={project}
       />
+
+      {sceneWorkspace}
+
+      <aside className="safety-note" aria-label="現在の制限">
+        <strong>現在の段階</strong>
+        <span>
+          実装済みの物理判定に適合しても、完全な搬入経路、構造・安定性、重心、軸重、床面強度、荷崩れ、固縛、動荷重、法令適合性や実積載の安全性は未確認です。
+        </span>
+      </aside>
 
       <AutomaticProposalPanel
         applyProposal={handleAutomaticProposalApply}
@@ -660,32 +726,6 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         readContext={readAutomaticProposalContext}
         startBlocked={historyBusy}
       />
-
-      <section
-        className={`capability capability--${state}`}
-      >
-        <div
-          className="capability__copy"
-          role="status"
-          aria-live="polite"
-          aria-labelledby="capability-title"
-          data-capability-state={state}
-        >
-          <span className="status-dot" aria-hidden="true" />
-          <div>
-            <h2 id="capability-title">{copy.title}</h2>
-            <p>{copy.detail}</p>
-          </div>
-        </div>
-        {sceneWorkspace}
-      </section>
-
-      <aside className="safety-note" aria-label="現在の制限">
-        <strong>現在の段階</strong>
-        <span>
-          実装済みの物理判定に適合しても、完全な搬入経路、構造・安定性、重心、軸重、床面強度、荷崩れ、固縛、動荷重、法令適合性や実積載の安全性は未確認です。
-        </span>
-      </aside>
 
       <ProjectWorkspace
         externalInteractionActive={
@@ -710,6 +750,13 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           request={cargoEditorRequest}
         />
       )}
+      {projectSettingsOpen ? (
+        <ProjectSettingsDialog
+          onClose={handleCloseProjectSettings}
+          onProjectCommit={handleProjectCommit}
+          project={project}
+        />
+      ) : null}
     </main>
   );
 }

@@ -35,6 +35,8 @@ interface PersistenceNotification {
 
 interface ProjectPersistencePanelProps {
   readonly busy: boolean;
+  readonly hasUnsavedChanges: boolean;
+  readonly onCreateNewProject: () => void;
   readonly onDeleteDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
   readonly onExportFile: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
   readonly onImportFile: (
@@ -44,6 +46,9 @@ interface ProjectPersistencePanelProps {
   readonly onInteractionChange: (active: boolean) => void;
   readonly onLoadDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
   readonly onSaveDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
+  readonly onOpenChange: (open: boolean) => void;
+  readonly onOpenProjectSettings: () => void;
+  readonly open: boolean;
   readonly project: Project;
 }
 
@@ -123,16 +128,21 @@ const modalFocusableSelector = [
 
 export function ProjectPersistencePanel({
   busy,
+  hasUnsavedChanges,
+  onCreateNewProject,
   onDeleteDevice,
   onExportFile,
   onImportFile,
   onInteractionChange,
   onLoadDevice,
   onSaveDevice,
+  onOpenChange,
+  onOpenProjectSettings,
+  open: drawerOpen,
   project,
 }: ProjectPersistencePanelProps) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
+  const [newProjectConfirmation, setNewProjectConfirmation] = useState(false);
   const [operation, setOperation] = useState<PersistenceAction>();
   const [status, setStatus] = useState("");
   const [notification, setNotification] = useState<PersistenceNotification>();
@@ -141,18 +151,20 @@ export function ProjectPersistencePanel({
   const deleteConfirmationRef = useRef(false);
   const operationRef = useRef(false);
   const notificationIdRef = useRef(0);
-  const entryButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const deleteConfirmButtonRef = useRef<HTMLButtonElement>(null);
+  const newProjectButtonRef = useRef<HTMLButtonElement>(null);
+  const newProjectConfirmButtonRef = useRef<HTMLButtonElement>(null);
   const restoreEntryFocusRef = useRef(false);
   const restoreDeleteFocusRef = useRef(false);
-  const interactionActive = deleteConfirmation || operation !== undefined;
+  const restoreNewProjectFocusRef = useRef(false);
+  const interactionActive = drawerOpen || deleteConfirmation || newProjectConfirmation || operation !== undefined;
   const deviceAvailable = isProjectStoreAvailable();
   const fileImportAvailable = isProjectFileImportAvailable();
   const fileExportAvailable = isProjectFileExportAvailable();
-  const controlsDisabled = busy || operation !== undefined || deleteConfirmation;
+  const controlsDisabled = busy || operation !== undefined || deleteConfirmation || newProjectConfirmation;
 
   const publish = useCallback((message: string, kind: NotificationKind) => {
     notificationIdRef.current += 1;
@@ -174,7 +186,7 @@ export function ProjectPersistencePanel({
       return;
     }
     restoreEntryFocusRef.current = false;
-    entryButtonRef.current?.focus();
+    document.getElementById("app-navigation-button")?.focus();
   }, [drawerOpen]);
 
   useEffect(() => {
@@ -190,6 +202,17 @@ export function ProjectPersistencePanel({
     restoreDeleteFocusRef.current = false;
     deleteButtonRef.current?.focus();
   }, [deleteConfirmation]);
+
+  useEffect(() => {
+    if (newProjectConfirmation) {
+      newProjectConfirmButtonRef.current?.focus();
+      return;
+    }
+    if (restoreNewProjectFocusRef.current && drawerOpenRef.current) {
+      restoreNewProjectFocusRef.current = false;
+      newProjectButtonRef.current?.focus();
+    }
+  }, [newProjectConfirmation]);
 
   useEffect(() => {
     onInteractionChange(interactionActive);
@@ -229,10 +252,20 @@ export function ProjectPersistencePanel({
     if (deleteConfirmationRef.current && !operationRef.current) {
       cancelDeleteConfirmation(false);
     }
+    setNewProjectConfirmation(false);
     drawerOpenRef.current = false;
     restoreEntryFocusRef.current = true;
-    setDrawerOpen(false);
-  }, [cancelDeleteConfirmation]);
+    onOpenChange(false);
+  }, [cancelDeleteConfirmation, onOpenChange]);
+
+  const finishDrawerAction = useCallback((action: () => void) => {
+    restoreNewProjectFocusRef.current = false;
+    setNewProjectConfirmation(false);
+    drawerOpenRef.current = false;
+    restoreEntryFocusRef.current = false;
+    onOpenChange(false);
+    window.requestAnimationFrame(action);
+  }, [onOpenChange]);
 
   const handleDrawerKeyDownCapture = useCallback(
     (event: ReactKeyboardEvent<HTMLElement>) => {
@@ -374,25 +407,6 @@ export function ProjectPersistencePanel({
 
   return (
     <>
-      <section className="project-persistence-entry" aria-label="CLPデータ">
-        <div>
-          <p className="eyebrow">CLP DATA</p>
-          <p>端末保存・JSON入出力</p>
-        </div>
-        <button
-          ref={entryButtonRef}
-          type="button"
-          aria-controls="project-persistence-drawer"
-          aria-expanded={drawerOpen}
-          onClick={() => {
-            drawerOpenRef.current = true;
-            setDrawerOpen(true);
-          }}
-        >
-          CLPデータを開く
-        </button>
-      </section>
-
       <div
         className="project-persistence__modal-layer"
         hidden={!drawerOpen}
@@ -417,10 +431,15 @@ export function ProjectPersistencePanel({
           <div className="project-persistence__heading">
             <div>
               <p className="eyebrow">LOCAL PERSISTENCE</p>
-              <h2 id="project-persistence-title">保存・再読込</h2>
+              <h2 id="project-persistence-title">CLPメニュー — 保存・再読込</h2>
             </div>
-            <button ref={closeButtonRef} type="button" onClick={closeDrawer}>
-              CLPデータを閉じる
+            <button
+              ref={closeButtonRef}
+              type="button"
+              aria-label="メニューを閉じる（CLPデータを閉じる）"
+              onClick={closeDrawer}
+            >
+              メニューを閉じる
             </button>
           </div>
           <p className="project-persistence__manual-copy">
@@ -428,6 +447,37 @@ export function ProjectPersistencePanel({
           </p>
 
           <div className="project-persistence__groups">
+
+            <div className="project-persistence__group">
+              <h3>CLP</h3>
+              <div className="button-row">
+                <button
+                  id="project-persistence-new-project"
+                  ref={newProjectButtonRef}
+                  className="primary-button"
+                  type="button"
+                  disabled={controlsDisabled}
+                  onClick={() => {
+                    if (hasUnsavedChanges) {
+                      restoreNewProjectFocusRef.current = true;
+                      setNewProjectConfirmation(true);
+                      setStatus("未保存の変更を破棄して新規CLPを作成するか確認してください。");
+                      return;
+                    }
+                    finishDrawerAction(onCreateNewProject);
+                  }}
+                >
+                  新規CLP
+                </button>
+                <button
+                  type="button"
+                  disabled={controlsDisabled}
+                  onClick={() => finishDrawerAction(onOpenProjectSettings)}
+                >
+                  CLP設定
+                </button>
+              </div>
+            </div>
             <div className="project-persistence__group">
               <h3>このブラウザ内</h3>
               <div className="button-row">
@@ -529,6 +579,31 @@ export function ProjectPersistencePanel({
                   onClick={() => cancelDeleteConfirmation(true)}
                 >
                   削除をやめる
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {newProjectConfirmation ? (
+            <div className="confirm-panel" role="alert">
+              <p>
+                現在のCLPに未保存の変更があります。新規CLPを作成すると、現在のCLPと操作履歴をこの画面から破棄します。必要なら先に端末保存またはJSON書き出しを行ってください。
+              </p>
+              <div className="button-row">
+                <button
+                  id="project-persistence-new-project-confirm"
+                  ref={newProjectConfirmButtonRef}
+                  className="danger-button"
+                  type="button"
+                  onClick={() => finishDrawerAction(onCreateNewProject)}
+                >
+                  破棄して新規CLPを作成
+                </button>
+                <button type="button" onClick={() => {
+                  restoreNewProjectFocusRef.current = true;
+                  setNewProjectConfirmation(false);
+                }}>
+                  現在のCLPへ戻る
                 </button>
               </div>
             </div>

@@ -213,7 +213,6 @@ export function SceneWorkspace({
     selectedCargo === undefined || filteredCargoes.some((cargo) => cargo.id === selectedCargo.id)
       ? filteredCargoes
       : [selectedCargo, ...filteredCargoes];
-
   useEffect(() => {
     onBusyChange(interactionActive);
     return () => onBusyChange(false);
@@ -682,133 +681,80 @@ export function SceneWorkspace({
 
   return (
     <section className="scene-workspace" aria-labelledby="scene-workspace-title">
-      <div className="scene-workspace__controls">
-        <div>
-          <p className="eyebrow">CLP SCENE</p>
-          <h3 id="scene-workspace-title">3D確認候補</h3>
-        </div>
-
-        {project.containers.length === 0 ? (
-          <p className="scene-workspace__empty">
-            表示する候補がありません。CLP入力でコンテナ・車両候補を追加してください。
-          </p>
-        ) : (
-          <div className="scene-workspace__field">
-            <label htmlFor="scene-container-select">表示する候補</label>
-            <select
-              id="scene-container-select"
-              value={effectiveContainerId}
-              disabled={interactionActive || externalInteractionActive}
-              aria-describedby="scene-container-select-lock"
-              onChange={(event) => {
-                if (!interactionActive) {
-                  setSelectedContainerId(event.target.value);
-                  setCanvasStatus("");
-                }
-              }}
-            >
-              {project.containers.map((container) => (
-                <option key={container.id} value={container.id}>
-                  {container.name}
-                </option>
-              ))}
-            </select>
-            <span className="visually-hidden" id="scene-container-select-lock">
-              配置の編集・削除確認・3D移動中、または別のCLP操作中は候補を切り替えられません。
-            </span>
-          </div>
-        )}
-
-        {project.cargoes.length === 0 ? null : (
-          <div className="scene-workspace__field">
-            <label htmlFor="scene-cargo-search">積荷を検索</label>
-            <input
-              id="scene-cargo-search"
-              type="search"
-              value={cargoQuery}
-              disabled={interactionActive || externalInteractionActive}
-              placeholder="積荷名またはIDの一部"
-              onChange={(event) => setCargoQuery(event.target.value)}
-            />
-            <label htmlFor="scene-cargo-select">操作する積荷</label>
-            <select
-              id="scene-cargo-select"
-              value={selectedCargoId ?? ""}
-              disabled={interactionActive || externalInteractionActive}
-              onChange={(event) => {
-                handleCargoSelectionChange(event.target.value || undefined);
-              }}
-            >
-              <option value="">積荷を選択</option>
-              {selectableCargoes.map((cargo) => {
-                const placement = project.placements.find(
-                  (candidate) => candidate.cargoId === cargo.id,
-                );
-                const placementContainer = project.containers.find(
-                  (container) => container.id === placement?.containerId,
-                );
-                const state =
-                  placement === undefined
-                    ? "未配置・荷室外"
-                    : placement.containerId === effectiveContainerId
-                      ? "現在候補に配置済み"
-                      : `${placementContainer?.name ?? "別候補"}に配置済み`;
-                return (
-                  <option key={cargo.id} value={cargo.id}>
-                    {cargo.name} — {cargo.dimensionsMm.lengthMm}×{cargo.dimensionsMm.widthMm}×{cargo.dimensionsMm.heightMm} mm — {state}
-                  </option>
-                );
-              })}
-            </select>
-            <span className="field__help" aria-live="polite">
-              {filteredCargoes.length} / {project.cargoes.length}件
-            </span>
-          </div>
-        )}
-
-        <p
-          id="scene-workspace-status"
-          className="scene-workspace__status"
-        >
-          {effectiveContainerId === undefined
-            ? `候補0件、積荷${project.cargoes.length}件。`
-            : `選択候補の配置${placementCount}件、荷室外${stagedCount}件。物理判定は保存済み配置だけから更新されます。`}
-        </p>
-
-        <p
-          id="scene-workspace-action-status"
-          className="scene-workspace__action-status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {canvasStatus === "" ? "操作メッセージはありません。" : canvasStatus}
-        </p>
-
-        <p id="scene-workspace-interaction-help" className="scene-workspace__status">
-          {rendererMounted
-            ? "3Dでは積荷を直接選ぶか、検索と一覧から選択できます。荷室内では床または支持可能な積荷上面へsnapし、単一支持面に収まる場合は上面内で移動できます。張り出しや複数支持は未確認のまま調整でき、完全に外へ出すと未配置になります。空白の左ドラッグで視点回転、右ドラッグで平行移動し、＋と－で拡大・縮小します。ホイールはページをスクロールします。"
-            : "3D表示を利用できない場合も、検索、選択カード、ダイアログで積荷と配置を編集できます。"}
-        </p>
-
-        {rendererMounted ? null : (
-          <div className="scene-workspace__fallback-history">
-            <ProjectHistoryControls {...historyControls} compact />
-          </div>
-        )}
-
-        {projectionResult !== undefined && !projectionResult.ok ? (
-          <p className="scene-workspace__error" role="alert">
-            {projectionErrorMessage(projectionResult.error.code)}
-          </p>
-        ) : null}
-
-        <p className="scene-workspace__notice">
-          描画は配置の見た目を確認するためのもので、積載可能性や物理的安全性を保証しません。
-        </p>
-      </div>
+      <h2 id="scene-workspace-title" className="visually-hidden">3D積載作業</h2>
 
       {rendererMounted ? (
         <ThreeViewport
+          topOverlay={project.containers.length === 0 ? (
+            <span className="viewport-control__empty">表示する候補がありません</span>
+          ) : (
+            <label className="viewport-control" htmlFor="scene-container-select">
+              <span>候補</span>
+              <select
+                id="scene-container-select"
+                aria-label="表示する候補"
+                value={effectiveContainerId}
+                disabled={interactionActive || externalInteractionActive}
+                aria-describedby="scene-container-select-lock"
+                onChange={(event) => {
+                  if (!interactionActive) {
+                    setSelectedContainerId(event.target.value);
+                    setCanvasStatus("");
+                  }
+                }}
+              >
+                {project.containers.map((container) => (
+                  <option key={container.id} value={container.id}>{container.name}</option>
+                ))}
+              </select>
+              <span className="visually-hidden" id="scene-container-select-lock">
+                配置の編集・削除確認・3D移動中、または別のCLP操作中は候補を切り替えられません。
+              </span>
+            </label>
+          )}
+          bottomOverlay={project.cargoes.length === 0 ? (
+            <span className="viewport-control__empty">積荷を登録すると、ここから操作対象を選べます</span>
+          ) : (
+            <div className="viewport-control viewport-control--cargo">
+              <label className="visually-hidden" htmlFor="scene-cargo-search">積荷を検索</label>
+              <input
+                id="scene-cargo-search"
+                type="search"
+                aria-label="積荷を検索"
+                value={cargoQuery}
+                disabled={interactionActive || externalInteractionActive}
+                placeholder="積荷名またはID"
+                onChange={(event) => setCargoQuery(event.target.value)}
+              />
+              <label className="visually-hidden" htmlFor="scene-cargo-select">操作する積荷</label>
+              <select
+                id="scene-cargo-select"
+                aria-label="操作する積荷"
+                value={selectedCargoId ?? ""}
+                disabled={interactionActive || externalInteractionActive}
+                onChange={(event) => handleCargoSelectionChange(event.target.value || undefined)}
+              >
+                <option value="">操作する積荷を選択</option>
+                {selectableCargoes.map((cargo) => {
+                  const placement = project.placements.find((candidate) => candidate.cargoId === cargo.id);
+                  const placementContainer = project.containers.find((container) => container.id === placement?.containerId);
+                  const placementState = placement === undefined
+                    ? "荷室外"
+                    : placement.containerId === effectiveContainerId
+                      ? "配置済み"
+                      : `${placementContainer?.name ?? "別候補"}に配置`;
+                  return (
+                    <option key={cargo.id} value={cargo.id}>
+                      {cargo.name} — {cargo.dimensionsMm.lengthMm}×{cargo.dimensionsMm.widthMm}×{cargo.dimensionsMm.heightMm} mm — {placementState}
+                    </option>
+                  );
+                })}
+              </select>
+              <span className="viewport-control__count" aria-live="polite">
+                {filteredCargoes.length}/{project.cargoes.length}件
+              </span>
+            </div>
+          )}
           forceInitialRenderError={forceInitialRenderError}
           historyControls={<ProjectHistoryControls {...historyControls} compact />}
           interactionDisabled={externalInteractionActive || placementInteractionActive}
@@ -866,6 +812,26 @@ export function SceneWorkspace({
         />
       ) : null}
 
+      <div className="scene-workspace__feedback">
+        <p id="scene-workspace-status" className="visually-hidden">
+          {effectiveContainerId === undefined
+            ? `候補0件、積荷${project.cargoes.length}件。`
+            : `選択候補の配置${placementCount}件、荷室外${stagedCount}件。物理判定は保存済み配置だけから更新されます。`}
+        </p>
+        <p id="scene-workspace-action-status" className="scene-workspace__action-status" aria-live="polite" aria-atomic="true">
+          {canvasStatus === "" ? "3D上の積荷または下部の一覧から操作対象を選べます。" : canvasStatus}
+        </p>
+        <p id="scene-workspace-interaction-help" className="visually-hidden">
+          3Dでは積荷を直接選ぶか、下部で検索・選択できます。空白の左ドラッグで視点回転、右ドラッグで平行移動し、ボタンで拡大・縮小します。ホイールはページをスクロールします。
+        </p>
+        {projectionResult !== undefined && !projectionResult.ok ? (
+          <p className="scene-workspace__error" role="alert">{projectionErrorMessage(projectionResult.error.code)}</p>
+        ) : null}
+        <p className="scene-workspace__notice">
+          3D描画と判定は、積載可能性や物理的安全性を保証しません。
+        </p>
+      </div>
+
       <section
         className="scene-selection-card"
         aria-labelledby="placement-panel-title"
@@ -874,7 +840,7 @@ export function SceneWorkspace({
           <h4 id="placement-panel-title" className="visually-hidden">配置</h4>
           {selectedCargo === undefined ? (
             <p className="scene-selection-card__empty">
-              検索または3D表示から積荷を選ぶと、情報と編集操作を表示します。
+              3D表示または下部の検索・一覧から積荷を選ぶと、情報と編集操作を表示します。
             </p>
           ) : (
             <div className="scene-selection-card__content">

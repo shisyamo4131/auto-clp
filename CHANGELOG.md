@@ -4,6 +4,7 @@
 
 ### Changed
 
+- 3D viewportを主作業面とし、Application Bar、3D能力Chip、CLP操作をまとめたNavigation Drawer、CLP設定dialog、viewport内の候補・積荷検索selectorへ再構成した。未保存確認付き新規CLPは新しいidentityと空履歴を作るbarrierとする。仕様1.1.0、ADR 0025。Schema 0.1.0は不変。
 - 利用者向けの「案件」を「CLP」、自動提案の未適用結果を「配置案」へ統一した。WebGL障害時の「作業データ」、内部 `Project` / `projectId`、Schema `0.1.0`、固定JSONファイル名は変更しない。仕様1.0.2、ADR 0024。
 
 ### Added

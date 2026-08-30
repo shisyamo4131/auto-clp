@@ -21,6 +21,8 @@
 - キーボード操作と305、320、375 px幅で、主要操作、理由、確認、focusを失わない。
 - fine-pointer床面dragはno-opを先行し、両軸に正の共通長があるpartialを修正途中配置として保存し、面・辺・点接触を含むoutsideだけを荷室外作業状態にする。status出現でviewport位置を変えない。
 - 全積荷を検索・選択でき、他候補配置は所有候補へ切り替えてから扱う。積荷定義と配置は別dialog・別履歴で、配置取り外しと積荷削除をcascadeしない。
+- Application Barにmenu、現在CLP名、3D能力Chipがあり、保存・読込・JSON・新規CLP・CLP設定はNavigation Drawerに集約される。3D viewport内の候補selectorと積荷検索・selectorはcanvasの位置を動かさず、toolbarやdragと重ならない。
+- 未保存変更がある新規CLP作成は破棄確認を要求し、作成後は新しい `projectId` と空CLP設定dialogを提供する。新規作成はUndo対象ではなく、旧履歴を破棄するbarrierとする。
 - dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は固定toolbar上の同一glyphを90度差とaccessible nameで区別でき、積荷editorの向き設定は天地無用だけとする。Z軸床面回転は常に利用でき、天地無用はXだけを無効にする。
 
 ## AC-01 Floor Layout and Manual Editing

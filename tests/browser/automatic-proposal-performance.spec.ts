@@ -605,7 +605,7 @@ test("records the AP-08 native Worker gate and cancellation evidence", async ({
   await installNativeProposalWorkerProbe(uiPage);
   await uiPage.goto(`${baseUrl}/`);
   await expect(
-    uiPage.getByRole("heading", { name: "3D表示を利用できます" }),
+    uiPage.getByRole("status", { name: "3D 利用可" }),
   ).toBeVisible();
   await importProject(uiPage);
   const cancellation = (await uiPage.evaluate(() => {

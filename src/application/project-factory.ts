@@ -5,10 +5,10 @@ import {
 
 export const INITIAL_PROJECT_ID = "project-1";
 
-export function createInitialProject(): Project {
+export function createInitialProject(projectId = INITIAL_PROJECT_ID): Project {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
-    projectId: INITIAL_PROJECT_ID,
+    projectId,
     name: "新規CLP",
     clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: [],

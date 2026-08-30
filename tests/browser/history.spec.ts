@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { saveProjectName } from "./ui-helpers";
 
 async function addCargo(page: Page, name: string) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
@@ -27,8 +28,7 @@ test("undoes and redoes project, cargo, container, placement, and removal", asyn
   const undo = page.getByRole("button", { name: "元に戻す" });
   const redo = page.getByRole("button", { name: "やり直す" });
   await expect(undo).toHaveAttribute("aria-keyshortcuts", "Control+Z Meta+Z");
-  await page.getByLabel("CLP名").fill("履歴CLP");
-  await page.getByRole("button", { name: "CLPを保存" }).click();
+  await saveProjectName(page, "履歴CLP");
   await undo.click();
   await expect(page.getByTestId("canonical-project-settings")).toContainText("新規CLP");
   await redo.click();
@@ -88,8 +88,7 @@ test("discards redo after a new branch", async ({ page }) => {
   await addCargo(page, "分岐積荷");
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(page.getByRole("button", { name: "やり直す" })).toBeEnabled();
-  await page.getByLabel("CLP名").fill("履歴分岐");
-  await page.getByRole("button", { name: "CLPを保存" }).click();
+  await saveProjectName(page, "履歴分岐");
   await expect(page.getByRole("button", { name: "やり直す" })).toBeDisabled();
 });
 

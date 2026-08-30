@@ -35,5 +35,6 @@
 | [0022](0022-upright-only-orientation-policy.md) | 天地無用だけを使う積荷向き方針 | Accepted | 2026-08-30 |
 | [0023](0023-webgl-required-operation-and-read-only-rescue.md) | WebGL 2必須運用と読み取り専用JSON救出 | Accepted | 2026-08-30 |
 | [0024](0024-user-facing-clp-terminology.md) | 利用者向けCLP用語 | Accepted | 2026-08-30 |
+| [0025](0025-viewer-first-application-shell.md) | 3D主作業面を優先するApplication Shell | Accepted | 2026-08-30 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。
