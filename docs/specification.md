@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-08-30
-- Specification version: 1.1.0
+- Specification version: 1.1.1
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -73,7 +73,7 @@
 - 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`は一つのNavigation Drawerへまとめる。常設の保存cardとCLP設定cardは置かない。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
 - 旧3D候補cardの外枠と見出しは置かない。表示候補selectorはviewport上部へ、全CLP積荷を名前またはIDで検索する入力、未配置・現在候補・他候補の状態付き積荷selector、件数はviewport下部へoverlayする。overlayの出現、検索結果、操作statusはcanvasの寸法またはページ上の位置を変えない。
 - viewport上部の候補selectorと、Undo/Redo、X/Z回転、拡大・縮小、全体表示toolbarは共通の非重複領域へ置く。305 / 320 / 375 pxでは複数行へ積み、下部の積荷検索・selector・件数も複数行にして水平overflowを起こさない。overlay外のcanvas操作領域を残す。
-- compactな操作statusと非保証注意、物理判定、自動配置案の順で3D viewportの後へ置く。積荷とコンテナ・車両候補の登録cardは維持する。
+- compactな操作status、物理判定、自動配置案の順で3D viewportの後へ置く。積荷を選択しただけの成功通知と、一般的な非保証注意をviewport直下へ重複表示しない。drag、回転不可、失敗など次の判断に必要な操作statusと、物理判定内の具体的な未確認・非保証説明は維持する。積荷とコンテナ・車両候補の登録cardは維持する。
 - `新規CLP` はSchema制約内の衝突しない新しい `projectId` を持つ空CLPを作成し、CLP設定dialogを開く。現在CLPに最後の端末保存またはJSON書出し以後の変更がある場合は、対象と結果を説明する破棄確認を必須とする。新規作成はUndo/Redoへ入れず、旧履歴、draft、選択、camera、drag preview、Worker結果を破棄するhistory barrierとする。作成直後の空CLPを新しい保存基準とする。
 
 ### Placement and Validation
@@ -85,7 +85,7 @@
 - 配置済み積荷のdropが `xy-contained` または `partial` なら、量子化したX/Yと向き、および床・支持面snapで決めたZを使って一回の `placement.drag-xy` とする。`outside` ならdrop位置と向きをsessionへ記録して一回の `placement.delete` とする。Undoは元配置を復元し、Redoは同じ外側作業位置へ戻す。失敗、取消、staleはstatusまたはpreviewを戻す以外、Project、履歴、session poseを変更しない。この三状態分類は3Dのfine-pointer dragだけに適用し、座標フォーム、JSON読込、回転、積荷・候補編集、既存Project配置を自動的に再分類しない。
 - fine-pointer dragで積荷footprintが荷室床面と正面積で重なるとき、支持可能な積荷上面がなければZ=0の床へsnapする。支持可能な上面とX/Yで正面積が重なる場合は最も高い上面へZをsnapする。対象底面をX/Y両軸で収容できる単一上面がある場合は、その上面内に完全包含される範囲へX/Yを制限する。単一上面が対象底面より一軸でも小さい場合はZだけを仮snapし、X/Yは制限しない。荷室外ではZを自動変更しない。支持不可積荷の上面だけにはsnapしない。
 - drag previewは床、単独支持、支持条件未確認、不適合、荷室外を色と固定高の操作statusで区別する。操作対象以外の積荷は面をほぼ透明な中立色、辺を灰色の点線とし、支持候補だけを単独支持なら緑、支持条件未確認なら黄の点線で示す。コンテナ・開口線枠は維持し、drop、取消、pointer capture喪失、描画更新で通常表示へ戻す。drop後の区分と理由は同じ整数mm位置を物理判定へ渡して決める。不適合も修正途中として保存可能で、強制rollbackしない。一回のdropは一回の配置履歴とする。
-- 3D viewport上のwheel入力はページscrollへ渡し、cameraを拡大・縮小しない。cameraの拡大・縮小は明示的な `＋` / `－` buttonだけで行い、「荷室全体を表示」を維持する。
+- 3D viewport上のwheel入力はページscrollへ渡し、cameraを拡大・縮小しない。cameraの拡大・縮小は明示的な `＋` / `－` buttonだけで行う。荷室全体表示はMaterial Design Iconsの `cube-outline` 相当の立方体輪郭を使うicon-only buttonとし、表示textを置かず、accessible nameとtitleで「荷室全体を表示」を伝える。
 - 積荷の検索と選択はscene投影ではなくCLPの全積荷を対象とし、未配置、現在候補へ配置済み、他候補へ配置済みを識別する。候補0件でも利用でき、選択だけではcameraを自動移動しない。他候補の積荷は所有候補へ明示切替した後だけ配置編集または取り外しできる。
 - 配置済み・荷室外の積荷は、X軸またはZ軸を中心に90度回転できる。Z軸遷移は `LWH↔WLH`、`LHW↔HLW`、`WHL↔HWL` とし、床面回転を禁止する積荷設定は設けない。X軸遷移は `LWH↔LHW`、`WLH↔WHL`、`HLW↔HWL` とし、天地無用の積荷だけ無効にする。配置済み回転は最小角を保持した一回の配置更新、荷室外回転はsession状態だけの変更とする。荷室外回転後のX/Y占有範囲が荷室床面と正面積で重なる場合は回転を拒否して直前poseを保持する。積荷寸法または天地無用の編集で既存session poseが同条件を失った場合は、新しい向き適用後寸法で完全に荷室外となる決定的初期位置へ戻す。
 - 積荷編集画面の向き設定は「天地無用」checkboxだけとし、6種類の許可向きcheckboxを表示しない。天地無用ONは `LWH` / `WLH`、OFFは全6向きを `allowedOrientations` へ保存する。旧JSON・端末保存はSchema・意味・物理preflight合格後、`LWH` / `WLH` だけの非空部分集合をONの2向き、それ以外の有効な非空部分集合をOFFの全6向きへ正規化し、次回保存で永続化する。横倒し配置中に天地無用ONへ変更する保存は拒否する。Schema `0.1.0` は変更しない。
@@ -144,6 +144,10 @@
 
 - 複数候補をtab等で切り替え、荷室外に残る積荷の退避関係を候補寸法に対して維持するUIは承認済みの将来要件であり、未実装である。tab表示、side-relativeな再投影、候補ごとのcamera、履歴と自動提案の境界を実装前に確定する。
 - 積荷写真または識別画像を直方体や選択UIへ表示する機能は承認済みの将来調査対象であり、未実装である。画像の選択、端末内保持、JSON可搬性、容量上限、texture面、thumbnail、失敗fallbackを技術調査後に別承認する。
+
+### Planned Terms of Use
+
+- Auto CLPの利用規約は未作成であり、将来工程として整備する。3D描画、物理判定、自動提案が積載可能性、実積載の安全性、法令適合性を保証しないこと、利用者が確認すべき事項、規約の表示場所・同意・版管理を、公開または実務運用へ進む前に法務確認を含む別checkpointで確定する。規約完成までは、物理判定panelと現在の制限にある具体的な未確認事項を削除せず、画面から一般的な一文を除いたことを保証範囲の拡大として扱わない。
 
 ### Automatic Proposal
 

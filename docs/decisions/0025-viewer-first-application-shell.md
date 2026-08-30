@@ -18,6 +18,7 @@ Phase 1の人間試用で、主操作は3D viewport上の選択、移動、回�
 - 3D候補cardの外枠と見出しを廃止し、viewerを主作業面として上方へ配置する。候補selectorはviewport上部、全CLP積荷を名前またはIDで検索する入力と状態付き積荷selectorはviewport下部へoverlayする。overlayはcanvasの寸法・位置を変えず、空白のcamera操作と積荷dragを覆わない範囲へ置く。
 - Undo/Redo、X/Z回転、拡大・縮小、全体表示、候補selectorは共通のviewport上部control領域で互いに重ならない。305 / 320 / 375 pxではtoolbarと候補selectorを積み、積荷検索・selector・件数は複数行にして水平overflowを起こさない。
 - 3D操作statusと非保証注意はcompactにviewer直下へ残し、物理判定をその次に置く。自動配置案は主3D作業面と物理判定の後へ置く。積荷、コンテナ・車両候補の登録cardはこの変更では維持する。
+- Refinement 2026-08-30: 積荷選択だけの成功通知と一般的な非保証一文は主作業面の情報密度を下げるため表示しない。drag・失敗・操作不可status、物理判定panelと現在の制限にある具体的説明は維持し、一般的な保証境界は将来の利用規約整備へ記録する。狭幅時の候補selectorはcolumn flexのbasisを解除して内容高に留め、荷室全体表示はaccessible name付きの `cube-outline` 相当icon-only buttonとする。
 - Drawerから設定dialogまたは新規CLPへ移る場合も、閉じたsurface内の要素ではなくApplication BarのCLP名またはmenu buttonへfocusを戻す。未保存確認は出現時に確定buttonへfocusし、取消時は `新規CLP` へ戻す。
 - WebGL 2非対応、初回描画失敗、context lossでは通常作業面を表示しない既存の必須ゲートを維持する。Application Barの能力Chipは利用不可を示し、許可済みの読み取り専用救出だけを残す。
 
@@ -38,7 +39,7 @@ Phase 1の人間試用で、主操作は3D viewport上の選択、移動、回�
 - Users: 3Dを中心に、Application Bar、Drawer、dialog、viewport overlayからCLPを操作する。未保存のCLPを破棄する新規作成には確認が入る。
 - Data: JSON Schema `0.1.0`と既存保存データの形・意味は変更しない。新規CLPの `projectId` はSchemaのASCII 1〜64文字制約内のUUID付きIDとする。
 - Implementation: Application Bar、能力Chip、controlled Drawer、CLP設定dialog、viewer overlay、history barrierと保存基準追跡をAppへ接続する。
-- Documentation: 現行仕様を1.1.0へ更新し、運用、受入、ロードマップ、変更履歴、文書索引を整合する。進捗は98%を維持する。
+- Documentation: 現行仕様を1.1.1へ更新し、運用、受入、ロードマップ、変更履歴、文書索引を整合する。進捗は98%を維持する。
 - Tests: 通常・WebGL障害、Drawer/dialog focus、未保存確認、履歴reset、固有ID、全積荷検索、wheel一回分、overlay非重複、305 / 320 / 375 / 720 pxと1,000積荷をbrowserで回帰する。
 
 ## Compatibility and Migration

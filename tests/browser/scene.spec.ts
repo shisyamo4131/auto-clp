@@ -286,6 +286,9 @@ test("keeps all-cargo selection and oriented dimensions available with no candid
   await page.goto("/");
   await addCargo(page, "候補なし積荷");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await expect(page.locator("#scene-workspace-action-status")).not.toContainText("操作対象として選択しました");
+  await expect(page.getByText("3D描画と判定は、積載可能性や物理的安全性を保証しません。", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "物理判定" })).toContainText("実積載の安全性を保証しません");
   const card = page.locator(".scene-selection-card");
   await expect(card).toContainText("奥行方向 500 × 横幅方向 400 × 高さ方向 300 mm");
   await expect(card.getByRole("button", { name: "座標を入力して配置" })).toHaveAttribute("aria-disabled", "true");
@@ -655,6 +658,7 @@ test("keeps touch selection form fallback and narrow modal layouts", async ({ pa
     const toolbar = await page.locator(".viewport__camera-controls").boundingBox();
     const candidate = await page.locator(".viewport__overlay--top").boundingBox();
     if (toolbar === null || candidate === null) throw new Error("viewport top controls are missing");
+    expect(candidate.height).toBeLessThanOrEqual(64);
     const separated =
       toolbar.x + toolbar.width <= candidate.x ||
       candidate.x + candidate.width <= toolbar.x ||
@@ -664,6 +668,10 @@ test("keeps touch selection form fallback and narrow modal layouts", async ({ pa
     expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);
   }
   await page.setViewportSize({ width: 305, height: 700 });
+  const resetViewButton = page.getByRole("button", { name: "荷室全体を表示" });
+  await expect(resetViewButton).toHaveAttribute("title", "荷室全体を表示");
+  await expect(resetViewButton.locator("svg.viewport__reset-view-icon")).toHaveCount(1);
+  expect((await resetViewButton.textContent())?.trim()).toBe("");
   await page.getByRole("button", { name: "拡大" }).focus();
   await expect(page.getByRole("button", { name: "拡大" })).toBeFocused();
   await page.getByLabel("操作する積荷").selectOption("cargo-1");

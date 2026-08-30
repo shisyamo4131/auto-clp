@@ -993,6 +993,13 @@ h1 {
   line-height: 1;
 }
 
+.viewport__reset-view-icon {
+  display: block;
+  width: 1.45rem;
+  height: 1.45rem;
+  fill: currentColor;
+}
+
 .viewport__rotation-controls {
   display: flex;
   gap: 0.4rem;
@@ -1065,8 +1072,7 @@ h1 {
   justify-content: space-between;
 }
 
-.scene-workspace__feedback .scene-workspace__action-status,
-.scene-workspace__feedback .scene-workspace__notice {
+.scene-workspace__feedback .scene-workspace__action-status {
   min-height: 0;
   max-height: none;
   margin: 0;
@@ -1076,10 +1082,6 @@ h1 {
 
 .scene-workspace__feedback .scene-workspace__action-status {
   flex: 1 1 auto;
-}
-
-.scene-workspace__feedback .scene-workspace__notice {
-  flex: 0 1 22rem;
 }
 
 .scene-workspace__controls {
@@ -1140,17 +1142,10 @@ h1 {
 }
 
 .scene-workspace__empty,
-.scene-workspace__status,
-.scene-workspace__notice {
+.scene-workspace__status {
   color: #a8bdcf;
   line-height: 1.55;
   overflow-wrap: anywhere;
-}
-
-.scene-workspace__notice {
-  padding-left: 0.75rem;
-  border-left: 3px solid #edb852;
-  color: #ffe2b3;
 }
 
 .scene-workspace__error {
@@ -2067,6 +2062,10 @@ legend {
   .viewport__overlay--top,
   .viewport__camera-controls {
     width: 100%;
+  }
+
+  .viewport__overlay--top {
+    flex: 0 0 auto;
   }
 
   .viewport-control {

@@ -271,7 +271,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.1.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.1.1' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -318,7 +318,9 @@ foreach ($requiredText in @(
     '3D viewportを通常画面の主作業面',
     'Navigation Drawer',
     '全CLP積荷',
-    'history barrier'
+    'history barrier',
+    '### Planned Terms of Use',
+    '`cube-outline`'
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved viewer-first shell marker: $requiredText"

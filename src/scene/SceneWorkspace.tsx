@@ -249,19 +249,10 @@ export function SceneWorkspace({
     };
   }, [project.cargoes, selectedCargoId]);
 
-  const handleCargoSelectionChange = useCallback(
-    (cargoId?: string) => {
-      setSelectedCargoId(cargoId);
-      if (cargoId === undefined) {
-        setCanvasStatus("3D表示の積荷選択を解除しました。");
-        return;
-      }
-      const cargoName =
-        project.cargoes.find((cargo) => cargo.id === cargoId)?.name ?? "不明な積荷";
-      setCanvasStatus(`${cargoName}を操作対象として選択しました。`);
-    },
-    [project.cargoes],
-  );
+  const handleCargoSelectionChange = useCallback((cargoId?: string) => {
+    setSelectedCargoId(cargoId);
+    setCanvasStatus("");
+  }, []);
 
   const handleCargoDragStateChange = useCallback((active: boolean) => {
     setCanvasDragActive(active);
@@ -827,9 +818,6 @@ export function SceneWorkspace({
         {projectionResult !== undefined && !projectionResult.ok ? (
           <p className="scene-workspace__error" role="alert">{projectionErrorMessage(projectionResult.error.code)}</p>
         ) : null}
-        <p className="scene-workspace__notice">
-          3D描画と判定は、積載可能性や物理的安全性を保証しません。
-        </p>
       </div>
 
       <section

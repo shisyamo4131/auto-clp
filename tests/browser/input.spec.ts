@@ -88,11 +88,11 @@ test("separates placement removal from cargo deletion and restores fallback focu
   await expect(page.getByText("積荷 0件、候補 1件、配置 0件")).toBeVisible();
 });
 
-test("keeps cargo input available with WebGL and exposes permanent safety notices", async ({ page }) => {
+test("keeps cargo input available with WebGL and exposes specific safety boundaries", async ({ page }) => {
   await page.goto("/");
   await addCargo(page, "非対応積荷");
   await expect(page.getByRole("img", { name: /3Dプレビュー/ })).toBeVisible();
-  await expect(page.getByText("積載可能性や物理的安全性を保証しません", { exact: false })).toBeVisible();
+  await expect(page.getByRole("region", { name: "物理判定" })).toContainText("実積載の安全性を保証しません");
 });
 
 test("uses 天地無用 as the only cargo orientation setting", async ({ page }) => {

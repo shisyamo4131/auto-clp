@@ -4,6 +4,7 @@
 
 ### Changed
 
+- 仕様1.1.1で、積荷選択だけの成功通知とviewport直下の重複する一般的非保証文を除き、狭幅時の候補selectorを内容高へ修正し、荷室全体表示をaccessibleな `cube-outline` 相当icon-only buttonへ変更した。利用規約整備を公開・実務運用前の将来工程として記録し、具体的な物理未確認表示、Schema 0.1.0、進捗98%は変更しない。
 - 3D viewportを主作業面とし、Application Bar、3D能力Chip、CLP操作をまとめたNavigation Drawer、CLP設定dialog、viewport内の候補・積荷検索selectorへ再構成した。未保存確認付き新規CLPは新しいidentityと空履歴を作るbarrierとする。仕様1.1.0、ADR 0025。Schema 0.1.0は不変。
 - 利用者向けの「案件」を「CLP」、自動提案の未適用結果を「配置案」へ統一した。WebGL障害時の「作業データ」、内部 `Project` / `projectId`、Schema `0.1.0`、固定JSONファイル名は変更しない。仕様1.0.2、ADR 0024。
 

@@ -298,6 +298,19 @@ function AxisRotationIcon({ axis }: { readonly axis: "X" | "Z" }) {
   );
 }
 
+function ResetViewIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="viewport__reset-view-icon"
+      viewBox="0 0 24 24"
+      focusable="false"
+    >
+      <path d="M21 16.5c0 .38-.21.73-.55.9l-8 4.5a.9.9 0 0 1-.9 0l-8-4.5A1.03 1.03 0 0 1 3 16.5v-9c0-.38.21-.73.55-.9l8-4.5a.9.9 0 0 1 .9 0l8 4.5c.34.17.55.52.55.9v9ZM12 4.15 6.04 7.5 12 10.85l5.96-3.35L12 4.15ZM5 15.91l6 3.38v-6.71L5 9.21v6.7Zm14 0v-6.7l-6 3.37v6.71l6-3.38Z" />
+    </svg>
+  );
+}
+
 export function ThreeViewport({
   bottomOverlay,
   forceInitialRenderError = false,
@@ -802,8 +815,13 @@ export function ThreeViewport({
           <button type="button" aria-label="縮小" onClick={() => zoomOutRef.current()}>
             －
           </button>
-          <button type="button" onClick={() => resetViewRef.current()}>
-            荷室全体を表示
+          <button
+            type="button"
+            aria-label="荷室全体を表示"
+            title="荷室全体を表示"
+            onClick={() => resetViewRef.current()}
+          >
+            <ResetViewIcon />
           </button>
         </div>
       </div>
