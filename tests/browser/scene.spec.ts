@@ -525,11 +525,11 @@ test("blocks scene rotation while a project draft owns the busy gate", async ({ 
   await place(page);
   const z = page.getByRole("button", { name: "Z軸を中心に90°回転" });
   const historyBefore = await page.locator(".project-history__summary").textContent();
-  await page.getByLabel("案件名").fill("未保存busy案件");
+  await page.getByLabel("CLP名").fill("未保存busyCLP");
   await expect(z).toHaveAttribute("aria-disabled", "true");
   await z.click({ force: true });
-  await expect(page.locator("#scene-workspace-action-status")).toContainText("別の案件操作または保存処理の完了後");
-  await page.getByLabel("案件名").fill("新規案件");
+  await expect(page.locator("#scene-workspace-action-status")).toContainText("別のCLP操作または保存処理の完了後");
+  await page.getByLabel("CLP名").fill("新規CLP");
   await expect(z).not.toHaveAttribute("aria-disabled", "true");
   expect(await page.locator(".project-history__summary").textContent()).toBe(historyBefore);
 });

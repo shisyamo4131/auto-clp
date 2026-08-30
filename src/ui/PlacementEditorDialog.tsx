@@ -229,7 +229,7 @@ export const PlacementEditorDialog = forwardRef<
       action: editor.kind === "new" ? "placement.add" : "placement.update",
     });
     if (!transition.ok) {
-      onStatusChange("案件が更新されたため配置を保存できませんでした。入力内容は保持しています。");
+      onStatusChange("CLPが更新されたため配置を保存できませんでした。入力内容は保持しています。");
       return;
     }
     onSelectedCargoChange(editor.cargoId);
@@ -255,7 +255,7 @@ export const PlacementEditorDialog = forwardRef<
       action: "placement.delete",
     });
     if (!transition.ok) {
-      onStatusChange("案件が更新されたため配置を解除できませんでした。");
+      onStatusChange("CLPが更新されたため配置を解除できませんでした。");
       return;
     }
     onSelectedCargoChange(deleteTarget.cargoId);

@@ -219,7 +219,7 @@ export function AutomaticProposalPanel({
             aria-describedby={startBlocked ? "automatic-proposal-blocked" : undefined}
             onClick={retry}
           >
-            現在の案件で再試行
+            現在のCLPで再試行
           </button>
         ) : null}
         {snapshot.phase === "ready" &&
@@ -235,7 +235,7 @@ export function AutomaticProposalPanel({
             }
             onClick={() => setConfirmationIdentity(snapshot.identity)}
           >
-            提案を適用
+            配置案を適用
           </button>
         ) : null}
       </div>
@@ -251,11 +251,11 @@ export function AutomaticProposalPanel({
           className="confirm-panel automatic-proposal__confirmation"
           role="alert"
         >
-          <strong>提案を案件へ一括適用しますか？</strong>
+          <strong>配置案をCLPへ一括適用しますか？</strong>
           <p>
             {project.placements.length > 0
-              ? `現在の配置${project.placements.length}件を、${view.selectedContainerLabel ?? "提案候補"}への提案${view.metrics.proposalPlacementCount}件で一括置換します。`
-              : `${view.selectedContainerLabel ?? "提案候補"}への提案${view.metrics.proposalPlacementCount}件を追加します。`}
+              ? `現在の配置${project.placements.length}件を、${view.selectedContainerLabel ?? "配置先候補"}への配置案${view.metrics.proposalPlacementCount}件で一括置換します。`
+              : `${view.selectedContainerLabel ?? "配置先候補"}への配置案${view.metrics.proposalPlacementCount}件を追加します。`}
             配置が変わる場合は、1回の取り消しで元へ戻せます。
           </p>
           {snapshot.result.status === "complete-with-cutoff" ? (
@@ -279,7 +279,7 @@ export function AutomaticProposalPanel({
                 apply(identity);
               }}
             >
-              提案を適用
+              配置案を適用
             </button>
             <button
               type="button"
@@ -302,7 +302,7 @@ export function AutomaticProposalPanel({
             <dd>{view.metrics.currentPlacementCount}件</dd>
           </div>
           <div>
-            <dt>提案の配置</dt>
+            <dt>配置案の件数</dt>
             <dd>{view.metrics.proposalPlacementCount}件</dd>
           </div>
           <div>
@@ -330,7 +330,7 @@ export function AutomaticProposalPanel({
 
       {view.selectedContainerLabel === undefined ? null : (
         <p className="automatic-proposal__selected">
-          提案候補: {view.selectedContainerLabel}
+          配置先候補: {view.selectedContainerLabel}
         </p>
       )}
 
@@ -357,7 +357,7 @@ export function AutomaticProposalPanel({
 
       {view.placements.total === 0 ? null : (
         <section className="automatic-proposal__group" aria-labelledby="automatic-proposal-placements">
-          <h3 id="automatic-proposal-placements">提案配置（未適用）</h3>
+          <h3 id="automatic-proposal-placements">配置案（未適用）</h3>
           <ol className="automatic-proposal__cards" start={view.placements.offset + 1}>
             {view.placements.rows.map((row) => (
               <li key={row.cargoId}>
@@ -368,7 +368,7 @@ export function AutomaticProposalPanel({
             ))}
           </ol>
           <PageControls
-            label="提案配置"
+            label="配置案"
             page={view.placements}
             onOffsetChange={(offset) => updateOffset("placementOffset", offset)}
           />

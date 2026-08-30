@@ -9,7 +9,7 @@ test("shows a deterministic unsupported WebGL 2 state", async ({ page }) => {
   await expect(
     page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" }),
   ).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "案件を保存" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "CLPを保存" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "自動提案を開始" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "端末へ保存" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "JSONを読み込む" })).toHaveCount(0);

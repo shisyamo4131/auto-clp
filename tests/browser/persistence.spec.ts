@@ -137,17 +137,17 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 async function openPersistenceDrawer(page: Page) {
-  const entry = page.getByRole("button", { name: "案件データを開く" });
+  const entry = page.getByRole("button", { name: "CLPデータを開く" });
   if ((await entry.getAttribute("aria-expanded")) !== "true") {
     await entry.click();
   }
   await expect(entry).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("button", { name: "案件データを閉じる" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "CLPデータを閉じる" })).toBeFocused();
 }
 
 async function expectModalFocusCycle(page: Page) {
   const drawer = page.getByRole("dialog", { name: "保存・再読込" });
-  const close = page.getByRole("button", { name: "案件データを閉じる" });
+  const close = page.getByRole("button", { name: "CLPデータを閉じる" });
   const fileInput = drawer.locator("input[type='file']");
   await expect(drawer).toHaveAttribute("aria-modal", "true");
   await close.focus();
@@ -183,7 +183,7 @@ test("keeps the navigation drawer initially closed and restores focus while safe
   page,
 }) => {
   await page.goto("/");
-  const entry = page.getByRole("button", { name: "案件データを開く" });
+  const entry = page.getByRole("button", { name: "CLPデータを開く" });
   const drawer = page.getByRole("dialog", { name: "保存・再読込" });
   const undo = page.getByRole("button", { name: "元に戻す" });
   const historySummary = page.locator(".project-history__summary");
@@ -193,8 +193,8 @@ test("keeps the navigation drawer initially closed and restores focus while safe
   await expect(drawer).toHaveCount(0);
   await expect(page.getByRole("button", { name: "端末へ保存" })).toHaveCount(0);
 
-  await page.getByLabel("案件名").fill("Drawer非ロック案件");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("Drawer非ロックCLP");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await expect(undo).toBeEnabled();
   await openPersistenceDrawer(page);
   await expect(drawer).toBeVisible();
@@ -205,7 +205,7 @@ test("keeps the navigation drawer initially closed and restores focus while safe
   expect(await historySummary.textContent()).toBe(historyBeforeModalInput);
   await page.locator(".project-persistence__backdrop").click({ position: { x: 8, y: 8 } });
   await expect(drawer).toBeVisible();
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   await expect(entry).toBeFocused();
   await expect(entry).toHaveAttribute("aria-expanded", "false");
   await expect(drawer).toHaveCount(0);
@@ -224,7 +224,7 @@ test("keeps the navigation drawer initially closed and restores focus while safe
 
   await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末保存を削除" }).click();
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   await expect(entry).toBeFocused();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(undo).toBeEnabled();
@@ -240,9 +240,9 @@ test("announces persistence outside the drawer, refreshes repeated copy, and app
   const save = page.getByRole("button", { name: "端末へ保存" });
 
   await save.click();
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   await expect(drawer).toHaveCount(0);
-  await expect(snackbar).toHaveText("現在の案件をこの端末へ保存しました。");
+  await expect(snackbar).toHaveText("現在のCLPをこの端末へ保存しました。");
   await expect(snackbar).toHaveAttribute("role", "status");
   await expect(snackbar).toHaveAttribute("aria-live", "polite");
   await expect(snackbar).toHaveAttribute("aria-atomic", "true");
@@ -250,7 +250,7 @@ test("announces persistence outside the drawer, refreshes repeated copy, and app
 
   await openPersistenceDrawer(page);
   await expect(page.locator(".project-persistence__status")).toHaveText(
-    "現在の案件をこの端末へ保存しました。",
+    "現在のCLPをこの端末へ保存しました。",
   );
   await expect(page.locator(".project-persistence__status")).not.toHaveAttribute(
     "aria-live",
@@ -258,8 +258,8 @@ test("announces persistence outside the drawer, refreshes repeated copy, and app
   );
   await save.click();
   await expect(snackbar).toHaveCount(0);
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
-  await expect(snackbar).toHaveText("現在の案件をこの端末へ保存しました。");
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
+  await expect(snackbar).toHaveText("現在のCLPをこの端末へ保存しました。");
   await expect
     .poll(() => snackbar.getAttribute("data-notification-id"))
     .not.toBe(firstNotificationId);
@@ -280,7 +280,7 @@ test("announces persistence outside the drawer, refreshes repeated copy, and app
   });
   await save.click();
   await expect(snackbar).toHaveCount(0);
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   await expect(snackbar).toContainText("端末内保存領域を開けませんでした");
   await page.waitForTimeout(6_100);
   await expect(snackbar).toContainText("端末内保存領域を開けませんでした");
@@ -293,8 +293,8 @@ test("keeps focus and global shortcuts inside the modal while a file preflight i
 }) => {
   await installControlledPreflightWorker(page);
   await page.goto("/");
-  const projectName = page.getByLabel("案件名");
-  const saveProject = page.getByRole("button", { name: "案件を保存" });
+  const projectName = page.getByLabel("CLP名");
+  const saveProject = page.getByRole("button", { name: "CLPを保存" });
   const undo = page.getByRole("button", { name: "元に戻す" });
   const historySummary = page.locator(".project-history__summary");
 
@@ -309,8 +309,8 @@ test("keeps focus and global shortcuts inside the modal while a file preflight i
 
   await openPersistenceDrawer(page);
   const drawer = page.getByRole("dialog", { name: "保存・再読込" });
-  const close = page.getByRole("button", { name: "案件データを閉じる" });
-  const entry = page.getByRole("button", { name: "案件データを開く" });
+  const close = page.getByRole("button", { name: "CLPデータを閉じる" });
+  const entry = page.getByRole("button", { name: "CLPデータを開く" });
   const fileInput = drawer.locator("input[type='file']");
   await fileInput.focus();
   await fileInput.setInputFiles({
@@ -387,7 +387,7 @@ test("keeps focus and global shortcuts inside the modal while a file preflight i
 
   await releaseControlledPreflight(page);
   await expect(page.locator(".project-persistence__snackbar")).toContainText(
-    "案件JSONを読み込みました",
+    "CLP JSONを読み込みました",
   );
   await expect(page.getByTestId("canonical-project-settings")).toContainText(
     "focus pending import",
@@ -402,21 +402,21 @@ test("round-trips the single IndexedDB slot across reload, resets history, and d
   const historySummary = page.locator(".project-history__summary");
   const canonical = page.getByTestId("canonical-project-settings");
 
-  await page.getByLabel("案件名").fill("匿名端末保存A");
-  await page.getByRole("button", { name: "案件を保存" }).click();
-  await expect(historySummary).toContainText("次に元に戻せる操作: 案件設定の更新。");
+  await page.getByLabel("CLP名").fill("匿名端末保存A");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
+  await expect(historySummary).toContainText("次に元に戻せる操作: CLP設定の更新。");
   const beforeSaveHistory = await historySummary.textContent();
 
   await openPersistenceDrawer(page);
   await expect(persistenceStatus).not.toHaveAttribute("aria-live", "polite");
   await expect(persistenceStatus).not.toHaveAttribute("aria-atomic", "true");
   await page.getByRole("button", { name: "端末へ保存" }).click();
-  await expect(persistenceStatus).toHaveText("現在の案件をこの端末へ保存しました。");
+  await expect(persistenceStatus).toHaveText("現在のCLPをこの端末へ保存しました。");
   expect(await historySummary.textContent()).toBe(beforeSaveHistory);
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
 
-  await page.getByLabel("案件名").fill("画面だけの変更");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("画面だけの変更");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await expect(canonical).toContainText("画面だけの変更");
   await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末保存を読込" }).click();
@@ -425,14 +425,14 @@ test("round-trips the single IndexedDB slot across reload, resets history, and d
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "やり直す" })).toBeDisabled();
 
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await page.getByLabel("積荷名").fill("再読込で破棄するdraft");
   await expect(page.locator(".app-shell")).toHaveAttribute("inert", "");
   await page.reload();
   await openPersistenceDrawer(page);
   await expect(page.getByLabel("積荷名")).toHaveCount(0);
-  await expect(canonical).toContainText("新規案件");
+  await expect(canonical).toContainText("新規CLP");
   await page.getByRole("button", { name: "端末保存を読込" }).click();
   await expect(canonical).toContainText("匿名端末保存A");
 
@@ -475,9 +475,9 @@ test("normalizes a legacy one-orientation import so floor rotation remains avail
     }],
   }));
   await expect(page.locator(".project-persistence__status")).toContainText(
-    "案件JSONを読み込みました",
+    "CLP JSONを読み込みました",
   );
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   await page.getByLabel("操作する積荷").selectOption("cargo-legacy");
 
   await expect(page.getByRole("button", { name: "X軸を中心に90°回転" })).toHaveAttribute(
@@ -497,8 +497,8 @@ test("downloads the fixed JSON contract and reimports it without history or deri
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("案件名").fill("匿名download案件");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("匿名downloadCLP");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await addCargo(page, "匿名download積荷");
   await addContainer(page, "匿名download候補");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
@@ -530,17 +530,17 @@ test("downloads the fixed JSON contract and reimports it without history or deri
   expect(await page.locator(".project-history__summary").textContent()).toBe(
     historyBeforeExport,
   );
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
 
-  await page.getByLabel("案件名").fill("import前の別案件");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("import前の別CLP");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await openPersistenceDrawer(page);
   await importJson(page, text, "private-looking-filename.json");
   const persistenceStatus = page.locator(".project-persistence__status");
-  await expect(persistenceStatus).toContainText("案件JSONを読み込みました");
+  await expect(persistenceStatus).toContainText("CLP JSONを読み込みました");
   await expect(persistenceStatus).not.toContainText("private-looking-filename");
   await expect(page.getByTestId("canonical-project-settings")).toContainText(
-    "匿名download案件",
+    "匿名downloadCLP",
   );
   await expect(page.locator(".physical-validation__summary")).toContainText("不適合：");
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
@@ -550,8 +550,8 @@ test("rejects every JSON failure stage without reflecting filename or values", a
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("案件名").fill("保持する匿名案件");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("保持する匿名CLP");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await openPersistenceDrawer(page);
   const canonical = page.getByTestId("canonical-project-settings");
   const status = page.locator(".project-persistence__status");
@@ -568,11 +568,11 @@ test("rejects every JSON failure stage without reflecting filename or values", a
     [`{${sensitive}`, "JSONの形式が正しくないため拒否しました"],
     [
       { ...projectJson(sensitive), schemaVersion: "9.9.9" },
-      "対応していない案件データ版のため拒否しました",
+      "対応していないCLPデータ版のため拒否しました",
     ],
     [
       { ...projectJson(sensitive), extra: sensitive },
-      "案件データの構造または値域が契約に適合しないため拒否しました",
+      "CLPデータの構造または値域が契約に適合しないため拒否しました",
     ],
     [
       projectJson(sensitive, {
@@ -595,14 +595,14 @@ test("rejects every JSON failure stage without reflecting filename or values", a
           },
         ],
       }),
-      "案件データのID、参照、向き、開口、または重量整合性を確認できないため拒否しました",
+      "CLPデータのID、参照、向き、開口、または重量整合性を確認できないため拒否しました",
     ],
   ];
   for (const [value, copy] of cases) {
     await importJson(page, value, `${sensitive}.json`);
     await expect(status).toContainText(copy);
     await expect(status).not.toContainText(sensitive);
-    await expect(canonical).toContainText("保持する匿名案件");
+    await expect(canonical).toContainText("保持する匿名CLP");
   }
 });
 
@@ -621,11 +621,11 @@ test("reports File read failure without changing or reflecting the current Proje
     });
   });
   await page.goto("/");
-  await page.getByLabel("案件名").fill("読取失敗でも保持");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("読取失敗でも保持");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await openPersistenceDrawer(page);
 
-  await importJson(page, projectJson("読まれない案件"), "private-looking-read.json");
+  await importJson(page, projectJson("読まれないCLP"), "private-looking-read.json");
 
   const status = page.locator(".project-persistence__status");
   await expect(status).toContainText("データを読み取れませんでした");
@@ -647,35 +647,35 @@ test("rejects a delayed import and concurrent Project commit while preserving th
   const historyBefore = await historySummary.textContent();
   const status = page.locator(".project-persistence__status");
 
-  await importJson(page, projectJson("遅延import案件"));
+  await importJson(page, projectJson("遅延importCLP"));
   await expect(status).toContainText("処理中です");
   await expectControlledPreflightPending(page);
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
-  await expect(page.getByRole("button", { name: "案件データを開く" })).toBeFocused();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
+  await expect(page.getByRole("button", { name: "CLPデータを開く" })).toBeFocused();
   await expect(page.locator(".project-persistence__snackbar")).toContainText(
     "処理中です",
   );
-  await page.getByLabel("案件名").fill("未保存の並行draft");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("未保存の並行draft");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   const settingsStatus = page
-    .getByRole("heading", { name: "案件と隙間" })
+    .getByRole("heading", { name: "CLP設定" })
     .locator("..")
     .locator(".action-status");
   await expect(settingsStatus).toHaveText(
-    "案件が更新されたため保存できませんでした。入力内容を確認して再度保存してください。",
+    "CLPが更新されたため保存できませんでした。入力内容を確認して再度保存してください。",
   );
 
   await releaseControlledPreflight(page);
-  await expect(status).toContainText("操作中に案件が更新されたため");
+  await expect(status).toContainText("操作中にCLPが更新されたため");
   await expect(page.locator(".project-persistence__snackbar")).toContainText(
-    "操作中に案件が更新されたため",
+    "操作中にCLPが更新されたため",
   );
-  await expect(canonical).toContainText("新規案件");
-  await expect(canonical).not.toContainText("遅延import案件");
-  await expect(page.getByLabel("案件名")).toHaveValue("未保存の並行draft");
+  await expect(canonical).toContainText("新規CLP");
+  await expect(canonical).not.toContainText("遅延importCLP");
+  await expect(page.getByLabel("CLP名")).toHaveValue("未保存の並行draft");
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
-  await page.getByLabel("案件名").fill("新規案件");
+  await page.getByLabel("CLP名").fill("新規CLP");
   expect(await historySummary.textContent()).toBe(historyBefore);
 });
 
@@ -687,20 +687,20 @@ test("blocks editor transitions while a delayed device replacement completes", a
   const canonical = page.getByTestId("canonical-project-settings");
   const status = page.locator(".project-persistence__status");
 
-  await page.getByLabel("案件名").fill("端末保存元");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("端末保存元");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末へ保存" }).click();
-  await expect(status).toHaveText("現在の案件をこの端末へ保存しました。");
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
-  await page.getByLabel("案件名").fill("現在保持する案件");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await expect(status).toHaveText("現在のCLPをこの端末へ保存しました。");
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
+  await page.getByLabel("CLP名").fill("現在保持するCLP");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeEnabled();
   await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末保存を読込" }).click();
   await expect(status).toContainText("処理中です");
   await expectControlledPreflightPending(page);
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   await expect(page.getByRole("button", { name: "積荷を追加" })).toHaveAttribute("aria-disabled", "true");
 
   await releaseControlledPreflight(page);
@@ -719,8 +719,8 @@ test("rejects a corrupt actual IndexedDB record without changing the current Pro
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("案件名").fill("壊れた保存でも保持");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("壊れた保存でも保持");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await page.evaluate(async () => {
     const browserGlobal = globalThis as unknown as {
       readonly Promise: PromiseConstructor;
@@ -785,12 +785,12 @@ test("locks persistence for drafts and delete confirmations and preserves keyboa
   const load = page.getByRole("button", { name: "端末保存を読込" });
   const status = page.locator(".project-persistence__status");
 
-  await page.getByLabel("案件名").fill("未保存draft");
+  await page.getByLabel("CLP名").fill("未保存draft");
   await openPersistenceDrawer(page);
   await expect(save).toBeDisabled();
   await expect(load).toBeDisabled();
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
-  await page.getByLabel("案件名").fill("新規案件");
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
+  await page.getByLabel("CLP名").fill("新規CLP");
   await openPersistenceDrawer(page);
 
   const deleteButton = page.getByRole("button", { name: "端末保存を削除" });
@@ -808,7 +808,7 @@ test("locks persistence for drafts and delete confirmations and preserves keyboa
 
   await save.focus();
   await page.keyboard.press("Enter");
-  await expect(status).toHaveText("現在の案件をこの端末へ保存しました。");
+  await expect(status).toHaveText("現在のCLPをこの端末へ保存しました。");
 
   await deleteButton.click();
   await expect(confirm).toBeFocused();
@@ -826,7 +826,7 @@ test("locks persistence for drafts and delete confirmations and preserves keyboa
   });
   await confirm.click();
   await expect(status).toHaveText(
-    "端末内保存領域を開けませんでした。現在の案件は変更していません。",
+    "端末内保存領域を開けませんでした。現在のCLPは変更していません。",
   );
   await expect(deleteButton).toBeFocused();
 });
@@ -848,7 +848,7 @@ test("keeps persistence controls within 305, 320, and 375 pixel viewports", asyn
     expect(drawerBounds?.height).toBeLessThanOrEqual(900);
     await expectModalFocusCycle(page);
     await expectNoHorizontalOverflow(page);
-    await page.getByRole("button", { name: "案件データを閉じる" }).click();
+    await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   }
 
   await page.setViewportSize({ width: 320, height: 900 });

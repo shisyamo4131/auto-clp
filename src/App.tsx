@@ -96,7 +96,7 @@ const stateCopy: Record<AppState, { readonly title: string; readonly detail: str
   },
   supported: {
     title: "3D表示を利用できます",
-    detail: "3D表示の初回描画を確認しました。案件入力、配置、判定、保存、自動提案を利用できます。",
+    detail: "3D表示の初回描画を確認しました。CLP入力、配置、判定、保存、自動提案を利用できます。",
   },
   unsupported: {
     title: "Auto CLPを利用できません",

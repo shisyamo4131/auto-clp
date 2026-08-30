@@ -57,9 +57,9 @@ interface SceneWorkspaceProps {
 
 function projectionErrorMessage(code: "scene.container-not-found" | "scene.cargo-not-found"): string {
   if (code === "scene.container-not-found") {
-    return "選択した候補が案件内に見つからないため、3D表示を更新できません。";
+    return "選択した候補がCLP内に見つからないため、3D表示を更新できません。";
   }
-  return "配置が参照する積荷が案件内に見つからないため、3D表示を更新できません。";
+  return "配置が参照する積荷がCLP内に見つからないため、3D表示を更新できません。";
 }
 
 export function SceneWorkspace({
@@ -195,7 +195,7 @@ export function SceneWorkspace({
     : placementInteractionActive
       ? "開いている配置操作を完了すると座標入力を開けます。"
       : externalInteractionActive
-        ? "別の案件操作または保存処理を完了すると座標入力を開けます。"
+        ? "別のCLP操作または保存処理を完了すると座標入力を開けます。"
         : selectedOtherContainer !== undefined
           ? `${selectedOtherContainer.name}へ切り替えると配置を編集できます。`
         : undefined;
@@ -357,7 +357,7 @@ export function SceneWorkspace({
       if (externalInteractionActive) {
         return {
           ok: false,
-          message: "別の案件操作または保存処理中のため、積荷の移動を保存しませんでした。",
+          message: "別のCLP操作または保存処理中のため、積荷の移動を保存しませんでした。",
         };
       }
       const projectedCargo = projection?.cargoes.find(
@@ -385,7 +385,7 @@ export function SceneWorkspace({
           return {
             ok: false,
             message:
-              "対象の積荷または候補が最新の案件に見つからないため、荷室外の作業スペースへ戻しました。",
+              "対象の積荷または候補が最新のCLPに見つからないため、荷室外の作業スペースへ戻しました。",
           };
         }
         const nextPosition = preview.positionMm;
@@ -438,7 +438,7 @@ export function SceneWorkspace({
           return {
             ok: false,
             message:
-              "案件が更新されたため配置を保存できませんでした。積荷を荷室外の作業スペースへ戻しました。",
+              "CLPが更新されたため配置を保存できませんでした。積荷を荷室外の作業スペースへ戻しました。",
           };
         }
         if (!transition.changed) {
@@ -466,7 +466,7 @@ export function SceneWorkspace({
       if (placement === undefined || effectiveContainerId === undefined) {
         return {
           ok: false,
-          message: "対象の配置が最新の案件に見つからないため、移動を保存せず元に戻しました。",
+          message: "対象の配置が最新のCLPに見つからないため、移動を保存せず元に戻しました。",
         };
       }
       const nextPosition = preview.positionMm;
@@ -478,7 +478,7 @@ export function SceneWorkspace({
         return {
           ok: false,
           message:
-            "対象の積荷または候補が最新の案件に見つからないため、移動を保存せず元に戻しました。",
+            "対象の積荷または候補が最新のCLPに見つからないため、移動を保存せず元に戻しました。",
         };
       }
       const dragDisposition = placedFloorDragDisposition(
@@ -497,7 +497,7 @@ export function SceneWorkspace({
           return {
             ok: false,
             message:
-              "対象の配置が最新の案件に見つからないため、荷室外の作業スペースへ戻せず元の配置を保持しました。",
+              "対象の配置が最新のCLPに見つからないため、荷室外の作業スペースへ戻せず元の配置を保持しました。",
           };
         }
         const transition = onProjectCommit({
@@ -509,7 +509,7 @@ export function SceneWorkspace({
           return {
             ok: false,
             message:
-              "案件が更新されたため配置を削除できませんでした。元の配置を確認してやり直してください。",
+              "CLPが更新されたため配置を削除できませんでした。元の配置を確認してやり直してください。",
           };
         }
         setStagingOverrides((current) => ({
@@ -545,7 +545,7 @@ export function SceneWorkspace({
         return {
           ok: false,
           message:
-            "案件が更新されたため移動を保存できませんでした。配置を確認してやり直してください。",
+            "CLPが更新されたため移動を保存できませんでした。配置を確認してやり直してください。",
         };
       }
       if (!transition.changed) {
@@ -566,7 +566,7 @@ export function SceneWorkspace({
 
   const handleCargoRotation = useCallback((axis: "X" | "Z") => {
     if (externalInteractionActive) {
-      setCanvasStatus("別の案件操作または保存処理の完了後に回転できます。");
+      setCanvasStatus("別のCLP操作または保存処理の完了後に回転できます。");
       return;
     }
     const rotationProjection = projection?.cargoes.find(
@@ -585,7 +585,7 @@ export function SceneWorkspace({
     );
     if (cargo === undefined) {
       setCanvasStatus(
-        "対象の積荷が最新の案件に見つからないため、回転しませんでした。",
+        "対象の積荷が最新のCLPに見つからないため、回転しませんでした。",
       );
       return;
     }
@@ -608,7 +608,7 @@ export function SceneWorkspace({
       );
       if (container === undefined) {
         setCanvasStatus(
-          "対象の候補が最新の案件に見つからないため、回転しませんでした。",
+          "対象の候補が最新のCLPに見つからないため、回転しませんでした。",
         );
         return;
       }
@@ -644,7 +644,7 @@ export function SceneWorkspace({
     );
     if (placement === undefined) {
       setCanvasStatus(
-        "対象の配置が最新の案件に見つからないため、回転を保存しませんでした。",
+        "対象の配置が最新のCLPに見つからないため、回転を保存しませんでした。",
       );
       return;
     }
@@ -667,7 +667,7 @@ export function SceneWorkspace({
     });
     if (!transition.ok) {
       setCanvasStatus(
-        "案件が更新されたため回転を保存できませんでした。配置を確認してやり直してください。",
+        "CLPが更新されたため回転を保存できませんでした。配置を確認してやり直してください。",
       );
       return;
     }
@@ -684,13 +684,13 @@ export function SceneWorkspace({
     <section className="scene-workspace" aria-labelledby="scene-workspace-title">
       <div className="scene-workspace__controls">
         <div>
-          <p className="eyebrow">PROJECT SCENE</p>
+          <p className="eyebrow">CLP SCENE</p>
           <h3 id="scene-workspace-title">3D確認候補</h3>
         </div>
 
         {project.containers.length === 0 ? (
           <p className="scene-workspace__empty">
-            表示する候補がありません。案件入力でコンテナ・車両候補を追加してください。
+            表示する候補がありません。CLP入力でコンテナ・車両候補を追加してください。
           </p>
         ) : (
           <div className="scene-workspace__field">
@@ -714,7 +714,7 @@ export function SceneWorkspace({
               ))}
             </select>
             <span className="visually-hidden" id="scene-container-select-lock">
-              配置の編集・削除確認・3D移動中、または別の案件操作中は候補を切り替えられません。
+              配置の編集・削除確認・3D移動中、または別のCLP操作中は候補を切り替えられません。
             </span>
           </div>
         )}
@@ -831,7 +831,7 @@ export function SceneWorkspace({
           }
           xRotationExplanation={
             externalInteractionActive
-              ? "別の案件操作または保存処理の完了後にX軸回転できます。"
+              ? "別のCLP操作または保存処理の完了後にX軸回転できます。"
               : canvasDragActive
               ? "積荷の移動を完了するとX軸回転できます。"
               : placementInteractionActive
@@ -850,7 +850,7 @@ export function SceneWorkspace({
           }
           zRotationExplanation={
             externalInteractionActive
-              ? "別の案件操作または保存処理の完了後にZ軸回転できます。"
+              ? "別のCLP操作または保存処理の完了後にZ軸回転できます。"
               : canvasDragActive
               ? "積荷の移動を完了するとZ軸回転できます。"
               : placementInteractionActive
@@ -934,7 +934,7 @@ export function SceneWorkspace({
                     aria-disabled={externalInteractionActive || interactionActive ? true : undefined}
                     onClick={() => {
                       if (externalInteractionActive || interactionActive) {
-                        setCanvasStatus("別の案件操作または保存処理の完了後に候補を切り替えられます。");
+                        setCanvasStatus("別のCLP操作または保存処理の完了後に候補を切り替えられます。");
                         return;
                       }
                       setSelectedContainerId(selectedOtherContainer.id);

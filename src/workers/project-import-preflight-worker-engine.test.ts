@@ -8,7 +8,7 @@ function project(): Project {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: "preflight-engine",
-    name: "匿名preflight案件",
+    name: "匿名preflightCLP",
     clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: [
       {

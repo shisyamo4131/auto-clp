@@ -18,7 +18,7 @@ function richProject(): Project {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: "project-1",
-    name: "匿名試験案件",
+    name: "匿名試験CLP",
     clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: [
       {
@@ -337,7 +337,7 @@ function physicalProject(
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: "physical-project",
-    name: "匿名物理判定案件",
+    name: "匿名物理判定CLP",
     clearancesMm: options.clearancesMm ?? { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: options.cargoes ?? [],
     containers: options.containers ?? [physicalContainer()],

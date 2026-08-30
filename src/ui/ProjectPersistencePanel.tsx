@@ -51,37 +51,37 @@ const failureCopy = {
   "persistence.operation-busy":
     "未保存入力、削除確認、3D移動、または別の保存操作を完了してからやり直してください。",
   "persistence.stale-base":
-    "操作中に案件が更新されたため処理を完了しませんでした。現在の案件は変更していません。",
+    "操作中にCLPが更新されたため処理を完了しませんでした。現在のCLPは変更していません。",
   "persistence.unexpected-failure":
-    "保存処理で予期しない問題が発生しました。現在の案件は変更していません。",
+    "保存処理で予期しない問題が発生しました。現在のCLPは変更していません。",
   "persistence.serialize-failed":
-    "案件を書き出し用データへ変換できませんでした。現在の案件は変更していません。",
+    "CLPを書き出し用データへ変換できませんでした。現在のCLPは変更していません。",
   "persistence.serialize-invalid":
-    "現在の案件が保存データ契約に適合しないため保存できませんでした。",
+    "現在のCLPが保存データ契約に適合しないため保存できませんでした。",
   "persistence.serialize-size-exceeded":
-    "案件データが5 MiBの保存上限を超えるため保存できませんでした。",
+    "CLPデータが5 MiBの保存上限を超えるため保存できませんでした。",
   "persistence.import-size-invalid":
     "読込データのサイズを安全に確認できないため拒否しました。",
   "persistence.import-size-exceeded":
     "読込データが5 MiBの上限を超えるため拒否しました。",
   "persistence.import-read-failed":
-    "データを読み取れませんでした。現在の案件は変更していません。",
+    "データを読み取れませんでした。現在のCLPは変更していません。",
   "persistence.import-syntax-invalid":
-    "JSONの形式が正しくないため拒否しました。現在の案件は変更していません。",
+    "JSONの形式が正しくないため拒否しました。現在のCLPは変更していません。",
   "persistence.import-version-unsupported":
-    "対応していない案件データ版のため拒否しました。",
+    "対応していないCLPデータ版のため拒否しました。",
   "persistence.import-schema-invalid":
-    "案件データの構造または値域が契約に適合しないため拒否しました。",
+    "CLPデータの構造または値域が契約に適合しないため拒否しました。",
   "persistence.import-semantic-invalid":
-    "案件データのID、参照、向き、開口、または重量整合性を確認できないため拒否しました。",
+    "CLPデータのID、参照、向き、開口、または重量整合性を確認できないため拒否しました。",
   "persistence.import-preflight-failed":
     "全候補の物理判定を安全に再計算できないため読込を拒否しました。",
   "persistence.device-unavailable":
     "このブラウザでは端末内保存を利用できません。JSON書き出しを利用してください。",
   "persistence.device-open-failed":
-    "端末内保存領域を開けませんでした。現在の案件は変更していません。",
+    "端末内保存領域を開けませんでした。現在のCLPは変更していません。",
   "persistence.device-read-failed":
-    "端末内保存を読み取れませんでした。現在の案件は変更していません。",
+    "端末内保存を読み取れませんでした。現在のCLPは変更していません。",
   "persistence.device-write-failed":
     "端末内保存を完了できませんでした。成功として扱っていません。",
   "persistence.device-delete-failed":
@@ -99,17 +99,17 @@ const failureCopy = {
 } satisfies Record<ProjectPersistenceFailureCode, string>;
 
 const successCopy = {
-  "save-device": "現在の案件をこの端末へ保存しました。",
+  "save-device": "現在のCLPをこの端末へ保存しました。",
   "load-device":
     "端末内保存を読み込みました。以前の操作履歴は破棄し、物理判定を再計算しています。",
   "delete-device": "端末内の保存コピーを削除しました。",
-  "export-file": "検証済み案件JSONのダウンロードを開始しました。",
+  "export-file": "検証済みCLP JSONのダウンロードを開始しました。",
   "import-file":
-    "案件JSONを読み込みました。以前の操作履歴は破棄し、物理判定を再計算しています。",
+    "CLP JSONを読み込みました。以前の操作履歴は破棄し、物理判定を再計算しています。",
 } satisfies Record<PersistenceAction, string>;
 
 const processingCopy =
-  "処理中です。完了するまで案件を閉じたり再読み込みしたりしないでください。";
+  "処理中です。完了するまでCLPを閉じたり再読み込みしたりしないでください。";
 const deleteCancelCopy = "端末保存の削除をキャンセルしました。";
 const transientNotificationDurationMs = 6_000;
 const modalFocusableSelector = [
@@ -374,9 +374,9 @@ export function ProjectPersistencePanel({
 
   return (
     <>
-      <section className="project-persistence-entry" aria-label="案件データ">
+      <section className="project-persistence-entry" aria-label="CLPデータ">
         <div>
-          <p className="eyebrow">PROJECT DATA</p>
+          <p className="eyebrow">CLP DATA</p>
           <p>端末保存・JSON入出力</p>
         </div>
         <button
@@ -389,7 +389,7 @@ export function ProjectPersistencePanel({
             setDrawerOpen(true);
           }}
         >
-          案件データを開く
+          CLPデータを開く
         </button>
       </section>
 
@@ -420,7 +420,7 @@ export function ProjectPersistencePanel({
               <h2 id="project-persistence-title">保存・再読込</h2>
             </div>
             <button ref={closeButtonRef} type="button" onClick={closeDrawer}>
-              案件データを閉じる
+              CLPデータを閉じる
             </button>
           </div>
           <p className="project-persistence__manual-copy">
@@ -504,7 +504,7 @@ export function ProjectPersistencePanel({
           {deleteConfirmation ? (
             <div className="confirm-panel" role="alert">
               <p>
-                このブラウザの手動保存スロットを削除します。現在画面にある案件とJSONファイルは削除しません。
+                このブラウザの手動保存スロットを削除します。現在画面にあるCLPとJSONファイルは削除しません。
               </p>
               <div className="button-row">
                 <button

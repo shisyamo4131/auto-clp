@@ -14,7 +14,7 @@ function minimalProject(): Project {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: "project-1",
-    name: "匿名試験案件",
+    name: "匿名試験CLP",
     clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: [],
     containers: [],

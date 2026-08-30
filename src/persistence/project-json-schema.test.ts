@@ -7,7 +7,7 @@ function minimalProject(): unknown {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: "project-1",
-    name: "匿名試験案件",
+    name: "匿名試験CLP",
     clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: [],
     containers: [],
@@ -19,7 +19,7 @@ function richProject(): unknown {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: "project-1",
-    name: "匿名試験案件",
+    name: "匿名試験CLP",
     clearancesMm: { xMm: 10, yMm: 20, zMm: 30 },
     cargoes: [
       {

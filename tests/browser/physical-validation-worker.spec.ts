@@ -325,7 +325,7 @@ test("surfaces worker-failed as a retryable transport error without synchronous 
   await expect(summary).toHaveText(
     "判定不能：物理判定の処理を開始または完了できませんでした。再試行してください。",
   );
-  await expect(summary).not.toContainText("案件データの参照または意味整合性");
+  await expect(summary).not.toContainText("CLPデータの参照または意味整合性");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
   await page.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByRole("button", { name: "配置を保存" }).click();

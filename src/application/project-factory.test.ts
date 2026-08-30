@@ -16,7 +16,7 @@ describe("project factory", () => {
     expect(project).toEqual({
       schemaVersion: "0.1.0",
       projectId: "project-1",
-      name: "新規案件",
+      name: "新規CLP",
       clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
       cargoes: [],
       containers: [],

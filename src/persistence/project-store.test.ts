@@ -142,7 +142,7 @@ function project(): Project {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: "store-roundtrip",
-    name: "匿名端末保存案件",
+    name: "匿名端末保存CLP",
     clearancesMm: { xMm: 1, yMm: 2, zMm: 3 },
     cargoes: [],
     containers: [],

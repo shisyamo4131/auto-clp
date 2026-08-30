@@ -15,7 +15,7 @@ import {
 } from "./automatic-proposal-view";
 
 const SAFETY_NOTICE =
-  "提案は検討用です。完全な搬入経路、構造・安定性、実積載の安全性を保証しません。";
+  "配置案は検討用です。完全な搬入経路、構造・安定性、実積載の安全性を保証しません。";
 
 function cargo(id: string, name = `anonymous-${id}`): Cargo {
   return {
@@ -159,7 +159,7 @@ describe("automaticProposalView phases", () => {
     [
       "idle",
       { phase: "idle" },
-      ["未実行", "自動提案はまだ実行していません。", "neutral", true, false, false],
+      ["未実行", "配置案はまだ作成していません。", "neutral", true, false, false],
     ],
     [
       "running",
@@ -168,22 +168,22 @@ describe("automaticProposalView phases", () => {
         interactionGeneration: 1,
         identity: 1,
       },
-      ["探索中", "現在の案件から完全案を探索しています。案件は変更していません。", "progress", false, true, false],
+      ["探索中", "現在のCLPから完全案を探索しています。CLPは変更していません。", "progress", false, true, false],
     ],
     [
       "failed",
       { phase: "failed", code: "automatic-proposal.engine-failure" },
-      ["計算不能", "自動提案を計算できませんでした。案件は変更していません。", "error", false, false, true],
+      ["計算不能", "自動提案を計算できませんでした。CLPは変更していません。", "error", false, false, true],
     ],
     [
       "cancelled",
       { phase: "cancelled" },
-      ["取消済み", "探索を中止しました。案件は変更していません。", "neutral", true, false, true],
+      ["取消済み", "探索を中止しました。CLPは変更していません。", "neutral", true, false, true],
     ],
     [
       "stale",
       { phase: "stale" },
-      ["結果破棄", "案件または入力状態が変わったため、探索結果を破棄しました。", "warning", true, false, true],
+      ["結果破棄", "CLPまたは入力状態が変わったため、探索結果を破棄しました。", "warning", true, false, true],
     ],
   ] as const)("maps %s to fixed copy and controls", (_label, partial, expected) => {
     const project = projectFixture();
@@ -226,7 +226,7 @@ describe("automaticProposalView phases", () => {
     expect(view).toMatchObject({
       phase: "stale",
       badge: "結果破棄",
-      summary: "案件が変わったため探索結果を使用しません。",
+      summary: "CLPが変わったため探索結果を使用しません。",
       canStart: true,
       canCancel: false,
       canRetry: true,
@@ -239,26 +239,26 @@ describe("automaticProposalView ready statuses", () => {
     [
       "no-cargo",
       "対象なし",
-      "提案する積荷がありません。案件は変更していません。",
+      "配置案を作成する積荷がありません。CLPは変更していません。",
       "積荷を登録してから探索してください。",
     ],
     [
       "no-candidates",
       "候補なし",
-      "提案先の候補コンテナがありません。案件は変更していません。",
+      "配置案の作成先となる候補コンテナがありません。CLPは変更していません。",
       "候補コンテナを登録してから探索してください。",
     ],
     [
       "no-complete-plan",
       "完全案なし",
       "登録済み候補と今回の探索モデルでは、全積荷を配置できる案がありませんでした。",
-      "これは実積載不能の証明ではありません。案件は変更していません。",
+      "これは実積載不能の証明ではありません。CLPは変更していません。",
     ],
     [
       "cutoff",
       "探索打切り",
       "探索上限に達したため、完全案を確定できませんでした。",
-      "配置できる案が存在しないという意味ではありません。案件は変更していません。",
+      "配置できる案が存在しないという意味ではありません。CLPは変更していません。",
     ],
   ] as const)("maps ready %s to fixed badge and copy", (status, badge, summary, detail) => {
     const project =
@@ -313,8 +313,8 @@ describe("automaticProposalView ready statuses", () => {
   it.each([
     [
       "complete",
-      "案あり・未適用",
-      "現行の計算規則を満たす検討案が見つかりました。まだ案件へ適用していません。",
+      "配置案あり・未適用",
+      "現行の計算規則を満たす配置案が見つかりました。まだCLPへ適用していません。",
       "success",
     ],
     [
@@ -335,7 +335,7 @@ describe("automaticProposalView ready statuses", () => {
       tone,
       badge,
       summary,
-      detail: expect.stringContaining("現在の配置1件に対し、提案2件です。"),
+      detail: expect.stringContaining("現在の配置1件に対し、配置案2件です。"),
       safetyNotice: SAFETY_NOTICE,
       isApplicablePreview: true,
       selectedContainerLabel: "anonymous-container-b (container-b)",
@@ -423,7 +423,7 @@ describe("automaticProposalView source correlation", () => {
     expect(view).toMatchObject({
       phase: "failed",
       badge: "計算不能",
-      summary: "自動提案を計算できませんでした。案件は変更していません。",
+      summary: "自動提案を計算できませんでした。CLPは変更していません。",
       isApplicablePreview: false,
     });
     expect(JSON.stringify(view)).not.toContain("marker-");
@@ -607,14 +607,14 @@ describe("automaticProposalView apply phases", () => {
         interactionGeneration: 1,
         identity: 1,
       },
-      ["適用中", "提案を現在の案件へ一括適用しています。", "progress"],
+      ["適用中", "配置案を現在のCLPへ一括適用しています。", "progress"],
     ],
     [
       "apply-failed",
       { phase: "apply-failed" },
       [
         "適用せず",
-        "提案を再検証できなかったため適用しませんでした。案件は変更していません。",
+        "配置案を再検証できなかったため適用しませんでした。CLPは変更していません。",
         "error",
       ],
     ],
@@ -623,7 +623,7 @@ describe("automaticProposalView apply phases", () => {
       { phase: "blocked" },
       [
         "適用保留",
-        "入力または別の操作中だったため、提案を適用しませんでした。",
+        "入力または別の操作中だったため、配置案を適用しませんでした。",
         "warning",
       ],
     ],
@@ -649,7 +649,7 @@ describe("automaticProposalView apply phases", () => {
     [
       "unchanged",
       "変更なし",
-      "提案は現在の配置と同じため、案件と操作履歴は変更していません。",
+      "配置案は現在の配置と同じため、CLPと操作履歴は変更していません。",
       "neutral",
     ],
   ] as const)("maps terminal %s with confirmation-relevant summary only", (phase, badge, copy, tone) => {

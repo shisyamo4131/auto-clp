@@ -184,7 +184,7 @@ export function CargoEditorDialog({
       action: target === undefined ? "cargo.add" : "cargo.update",
     });
     if (!transition.ok) {
-      setStatus("案件が更新されたため保存できませんでした。入力内容は保持しています。");
+      setStatus("CLPが更新されたため保存できませんでした。入力内容は保持しています。");
       return;
     }
     onClose();
@@ -204,7 +204,7 @@ export function CargoEditorDialog({
       action: "cargo.delete",
     });
     if (!transition.ok) {
-      setStatus("案件が更新されたため積荷を削除できませんでした。");
+      setStatus("CLPが更新されたため積荷を削除できませんでした。");
       return;
     }
     onClose();
@@ -213,7 +213,7 @@ export function CargoEditorDialog({
   if (request.kind !== "add" && target === undefined) {
     return (
       <ModalShell fallbackFocusIds={["scene-cargo-select", "cargo-add-button"]} title="積荷情報" onRequestClose={onClose}>
-        <p role="alert">対象の積荷が見つかりません。案件を確認してください。</p>
+        <p role="alert">対象の積荷が見つかりません。CLPを確認してください。</p>
         <button type="button" onClick={onClose}>閉じる</button>
       </ModalShell>
     );

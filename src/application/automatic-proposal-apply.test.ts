@@ -46,7 +46,7 @@ function ap02Project(overrides: Partial<Project> = {}): Project {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: "proposal-apply",
-    name: "匿名適用案件",
+    name: "匿名適用CLP",
     clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: [cargo("cargo-a"), cargo("cargo-b")],
     containers: [

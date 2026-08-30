@@ -246,7 +246,7 @@ describe("project commands", () => {
   it("updates project settings immutably and preserves placements", () => {
     const current = placedProject();
     const result = updateProjectSettings(current, {
-      name: "匿名案件B",
+      name: "匿名CLPB",
       clearanceXmm: "10",
       clearanceYmm: "20",
       clearanceZmm: "30",
@@ -258,13 +258,13 @@ describe("project commands", () => {
       expect(result.project.clearancesMm).toEqual({ xMm: 10, yMm: 20, zMm: 30 });
       expect(result.project.placements).toBe(current.placements);
     }
-    expect(current.name).toBe("新規案件");
+    expect(current.name).toBe("新規CLP");
   });
 
   it("returns the identical current project for invalid settings", () => {
     const current = createInitialProject();
     const result = updateProjectSettings(current, {
-      name: "匿名案件",
+      name: "匿名CLP",
       clearanceXmm: "10001",
       clearanceYmm: "0",
       clearanceZmm: "0",
@@ -294,7 +294,7 @@ describe("project commands", () => {
     const original = structuredClone(current);
     const results = [
       updateProjectSettings(current, {
-        name: "匿名案件",
+        name: "匿名CLP",
         clearanceXmm: "10001",
         clearanceYmm: "0",
         clearanceZmm: "0",

@@ -19,7 +19,7 @@ const expectedAttemptCount = 210;
 const ap08Project = {
   schemaVersion: "0.1.0",
   projectId: "ap08",
-  name: "匿名AP08性能案件",
+  name: "匿名AP08性能CLP",
   clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
   cargoes: Array.from({ length: 20 }, (_, index) => ({
     id: `cargo-${String(index + 1).padStart(3, "0")}`,

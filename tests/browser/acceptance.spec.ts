@@ -79,7 +79,7 @@ async function setClearances(page: Page, valueMm: string) {
   await page.getByLabel("X方向の隙間").fill(valueMm);
   await page.getByLabel("Y方向の隙間").fill(valueMm);
   await page.getByLabel("Z方向の隙間").fill(valueMm);
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByRole("button", { name: "CLPを保存" }).click();
 }
 
 test("executes the AC-01 form subset for orientation, removal, and undo", async ({

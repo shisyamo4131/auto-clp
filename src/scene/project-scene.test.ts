@@ -37,7 +37,7 @@ function projectFixture(): Project {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: "project-scene-1",
-    name: "匿名scene試験案件",
+    name: "匿名scene試験CLP",
     clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: [
       {

@@ -104,19 +104,19 @@ interface ReadyCopy {
 }
 
 const SAFETY_NOTICE =
-  "提案は検討用です。完全な搬入経路、構造・安定性、実積載の安全性を保証しません。";
+  "配置案は検討用です。完全な搬入経路、構造・安定性、実積載の安全性を保証しません。";
 
 const READY_COPY = {
   "no-cargo": {
     tone: "neutral",
     badge: "対象なし",
-    summary: "提案する積荷がありません。案件は変更していません。",
+    summary: "配置案を作成する積荷がありません。CLPは変更していません。",
     detail: "積荷を登録してから探索してください。",
   },
   "no-candidates": {
     tone: "neutral",
     badge: "候補なし",
-    summary: "提案先の候補コンテナがありません。案件は変更していません。",
+    summary: "配置案の作成先となる候補コンテナがありません。CLPは変更していません。",
     detail: "候補コンテナを登録してから探索してください。",
   },
   "no-complete-plan": {
@@ -124,19 +124,19 @@ const READY_COPY = {
     badge: "完全案なし",
     summary:
       "登録済み候補と今回の探索モデルでは、全積荷を配置できる案がありませんでした。",
-    detail: "これは実積載不能の証明ではありません。案件は変更していません。",
+    detail: "これは実積載不能の証明ではありません。CLPは変更していません。",
   },
   cutoff: {
     tone: "warning",
     badge: "探索打切り",
     summary: "探索上限に達したため、完全案を確定できませんでした。",
     detail:
-      "配置できる案が存在しないという意味ではありません。案件は変更していません。",
+      "配置できる案が存在しないという意味ではありません。CLPは変更していません。",
   },
   complete: {
     tone: "success",
-    badge: "案あり・未適用",
-    summary: "現行の計算規則を満たす検討案が見つかりました。まだ案件へ適用していません。",
+    badge: "配置案あり・未適用",
+    summary: "現行の計算規則を満たす配置案が見つかりました。まだCLPへ適用していません。",
     detail: "未確認事項と配置内容を確認してから適用を判断してください。",
   },
   "complete-with-cutoff": {
@@ -145,7 +145,7 @@ const READY_COPY = {
     summary:
       "完全案は見つかりましたが、より優先される候補の探索が上限に達したため、目的関数上の最良とは確認できません。",
     detail:
-      "案はまだ案件へ適用していません。未確認事項と安全上の制限を確認してください。",
+      "配置案はまだCLPへ適用していません。未確認事項と安全上の制限を確認してください。",
   },
 } satisfies Record<AutomaticProposalStatus, ReadyCopy>;
 
@@ -220,7 +220,7 @@ function genericFailure(project: Project): AutomaticProposalView {
     phase: "failed",
     tone: "error",
     badge: "計算不能",
-    summary: "自動提案を計算できませんでした。案件は変更していません。",
+    summary: "自動提案を計算できませんでした。CLPは変更していません。",
     detail: "入力状態を確認して、もう一度実行してください。",
     canStart: false,
     canCancel: false,
@@ -234,8 +234,8 @@ function applyFailure(project: Project): AutomaticProposalView {
     tone: "error",
     badge: "適用せず",
     summary:
-      "提案を再検証できなかったため適用しませんでした。案件は変更していません。",
-    detail: "現在の案件で探索し直してください。",
+      "配置案を再検証できなかったため適用しませんでした。CLPは変更していません。",
+    detail: "現在のCLPで探索し直してください。",
     canStart: false,
     canCancel: false,
     canRetry: true,
@@ -254,8 +254,8 @@ function completedApplyView(
       phase: "idle",
       tone: "neutral",
       badge: "未実行",
-      summary: "自動提案はまだ実行していません。",
-      detail: "現在の案件を変更せず、別処理で完全案を探索します。",
+      summary: "配置案はまだ作成していません。",
+      detail: "現在のCLPを変更せず、別処理で完全案を探索します。",
       canStart: true,
       canCancel: false,
       canRetry: false,
@@ -275,11 +275,11 @@ function completedApplyView(
       badge: applied ? "適用済み" : "変更なし",
       summary: applied
         ? `候補${container.name} (${container.id})へ${snapshot.summary.placementCount}件適用、1回の取り消しで元へ戻せます。`
-        : "提案は現在の配置と同じため、案件と操作履歴は変更していません。",
+        : "配置案は現在の配置と同じため、CLPと操作履歴は変更していません。",
       detail:
         snapshot.summary.unverifiedReasonCount > 0
           ? `未確認事項${snapshot.summary.unverifiedReasonCount}件を保持しています。安全上の制限を再確認してください。`
-          : "提案の適用後も、安全上の制限を確認してください。",
+          : "配置案の適用後も、安全上の制限を確認してください。",
       canStart: false,
       canCancel: false,
       canRetry: false,
@@ -447,8 +447,8 @@ export function automaticProposalView(
       phase: "idle",
       tone: "neutral",
       badge: "未実行",
-      summary: "自動提案はまだ実行していません。",
-      detail: "現在の案件を変更せず、別処理で完全案を探索します。",
+      summary: "配置案はまだ作成していません。",
+      detail: "現在のCLPを変更せず、別処理で完全案を探索します。",
       canStart: true,
       canCancel: false,
       canRetry: false,
@@ -460,8 +460,8 @@ export function automaticProposalView(
         phase: "stale",
         tone: "warning",
         badge: "結果破棄",
-        summary: "案件が変わったため探索結果を使用しません。",
-        detail: "現在の案件で探索を開始し直してください。",
+        summary: "CLPが変わったため探索結果を使用しません。",
+        detail: "現在のCLPで探索を開始し直してください。",
         canStart: true,
         canCancel: false,
         canRetry: true,
@@ -471,7 +471,7 @@ export function automaticProposalView(
       phase: "running",
       tone: "progress",
       badge: "探索中",
-      summary: "現在の案件から完全案を探索しています。案件は変更していません。",
+      summary: "現在のCLPから完全案を探索しています。CLPは変更していません。",
       detail: "探索はいつでも中止できます。",
       canStart: false,
       canCancel: true,
@@ -483,7 +483,7 @@ export function automaticProposalView(
       phase: "applying",
       tone: "progress",
       badge: "適用中",
-      summary: "提案を現在の案件へ一括適用しています。",
+      summary: "配置案を現在のCLPへ一括適用しています。",
       detail: "適用結果を確認しています。",
       canStart: false,
       canCancel: false,
@@ -504,8 +504,8 @@ export function automaticProposalView(
       phase: "blocked",
       tone: "warning",
       badge: "適用保留",
-      summary: "入力または別の操作中だったため、提案を適用しませんでした。",
-      detail: "現在の案件で自動提案を実行し直してください。",
+      summary: "入力または別の操作中だったため、配置案を適用しませんでした。",
+      detail: "現在のCLPで自動提案を実行し直してください。",
       canStart: true,
       canCancel: false,
       canRetry: true,
@@ -516,8 +516,8 @@ export function automaticProposalView(
       phase: "cancelled",
       tone: "neutral",
       badge: "取消済み",
-      summary: "探索を中止しました。案件は変更していません。",
-      detail: "必要なら現在の案件でもう一度実行できます。",
+      summary: "探索を中止しました。CLPは変更していません。",
+      detail: "必要なら現在のCLPでもう一度実行できます。",
       canStart: true,
       canCancel: false,
       canRetry: true,
@@ -528,8 +528,8 @@ export function automaticProposalView(
       phase: "stale",
       tone: "warning",
       badge: "結果破棄",
-      summary: "案件または入力状態が変わったため、探索結果を破棄しました。",
-      detail: "現在の案件で探索を開始し直してください。",
+      summary: "CLPまたは入力状態が変わったため、探索結果を破棄しました。",
+      detail: "現在のCLPで探索を開始し直してください。",
       canStart: true,
       canCancel: false,
       canRetry: true,
@@ -563,7 +563,7 @@ export function automaticProposalView(
   const countDetail =
     proposal === undefined
       ? copy.detail
-      : `現在の配置${sourceProject.placements.length}件に対し、提案${proposal.placements.length}件です。${copy.detail}`;
+      : `現在の配置${sourceProject.placements.length}件に対し、配置案${proposal.placements.length}件です。${copy.detail}`;
 
   return {
     phase: "ready",

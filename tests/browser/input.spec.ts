@@ -28,14 +28,14 @@ async function addContainer(page: Page, name: string) {
 
 test("edits project settings transactionally and focuses invalid input", async ({ page }) => {
   await page.goto("/");
-  await page.getByLabel("案件名").fill("更新案件");
+  await page.getByLabel("CLP名").fill("更新CLP");
   await page.getByLabel("X方向の隙間").fill("1.5");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await expect(page.getByLabel("X方向の隙間")).toBeFocused();
   await expect(page.getByLabel("X方向の隙間")).toHaveAttribute("aria-invalid", "true");
   await page.getByLabel("X方向の隙間").fill("10");
-  await page.getByRole("button", { name: "案件を保存" }).click();
-  await expect(page.getByTestId("canonical-project-settings")).toContainText("更新案件");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
+  await expect(page.getByTestId("canonical-project-settings")).toContainText("更新CLP");
 });
 
 test("adds, edits, cancels, and explicitly deletes cargo through the compact card", async ({ page }) => {

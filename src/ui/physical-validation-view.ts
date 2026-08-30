@@ -67,9 +67,9 @@ const UNVERIFIED_REASON_COPY = {
 
 const UNAVAILABLE_REASON_COPY = {
   "physical.semantic-input-invalid":
-    "案件データの参照または意味整合性に問題があるため、物理判定を実行できません。",
+    "CLPデータの参照または意味整合性に問題があるため、物理判定を実行できません。",
   "physical.container-not-found":
-    "選択した候補が案件内に見つからないため、物理判定を実行できません。",
+    "選択した候補がCLP内に見つからないため、物理判定を実行できません。",
   "physical.payload-calculation-unavailable":
     "重量または耐荷重を安全に計算できないため、物理判定を実行できません。",
   "physical.geometry-calculation-unavailable":

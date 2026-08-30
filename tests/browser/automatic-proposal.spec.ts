@@ -334,7 +334,7 @@ test("runs the real worker for no-cargo and no-candidates without changing the p
   await expect(history).toContainText("次に元に戻せる操作: 積荷の追加。");
   const cargoHistory = await history.textContent();
   const cargoProject = await canonical.textContent();
-  await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
+  await panel.getByRole("button", { name: "現在のCLPで再試行" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
   await expect(panel).toContainText("候補なし");
   expect(await history.textContent()).toBe(cargoHistory);
@@ -366,7 +366,7 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
   await expect(panel).toContainText("案あり・未適用");
   await expect(panel).toContainText("現在の配置1件");
-  await expect(panel).toContainText("提案2件");
+  await expect(panel).toContainText("配置案2件");
   await expect(panel).toContainText("automatic-proposal-v1");
   await expect(panel).toContainText("匿名AP02候補 (container-1)");
   await expect(panel).toContainText("匿名積荷A (cargo-1)");
@@ -378,20 +378,20 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
   await expect(sceneStatus).toContainText("配置1件");
   await expect(page.locator(".scene-selection-card")).toContainText("50 mm");
 
-  const applyButton = panel.getByRole("button", { name: "提案を適用", exact: true });
+  const applyButton = panel.getByRole("button", { name: "配置案を適用", exact: true });
   await applyButton.click();
   const confirmation = panel.getByRole("alert");
   await expect(confirmation).toContainText("現在の配置1件を");
-  await expect(confirmation).toContainText("提案2件で一括置換します");
+  await expect(confirmation).toContainText("配置案2件で一括置換します");
   await expect(confirmation).toContainText(
     "配置が変わる場合は、1回の取り消しで元へ戻せます。",
   );
-  await expect(confirmation.getByRole("button", { name: "提案を適用" })).toBeFocused();
+  await expect(confirmation.getByRole("button", { name: "配置案を適用" })).toBeFocused();
   await confirmation.getByRole("button", { name: "適用をやめる" }).click();
   await expect(applyButton).toBeFocused();
 
   await applyButton.click();
-  await confirmation.getByRole("button", { name: "提案を適用" }).click();
+  await confirmation.getByRole("button", { name: "配置案を適用" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "applied");
   await expect(panel).toContainText("適用済み");
   await expect(panel.locator(".automatic-proposal__summary")).toBeFocused();
@@ -420,10 +420,10 @@ test("confirms a zero-current add, commits rapid double confirmation once, and k
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
-  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
   const confirmation = panel.getByRole("alert");
-  await expect(confirmation).toContainText("提案1件を追加します");
-  const confirmButton = confirmation.getByRole("button", { name: "提案を適用" });
+  await expect(confirmation).toContainText("配置案1件を追加します");
+  const confirmButton = confirmation.getByRole("button", { name: "配置案を適用" });
   await confirmButton.evaluate((element) => {
     const clickable = element as unknown as { click(): void };
     clickable.click();
@@ -441,14 +441,14 @@ test("confirms a zero-current add, commits rapid double confirmation once, and k
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
-  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
   await expect(panel.getByRole("alert")).toContainText(
     "配置が変わる場合は、1回の取り消しで元へ戻せます。",
   );
   const historyBeforeNoOp = await history.textContent();
   await panel
     .getByRole("alert")
-    .getByRole("button", { name: "提案を適用" })
+    .getByRole("button", { name: "配置案を適用" })
     .click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "unchanged");
   await expect(panel).toContainText("変更なし");
@@ -477,10 +477,10 @@ test("preserves the AP-03 structure warning through real preview, confirmation, 
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
   await expect(panel.getByRole("heading", { name: "未確認事項（1件）" })).toBeVisible();
   await expect(panel.getByText("支持後の構造・安定性は未確認です。")).toHaveCount(1);
-  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
   const confirmation = panel.getByRole("alert");
   await expect(confirmation).toContainText("未確認事項が1件あります");
-  await confirmation.getByRole("button", { name: "提案を適用" }).click();
+  await confirmation.getByRole("button", { name: "配置案を適用" }).click();
 
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "applied");
   await expect(panel).toContainText("未確認事項1件を保持しています");
@@ -515,7 +515,7 @@ test("keeps a controlled complete-with-cutoff warning applicable in preview and 
   await releaseProposal(page);
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
   await expect(panel).toContainText("案あり・最良未確認・未適用");
-  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
   await expect(panel.getByRole("alert")).toContainText(
     "この案が目的関数上の最良とは確認できません",
   );
@@ -538,29 +538,29 @@ test("closes confirmation on generation and persistence changes and shows fixed 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await releaseProposal(page);
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
-  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
+  await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
   const historyBeforeDraft = await history.textContent();
-  await page.getByLabel("案件名").fill("未保存変更");
+  await page.getByLabel("CLP名").fill("未保存変更");
   await expect(panel.getByRole("alert")).toHaveCount(0);
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
-  await page.getByLabel("案件名").fill("新規案件");
+  await page.getByLabel("CLP名").fill("新規CLP");
   await expect(history).toHaveText(historyBeforeDraft ?? "");
 
-  await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
+  await panel.getByRole("button", { name: "現在のCLPで再試行" }).click();
   await releaseProposal(page);
-  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
-  await page.getByRole("button", { name: "案件データを開く" }).click();
+  await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
+  await page.getByRole("button", { name: "CLPデータを開く" }).click();
   await page.getByRole("button", { name: "端末へ保存" }).click();
   await expect(page.locator(".project-persistence__status")).toHaveText(
-    "現在の案件をこの端末へ保存しました。",
+    "現在のCLPをこの端末へ保存しました。",
   );
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   await expect(panel.getByRole("alert")).toHaveCount(0);
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(history).toHaveText(historyBeforeDraft ?? "");
 
-  await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
+  await panel.getByRole("button", { name: "現在のCLPで再試行" }).click();
   await page.evaluate(() => {
     const browserGlobal = globalThis as unknown as {
       __setProposalPhysicallyInvalid: (enabled: boolean) => void;
@@ -568,11 +568,11 @@ test("closes confirmation on generation and persistence changes and shows fixed 
     browserGlobal.__setProposalPhysicallyInvalid(true);
   });
   await releaseProposal(page);
-  await panel.getByRole("button", { name: "提案を適用", exact: true }).click();
-  await panel.getByRole("alert").getByRole("button", { name: "提案を適用" }).click();
+  await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
+  await panel.getByRole("alert").getByRole("button", { name: "配置案を適用" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "apply-failed");
   await expect(panel).toContainText(
-    "提案を再検証できなかったため適用しませんでした。案件は変更していません。",
+    "配置案を再検証できなかったため適用しませんでした。CLPは変更していません。",
   );
   await expect(panel).not.toContainText("marker-sensitive-cargo");
   expect(await history.textContent()).toBe(historyBeforeDraft);
@@ -623,7 +623,7 @@ test("cancels a controlled slow worker responsively, ignores its late result, an
       return browserGlobal.__proposalTerminatedCount();
     }),
   ).toBe(1);
-  await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
+  await panel.getByRole("button", { name: "現在のCLPで再試行" }).click();
   await expectPendingCount(page, 2);
   await releaseProposal(page, 1);
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
@@ -637,12 +637,12 @@ test("invalidates a running preview for Project commits, undo, redo, and generat
   await page.goto("/");
   const panel = page.locator(".automatic-proposal");
   const canonical = page.getByTestId("canonical-project-settings");
-  const retry = () => panel.getByRole("button", { name: "現在の案件で再試行" });
+  const retry = () => panel.getByRole("button", { name: "現在のCLPで再試行" });
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expectPendingCount(page, 1);
-  await page.getByLabel("案件名").fill("提案中に更新");
-  await page.getByRole("button", { name: "案件を保存" }).click();
+  await page.getByLabel("CLP名").fill("提案中に更新");
+  await page.getByRole("button", { name: "CLPを保存" }).click();
   await expect(canonical).toContainText("提案中に更新");
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await releaseProposal(page, 0);
@@ -651,7 +651,7 @@ test("invalidates a running preview for Project commits, undo, redo, and generat
   await retry().click();
   await expectPendingCount(page, 2);
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(canonical).toContainText("新規案件");
+  await expect(canonical).toContainText("新規CLP");
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
 
   await retry().click();
@@ -679,17 +679,17 @@ test("invalidates a running proposal when persistence starts and after a valid J
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expectPendingCount(page, 1);
-  await page.getByRole("button", { name: "案件データを開く" }).click();
+  await page.getByRole("button", { name: "CLPデータを開く" }).click();
   await page.getByRole("button", { name: "端末へ保存" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
-  await expect(persistenceStatus).toHaveText("現在の案件をこの端末へ保存しました。");
-  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await expect(persistenceStatus).toHaveText("現在のCLPをこの端末へ保存しました。");
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
 
-  await panel.getByRole("button", { name: "現在の案件で再試行" }).click();
+  await panel.getByRole("button", { name: "現在のCLPで再試行" }).click();
   await expectPendingCount(page, 2);
-  await importJson(page, projectJson("読込後案件", 0, 0));
-  await expect(page.getByTestId("canonical-project-settings")).toContainText("読込後案件");
-  await expect(persistenceStatus).toContainText("案件JSONを読み込みました");
+  await importJson(page, projectJson("読込後CLP", 0, 0));
+  await expect(page.getByTestId("canonical-project-settings")).toContainText("読込後CLP");
+  await expect(persistenceStatus).toContainText("CLP JSONを読み込みました");
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await releaseProposal(page, 1);
   await expect(panel).not.toContainText("対象なし");
@@ -731,8 +731,8 @@ test("paginates more than 25 controlled candidate, placement, and unverified row
 }) => {
   await installControlledProposalWorker(page);
   await page.goto("/");
-  await importJson(page, projectJson("大量匿名案件", 26, 26));
-  await expect(page.getByTestId("canonical-project-settings")).toContainText("大量匿名案件");
+  await importJson(page, projectJson("大量匿名CLP", 26, 26));
+  await expect(page.getByTestId("canonical-project-settings")).toContainText("大量匿名CLP");
   const panel = page.locator(".automatic-proposal");
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
@@ -742,7 +742,7 @@ test("paginates more than 25 controlled candidate, placement, and unverified row
   await expect(panel).toContainText("案あり・未適用");
 
   const candidates = panel.getByRole("region", { name: "候補別の探索結果" });
-  const placements = panel.getByRole("region", { name: "提案配置（未適用）" });
+  const placements = panel.getByRole("region", { name: "配置案（未適用）" });
   const unverified = panel.getByRole("region", { name: "未確認事項（26件）" });
   await expect(candidates.getByRole("listitem")).toHaveCount(25);
   await candidates.getByRole("button", { name: "次の候補" }).click();
@@ -750,7 +750,7 @@ test("paginates more than 25 controlled candidate, placement, and unverified row
   await expect(candidates).toContainText("26〜26 / 26件");
 
   await expect(placements.getByRole("listitem")).toHaveCount(25);
-  await placements.getByRole("button", { name: "次の提案配置" }).click();
+  await placements.getByRole("button", { name: "次の配置案" }).click();
   await expect(placements.getByRole("listitem")).toHaveCount(1);
   await expect(placements).toContainText("26〜26 / 26件");
 

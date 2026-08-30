@@ -9,8 +9,8 @@
 
 | Milestone | Weight | Earned | Status | Completion evidence and remaining work |
 | --- | ---: | ---: | --- | --- |
-| 基盤・データ契約 | 10 | 10 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly案件型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
-| 積荷・コンテナ入力モデル | 15 | 15 | Complete | 案件・隙間・積荷・候補の入力、一覧、編集、明示削除、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
+| 基盤・データ契約 | 10 | 10 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly CLP型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
+| 積荷・コンテナ入力モデル | 15 | 15 | Complete | CLP・隙間・積荷・候補の入力、一覧、編集、明示削除、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
 | 3D表示と手動配置 | 25 | 25 | Complete | 座標契約、全積荷検索select、Project→scene投影・描画、荷室外の非永続自由作業位置、未配置・配置済み共通のdrag三状態分類、床・支持可能上面へのZ snap、単一支持面内のX/Y制限、条件未確認preview、dialog配置編集、完全drag-out位置保持、許可済みX/Z軸90度回転と天地無用、wheel page scrollとbutton zoom、同一候補camera保持、viewport内Undo/Redo、compactな選択積荷カードとCRUD入口を実装 |
 | 物理制約の判定 | 20 | 20 | Complete | 低レベルgeometry・耐荷重評価、高位集約、単独支持・支持条件未確認・支持接触不成立、接触時の隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL 2利用可能時のUI、許可上限1,000配置の応答性を実装・検証。人間の派生床突き抜け観察で発見した境界違反由来の上段支持不足カスケード `HUT-01` は、診断上の床Z=0正規化、負例、複数支持、実Worker表示を追加して修正・回帰済み |
 | 保存・再読込・操作性 | 10 | 10 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、保存Navigation Drawer、操作単位Snackbar、modal focus・狭幅を実装・検証 |
@@ -22,16 +22,16 @@
 
 ## Next Work
 
-1. WebGL 2非対応・初期描画失敗・context loss時の全面停止、復旧案内、現在案件・端末保存の読み取り専用JSON救出を人間が確認する。
+1. WebGL 2非対応・初期描画失敗・context loss時の全面停止、復旧案内、現在CLP・端末保存の読み取り専用JSON救出と「作業データ」表現を人間が確認する。
 2. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
-3. 複数候補tabとside-relative作業面、積荷画像は承認済みの将来設計として別checkpointで調査・設計する。JSON名の案件名利用は現仕様・ADRと衝突するため別承認まで変更しない。
+3. 複数候補tabとside-relative作業面、積荷画像は承認済みの将来設計として別checkpointで調査・設計する。JSON名のCLP名利用は現仕様・ADRと衝突するため別承認まで変更しない。
 
 ## Deliverables and Verification Evidence
 
 | Milestone | Design or decision | Implementation | Tests, review, deployment, or acceptance evidence |
 | --- | --- | --- | --- |
-| 基盤・データ契約 | [仕様](../specification.md)、[ADR索引](../decisions/README.md)、[データ契約](../data-model.md)、[JSON Schema](../../schemas/project-0.1.0.schema.json) | JSON Schema `0.1.0`、完全な案件型、構造・意味検証、検証済み書出し、取引的読込、TypeScript/React/Three.js/Vite骨格、WebGL 2能力ゲート、向き適用関数 | データ契約・型・lint・単体88件・ブラウザ4件・ビルド・ガバナンス検証 |
-| 積荷・コンテナ入力モデル | [仕様](../specification.md)、[ADR 0005](../decisions/0005-canonical-units-and-ranges.md)、[ADR 0007](../decisions/0007-cargo-orientation-policy.md) | 検証済みProject command、案件・隙間・積荷・候補の入力編集UI | 型・lint・単体147件・ブラウザ11件・実UIレビュー（305/320/375pxを含む） |
+| 基盤・データ契約 | [仕様](../specification.md)、[ADR索引](../decisions/README.md)、[データ契約](../data-model.md)、[JSON Schema](../../schemas/project-0.1.0.schema.json) | JSON Schema `0.1.0`、完全なCLP型、構造・意味検証、検証済み書出し、取引的読込、TypeScript/React/Three.js/Vite骨格、WebGL 2能力ゲート、向き適用関数 | データ契約・型・lint・単体88件・ブラウザ4件・ビルド・ガバナンス検証 |
+| 積荷・コンテナ入力モデル | [仕様](../specification.md)、[ADR 0005](../decisions/0005-canonical-units-and-ranges.md)、[ADR 0007](../decisions/0007-cargo-orientation-policy.md) | 検証済みProject command、CLP・隙間・積荷・候補の入力編集UI | 型・lint・単体147件・ブラウザ11件・実UIレビュー（305/320/375pxを含む） |
 | 3D表示と手動配置 | [仕様](../specification.md)、[ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0015](../decisions/0015-scene-wheel-drag-out-and-size-copy.md)、[ADR 0017](../decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](../decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](../decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](../decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](../decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](../decisions/0022-upright-only-orientation-policy.md) | 共通drag三状態classifier、床・支持面snap、支持面内clamp、条件未確認preview、drag中の周辺透過・点線と支持候補色、非永続session pose、全積荷select、荷室内外描画、camera保持、積荷・配置別modal editor、自由な外側drag、partial保存、完全drag-out、固定toolbarのX/Z回転、天地無用だけの向き設定、compact cardを実装 | 型・lint・全単体・全ブラウザ・ビルド・305/320/375px Chromium回帰・1,000件純粋投影・全6向き分類/X/Z mapping・支持snap実drag・レビュー |
 | 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0019](../decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](../decisions/0020-actionable-opening-diagnostics-and-drag-focus.md) | 低レベルgeometry・耐荷重評価、単独支持・条件未確認・接触不成立、寸法不適合だけを通知する開口診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体・全ブラウザ、型・lint・build。単独包含の等値、1 mm張り出し、複数支持、隙間、支持可否混在、辺・点、Z不一致、重複、開口寸法合否、Worker表示、自動提案除外を検証 |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0023](../decisions/0023-webgl-required-operation-and-read-only-rescue.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、WebGL障害時の読み取り専用救出、固定code UI | 実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL 2利用可能時の通常操作、非対応・描画障害時の全面停止と2種類の救出、305/320/375px、1,000配置・100候補の実Worker応答性を回帰 |
@@ -42,7 +42,7 @@
 
 - 実務利用者試用の評価担当、日程、合否記録が未決定。
 - 対応ブラウザと最低GPU性能が未決定。
-- JSON出力名を案件名または利用者指定へ変える要望は、固定名・案件名非反射を定める現仕様とADR 0013に衝突し、別承認が未決定。
+- JSON出力名をCLP名または利用者指定へ変える要望は、固定名・CLP名非反射を定める現仕様とADR 0013に衝突し、別承認が未決定。
 
 ## Definition of Done
 
@@ -58,13 +58,13 @@
 | --- | ---: | ---: | --- |
 | 2026-08-27 | 4% | Baseline | 承認済みのガバナンス、初期仕様、ADR、ロードマップを作成。アプリ実装と技術スパイクは未着手 |
 | 2026-08-27 | 6% | +2 | 正規単位・値域、矩形開口、積荷別許可回転、保守的な支持・荷重ルールをADR 0005〜0008で確定。JSONスキーマとアプリ実装は未着手 |
-| 2026-08-27 | 8% | +2 | 案件JSON Schema `0.1.0`、意味契約、モジュール境界、依存不要の契約チェックを作成。アプリ実装は未着手 |
-| 2026-08-27 | 9% | +1 | 最小Webアプリ骨格、WebGL 2能力ゲート、Three.js技術確認描画、純粋な向き適用関数と独立したアプリ検証を追加。完全な案件型と意味検証は未着手 |
-| 2026-08-27 | 10% | +1 | 完全なreadonly案件型、Draft 2020-12構造検証、意味検証、検証済み書出し、失敗時状態保持を含む取引的読込基盤と境界テストを追加 |
-| 2026-08-27 | 25% | +15 | 案件・隙間・積荷・候補の入力、検証、編集、一覧、削除確認、確定単位・値域、許可向き、狭幅・キーボード操作を実装し、単体147件・ブラウザ11件・独立レビューで検証 |
+| 2026-08-27 | 8% | +2 | CLP JSON Schema `0.1.0`、意味契約、モジュール境界、依存不要の契約チェックを作成。アプリ実装は未着手 |
+| 2026-08-27 | 9% | +1 | 最小Webアプリ骨格、WebGL 2能力ゲート、Three.js技術確認描画、純粋な向き適用関数と独立したアプリ検証を追加。完全なCLP型と意味検証は未着手 |
+| 2026-08-27 | 10% | +1 | 完全なreadonly CLP型、Draft 2020-12構造検証、意味検証、検証済み書出し、失敗時状態保持を含む取引的読込基盤と境界テストを追加 |
+| 2026-08-27 | 25% | +15 | CLP・隙間・積荷・候補の入力、検証、編集、一覧、削除確認、確定単位・値域、許可向き、狭幅・キーボード操作を実装し、単体147件・ブラウザ11件・独立レビューで検証 |
 | 2026-08-27 | 26% | +1 | ADR 0010でコンテナ局所右手座標、負X側開口面の原点、向き適用後AABB最小角の `positionMm` を確定し、3D・配置・物理判定の共通前提を作成 |
 | 2026-08-27 | 31% | +5 | 候補選択、Project→scene一方向投影、コンテナ内部・中央開口・登録済み配置の描画、外側配置を含む投影範囲cameraを実装し、単体162件・ブラウザ15件・実UI・独立レビューで検証 |
-| 2026-08-27 | 37% | +6 | 保存前draftを正規案件から分離した配置追加・整数mm移動・許可向き変更・取り外しフォームを実装し、負・候補外座標、候補lock、stale復旧、WebGL非対応、狭幅を単体201件・ブラウザ19件・独立レビューで検証 |
+| 2026-08-27 | 37% | +6 | 保存前draftを正規CLPから分離した配置追加・整数mm移動・許可向き変更・取り外しフォームを実装し、負・候補外座標、候補lock、stale復旧、WebGL非対応、狭幅を単体201件・ブラウザ19件・独立レビューで検証 |
 | 2026-08-27 | 45% | +8 | canvas上の積荷選択、Project非変更preview、最近接1 mmの床面方向drag、取消・描画障害rollback、視点操作、タッチ・フォームfallbackを実装し、単体212件・ブラウザ23件・実UI・独立レビューで検証 |
 | 2026-08-27 | 47% | +2 | コンテナ包含と正体積AABB重なりの純粋geometry基盤を実装し、全軸の等値・±1 mm、正負側接触、対称性、退化・反転、非変異を含む全単体272件と独立レビューで検証 |
 | 2026-08-27 | 48% | +1 | 軸別隙間を表面間の実距離とし、配置後の適用面、床・支持例外、非支持ペアの分離軸規則を仕様0.5.0とADR 0011で確定 |
@@ -75,7 +75,7 @@
 | 2026-08-27 | 55% | +1 | 床支持と、段積み許可された候補上面の完全一致Z接触・XY 100%被覆を純粋関数で合成し、geometry233件・全単体454件と独立レビューで検証 |
 | 2026-08-27 | 59% | +4 | 境界違反を独立・優先表示しながら無関係な理由を保持する仕様0.6.0とADR 0012を確定し、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を集約する純粋判定をvalidation65件・全単体488件と独立レビューで検証 |
 | 2026-08-27 | 65% | +6 | 物理判定をローカルmodule Workerへ接続し、適合・不適合・未確認・判定不能、対象・関連積荷、独立理由をアクセシブルにページ表示。全単体551件・ブラウザ31件、許可上限1,000配置の499,500不適合理由を含む実Worker試験、305/320/375px実UI、独立レビューで物理制約マイルストーンを完了 |
-| 2026-08-28 | 67% | +2 | 案件設定・積荷・候補・配置・1回の3D床面dragを最大100件取り消し・やり直しできる非永続履歴を実装。stale/no-op/分岐、入力中lock、native入力履歴保護、WebGL非依存、全単体567件・全ブラウザ37件、305/320/375px実UI、独立レビューで検証 |
+| 2026-08-28 | 67% | +2 | CLP設定・積荷・候補・配置・1回の3D床面dragを最大100件取り消し・やり直しできる非永続履歴を実装。stale/no-op/分岐、入力中lock、native入力履歴保護、WebGL非依存、全単体567件・全ブラウザ37件、305/320/375px実UI、独立レビューで検証 |
 | 2026-08-28 | 77% | +10 | IndexedDB単一手動枠、固定名JSON入出力、全候補Worker事前判定、履歴barrier、固定code失敗表示を実装。全単体623件・全ブラウザ48件で実reload/delete/download/reimport、失敗段階、競合、focus、狭幅、1,000配置・100候補応答性を検証し、保存・再読込・操作性マイルストーンを完了 |
 | 2026-08-28 | 78% | +1 | 4本の匿名合成受入ケース、合格基準、観察様式を確定し、実務利用者試用と区別した技術受入の正本を追加 |
 | 2026-08-28 | 79% | +1 | 床突き抜け専用診断とWorker伝送を実装し、合成ケースを全単体628件・全ブラウザ51件へ対応付けて自動証拠サブゲートを完了。人間による試用は未実施 |
@@ -94,8 +94,8 @@
 | 2026-08-28 | 95% | +0 | 人間評価で必要性が確認された明示 `＋` / `－` と荷室基準の視点復元を実装。遠方積荷を初期fitから除外しつつ全投影へのcamera到達余地を保持し、全単体849件・全ブラウザ65件、型・lint・build、独立レビューに合格。3Dマイルストーンの既存22点内の操作性改善であり進捗は据え置き |
 | 2026-08-28 | 96% | +1 | 選択積荷近傍に追従する床面90度回転を実装。全6向きの相手対応、許可集合、最小角保持、1回のUndo/Redo、回転不可理由、drag lock、camera追従、狭幅・focusを全単体855件・全ブラウザ67件で回帰し、型・lint・build・独立レビューに合格したため3D表示と手動配置を23/25へ更新 |
 | 2026-08-28 | 96% | +0 | 端末保存・JSON入出力をモーダルNavigation Drawerへ集約し、処理中・成功・取消・失敗を操作ごとに識別できるSnackbarを実装。処理中focus、背景操作遮断、通知寿命、競合、WebGL非依存、305〜375 pxを全単体855件・全ブラウザ70件で回帰し、型・lint・build・独立レビューに合格。保存・再読込・操作性は既に10/10 Completeのため進捗据え置き |
-| 2026-08-28 | 97% | +1 | 案件全体で未配置の積荷を荷室外の非永続仮置きgridへ派生し、fine pointerの荷室内dropだけを一回の配置追加として確定する主操作を実装。他候補の配置除外、全6向き、1,000件、outside/stale/cancel、Undo/Redo、touch/form fallback、狭幅を全単体862件・全ブラウザ74件で回帰し、型・lint・build・独立レビューに合格したため3D表示と手動配置を24/25へ更新 |
-| 2026-08-28 | 98% | +1 | 単一の案件Undo/Redoを3D直前へ移し、選択積荷の奥行・横幅・高さ、入口・右壁・床からの位置、既存座標フォームへの導線、全6向きの結果指向表示を実装。busy、focus、scroll、WebGL非対応、長名、狭幅を全単体875件・全ブラウザ75件で回帰し、型・lint・build・独立レビューに合格したため3D表示と手動配置25/25を完了 |
+| 2026-08-28 | 97% | +1 | CLP全体で未配置の積荷を荷室外の非永続仮置きgridへ派生し、fine pointerの荷室内dropだけを一回の配置追加として確定する主操作を実装。他候補の配置除外、全6向き、1,000件、outside/stale/cancel、Undo/Redo、touch/form fallback、狭幅を全単体862件・全ブラウザ74件で回帰し、型・lint・build・独立レビューに合格したため3D表示と手動配置を24/25へ更新 |
+| 2026-08-28 | 98% | +1 | 単一のCLPUndo/Redoを3D直前へ移し、選択積荷の奥行・横幅・高さ、入口・右壁・床からの位置、既存座標フォームへの導線、全6向きの結果指向表示を実装。busy、focus、scroll、WebGL非対応、長名、狭幅を全単体875件・全ブラウザ75件で回帰し、型・lint・build・独立レビューに合格したため3D表示と手動配置25/25を完了 |
 | 2026-08-28 | 98% | +0 | 共通ガバナンス1.4.0、調整runbook、session容量経路、handoff recordを導入。製品仕様0.11.0、Schema 0.1.0、実装済み機能、weighted milestoneの完了証拠は変更しないため進捗は据え置き |
 | 2026-08-28 | 98% | +0 | 仕様0.12.0とADR 0015で、viewport wheelのpage scroll、配置済みdragのX/Y正面積境界による仮置き復帰、共通 `大きさ` labelを確定・実装。全単体907件・全browser76件と独立レビューに合格したが、既に完了済みの3Dマイルストーン内の操作性改善であり進捗は据え置き |
 | 2026-08-29 | 98% | +0 | 仕様0.14.0とADR 0018で、未配置・配置済み共通のdrag三状態分類、partial保存、全積荷検索select、積荷・配置別dialog CRUD、distinct X/Z icon、固定高statusを確定。Schema 0.1.0と完了済み3Dマイルストーンの配点は変更しないため進捗は据え置き |
@@ -107,5 +107,6 @@
 | 2026-08-30 | 98% | +0 | 人間再試用で操作荷FのZ軸回転時に操作荷Hの初期grid位置が動く連動不具合を確認。仕様0.18.1でgridセルを許可向き全体の最大X/Y footprintへ固定し、回転対象以外を再配置しない純粋投影回帰を追加した。全単体944件・全browser 71件、typecheck、lint、buildに合格。Schema 0.1.0と完了済みマイルストーン配点は変更せず、評価者本人の再確認を残すため進捗据え置き |
 | 2026-08-30 | 98% | +0 | 同じ人間のプロジェクト評価者が仕様0.18.1を再試用し、天地無用によるX制限とZ許可、天地無用OFFのX/Z許可、固定button位置、zoom同等の有効枠、editor簡略化、端末再読込、F回転時のHを含む他積荷の位置維持をすべて期待どおりと判定。案内付き再試験の合格を証拠化したが、`HUT-01` 再試用、正式fixture、評価者区分、狭幅・Tab・fallbackは未完了のため進捗据え置き |
 | 2026-08-30 | 98% | +0 | 同じ評価者が正式自動回帰と同じ `HUT-01` A/B派生fixtureを再試用し、床貫通1件だけの表示、Z=0修正後の単独支持と構造・安定性未確認、Undo/Redo往復を期待どおりと確認。診断上の正規化は描画・保存座標を動かさず、配置は独立絶対座標で自動追従しない境界も了承された。狭幅・Tab・focus・fallback・正式fixture・評価者区分は未完了のため進捗据え置き |
-| 2026-08-30 | 98% | +0 | 同じ評価者が305 / 320 / 375 pxとdialogのTab・focus・scrollを期待どおりと確認。WebGL fallback試用では「3D表示なしに空間情報を操作させない」と判断して中止し、仕様1.0.0・ADR 0023でWebGL 2必須ゲート、非対応・初期描画失敗・context loss時の全面停止、現在案件・端末保存の読み取り専用JSON救出へ置換した。Schema 0.1.0と配点は変更せず、新しい阻止・救出画面の人間確認を残すため進捗据え置き |
+| 2026-08-30 | 98% | +0 | 同じ評価者が305 / 320 / 375 pxとdialogのTab・focus・scrollを期待どおりと確認。WebGL fallback試用では「3D表示なしに空間情報を操作させない」と判断して中止し、仕様1.0.0・ADR 0023でWebGL 2必須ゲート、非対応・初期描画失敗・context loss時の全面停止、現在CLP・端末保存の読み取り専用JSON救出へ置換した。Schema 0.1.0と配点は変更せず、新しい阻止・救出画面の人間確認を残すため進捗据え置き |
 | 2026-08-30 | 98% | +0 | WebGL必須ゲートの人間試用でdownload自体は概ね想定どおりだったが、「JSON救出」と画面変化だけでは対象・結果・次行動を理解できないと評価された。仕様1.0.1で現在作業と端末保存の違い、固定名、download開始結果、確認先、復旧手順を常時表示する退避画面へ修正し、全単体945件・全browser73件、typecheck、lint、buildに合格した。Schema 0.1.0と完了済み配点は変更せず、評価者本人の再確認を残すため進捗据え置き |
+| 2026-08-30 | 98% | +0 | 利用者向けの「案件」を「CLP」、自動提案の未適用結果を「配置案」へ統一する仕様1.0.2・ADR 0024を承認。WebGL障害時は平易な「作業データ」を維持し、内部 `Project` / `projectId`、Schema 0.1.0、固定ファイル名、進捗を変更しない |

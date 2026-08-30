@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
     [string]$ProjectPath = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 )
@@ -24,6 +24,7 @@ $actionableOpeningDecisionPath = Join-Path $resolvedProject 'docs/decisions/0020
 $fixedRotationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0021-fixed-rotation-toolbar-and-axis-icons.md'
 $orientationPolicyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0022-upright-only-orientation-policy.md'
 $webglRequiredDecisionPath = Join-Path $resolvedProject 'docs/decisions/0023-webgl-required-operation-and-read-only-rescue.md'
+$clpTerminologyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0024-user-facing-clp-terminology.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -53,6 +54,9 @@ $sceneBrowserTestPath = Join-Path $resolvedProject 'tests/browser/scene.spec.ts'
 $stylesPath = Join-Path $resolvedProject 'src/styles.css'
 $orientationPolicyPath = Join-Path $resolvedProject 'src/domain/orientation-policy.ts'
 $cargoEditorPath = Join-Path $resolvedProject 'src/ui/CargoEditorDialog.tsx'
+$projectWorkspacePath = Join-Path $resolvedProject 'src/ui/ProjectWorkspace.tsx'
+$projectHistoryControlsPath = Join-Path $resolvedProject 'src/ui/ProjectHistoryControls.tsx'
+$projectPersistencePanelPath = Join-Path $resolvedProject 'src/ui/ProjectPersistencePanel.tsx'
 $projectPersistencePath = Join-Path $resolvedProject 'src/application/project-persistence.ts'
 
 foreach ($path in @(
@@ -75,6 +79,7 @@ foreach ($path in @(
     $fixedRotationDecisionPath,
     $orientationPolicyDecisionPath,
     $webglRequiredDecisionPath,
+    $clpTerminologyDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -104,6 +109,9 @@ foreach ($path in @(
     $stylesPath,
     $orientationPolicyPath,
     $cargoEditorPath,
+    $projectWorkspacePath,
+    $projectHistoryControlsPath,
+    $projectPersistencePanelPath,
     $projectPersistencePath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -192,6 +200,32 @@ foreach ($requiredText in @(
         throw "Root README does not contain the current AP-08 status marker: $requiredText"
     }
 }
+$productionSourceFiles = Get-ChildItem -LiteralPath (Join-Path $resolvedProject 'src') -Recurse -File |
+    Where-Object { $_.Extension -in @('.ts', '.tsx') -and $_.Name -notmatch '\.test\.' }
+foreach ($sourceFile in $productionSourceFiles) {
+    $sourceText = [IO.File]::ReadAllText($sourceFile.FullName)
+    if ($sourceText.Contains('案件')) {
+        throw "Production source still contains the retired user-facing term: $($sourceFile.FullName)"
+    }
+}
+$projectWorkspace = [IO.File]::ReadAllText($projectWorkspacePath)
+$projectHistoryControls = [IO.File]::ReadAllText($projectHistoryControlsPath)
+$projectPersistencePanel = [IO.File]::ReadAllText($projectPersistencePanelPath)
+$sceneWorkspace = [IO.File]::ReadAllText($sceneWorkspacePath)
+$automaticProposalPanel = [IO.File]::ReadAllText($automaticProposalPanelPath)
+foreach ($contract in @(
+    @{ Name = 'CLP settings'; Text = $projectWorkspace; Required = @('CLP INPUT', 'CLP設定', 'CLP名', 'CLPを保存') },
+    @{ Name = 'CLP history'; Text = $projectHistoryControls; Required = @('CLP-WIDE HISTORY', 'CLP全体の操作') },
+    @{ Name = 'CLP persistence'; Text = $projectPersistencePanel; Required = @('CLP DATA', 'CLPデータを開く') },
+    @{ Name = 'CLP scene'; Text = $sceneWorkspace; Required = @('CLP SCENE', 'CLP入力でコンテナ・車両候補を追加') },
+    @{ Name = 'Placement proposal'; Text = $automaticProposalPanel; Required = @('配置案を適用', '配置案（未適用）') }
+)) {
+    foreach ($requiredText in $contract.Required) {
+        if (-not $contract.Text.Contains($requiredText)) {
+            throw "$($contract.Name) does not contain the approved CLP-terminology marker: $requiredText"
+        }
+    }
+}
 
 foreach ($requiredText in @(
     '`xy-contained`、`partial`、`outside`',
@@ -203,7 +237,7 @@ foreach ($requiredText in @(
     'X軸またはZ軸を中心に90度回転',
     '寸法prefix `大きさ:` を表示しない',
     '同一候補のProject更新ではcamera位置と注視点を保持',
-    '案件の全積荷を対象',
+    'CLPの全積荷を対象',
     '共有modal shell上の別dialog',
     'drag中の操作通知は固定高またはoverlay領域'
     '操作対象以外の積荷は面をほぼ透明な中立色、辺を灰色の点線'
@@ -236,7 +270,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.0.1' 'Approved specification version'
+Assert-Equal $specificationVersion '1.0.2' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -283,7 +317,7 @@ foreach ($requiredText in @(
     '自動保存と起動時自動読込を行わない',
     'auto-clp-project-0.1.0.json',
     '全候補の物理判定をmodule Workerで再計算',
-    '現在案件、履歴、入力を保持'
+    '現在CLP、履歴、入力を保持'
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved persistence contract text: $requiredText"
@@ -401,6 +435,34 @@ foreach ($requiredText in @(
 )) {
     if (-not $webglRequiredDecision.Contains($requiredText)) {
         throw "ADR 0023 does not contain the approved WebGL-required marker: $requiredText"
+    }
+}
+$clpTerminologyDecision = [IO.File]::ReadAllText($clpTerminologyDecisionPath)
+if ($clpTerminologyDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0024 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '正規データ一式を「CLP」と呼ぶ',
+    '未適用結果は「配置案」と呼ぶ',
+    '「作業データ」を使う',
+    '`Project`、`projectId`',
+    'JSON Schema `0.1.0`',
+    '過去のADR、証拠、handoffは当時の記録として書き換えない'
+)) {
+    if (-not $clpTerminologyDecision.Contains($requiredText)) {
+        throw "ADR 0024 does not contain the approved CLP-terminology marker: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    '## User-facing terminology',
+    '「CLP」と呼び',
+    '「配置案」と呼ぶ',
+    '「作業データ」と表現する',
+    '`Project`、`projectId`',
+    'JSON Schema `0.1.0`'
+)) {
+    if (-not $specification.Contains($requiredText)) {
+        throw "Specification does not contain the approved CLP-terminology marker: $requiredText"
     }
 }
 foreach ($requiredText in @(
@@ -607,7 +669,7 @@ foreach ($requiredText in @(
     '確認付き一括適用と一回のUndo/Redoは実装済み',
     '完全案をSchema・意味・正本物理判定で再検証',
     '同じ配置集合なら履歴を増やさず',
-    'preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在案件と履歴を保持',
+    'preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在CLPと履歴を保持',
     '目的関数上の最良として案内してはならない'
 )) {
     if (-not $operations.Contains($requiredText)) {
@@ -628,7 +690,7 @@ foreach ($contract in @(
     @{ Name = 'Application apply'; Text = $automaticProposalApply; Required = @('prepareAutomaticProposalApply', 'validatePlacementSet', 'support-conditions-unverified', 'automatic-proposal.apply-unverified-mismatch') },
     @{ Name = 'Application apply test'; Text = $automaticProposalApplyTest; Required = @('expectFailurePreserves', 'toBe(frozenCurrent)', 'complete-with-cutoff') },
     @{ Name = 'React hook'; Text = $automaticProposalHook; Required = @('useSyncExternalStore', 'visibleSnapshot', 'interactionGeneration') },
-    @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '提案を適用', '配置が変わる場合は、1回の取り消しで元へ戻せます。') },
+    @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '配置案を適用', '配置が変わる場合は、1回の取り消しで元へ戻せます。') },
     @{ Name = 'App integration'; Text = $app; Required = @('handleAutomaticProposalApply', 'automatic-proposal.apply', 'persistenceOperationRef.current') },
     @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '自動提案の一括適用', '3D表示を利用できます') }
     @{ Name = 'AP-08 performance test'; Text = $automaticProposalPerformanceTest; Required = @('automatic-proposal.worker.ts', 'cold-1', 'warm-${iteration - 1}', 'expectedAttemptCount = 210', 'AP08_EVIDENCE_JSON=', 'terminateLatencyMs', '/^[0-9a-f]{40}$/') }
@@ -718,6 +780,7 @@ foreach ($requiredText in @(
     fixed_rotation_decision_0021_accepted = $true
     orientation_policy_decision_0022_accepted = $true
     webgl_required_decision_0023_accepted = $true
+    clp_terminology_decision_0024_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true

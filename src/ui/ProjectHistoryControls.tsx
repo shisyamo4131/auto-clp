@@ -15,7 +15,7 @@ export interface ProjectHistoryControlsProps {
 }
 
 const actionCopy = {
-  "project-settings.update": "案件設定の更新",
+  "project-settings.update": "CLP設定の更新",
   "cargo.add": "積荷の追加",
   "cargo.update": "積荷の更新",
   "cargo.delete": "積荷の削除",
@@ -149,7 +149,7 @@ export function ProjectHistoryControls({
   const nextActionSummary = busy
     ? "入力または3D操作を完了すると、履歴操作を利用できます。"
     : undoAction === undefined && redoAction === undefined
-      ? "取り消し・やり直しできる案件操作はありません。"
+      ? "取り消し・やり直しできるCLP操作はありません。"
       : [
           undoAction === undefined
             ? undefined
@@ -172,7 +172,7 @@ export function ProjectHistoryControls({
       <section
         className="project-history project-history--compact"
         role="group"
-        aria-label="案件全体の履歴"
+        aria-label="CLP全体の履歴"
       >
         <button
           id="project-history-undo"
@@ -207,7 +207,7 @@ export function ProjectHistoryControls({
         >
           {busy
             ? "未保存入力、削除確認、または3D移動中は履歴を変更しません。"
-            : "案件操作の履歴は現在利用できます。"}
+            : "CLP操作の履歴は現在利用できます。"}
         </p>
       </section>
     );
@@ -217,8 +217,8 @@ export function ProjectHistoryControls({
     <section className="project-history" aria-labelledby="project-history-title">
       <div className="project-history__heading">
         <div>
-          <p className="eyebrow">PROJECT-WIDE HISTORY</p>
-          <h4 id="project-history-title">案件全体の操作</h4>
+          <p className="eyebrow">CLP-WIDE HISTORY</p>
+          <h4 id="project-history-title">CLP全体の操作</h4>
         </div>
         <div className="button-row">
           <button
@@ -254,7 +254,7 @@ export function ProjectHistoryControls({
       >
         {busy
           ? "未保存入力、削除確認、または3D移動中は履歴を変更しません。"
-          : "案件操作の履歴は現在利用できます。"}
+          : "CLP操作の履歴は現在利用できます。"}
       </p>
     </section>
   );

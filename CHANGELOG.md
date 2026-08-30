@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- 利用者向けの「案件」を「CLP」、自動提案の未適用結果を「配置案」へ統一した。WebGL障害時の「作業データ」、内部 `Project` / `projectId`、Schema `0.1.0`、固定JSONファイル名は変更しない。仕様1.0.2、ADR 0024。
+
 ### Added
 
 - Undo/Redo・拡大縮小と同じ固定toolbarへ常設するX/Z回転button、一本の軸線へ矢印が回り込む同一glyphの90度差、未選択・天地無用・busy時の理由付き無効状態、およびADR 0021。

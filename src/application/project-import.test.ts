@@ -10,7 +10,7 @@ function project(id: string): Project {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: id,
-    name: `匿名案件${id}`,
+    name: `匿名CLP${id}`,
     clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: [],
     containers: [],

@@ -9,7 +9,7 @@ export function createInitialProject(): Project {
   return {
     schemaVersion: PROJECT_SCHEMA_VERSION,
     projectId: INITIAL_PROJECT_ID,
-    name: "新規案件",
+    name: "新規CLP",
     clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
     cargoes: [],
     containers: [],

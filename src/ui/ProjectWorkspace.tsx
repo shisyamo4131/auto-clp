@@ -297,7 +297,7 @@ function ProjectSettings({
     if (applied !== "success") {
       setStatus(
         applied === "stale"
-          ? "案件が更新されたため保存できませんでした。入力内容を確認して再度保存してください。"
+          ? "CLPが更新されたため保存できませんでした。入力内容を確認して再度保存してください。"
           : "",
       );
       focusFirstInvalid(formRef.current);
@@ -307,8 +307,8 @@ function ProjectSettings({
       setDraft(projectSettingsDraftFrom(result.project));
       setStatus(
         result.project === project
-          ? "案件と隙間に変更はありません。"
-          : "案件と隙間を保存しました。",
+          ? "CLP設定に変更はありません。"
+          : "CLP設定を保存しました。",
       );
     }
     focusElement("project-save-button");
@@ -316,15 +316,15 @@ function ProjectSettings({
 
   return (
     <section className="editor-card" aria-labelledby="project-settings-title">
-      <h2 id="project-settings-title">案件と隙間</h2>
-      <p className="section-help">入力中の文字列は「案件を保存」を押すまで案件データへ反映しません。</p>
+      <h2 id="project-settings-title">CLP設定</h2>
+      <p className="section-help">入力中の文字列は「CLPを保存」を押すまでCLPデータへ反映しません。</p>
       <form ref={formRef} onSubmit={submit} noValidate>
         <ErrorSummary id="project-settings-errors" issues={issues} />
         <fieldset>
-          <legend>案件情報</legend>
+          <legend>基本情報</legend>
           <Field
             id="project-name"
-            label="案件名"
+            label="CLP名"
             value={draft.name}
             issues={issues}
             issueField="name"
@@ -373,7 +373,7 @@ function ProjectSettings({
             />
           </div>
         </fieldset>
-        <button id="project-save-button" className="primary-button" type="submit">案件を保存</button>
+        <button id="project-save-button" className="primary-button" type="submit">CLPを保存</button>
       </form>
       <p className="action-status" aria-live="polite" aria-atomic="true">{status}</p>
       <p className="canonical-summary" data-testid="canonical-project-settings">
@@ -493,7 +493,7 @@ export function LegacyCargoManager({
     if (applied !== "success") {
       setStatus(
         applied === "stale"
-          ? "案件が更新されたため積荷を保存できませんでした。入力内容を確認してください。"
+          ? "CLPが更新されたため積荷を保存できませんでした。入力内容を確認してください。"
           : "",
       );
       focusFirstInvalid(formRef.current);
@@ -538,7 +538,7 @@ export function LegacyCargoManager({
     }
     setStatus(
       applied === "stale"
-        ? "案件が更新されたため積荷を削除できませんでした。削除確認をやり直してください。"
+        ? "CLPが更新されたため積荷を削除できませんでした。削除確認をやり直してください。"
         : "",
     );
     if (applied === "command-failure") {
@@ -826,7 +826,7 @@ function ContainerManager({
     if (applied !== "success") {
       setStatus(
         applied === "stale"
-          ? "案件が更新されたため候補を保存できませんでした。入力内容を確認してください。"
+          ? "CLPが更新されたため候補を保存できませんでした。入力内容を確認してください。"
           : "",
       );
       focusFirstInvalid(formRef.current);
@@ -871,7 +871,7 @@ function ContainerManager({
     }
     setStatus(
       applied === "stale"
-        ? "案件が更新されたため候補を削除できませんでした。削除確認をやり直してください。"
+        ? "CLPが更新されたため候補を削除できませんでした。削除確認をやり直してください。"
         : "",
     );
     if (applied === "command-failure") {
@@ -1021,7 +1021,7 @@ export function ProjectWorkspace({
   return (
     <section className="workspace" aria-labelledby="workspace-title">
       <div className="workspace__heading">
-        <div><p className="eyebrow">PROJECT INPUT</p><h2 id="workspace-title">案件入力</h2></div>
+        <div><p className="eyebrow">CLP INPUT</p><h2 id="workspace-title">CLP入力</h2></div>
         <p aria-live="polite">{summary}</p>
       </div>
       <aside className="privacy-note" aria-label="入力データの注意">

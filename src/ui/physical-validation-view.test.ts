@@ -171,7 +171,7 @@ describe("toPhysicalValidationView", () => {
   it.each([
     [
       { code: "physical.semantic-input-invalid", issues: [{ code: "sample", path: "/" }] },
-      "判定不能：案件データの参照または意味整合性に問題があるため、物理判定を実行できません。",
+      "判定不能：CLPデータの参照または意味整合性に問題があるため、物理判定を実行できません。",
       undefined,
     ],
     [
@@ -179,7 +179,7 @@ describe("toPhysicalValidationView", () => {
         code: "physical.container-not-found",
         target: { kind: "container", id: "container-known" },
       },
-      "判定不能：選択した候補が案件内に見つからないため、物理判定を実行できません。",
+      "判定不能：選択した候補がCLP内に見つからないため、物理判定を実行できません。",
       "既知候補（ID: container-known）",
     ],
     [
@@ -469,13 +469,13 @@ describe("worker physical validation view adapters", () => {
     [
       "physical.semantic-input-invalid",
       undefined,
-      "判定不能：案件データの参照または意味整合性に問題があるため、物理判定を実行できません。",
+      "判定不能：CLPデータの参照または意味整合性に問題があるため、物理判定を実行できません。",
       undefined,
     ],
     [
       "physical.container-not-found",
       { kind: "container", id: "container-known" },
-      "判定不能：選択した候補が案件内に見つからないため、物理判定を実行できません。",
+      "判定不能：選択した候補がCLP内に見つからないため、物理判定を実行できません。",
       "既知候補（ID: container-known）",
     ],
     [
