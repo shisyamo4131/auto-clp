@@ -693,47 +693,27 @@ h1 {
   line-height: 1;
 }
 
-.viewport__cargo-action {
-  position: absolute;
-  z-index: 3;
+.viewport__rotation-controls {
   display: flex;
-  width: max-content;
-  max-width: calc(100% - 1rem);
-  gap: 0.3rem;
-  padding: 0.4rem;
-  border: 1px solid rgba(255, 230, 154, 0.82);
-  border-radius: 0.55rem;
-  background: rgba(7, 17, 31, 0.94);
-  box-shadow: 0 0.35rem 1rem rgba(0, 0, 0, 0.36);
-  pointer-events: none;
+  gap: 0.4rem;
 }
 
-.viewport__cargo-action button {
+.viewport__rotation-controls button {
   display: grid;
   width: 2.75rem;
-  min-height: 2.75rem;
   padding: 0.45rem;
   place-items: center;
-  border-color: rgba(255, 230, 154, 0.82);
-  background: rgba(31, 49, 67, 0.96);
-  pointer-events: auto;
 }
 
-.viewport__cargo-action > div {
-  display: flex;
-  gap: 0.3rem;
-}
-
-.viewport__cargo-action svg {
+.viewport__rotation-icon {
   width: 1.5rem;
   height: 1.5rem;
   fill: currentColor;
 }
 
-.viewport__cargo-action text {
-  fill: #07111f;
-  font-size: 7px;
-  font-weight: 850;
+.viewport__rotation-icon--x {
+  transform: rotate(90deg);
+  transform-origin: center;
 }
 
 .viewport__staging-label {

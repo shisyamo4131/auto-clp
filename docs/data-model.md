@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)
 
 ## Contract Scope
 
 この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、案件操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定、Projectを変更しない自動提案探索とpreview UI、再検証付きの配置一括適用と一履歴操作のUndo/Redoは実装済みである。操作履歴、UI状態、Three.jsオブジェクト、物理判定と自動提案の結果は本契約へ保存しない。
 
-仕様版 `0.16.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `0.17.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -155,7 +155,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
 - `evaluatePayloadCapacity(massesGrams, payloadCapacityGrams)` — 実装済み。非負safe integerの質量だけをoverflowなく合計し、計算可能なら総質量と耐荷重以内かを返す。等値は合格、超過は不合格とし、案件内の配置・参照選択と理由は扱わない。
 - `isRectangleFullyCoveredByUnion(target, coveringRectangles)` — 実装済み。safe integerの正面積XY矩形だけを受け、対象外をclipした支持矩形の和集合が対象矩形を100%覆うかを整数端点の走査で決定的に判定する。Z接触、段積み可否、対象ID、理由、隙間例外は扱わない。
-- `hasFullGeometricSupport(target, candidates)` — 旧和集合100%被覆の低レベル回帰用helperとして実装を保持するが、仕様0.16.0の現行支持区分には使用しない。
+- `hasFullGeometricSupport(target, candidates)` — 旧和集合100%被覆の低レベル回帰用helperとして実装を保持するが、仕様0.17.0の現行支持区分には使用しない。
 - `assessGeometricSupport(target, candidates)` — 実装済み。床、単一支持面によるX/Y完全包含、支持可能面を含む複数・隙間・張り出し・支持可否混在の条件未確認、接触なし・Z不一致・支持不可面だけの不適合を、正面積接触と安定したID順で純粋分類する。
 - `resolveSupportSnapPosition(project, containerId, cargoId, orientation, rawPositionMm)` — 実装済み。fine-pointer dragの整数mm位置を床または最も高い支持可能上面へsnapし、単一面で収容できる場合だけX/Yを完全包含範囲へ制限する。荷室外、支持条件未確認、立体重複を区別し、Projectを変更しない。
 - `validatePlacementSet(project, containerId)` — 実装済み。対象コンテナの配置だけを参照解決し、境界、重なり、隙間、許可向きの開口寸法、単独支持・支持条件未確認・支持接触不成立、耐荷重を決定的な順序で評価する。境界違反を座標理由として優先し、その違反だけを原因とする支持・隙間理由は連鎖させず、寸法不適合の開口、耐荷重、単独支持時の構造・安定性未確認など独立理由は保持する。寸法適合だけでは積荷ごとの搬入経路理由を生成せず、入力や計算が安全に評価できない場合は物理的不適合と混同せず `unavailable` を返す。

@@ -534,18 +534,31 @@ test("blocks scene rotation while a project draft owns the busy gate", async ({ 
   expect(await page.locator(".project-history__summary").textContent()).toBe(historyBefore);
 });
 
-test("uses distinct focusable X and Z rotation icons and reports disabled reasons", async ({ page }) => {
+test("keeps axis rotation controls fixed, always visible, and distinguishable by orientation", async ({ page }) => {
   await page.goto("/");
+  const x = page.getByRole("button", { name: "X軸を中心に90°回転" });
+  const z = page.getByRole("button", { name: "Z軸を中心に90°回転" });
+  await expect(x).toBeVisible();
+  await expect(z).toBeVisible();
+  await expect(x).toHaveAttribute("aria-disabled", "true");
+  await expect(z).toHaveAttribute("aria-disabled", "true");
+  await expect(x).toHaveAttribute("title", "積荷を選択するとX軸回転できます。");
+  await expect(z).toHaveAttribute("title", "積荷を選択するとZ軸回転できます。");
   await addCargo(page, "天地無用積荷");
   await addContainer(page, "回転候補");
   await place(page);
-  const x = page.getByRole("button", { name: "X軸を中心に90°回転" });
-  const z = page.getByRole("button", { name: "Z軸を中心に90°回転" });
   await expect(x).toHaveAttribute("aria-disabled", "true");
   await expect(z).not.toHaveAttribute("aria-disabled", "true");
   await x.focus();
   await expect(x).toBeFocused();
-  expect(await x.locator("path").first().getAttribute("d")).not.toBe(await z.locator("path").first().getAttribute("d"));
+  expect(await x.locator("path").first().getAttribute("d")).toBe(await z.locator("path").first().getAttribute("d"));
+  await expect(x.locator("svg")).toHaveCSS("transform", /matrix\(0, 1, -1, 0/);
+  await expect(z.locator("svg")).toHaveCSS("transform", "none");
+  const before = await z.boundingBox();
+  await z.click();
+  await expect.poll(() => z.boundingBox()).toEqual(before);
+  await z.click();
+  await expect.poll(() => z.boundingBox()).toEqual(before);
   await x.click({ force: true });
   await expect(page.locator("#scene-workspace-action-status")).toContainText("X軸回転は利用できません");
 });

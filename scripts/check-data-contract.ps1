@@ -21,6 +21,7 @@ $sceneWorkbenchDecisionPath = Join-Path $resolvedProject 'docs/decisions/0017-sc
 $sceneCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0018-scene-drag-classification-and-dialog-editors.md'
 $supportSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0019-support-surface-snap-and-conditional-support.md'
 $actionableOpeningDecisionPath = Join-Path $resolvedProject 'docs/decisions/0020-actionable-opening-diagnostics-and-drag-focus.md'
+$fixedRotationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0021-fixed-rotation-toolbar-and-axis-icons.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -63,6 +64,7 @@ foreach ($path in @(
     $sceneCompactDecisionPath,
     $supportSnapDecisionPath,
     $actionableOpeningDecisionPath,
+    $fixedRotationDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -190,6 +192,9 @@ foreach ($requiredText in @(
     'drag中の操作通知は固定高またはoverlay領域'
     '操作対象以外の積荷は面をほぼ透明な中立色、辺を灰色の点線'
     '寸法上通る場合は積荷ごとの理由を生成せず'
+    '同じviewport固定toolbarへ常時表示'
+    '一本の軸線へ矢印が回り込む同じSVG'
+    '回転前後でbutton位置を変えない'
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved scene-feedback contract text: $requiredText"
@@ -212,7 +217,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.16.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.17.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -277,7 +282,8 @@ if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
     -not $dataModel.Contains('decisions/0017-scene-workbench-rotation-and-compact-controls.md') -or
     -not $dataModel.Contains('decisions/0018-scene-drag-classification-and-dialog-editors.md') -or
     -not $dataModel.Contains('decisions/0019-support-surface-snap-and-conditional-support.md') -or
-    -not $dataModel.Contains('decisions/0020-actionable-opening-diagnostics-and-drag-focus.md')) {
+    -not $dataModel.Contains('decisions/0020-actionable-opening-diagnostics-and-drag-focus.md') -or
+    -not $dataModel.Contains('decisions/0021-fixed-rotation-toolbar-and-axis-icons.md')) {
     throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
 }
 
@@ -342,6 +348,23 @@ $actionableOpeningDecision = [IO.File]::ReadAllText($actionableOpeningDecisionPa
 if ($actionableOpeningDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0020 does not have Accepted status.'
 }
+
+$fixedRotationDecision = [IO.File]::ReadAllText($fixedRotationDecisionPath)
+if ($fixedRotationDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0021 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '同じviewport固定toolbar',
+    '一本の軸線へ矢印が回り込む同じSVG glyph',
+    'X軸glyphだけをZ軸glyphに対して90度回して',
+    '積荷未選択時も常時表示',
+    'Project、JSON、IndexedDB、Schema `0.1.0`',
+    '回転前後でbutton位置は変えない'
+)) {
+    if (-not $fixedRotationDecision.Contains($requiredText)) {
+        throw "ADR 0021 does not contain the approved fixed-rotation marker: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     '`opening-no-fitting-orientation`',
     '`opening-path-unverified` を生成・保存・Worker転送・表示しない',
@@ -396,7 +419,10 @@ foreach ($implementationMarker in @(
     @{ Name = 'viewport wheel policy'; Text = $threeViewport; Required = 'controls.enableZoom = false' },
     @{ Name = 'viewport dotted focus'; Text = $threeViewport; Required = 'new THREE.LineDashedMaterial' },
     @{ Name = 'viewport drag de-emphasis'; Text = $threeViewport; Required = 'visual.mesh.material.opacity = 0.08' },
+    @{ Name = 'viewport fixed rotation toolbar'; Text = $threeViewport; Required = 'className="viewport__rotation-controls"' },
+    @{ Name = 'viewport common axis rotation icon'; Text = $threeViewport; Required = 'M4 12a8 5 0 0 0 13.7 3.5' },
     @{ Name = 'scene browser drag focus'; Text = $sceneBrowserTest; Required = 'renders drag focus and restores normal cargo rendering after cancel' },
+    @{ Name = 'scene browser fixed rotation'; Text = $sceneBrowserTest; Required = 'keeps axis rotation controls fixed, always visible, and distinguishable by orientation' },
     @{ Name = 'scene browser drag-out'; Text = $sceneBrowserTest; Required = 'returns a fully dragged-out placement to staging as one undoable deletion' }
 )) {
     if (-not $implementationMarker.Text.Contains($implementationMarker.Required)) {
@@ -626,6 +652,7 @@ foreach ($requiredText in @(
     scene_compact_decision_0018_accepted = $true
     support_snap_decision_0019_accepted = $true
     actionable_opening_decision_0020_accepted = $true
+    fixed_rotation_decision_0021_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true

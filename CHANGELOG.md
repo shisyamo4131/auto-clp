@@ -4,6 +4,7 @@
 
 ### Added
 
+- Undo/Redo・拡大縮小と同じ固定toolbarへ常設するX/Z回転button、一本の軸線へ矢印が回り込む同一glyphの90度差、未選択・天地無用・busy時の理由付き無効状態、およびADR 0021。
 - drag中だけ操作対象以外の積荷をほぼ透明な中立面・灰色点線とし、支持候補を緑または黄の点線で示して終了時に通常表示へ戻す集中表示とADR 0020。
 - 床または支持可能な積荷上面へ3D drag中のZをsnapし、単一支持面内のX/Y制限、条件未確認preview、候補強調、一回のUndo/Redoを提供する支持面操作とADR 0019。
 - 共通ガバナンス1.4.0の容量経路に対応するプロジェクト調整runbook、exact-task session測定script、handoff index/record、ADR 0016。
@@ -68,6 +69,7 @@
 
 ### Changed
 
+- 仕様を0.17.0へ更新し、mesh追従回転controlとdistinct SVG pathを、連続回転で位置が動かない固定toolbarと同一glyphの90度差へ変更した。Schema 0.1.0と進捗98%は変更しない。
 - 仕様を0.16.0へ更新し、矩形開口の寸法不適合だけを積荷別理由として表示し、完全な搬入経路と安全を保証しない範囲は恒常的な注意へ集約した。Schema 0.1.0と進捗98%は変更しない。
 - 支持判定を、複数面の100%和集合から、単一上面のX/Y完全包含、複数支持・隙間・張り出し・支持可否混在の `support-conditions-unverified`、支持接触不成立の不適合へ変更。自動提案は床置きまたは単独支持だけを生成する。
 - 仕様を0.14.0へ更新し、fine-pointer床面dragを未配置・配置済み共通の `xy-contained` / `partial` / `outside` に分類した。partialは修正途中の不適合配置として保存し、outsideだけを非永続作業位置または一回の配置削除とする。全Project積荷の検索select、compact選択cardのCRUD入口、積荷定義・配置別modal editor、非cascade削除、distinct X/Z icon、固定高statusを導入した。Schema 0.1.0と進捗98%は変更しない。

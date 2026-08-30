@@ -835,6 +835,8 @@ export function SceneWorkspace({
               ? "積荷の移動を完了するとX軸回転できます。"
               : placementInteractionActive
               ? "配置の編集または削除確認を完了するとX軸回転できます。"
+              : selectedProjection === undefined
+              ? "積荷を選択するとX軸回転できます。"
               : xRotationAllowed
                 ? "X軸を中心に90°回転します。"
                 : "天地無用または許可する向きにより、X軸回転は利用できません。"
@@ -852,6 +854,8 @@ export function SceneWorkspace({
               ? "積荷の移動を完了するとZ軸回転できます。"
               : placementInteractionActive
               ? "配置の編集または削除確認を完了するとZ軸回転できます。"
+              : selectedProjection === undefined
+              ? "積荷を選択するとZ軸回転できます。"
               : zRotationAllowed
                 ? "Z軸を中心に床面上で90°回転します。"
                 : "許可する向きにより、Z軸回転は利用できません。"

@@ -1,6 +1,7 @@
 # 0018 3D drag三状態分類とdialog編集
 
 - Status: Accepted
+- Partial supersession: ADR 0021 replaces the distinct-SVG-path rotation icons with one axis-wrapped-arrow glyph shown at a 90-degree axis difference and fixes both controls in the viewport toolbar; all other decisions remain active.
 - Date: 2026-08-29
 - Related specification: `../specification.md` 0.14.0
 - Supersedes: ADR 0017の未配置partial rollbackと投影中積荷だけのpicker範囲

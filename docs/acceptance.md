@@ -21,7 +21,7 @@
 - キーボード操作と305、320、375 px幅で、主要操作、理由、確認、focusを失わない。
 - fine-pointer床面dragはno-opを先行し、両軸に正の共通長があるpartialを修正途中配置として保存し、面・辺・点接触を含むoutsideだけを荷室外作業状態にする。status出現でviewport位置を変えない。
 - 全積荷を検索・選択でき、他候補配置は所有候補へ切り替えてから扱う。積荷定義と配置は別dialog・別履歴で、配置取り外しと積荷削除をcascadeしない。
-- dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は形状とaccessible nameで区別でき、天地無用はXだけを無効にする。
+- dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は固定toolbar上の同一glyphを90度差とaccessible nameで区別でき、天地無用はXだけを無効にする。
 
 ## AC-01 Floor Layout and Manual Editing
 
@@ -100,6 +100,7 @@
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` が履歴、IndexedDB、固定JSON往復、WebGL非対応fallbackを分担して実行する。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
+- 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 
 ## Observation Record Template
 
