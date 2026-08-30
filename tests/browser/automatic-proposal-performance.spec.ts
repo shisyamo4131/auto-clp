@@ -378,7 +378,7 @@ test("records the AP-08 native Worker gate and cancellation evidence", async ({
     }
   });
   directPage.on("pageerror", (error) => directConsole.push(`pageerror: ${error.message}`));
-  await directPage.goto(`${baseUrl}/?forceWebgl2=unsupported`);
+  await directPage.goto(`${baseUrl}/`);
 
   const runtime = await directPage.evaluate(async () => {
     interface BatteryLike {
@@ -603,9 +603,9 @@ test("records the AP-08 native Worker gate and cancellation evidence", async ({
   });
   uiPage.on("pageerror", (error) => uiConsole.push(`pageerror: ${error.message}`));
   await installNativeProposalWorkerProbe(uiPage);
-  await uiPage.goto(`${baseUrl}/?forceWebgl2=unsupported`);
+  await uiPage.goto(`${baseUrl}/`);
   await expect(
-    uiPage.getByRole("heading", { name: "3D表示を利用できません" }),
+    uiPage.getByRole("heading", { name: "3D表示を利用できます" }),
   ).toBeVisible();
   await importProject(uiPage);
   const cancellation = (await uiPage.evaluate(() => {
@@ -703,7 +703,7 @@ test("records the AP-08 native Worker gate and cancellation evidence", async ({
       browserDeviceMemoryGiB: runtime.deviceMemoryGiB,
       viewport: { width: 1280, height: 720 },
       devicePixelRatio: runtime.devicePixelRatio,
-      webgl: { forced: "unsupported", nativeWebgl2: runtime.nativeWebgl2 },
+      webgl: { forced: "none", nativeWebgl2: runtime.nativeWebgl2 },
       power: runtime.battery,
     },
     fixture: {

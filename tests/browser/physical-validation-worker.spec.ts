@@ -152,7 +152,7 @@ test("masks old generations and ignores terminated workers and stale page reques
   page,
 }) => {
   await installControllableWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addContainer(page, "遅い候補A");
   await addContainer(page, "最新候補B");
 
@@ -220,7 +220,7 @@ test("terminates the completed last-candidate worker, clears old reasons, and ev
   page,
 }) => {
   await installControllableWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addContainer(page, "削除前候補");
 
   const panel = page.locator(".physical-validation");
@@ -319,7 +319,7 @@ test("surfaces worker-failed as a retryable transport error without synchronous 
       }
     };
   });
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "失敗時積荷");
   await addContainer(page, "失敗候補");
 
@@ -363,7 +363,7 @@ test("keeps all 1000-placement reasons in the real module Worker and yields the 
   page,
 }) => {
   test.setTimeout(120_000);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
 
   const measurement = await page.evaluate(async () => {
     type WorkerResponse = {

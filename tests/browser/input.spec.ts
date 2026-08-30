@@ -27,7 +27,7 @@ async function addContainer(page: Page, name: string) {
 }
 
 test("edits project settings transactionally and focuses invalid input", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await page.getByLabel("案件名").fill("更新案件");
   await page.getByLabel("X方向の隙間").fill("1.5");
   await page.getByRole("button", { name: "案件を保存" }).click();
@@ -39,7 +39,7 @@ test("edits project settings transactionally and focuses invalid input", async (
 });
 
 test("adds, edits, cancels, and explicitly deletes cargo through the compact card", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "合成積荷");
   const picker = page.getByLabel("操作する積荷");
   await picker.selectOption("cargo-1");
@@ -60,7 +60,7 @@ test("adds, edits, cancels, and explicitly deletes cargo through the compact car
 });
 
 test("separates placement removal from cargo deletion and restores fallback focus", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "非cascade積荷");
   await addContainer(page, "非cascade候補");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
@@ -86,15 +86,15 @@ test("separates placement removal from cargo deletion and restores fallback focu
   await expect(page.getByText("積荷 0件、候補 1件、配置 0件")).toBeVisible();
 });
 
-test("keeps cargo input available without WebGL and exposes permanent safety notices", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+test("keeps cargo input available with WebGL and exposes permanent safety notices", async ({ page }) => {
+  await page.goto("/");
   await addCargo(page, "非対応積荷");
-  await expect(page.getByRole("img", { name: /3Dプレビュー/ })).toHaveCount(0);
+  await expect(page.getByRole("img", { name: /3Dプレビュー/ })).toBeVisible();
   await expect(page.getByText("積載可能性や物理的安全性を保証しません", { exact: false })).toBeVisible();
 });
 
 test("uses 天地無用 as the only cargo orientation setting", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await fillCargo(page, "天地無用合成積荷");
   await expect(page.getByLabel(/天地無用/)).toBeChecked();
@@ -108,7 +108,7 @@ test("uses 天地無用 as the only cargo orientation setting", async ({ page })
 });
 
 test("container CRUD remains transactional", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addContainer(page, "合成候補");
   const list = page.getByRole("list", { name: "候補一覧" });
   await expect(list).toContainText("合成候補");
@@ -120,7 +120,7 @@ test("container CRUD remains transactional", async ({ page }) => {
 
 test("modal editors have no horizontal overflow at narrow widths", async ({ page }) => {
   await page.setViewportSize({ width: 305, height: 640 });
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await fillCargo(page, "C".repeat(120));
   for (const width of [305, 320, 375]) {

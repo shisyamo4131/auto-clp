@@ -267,18 +267,18 @@ function expectSameContainerFrame(
   expect(Math.abs(actual.height - expected.height)).toBeLessThanOrEqual(4);
 }
 
-test("renders the selected container and keeps the fallback controls without WebGL", async ({ page }) => {
+test("renders the selected container and keeps the viewport controls after reload", async ({ page }) => {
   await page.goto("/");
   await addContainer(page, "scene候補");
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
   await expect(page.getByRole("button", { name: "拡大" })).toBeVisible();
-  await page.goto("/?forceWebgl2=unsupported");
-  await expect(page.getByRole("img", { name: previewName })).toHaveCount(0);
+  await page.goto("/");
+  await expect(page.getByRole("img", { name: previewName })).toBeVisible();
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeVisible();
 });
 
 test("keeps all-cargo selection and oriented dimensions available with no candidate", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "候補なし積荷");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
   const card = page.locator(".scene-selection-card");
@@ -287,7 +287,7 @@ test("keeps all-cargo selection and oriented dimensions available with no candid
 });
 
 test("searches all Project cargoes and identifies unplaced, current, and other-container states", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "検索積荷A");
   await addCargo(page, "検索積荷B");
   await addContainer(page, "候補A");
@@ -303,7 +303,7 @@ test("searches all Project cargoes and identifies unplaced, current, and other-c
 });
 
 test("saves a partial coordinate as an invalid repair-in-progress placement", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "partial積荷");
   await addContainer(page, "partial候補");
   await place(page, "cargo-1", "-499", "0");
@@ -637,7 +637,7 @@ test("keeps touch selection form fallback and narrow modal layouts", async ({ pa
 });
 
 test("keeps the selection card compact as cargo count grows", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addContainer(page, "many候補");
   for (let index = 0; index < 6; index += 1) await addCargo(page, `many積荷${index}`);
   const card = page.locator(".scene-selection-card");

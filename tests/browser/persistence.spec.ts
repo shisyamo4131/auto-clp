@@ -182,7 +182,7 @@ async function addContainer(page: Page, name: string) {
 test("keeps the navigation drawer initially closed and restores focus while safely cancelling deletion", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const entry = page.getByRole("button", { name: "案件データを開く" });
   const drawer = page.getByRole("dialog", { name: "保存・再読込" });
   const undo = page.getByRole("button", { name: "元に戻す" });
@@ -233,7 +233,7 @@ test("keeps the navigation drawer initially closed and restores focus while safe
 test("announces persistence outside the drawer, refreshes repeated copy, and applies notification lifetimes", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await openPersistenceDrawer(page);
   const drawer = page.getByRole("dialog", { name: "保存・再読込" });
   const snackbar = page.locator(".project-persistence__snackbar");
@@ -292,7 +292,7 @@ test("keeps focus and global shortcuts inside the modal while a file preflight i
   page,
 }) => {
   await installControlledPreflightWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const projectName = page.getByLabel("案件名");
   const saveProject = page.getByRole("button", { name: "案件を保存" });
   const undo = page.getByRole("button", { name: "元に戻す" });
@@ -397,7 +397,7 @@ test("keeps focus and global shortcuts inside the modal while a file preflight i
 test("round-trips the single IndexedDB slot across reload, resets history, and deletes explicitly", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const persistenceStatus = page.locator(".project-persistence__status");
   const historySummary = page.locator(".project-history__summary");
   const canonical = page.getByTestId("canonical-project-settings");
@@ -496,7 +496,7 @@ test("normalizes a legacy one-orientation import so floor rotation remains avail
 test("downloads the fixed JSON contract and reimports it without history or derived state", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await page.getByLabel("案件名").fill("匿名download案件");
   await page.getByRole("button", { name: "案件を保存" }).click();
   await addCargo(page, "匿名download積荷");
@@ -549,7 +549,7 @@ test("downloads the fixed JSON contract and reimports it without history or deri
 test("rejects every JSON failure stage without reflecting filename or values", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await page.getByLabel("案件名").fill("保持する匿名案件");
   await page.getByRole("button", { name: "案件を保存" }).click();
   await openPersistenceDrawer(page);
@@ -620,7 +620,7 @@ test("reports File read failure without changing or reflecting the current Proje
       value: () => browserGlobal.Promise.reject(new Error("private-looking-read")),
     });
   });
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await page.getByLabel("案件名").fill("読取失敗でも保持");
   await page.getByRole("button", { name: "案件を保存" }).click();
   await openPersistenceDrawer(page);
@@ -639,7 +639,7 @@ test("rejects a delayed import and concurrent Project commit while preserving th
   page,
 }) => {
   await installControlledPreflightWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await openPersistenceDrawer(page);
 
   const canonical = page.getByTestId("canonical-project-settings");
@@ -683,7 +683,7 @@ test("blocks editor transitions while a delayed device replacement completes", a
   page,
 }) => {
   await installControlledPreflightWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const canonical = page.getByTestId("canonical-project-settings");
   const status = page.locator(".project-persistence__status");
 
@@ -718,7 +718,7 @@ test("blocks editor transitions while a delayed device replacement completes", a
 test("rejects a corrupt actual IndexedDB record without changing the current Project", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await page.getByLabel("案件名").fill("壊れた保存でも保持");
   await page.getByRole("button", { name: "案件を保存" }).click();
   await page.evaluate(async () => {
@@ -780,7 +780,7 @@ test("rejects a corrupt actual IndexedDB record without changing the current Pro
 test("locks persistence for drafts and delete confirmations and preserves keyboard access", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const save = page.getByRole("button", { name: "端末へ保存" });
   const load = page.getByRole("button", { name: "端末保存を読込" });
   const status = page.locator(".project-persistence__status");
@@ -836,7 +836,7 @@ test("keeps persistence controls within 305, 320, and 375 pixel viewports", asyn
 }) => {
   const widths = [305, 320, 375] as const;
   await page.setViewportSize({ width: widths[0], height: 900 });
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await expect(page.getByRole("heading", { name: "保存・再読込" })).toHaveCount(0);
   const drawer = page.getByRole("dialog", { name: "保存・再読込" });
   for (const width of widths) {
@@ -863,7 +863,7 @@ test("keeps persistence controls within 305, 320, and 375 pixel viewports", asyn
 test("runs a 1000-placement, 100-candidate preflight off the main thread", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const workerUrl = new URL(
     "/src/workers/project-import-preflight.worker.ts",
     runtimeBaseUrl,

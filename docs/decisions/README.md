@@ -33,5 +33,6 @@
 | [0020](0020-actionable-opening-diagnostics-and-drag-focus.md) | 実行可能な開口診断とdrag集中表示 | Accepted | 2026-08-30 |
 | [0021](0021-fixed-rotation-toolbar-and-axis-icons.md) | 固定回転toolbarと軸icon | Accepted | 2026-08-30 |
 | [0022](0022-upright-only-orientation-policy.md) | 天地無用だけを使う積荷向き方針 | Accepted | 2026-08-30 |
+| [0023](0023-webgl-required-operation-and-read-only-rescue.md) | WebGL 2必須運用と読み取り専用JSON救出 | Accepted | 2026-08-30 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

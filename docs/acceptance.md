@@ -17,7 +17,7 @@
 - 不適合、未確認、判定不能を区別し、不適合があっても独立した開口・耐荷重理由を失わない。
 - 「適合」または「未確認」を、実積載の安全保証として表示しない。
 - 成功した案件変更だけを1件の履歴操作とし、失敗とno-opは履歴を増やさない。
-- WebGL 2を利用できない場合も、フォーム、物理判定、履歴、保存・再読込を利用できる。
+- WebGL 2能力確認と初回描画に成功した場合だけ案件操作を利用できる。非対応・初期描画失敗・context lossでは通常作業面を表示せず、現在案件と端末保存を変更しない読み取り専用JSON救出だけを利用できる。
 - キーボード操作と305、320、375 px幅で、主要操作、理由、確認、focusを失わない。
 - fine-pointer床面dragはno-opを先行し、両軸に正の共通長があるpartialを修正途中配置として保存し、面・辺・点接触を含むoutsideだけを荷室外作業状態にする。status出現でviewport位置を変えない。
 - 全積荷を検索・選択でき、他候補配置は所有候補へ切り替えてから扱う。積荷定義と配置は別dialog・別履歴で、配置取り外しと積荷削除をcascadeしない。
@@ -75,30 +75,31 @@
 4. 搬入経路未確認は積荷ごとの理由として表示せず、完全な搬入経路を保証しない範囲は恒常的な注意で確認できる。
 5. 床以外の壁・天井境界違反は従来どおり `outside-container` として区別する。
 
-## AC-04 Recovery, Portability, and No-WebGL Fallback
+## AC-04 Recovery, Portability, and Required-WebGL Failure Gate
 
 ### Steps and Expected Results
 
 1. AC-02の案件で上段Xを501 mmへ変更し、取り消し、やり直し、取り消しを行う。最終案件はX=500 mmとなる。
 2. 「端末へ保存」後に案件を変更し、「端末保存を読込」する。保存時の正規案件を復元し、履歴、未保存入力、選択、camera、旧判定結果をリセットして再判定する。
 3. `auto-clp-project-0.1.0.json` を書き出し、案件を変更してから再読込する。Schema `0.1.0` の正規案件だけを復元し、履歴、camera、判定結果をファイルへ含めない。
-4. WebGL 2非対応状態でも同じ案件を読み込み、フォームによるZ・向き・取り外し、物理判定、履歴、端末保存、JSON入出力を利用できる。canvasは表示しない。
+4. WebGL 2非対応状態では、案件編集、配置、物理判定、自動提案、履歴、端末保存・読込・削除、JSON読込を利用できず、通常作業面とcanvasを表示しない。現在メモリ内案件は `auto-clp-project-0.1.0.json`、IndexedDB端末保存は `auto-clp-device-rescue-0.1.0.json` へ読み取り専用で救出でき、救出操作は案件・履歴・保存内容を変更しない。
+5. 初期Three.js描画失敗と描画後のWebGLコンテキスト喪失でも同じ全面停止へ移行し、現在案件を保持する。WebGL 2が回復した状態で再読込した場合だけ通常操作へ戻る。
 
 ## Evidence and Completion
 
-- 自動証拠: domainと表示の単体試験、Worker経由のブラウザ試験、履歴、IndexedDB、JSON往復、WebGL非対応回帰を個別の終了コードで記録する。
+- 自動証拠: domainと表示の単体試験、Worker経由のブラウザ試験、履歴、IndexedDB、JSON往復、WebGL必須能力ゲートと読み取り専用救出回帰を個別の終了コードで記録する。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
-- canvas追加操作の判断: AC-01とAC-04で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。
+- canvas追加操作の判断: AC-01で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。
 - 現在のUI-assisted観察: Codex UIテスターによる[部分観察](evidence/phase1-development-ui-trial-8c8ece2.md)では、AC-01〜03、通常経路のJSON再読込、WebGL非対応fallbackでのZ編集・物理判定・履歴・端末保存、305 / 320 / 375 px、主要focus、console 0件を画面操作で確認し、向き・削除・JSON・自動提案controlは有効状態だけを確認した。Z・向き・取り外しはフォームで発見できたためcanvas側追加操作の根拠にはしないが、exact floor dragは3回の誤座標commitを要し、狭幅時の向き補足文とともに改善候補となった。WebGL非対応時の向き変更・取り外し・JSON往復、自然なTab順と確認後focus、人間による安全表示理解は未観察で、人間試用または実務受入の証拠ではない。
-- 現在の人間観察: 人間のプロジェクト評価者による[案内付き部分評価と再試用](evidence/phase1-human-ui-trial-4e6c680.md)では、匿名派生ケースの3D床面移動、正確な座標修正、向き、配置削除・Undo、完全支持・1 mm支持不足、床突き抜け、端末保存・読込、JSON往復に加え、仕様0.12.0版のwheel page scroll、camera button、完全drag-out、Undo/Redo、不適合表示をChromeで確認した。改善後の再試用では、仕様0.18.1の固定X/Z回転button、天地無用だけの向き設定、使用可否の枠表示、端末再読込、F回転時のHを含む他積荷の位置維持を期待どおりと判定した。さらに `HUT-01` のA/B派生fixtureで、床貫通1件だけの表示、Z=0修正後の単独支持と構造・安定性未確認、Undo/Redo往復をすべて期待どおりと確認した。正式fixture、狭幅・Tab・fallback、評価者区分は未確認のため、実務利用者受入ではない。
+- 現在の人間観察: 人間のプロジェクト評価者による[案内付き部分評価と再試用](evidence/phase1-human-ui-trial-4e6c680.md)では、匿名派生ケースの3D床面移動、正確な座標修正、向き、配置削除・Undo、完全支持・1 mm支持不足、床突き抜け、端末保存・読込、JSON往復に加え、仕様0.12.0版のwheel page scroll、camera button、完全drag-out、Undo/Redo、不適合表示をChromeで確認した。改善後の再試用では、仕様0.18.1の固定X/Z回転button、天地無用だけの向き設定、使用可否の枠表示、端末再読込、F回転時のHを含む他積荷の位置維持を期待どおりと判定した。さらに `HUT-01` のA/B派生fixtureで、床貫通1件だけの表示、Z=0修正後の単独支持と構造・安定性未確認、Undo/Redo往復をすべて期待どおりと確認した。狭幅・Tab・focusは期待どおりと確認した。WebGL fallback試用は、評価者が3Dなしの操作を不適切と判断して中止し、仕様1.0.0の必須ゲートへ置換した。新しい阻止・救出画面の人間確認、正式fixture、評価者区分は未確認のため、実務利用者受入ではない。
 
 ### Current Automated Mapping
 
-- AC-01: `tests/browser/acceptance.spec.ts` が正確な合成データでフォームによる向き変更、確認付き取り外し、undo、未確認理由、WebGL非対応subsetを実行する。WebGL有効時の選択・床面dragは `tests/browser/scene.spec.ts` の独立回帰で覆う。
+- AC-01: `tests/browser/acceptance.spec.ts` が正確な合成データでフォームによる向き変更、確認付き取り外し、undo、未確認理由を実行する。WebGL有効時の選択・床面dragは `tests/browser/scene.spec.ts` の独立回帰で覆う。
 - AC-02: `tests/browser/acceptance.spec.ts` が正確な合成データで単独支持、Xを1 mmずらした条件未確認の張り出し、undo復元を実行する。`tests/browser/scene.spec.ts` が支持面への実drag snapと一回のUndo/Redoを実行する。
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
-- AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` が履歴、IndexedDB、固定JSON往復、WebGL非対応fallbackを分担して実行する。
+- AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` がWebGL利用可能時の履歴、IndexedDB、固定JSON往復を実行し、`tests/browser/capability.spec.ts` が非対応・初期描画失敗・context lossの全面停止と2種類の読み取り専用救出を実行する。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 - 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。
@@ -127,7 +128,7 @@
 - AP-05 No complete plan: 隙間0、積荷 `101×100×100 mm`、1,000 g、`LWH` のみと、各 `100×100×100 mm`、開口 `100×100 mm`、耐荷重1,000 gの不可能候補2個を使う。向き事前filterでattempt 0、全候補探索済み、`no-complete-plan`、cutoffなし、適用不可、実積載不能の非証明copyを期待する。
 - AP-06 Preview and apply: 探索、preview、取消、失敗、staleでは現在Projectと履歴を同一参照で保持し、確認付き適用だけが配置を一括置換する。Undo/Redoで探索前後を正確に往復する。
 - AP-07 Determinism: 同じ正規案件、アルゴリズム版、探索上限から、候補・積荷配列順や表示名に依存しない同じ案と理由順を返す。
-- AP-08 Worker and performance: 隙間0、`200×200×200 mm`、1,000 g、`LWH` の積荷20個と、候補 `1,000×800×1,000 mm`、開口 `800×1,000 mm`、十分な耐荷重を代表fixtureとする。記録環境でcold 1回とwarm 3回を各5秒以内、取消要求からWorker終了・idle観測まで250 ms以内とする。main timer/rAF、WebGL非対応、キーボード、305/320/375 pxを別行で検証する。別の純粋候補点fixtureでは1,000配置相当から各軸を重複排除・昇順化し、Z→X→Yの期待順で2,048点以下だけを生成して停止し、直積全体を中間配列へ展開しないことを検証する。
+- AP-08 Worker and performance: 隙間0、`200×200×200 mm`、1,000 g、`LWH` の積荷20個と、候補 `1,000×800×1,000 mm`、開口 `800×1,000 mm`、十分な耐荷重を代表fixtureとする。記録環境でWebGL 2利用可能状態のcold 1回とwarm 3回を各5秒以内、取消要求からWorker終了・idle観測まで250 ms以内とする。main timer/rAF、キーボード、305/320/375 pxを別行で検証する。別の純粋候補点fixtureでは1,000配置相当から各軸を重複排除・昇順化し、Z→X→Yの期待順で2,048点以下だけを生成して停止し、直積全体を中間配列へ展開しないことを検証する。
 
 空入力fixtureは、積荷0・候補ありと両方0を `no-cargo`、積荷あり・候補0を `no-candidates` とし、attempt 0、previewなし、適用不可、履歴変更なしを期待する。
 
@@ -135,7 +136,7 @@
 
 - AP-01、AP-02、AP-03、AP-04、AP-05、AP-07: domain、Worker protocol/client、session/viewの単体試験が目的順位、完全案、未確認理由、cutoff、完全案なし、決定性と入力順非依存を検証する。
 - AP-06: `src/application/automatic-proposal-apply.test.ts` と `tests/browser/automatic-proposal.spec.ts` が、実Workerの完全案、未適用表示、Project・履歴の非変更、適用直前の再検証、常時確認、配置だけの一括置換、同一案no-op、一回のUndo/Redo、通常編集・未保存入力・保存・JSON置換によるstale、遅延結果破棄を検証する。
-- AP-08: `tests/browser/automatic-proposal-performance.spec.ts` が、production module Workerを使う20積荷fixtureのcold 1回・warm 3回、各210 attempts、同一result hash、main timer/rAF進行、別fresh UI pageでのnative `terminate()` と取消表示、250 ms late-response mask、WebGL非対応、consoleを検証する。最初の成功記録は [AP-08技術証拠](evidence/automatic-proposal-ap08-1226b082.md) に保存する。既存browser試験のcontrolled Worker取消、keyboard、305/320/375 px回帰は独立して維持する。
+- AP-08: `tests/browser/automatic-proposal-performance.spec.ts` が、WebGL 2利用可能状態でproduction module Workerを使う20積荷fixtureのcold 1回・warm 3回、各210 attempts、同一result hash、main timer/rAF進行、別fresh UI pageでのnative `terminate()` と取消表示、250 ms late-response mask、consoleを検証する。最初の成功記録は [AP-08技術証拠](evidence/automatic-proposal-ap08-1226b082.md) に保存する。既存browser試験のcontrolled Worker取消、keyboard、305/320/375 px回帰は独立して維持する。
 - 空入力: 同browser試験が実Workerの `no-cargo` と `no-candidates`、attempt 0相当の固定表示、Project・履歴の非変更を検証する。
 
 AP-04の上限試験は、`1..N` の順序付きattempt記述子を生成して指定ordinalだけを成功させられる純粋なtest infrastructureを使う。これはProjectの設定や利用者入力へ公開しない。AP-08の記録にはcommit SHA、algorithm・Schema版、browser/Playwright/OS、CPU、logical processor数、RAM、電源状態、cold/warmと反復番号、viewport、WebGL状態、積荷・候補数、選択候補、候補別・要求attempt数、結果・cutoff源、配置・不適合・未確認件数、結果hash、開始・完了・経過、取消・Worker終了・取消遅延、timer/rAF回数と最大遅延、console warning/error、合否、備考を含める。記録環境以外の性能、headed実行、最低GPU、実務受入は未検証である。

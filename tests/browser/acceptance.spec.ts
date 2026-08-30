@@ -82,13 +82,13 @@ async function setClearances(page: Page, valueMm: string) {
   await page.getByRole("button", { name: "案件を保存" }).click();
 }
 
-test("executes the AC-01 form subset for orientation, removal, undo, and no-WebGL fallback", async ({
+test("executes the AC-01 form subset for orientation, removal, and undo", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await expect(page.getByRole("status")).toHaveAttribute(
     "data-capability-state",
-    "unsupported",
+    "supported",
   );
   await setClearances(page, "100");
   await addCargo(page, "合成積荷A", {
@@ -130,13 +130,13 @@ test("executes the AC-01 form subset for orientation, removal, undo, and no-WebG
   await expect(card.getByRole("button", { name: "座標を入力して配置" })).toBeVisible();
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(card).toContainText("1500 mm");
-  await expect(page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" })).toHaveCount(0);
+  await expect(page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" })).toBeVisible();
 });
 
 test("reports a 1 mm overhang as support-conditions-unverified and undo restores exact single support", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "合成支持台", {
     lengthMm: "1000",
     widthMm: "800",
@@ -193,7 +193,7 @@ test("reports a 1 mm overhang as support-conditions-unverified and undo restores
 test("orders floor penetration before independent opening and payload failures", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "合成不適合荷", {
     lengthMm: "1000",
     widthMm: "1800",
@@ -239,7 +239,7 @@ test("orders floor penetration before independent opening and payload failures",
 test("suppresses the human-trial floor-derived support message through the Worker", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "テスト積荷A", {
     lengthMm: "1000",
     widthMm: "800",

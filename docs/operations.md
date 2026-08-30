@@ -7,7 +7,7 @@
 - Implemented rotation-toolbar refinement: X/Z回転はUndo/Redo・拡大縮小と同じviewport固定toolbarへ常設する。一本の軸線へ矢印が回り込む同一SVGをXだけ90度回して区別し、未選択・天地無用のX軸・busyではfocus可能な理由付き `aria-disabled` とする。Z軸床面回転は常に許可し、使用可は拡大・縮小と同じ青緑の強調枠、使用不可は低彩度の枠・iconで区別する。紫色の塗り分けは使わず、回転前後でbutton位置は変えない。
 - Implemented foundation: ADR 0004に基づく、一候補へ全積荷を配置する純粋な決定的DFS、目的関数順位、候補点・attempt上限、cutoff/no-complete-plan、未確認理由保持。
 - Implemented transport: 正本Schema・意味検証後だけ探索するone-shot module Worker、固定code、厳格な応答検証、同期fallbackなしのclient、即時terminate取消と遅延・二重応答mask、Appからの実Worker接続。
-- Implemented orchestration, preview, and apply: React非依存の探索session、Project参照・interaction generationのstale判定、取消・retry・遅延結果mask、React hook/panel、Appのbusy・generation開始gate、source相関付き固定copy、25件pageの非永続preview DOM、Schema・意味・物理再検証付きの確認、一括適用、一回のUndo/Redo。WebGL非対応時も利用できる。
+- Implemented orchestration, preview, and apply: React非依存の探索session、Project参照・interaction generationのstale判定、取消・retry・遅延結果mask、React hook/panel、Appのbusy・generation開始gate、source相関付き固定copy、25件pageの非永続preview DOM、Schema・意味・物理再検証付きの確認、一括適用、一回のUndo/Redo。Auto CLPの操作はWebGL 2能力確認と初回描画成功後だけ利用できる。
 - Verified technical evidence: AP-08代表規模は、Windows/headless Chromiumの記録環境で実Workerのcold 1回・warm 3回、決定性、main timer/rAF進行、native取消を初期性能gate内で検証した。記録は `evidence/automatic-proposal-ap08-1226b082.md`。一般端末SLA、最低GPU、実務受入、安全保証ではない。
 - Unavailable: 端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上の自由な連続Z移動・取り外し、touch drag、複数候補のtab切替とside-relative作業面、積荷画像、デプロイ、クラウド保存、外部API、実運用サポート。
 
@@ -29,7 +29,7 @@ Phase 1は、完全な搬入経路、積荷別上載荷重、重心、軸重、�
 
 Z軸回転は高さ軸を保つ相手を使い、積荷選択中かつbusyでなければ常に有効とする。X軸回転はY/Z割当を交換し、天地無用OFFだけ有効とする。積荷editorは天地無用だけを表示し、ONを `LWH` / `WLH`、OFFを全6向きへ写像する。旧保存の部分集合は読込preflight後に同じ2状態へ正規化する。面の表裏は識別しない。配置済み回転は最小X/Y/Z角を保持した一回の配置更新、荷室外回転は回転後も荷室床面との正面積重なりが0の場合だけsession変更とする。重なる回転は直前poseを保持して拒否し、積荷編集で既存poseが重なる場合は新寸法の決定的外側gridへ戻す。cameraのfarと最大移動距離は全投影範囲への到達余地を保ち、同一候補のProject更新では現在cameraと注視点を復元する。touch/coarse pointerは積荷選択だけを行い、正確な配置・移動・向きにはキーボード操作可能なフォームを使う。canvas上のZ移動は未実装である。
 
-案件全体のUndo/Redoはviewport内で `＋` / `－` と同じ外観の単一操作UIとし、buttonと既存shortcutを同じ履歴handlerへ接続する。実行前後のpage scroll位置を復元し、WebGL 2非対応時はfallback領域へ同じ一組だけを置く。選択cardは積荷名を見出しとし、寸法prefixを付けず、配置済みなら向き適用後寸法とcompactなX/Y/Zを表示する。積荷selectは全Project積荷を検索し、現在候補、未配置、他候補を示す。他候補の配置を扱う前に所有候補へ明示切替する。積荷定義と配置は別modal editorで編集し、focus trap、背景inert、dirty破棄確認、内部scroll、狭幅、preventScroll focus復帰を維持する。dialog中は履歴、3D操作、候補切替、永続化、自動提案をbusyとして拒否する。配置取り外しと積荷削除は別確認・別履歴でcascadeしない。物理panelは維持する。
+案件全体のUndo/Redoはviewport内で `＋` / `－` と同じ外観の単一操作UIとし、buttonと既存shortcutを同じ履歴handlerへ接続する。実行前後のpage scroll位置を復元する。WebGL 2非対応または描画障害時は履歴を含む案件操作を停止する。選択cardは積荷名を見出しとし、寸法prefixを付けず、配置済みなら向き適用後寸法とcompactなX/Y/Zを表示する。積荷selectは全Project積荷を検索し、現在候補、未配置、他候補を示す。他候補の配置を扱う前に所有候補へ明示切替する。積荷定義と配置は別modal editorで編集し、focus trap、背景inert、dirty破棄確認、内部scroll、狭幅、preventScroll focus復帰を維持する。dialog中は履歴、3D操作、候補切替、永続化、自動提案をbusyとして拒否する。配置取り外しと積荷削除は別確認・別履歴でcascadeしない。物理panelは維持する。
 
 案件履歴は、案件設定、積荷、候補、配置の成功した追加・更新・削除と、1回のcanvas dragを一つの操作として最大100件保持する。「元に戻す」「やり直す」ボタンに加え、Windows/Linuxでは `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y`、macOSでは `Command+Z` / `Command+Shift+Z` を利用できる。未保存入力、削除確認、drag中は履歴操作を無効にし、入力欄、選択欄、編集可能領域、独自入力コンポーネントのローカル履歴を優先する。失敗とno-opは履歴を変えず、undo後の新しい確定操作はredoを破棄する。履歴はメモリ内だけで、再読込、JSON書出し、端末保存には含めない。
 
@@ -41,7 +41,7 @@ Phase 1の技術受入には `acceptance.md` の匿名合成データだけを�
 
 AP-08の性能再現は `node scripts/run-browser-tests.mjs automatic-proposal-performance.spec.ts` を使う。匿名の固定20積荷fixture、production module Worker、cold 1回・warm 3回、決定的result hash、browser clock、main timer/rAF、別fresh UI pageのnative取消、consoleと実行環境を一つのJSONへ記録する。各探索5秒と取消250 msは記録環境の受入gateであり、一般端末の保証値へ転用しない。
 
-Node.js `22.13.0`以上`23`未満とCorepackを使用する。パッケージマネージャーはpnpm `11.19.0`で、依存バージョンは `package.json` と `pnpm-lock.yaml` に固定する。案件構造検証はAjv `8.20.0`のDraft 2020-12実装を使う。対象ブラウザと最低GPU性能は未決定であるため、現在は実行時のWebGL 2能力確認を利用可能性のゲートとし、正式な対応保証とはしない。
+Node.js `22.13.0`以上`23`未満とCorepackを使用する。パッケージマネージャーはpnpm `11.19.0`で、依存バージョンは `package.json` と `pnpm-lock.yaml` に固定する。案件構造検証はAjv `8.20.0`のDraft 2020-12実装を使う。対象ブラウザと最低GPU性能は未決定であるため、実行時のWebGL 2能力確認と初回Three.js描画成功を必須利用ゲートとし、正式な対応保証とはしない。
 
 依存関係を初回取得するには、ネットワーク通信を別途承認した環境で次を実行する。通常のアプリ実行は外部通信を必要としない。
 
@@ -186,7 +186,7 @@ corepack pnpm run build
 - JSON・端末読込失敗: サイズ、読取、構文、版、スキーマ、意味、全候補Worker判定、非同期競合のどの失敗でも現在案件、履歴、未保存入力を保持する。固定codeから理由を表示し、ファイル名、入力値、全文をエラーやログへ出さない。
 - 端末保存失敗: 未対応、open、blocked、read、write、delete、abort、容量不足相当を成功と表示しない。save/delete/exportは副作用完了後にstale失敗へ置き換えず、永続化中のProject commitを中央で拒否する。
 - UI入力失敗: 入力途中の文字列と確定済み案件を分離し、固定code/pathから修正可能な理由を表示する。失敗時は確定済み案件を同一参照で保持し、入力値をエラーやログへ反射しない。
-- 3D非対応・描画障害: WebGL 2能力確認の非対応表示を確認する。対応判定後のThree.js初期化失敗、描画例外、WebGLコンテキスト喪失も別の失敗状態として表示し、空画面や停止画面を成功扱いしない。
+- 3D非対応・描画障害: WebGL 2非対応、Three.js初期化失敗、描画例外、WebGLコンテキスト喪失ではAuto CLPの案件編集・配置・判定・自動提案・履歴・保存操作を全面停止する。現在メモリ内案件とIndexedDB端末保存は変更せず、固定名JSONへの読み取り専用救出と再読込案内だけを表示する。救出は読込・編集・削除・上書き保存を行わず、WebGL 2が回復した再読込後だけ通常操作を再開する。
 - コールバック・タスク状態取得失敗: 同じ割当を重複送信せず、安全な復旧を1回試み、再開条件をユーザーへ報告する。
 
 ## Backup and Retention

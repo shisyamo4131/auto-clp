@@ -23,6 +23,7 @@ $supportSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0019-suppo
 $actionableOpeningDecisionPath = Join-Path $resolvedProject 'docs/decisions/0020-actionable-opening-diagnostics-and-drag-focus.md'
 $fixedRotationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0021-fixed-rotation-toolbar-and-axis-icons.md'
 $orientationPolicyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0022-upright-only-orientation-policy.md'
+$webglRequiredDecisionPath = Join-Path $resolvedProject 'docs/decisions/0023-webgl-required-operation-and-read-only-rescue.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -73,6 +74,7 @@ foreach ($path in @(
     $actionableOpeningDecisionPath,
     $fixedRotationDecisionPath,
     $orientationPolicyDecisionPath,
+    $webglRequiredDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -234,7 +236,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.18.1' 'Approved specification version'
+Assert-Equal $specificationVersion '1.0.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -385,6 +387,21 @@ foreach ($requiredText in @(
 $orientationPolicyDecision = [IO.File]::ReadAllText($orientationPolicyDecisionPath)
 if ($orientationPolicyDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0022 does not have Accepted status.'
+}
+$webglRequiredDecision = [IO.File]::ReadAllText($webglRequiredDecisionPath)
+if ($webglRequiredDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0023 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    'WebGL 2能力確認と初回Three.js描画成功',
+    '案件編集、3D配置、物理判定、自動提案、履歴',
+    'auto-clp-device-rescue-0.1.0.json',
+    '読み取り専用救出',
+    'Project Schema `0.1.0`'
+)) {
+    if (-not $webglRequiredDecision.Contains($requiredText)) {
+        throw "ADR 0023 does not contain the approved WebGL-required marker: $requiredText"
+    }
 }
 foreach ($requiredText in @(
     '向き設定は「天地無用」checkboxだけ',
@@ -565,7 +582,7 @@ foreach ($requiredText in @(
     'AC-01 Floor Layout and Manual Editing',
     'AC-02 Exact Single Support and 1 mm Conditional Overhang',
     'AC-03 Independent Floor Penetration Diagnostics',
-    'AC-04 Recovery, Portability, and No-WebGL Fallback',
+    'AC-04 Recovery, Portability, and Required-WebGL Failure Gate',
     'AP-01 Candidate objective',
     'small=200×100×100',
     '10,000回目で自然終了',
@@ -613,7 +630,7 @@ foreach ($contract in @(
     @{ Name = 'React hook'; Text = $automaticProposalHook; Required = @('useSyncExternalStore', 'visibleSnapshot', 'interactionGeneration') },
     @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '提案を適用', '配置が変わる場合は、1回の取り消しで元へ戻せます。') },
     @{ Name = 'App integration'; Text = $app; Required = @('handleAutomaticProposalApply', 'automatic-proposal.apply', 'persistenceOperationRef.current') },
-    @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '自動提案の一括適用', 'forceWebgl2=unsupported') }
+    @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '自動提案の一括適用', '3D表示を利用できます') }
     @{ Name = 'AP-08 performance test'; Text = $automaticProposalPerformanceTest; Required = @('automatic-proposal.worker.ts', 'cold-1', 'warm-${iteration - 1}', 'expectedAttemptCount = 210', 'AP08_EVIDENCE_JSON=', 'terminateLatencyMs', '/^[0-9a-f]{40}$/') }
 )) {
     foreach ($requiredText in $contract.Required) {
@@ -700,6 +717,7 @@ foreach ($requiredText in @(
     actionable_opening_decision_0020_accepted = $true
     fixed_rotation_decision_0021_accepted = $true
     orientation_policy_decision_0022_accepted = $true
+    webgl_required_decision_0023_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true

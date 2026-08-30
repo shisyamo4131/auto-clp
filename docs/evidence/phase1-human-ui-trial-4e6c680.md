@@ -256,9 +256,22 @@ AをZ=0へ修正すると床貫通が消え、A上面Z=600とB下面Z=600の単�
 
 この合格は `HUT-01` の派生警告抑制と、根本原因修正後に実際の支持未確認を復元する人間再試験である。正式な実務利用者受入、実積載の安全性、狭幅・キーボード・WebGL非対応の残項目を完了したことは意味せず、進捗は98%を維持する。
 
+### Narrow-width, Focus, and WebGL Requirement Review
+
+- Date: 2026-08-30
+- Evaluator: 同じ人間のプロジェクト評価者
+- Environment: ローカルin-app Browser、305 / 320 / 375 px exact iframe、匿名合成データ
+- Result: 狭幅・Tab・focusはpass、旧WebGL fallback試用は要件不適合として中止
+
+評価者は305 / 320 / 375 pxの主要操作、補足文、dialog内部scrollをすべて期待どおりと確認した。305 pxで自然なTab順、dialog focus trap、dirty破棄確認、openerへのfocus復帰、page scroll位置維持も期待どおりと確認した。この確認用wrapperはリポジトリ外の一時ローカル成果物であり、製品コードまたは正式fixtureではない。
+
+続けてWebGL非対応fallbackの試用を開始したが、評価者は「3D表示が利用できない環境であればAuto CLP自体を使えない仕様とすべきであり、人は視覚的に把握できない空間情報をコントロールできない」と判断した。このため従来fallbackの合否判定は行わず、試験前提を破棄した。現在規則、提案理由、影響、非互換性、既存JSON・端末保存の互換、rollback、必要試験を確認した後、WebGL 2必須運用と障害時の読み取り専用JSON救出を仕様1.0.0・ADR 0023として承認した。
+
+この記録は新しい阻止・救出画面の人間試用合格を意味しない。実装後に、非対応・初期描画失敗・context lossの全面停止、通常操作が露出しないこと、現在案件・端末保存の固定名救出、救出後もProjectと保存内容が変わらないこと、再読込による復旧を別途確認する。
+
 ## Remaining Follow-up
 
-- 正式fixture、評価者区分、305 / 320 / 375 px、自然なTab順、dialog終了後focus、WebGL非対応fallbackの人間観察。
+- 正式fixture、評価者区分、WebGL必須阻止・読み取り専用救出画面の人間観察。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 
 ## Repository and Local Side Effects

@@ -65,13 +65,13 @@ test("creates, validates, edits, switches, and removes a placement through compa
   await expect(card).toContainText("荷室外（未配置）");
 });
 
-test("keeps placement CRUD available without WebGL", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+test("keeps placement CRUD available with the required 3D view", async ({ page }) => {
+  await page.goto("/");
   await addCargo(page, "非対応時配置積荷");
   await addContainer(page, "非対応時配置候補");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
   const card = page.locator(".scene-selection-card");
-  await expect(page.getByRole("img")).toHaveCount(0);
+  await expect(page.getByRole("img", { name: /3Dプレビュー/ })).toBeVisible();
   await card.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByLabel("X最小角").fill("-2");
   await page.getByRole("button", { name: "配置を保存" }).click();
@@ -82,7 +82,7 @@ test("keeps placement CRUD available without WebGL", async ({ page }) => {
 });
 
 test("confirms dirty close and restores the opener without scrolling", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "focus配置積荷");
   await addContainer(page, "focus配置候補");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
@@ -103,7 +103,7 @@ test("confirms dirty close and restores the opener without scrolling", async ({ 
 });
 
 test("traps focus in the shared placement modal", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "focus-trap積荷");
   await addContainer(page, "focus-trap候補");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
@@ -122,7 +122,7 @@ test("traps focus in the shared placement modal", async ({ page }) => {
 
 test("has no dialog overflow at 305, 320, and 375 pixels", async ({ page }) => {
   await page.setViewportSize({ width: 305, height: 640 });
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "狭幅配置積荷");
   await addContainer(page, "狭幅配置候補");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");

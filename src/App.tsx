@@ -19,6 +19,7 @@ import {
 import type { Project } from "./domain/model";
 import {
   downloadProjectJson,
+  PROJECT_DEVICE_RESCUE_FILENAME,
   projectJsonSourceFromFile,
 } from "./persistence/project-file";
 import { preflightImportedProject } from "./persistence/project-import-preflight-client";
@@ -57,6 +58,10 @@ type PersistenceOperationOutcome =
   | { readonly ok: true; readonly replacement?: Project }
   | { readonly ok: false; readonly code: ProjectPersistenceFailureCode };
 
+type RescueResult =
+  | { readonly ok: true; readonly message: string }
+  | { readonly ok: false; readonly message: string };
+
 const persistenceTextEncoder = new TextEncoder();
 
 function storeFailure(code: ProjectStoreFailureCode): ProjectPersistenceActionResult {
@@ -90,20 +95,22 @@ const stateCopy: Record<AppState, { readonly title: string; readonly detail: str
   },
   supported: {
     title: "3D表示を利用できます",
-    detail: "選択した候補と登録済み配置を表示します。案件入力は3D表示とは独立して利用できます。",
+    detail: "3D表示の初回描画を確認しました。案件入力、配置、判定、保存、自動提案を利用できます。",
   },
   unsupported: {
-    title: "3D表示を利用できません",
-    detail: "WebGL 2対応の現行デスクトップブラウザとGPU設定を確認してください。3D表示を利用できない場合も、保存済み配置の物理判定は利用できます。",
+    title: "Auto CLPを利用できません",
+    detail: "WebGL 2を利用できないため、案件の編集・配置・判定・自動提案・保存操作を停止しました。対応ブラウザとGPU設定を確認して再読み込みしてください。",
   },
   "renderer-error": {
-    title: "3D表示で問題が発生しました",
-    detail: "初期化または描画の障害を成功扱いせず停止しました。ブラウザのGPU設定を確認してから再読み込みしてください。",
+    title: "Auto CLPの操作を停止しました",
+    detail: "3D表示の初期化・描画、またはWebGLコンテキストで障害が発生しました。案件操作を再開せず、ブラウザのGPU設定を確認して再読み込みしてください。",
   },
 };
 
 export function App({ capabilityCheck, forceInitialRenderError = false }: AppProps) {
   const [state, setState] = useState<AppState>("checking");
+  const stateRef = useRef<AppState>("checking");
+  const operationalRef = useRef(false);
   const [history, setHistory] = useState(() =>
     createProjectHistory(createInitialProject()),
   );
@@ -145,7 +152,11 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         return;
       }
       const capability = capabilityCheck();
-      setState(capability.status === "supported" ? "renderer-checking" : "unsupported");
+      operationalRef.current = false;
+      const nextState =
+        capability.status === "supported" ? "renderer-checking" : "unsupported";
+      stateRef.current = nextState;
+      setState(nextState);
     });
 
     return () => {
@@ -154,11 +165,17 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   }, [capabilityCheck]);
 
   const handleRendererReady = useCallback(() => {
-    setState((current) => (current === "renderer-checking" ? "supported" : current));
+    if (stateRef.current !== "renderer-checking") return;
+    operationalRef.current = true;
+    stateRef.current = "supported";
+    setState("supported");
   }, []);
 
   const handleRendererError = useCallback(() => {
-    setState((current) => (current === "unsupported" ? current : "renderer-error"));
+    if (stateRef.current === "unsupported") return;
+    operationalRef.current = false;
+    stateRef.current = "renderer-error";
+    setState("renderer-error");
   }, []);
 
   const handleBusyChange = useCallback(
@@ -227,7 +244,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
 
   const handleProjectCommit = useCallback(
     (commit: ProjectHistoryCommit): ProjectHistoryTransition => {
-      if (persistenceOperationRef.current) {
+      if (!operationalRef.current || persistenceOperationRef.current) {
         bumpProjectInteractionGeneration();
         return {
           ok: false,
@@ -249,7 +266,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
 
   const navigateHistory = useCallback(
     (direction: "undo" | "redo"): boolean => {
-      if (busyRef.current) {
+      if (!operationalRef.current || busyRef.current) {
         return false;
       }
       const transition =
@@ -277,6 +294,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     ): Promise<ProjectPersistenceActionResult> => {
       const sources = busySourcesRef.current;
       if (
+        !operationalRef.current ||
         sources.cargoDialog ||
         sources.project ||
         sources.scene ||
@@ -300,6 +318,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         if (outcome.replacement !== undefined) {
           const currentSources = busySourcesRef.current;
           if (
+            !operationalRef.current ||
             historyRef.current.present !== baseProject ||
             currentSources.cargoDialog ||
             currentSources.project ||
@@ -337,6 +356,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       project: historyRef.current.present,
       interactionGeneration: projectInteractionGenerationRef.current,
       startBlocked:
+        !operationalRef.current ||
         busySourcesRef.current.cargoDialog ||
         busySourcesRef.current.project ||
         busySourcesRef.current.scene ||
@@ -350,6 +370,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     (request) => {
       const currentSources = busySourcesRef.current;
       if (
+        !operationalRef.current ||
         currentSources.cargoDialog ||
         currentSources.project ||
         currentSources.scene ||
@@ -489,6 +510,44 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     [runPersistenceOperation],
   );
 
+  const handleRescueCurrent = useCallback(async (): Promise<RescueResult> => {
+    const serialized = serializeProjectForPersistence(historyRef.current.present);
+    if (!serialized.ok) {
+      return {
+        ok: false,
+        message: "現在案件を安全なJSONへ変換できなかったため、救出しませんでした。",
+      };
+    }
+    const downloaded = downloadProjectJson(serialized.json);
+    return downloaded.ok
+      ? { ok: true, message: "現在案件のJSON救出を開始しました。" }
+      : {
+          ok: false,
+          message: "このブラウザでは現在案件のJSONをダウンロードできませんでした。",
+        };
+  }, []);
+
+  const handleRescueDevice = useCallback(async (): Promise<RescueResult> => {
+    const stored = await loadProjectJsonFromDevice();
+    if (!stored.ok) {
+      const message =
+        stored.code === "project-store.not-found"
+          ? "救出できる端末保存はありません。"
+          : "端末保存を読み取れなかったため、現在の案件へ読み込まず終了しました。";
+      return { ok: false, message };
+    }
+    const downloaded = downloadProjectJson(
+      stored.value,
+      PROJECT_DEVICE_RESCUE_FILENAME,
+    );
+    return downloaded.ok
+      ? { ok: true, message: "端末保存のJSON救出を開始しました。" }
+      : {
+          ok: false,
+          message: "このブラウザでは端末保存のJSONをダウンロードできませんでした。",
+        };
+  }, []);
+
   const copy = stateCopy[state];
   const rendererMounted = state === "renderer-checking" || state === "supported";
   const externalPersistenceBusy =
@@ -497,6 +556,76 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     busySources.scene ||
     persistenceOperationActive;
   const historyBusy = externalPersistenceBusy || persistenceInteractionActive;
+
+  const sceneWorkspace = (
+    <SceneWorkspace
+      key={`scene-${projectBarrierRevision}`}
+      externalInteractionActive={
+        state !== "supported" ||
+        busySources.cargoDialog ||
+        busySources.project ||
+        persistenceInteractionActive ||
+        persistenceOperationActive
+      }
+      forceInitialRenderError={forceInitialRenderError}
+      historyControls={{
+        busy: state !== "supported" || historyBusy,
+        canRedo: history.future.length > 0,
+        canUndo: history.past.length > 0,
+        commitRevision: historyCommitRevision,
+        redoAction: history.future.at(-1)?.action,
+        undoAction: history.past.at(-1)?.action,
+        onRedo: handleRedo,
+        onUndo: handleUndo,
+      }}
+      onRendererError={handleRendererError}
+      onRendererReady={handleRendererReady}
+      historyRevision={historyRevision}
+      onBusyChange={handleSceneBusyChange}
+      onOpenCargoEditor={handleOpenCargoEditor}
+      onProjectCommit={handleProjectCommit}
+      project={project}
+      rendererMounted={rendererMounted}
+    />
+  );
+
+  if (state !== "supported") {
+    const rescueAvailable = state === "unsupported" || state === "renderer-error";
+    return (
+      <main className="app-shell app-shell--blocked">
+        <header className="hero">
+          <p className="eyebrow">LOCAL 3D LOADING WORKSPACE</p>
+          <h1>Auto CLP</h1>
+        </header>
+        <section className={`capability capability--${state} capability--blocking`}>
+          <div
+            className="capability__copy"
+            role={rescueAvailable ? "alert" : "status"}
+            aria-live={rescueAvailable ? "assertive" : "polite"}
+            aria-labelledby="capability-title"
+            data-capability-state={state}
+          >
+            <span className="status-dot" aria-hidden="true" />
+            <div>
+              <h2 id="capability-title">{copy.title}</h2>
+              <p>{copy.detail}</p>
+            </div>
+          </div>
+          {rescueAvailable ? (
+            <WebGLRescuePanel
+              onRescueCurrent={handleRescueCurrent}
+              onRescueDevice={handleRescueDevice}
+            />
+          ) : null}
+        </section>
+        {state === "renderer-checking" ? (
+          <div className="renderer-probe" aria-hidden="true" inert>
+            {sceneWorkspace}
+          </div>
+        ) : null}
+      </main>
+    );
+  }
 
   return (
     <main className="app-shell">
@@ -541,34 +670,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
             <p>{copy.detail}</p>
           </div>
         </div>
-        <SceneWorkspace
-          key={`scene-${projectBarrierRevision}`}
-          externalInteractionActive={
-            busySources.cargoDialog ||
-            busySources.project ||
-            persistenceInteractionActive ||
-            persistenceOperationActive
-          }
-          forceInitialRenderError={forceInitialRenderError}
-          historyControls={{
-            busy: historyBusy,
-            canRedo: history.future.length > 0,
-            canUndo: history.past.length > 0,
-            commitRevision: historyCommitRevision,
-            redoAction: history.future.at(-1)?.action,
-            undoAction: history.past.at(-1)?.action,
-            onRedo: handleRedo,
-            onUndo: handleUndo,
-          }}
-          onRendererError={handleRendererError}
-          onRendererReady={handleRendererReady}
-          historyRevision={historyRevision}
-          onBusyChange={handleSceneBusyChange}
-          onOpenCargoEditor={handleOpenCargoEditor}
-          onProjectCommit={handleProjectCommit}
-          project={project}
-          rendererMounted={rendererMounted}
-        />
+        {sceneWorkspace}
       </section>
 
       <aside className="safety-note" aria-label="現在の制限">
@@ -602,5 +704,54 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         />
       )}
     </main>
+  );
+}
+
+interface WebGLRescuePanelProps {
+  readonly onRescueCurrent: () => Promise<RescueResult>;
+  readonly onRescueDevice: () => Promise<RescueResult>;
+}
+
+function WebGLRescuePanel({
+  onRescueCurrent,
+  onRescueDevice,
+}: WebGLRescuePanelProps) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState(
+    "編集や保存はできません。必要な場合だけ、案件を変更せずJSONとして救出できます。",
+  );
+
+  const run = async (action: () => Promise<RescueResult>) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = await action();
+      setMessage(result.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="webgl-rescue" aria-labelledby="webgl-rescue-title">
+      <h3 id="webgl-rescue-title">読み取り専用のJSON救出</h3>
+      <p>
+        救出は現在案件または端末保存をファイルへ複製するだけです。案件の読込・編集・削除・端末保存の上書きは行いません。
+      </p>
+      <div className="webgl-rescue__actions">
+        <button type="button" disabled={busy} onClick={() => void run(onRescueCurrent)}>
+          現在案件をJSON救出
+        </button>
+        <button type="button" disabled={busy} onClick={() => void run(onRescueDevice)}>
+          端末保存をJSON救出
+        </button>
+        <button type="button" disabled={busy} onClick={() => window.location.reload()}>
+          再読み込み
+        </button>
+      </div>
+      <p className="webgl-rescue__status" role="status" aria-live="polite">
+        {message}
+      </p>
+    </div>
   );
 }

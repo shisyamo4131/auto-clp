@@ -656,6 +656,47 @@ h1 {
   box-shadow: 0 0 1.2rem rgba(255, 118, 111, 0.65);
 }
 
+.capability--blocking {
+  min-height: 0;
+}
+
+.webgl-rescue {
+  margin: 0 clamp(1.25rem, 3vw, 2rem) clamp(1.25rem, 3vw, 2rem);
+  padding: clamp(1rem, 2.5vw, 1.5rem);
+  border: 1px solid rgba(132, 172, 195, 0.3);
+  border-radius: 0.85rem;
+  background: rgba(5, 17, 29, 0.78);
+}
+
+.webgl-rescue h3 {
+  margin-bottom: 0.5rem;
+}
+
+.webgl-rescue p {
+  color: #b8cad8;
+  line-height: 1.65;
+}
+
+.webgl-rescue__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.webgl-rescue__status {
+  min-height: 1.65em;
+  margin: 1rem 0 0;
+}
+
+.renderer-probe {
+  position: fixed;
+  width: 2px;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+
 .viewport {
   position: relative;
   height: clamp(280px, 46vw, 510px);

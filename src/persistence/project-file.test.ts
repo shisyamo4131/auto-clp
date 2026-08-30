@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  PROJECT_DEVICE_RESCUE_FILENAME,
   PROJECT_EXPORT_FILENAME,
   downloadProjectJson,
   isProjectFileExportAvailable,
@@ -99,6 +100,19 @@ describe("project file boundary", () => {
     expect(click).toHaveBeenCalledOnce();
     expect(remove).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:synthetic-fixed");
+  });
+
+  it("uses the dedicated fixed filename for a device rescue", () => {
+    const anchor = { click: vi.fn(), download: "", hidden: false, href: "", remove: vi.fn() };
+    setGlobal("Blob", class FakeBlob {});
+    setGlobal("URL", { createObjectURL: () => "blob:device-rescue", revokeObjectURL: vi.fn() });
+    setGlobal("document", {
+      body: { append: vi.fn() },
+      createElement: () => anchor,
+    });
+
+    expect(downloadProjectJson("{}", PROJECT_DEVICE_RESCUE_FILENAME)).toEqual({ ok: true });
+    expect(anchor.download).toBe("auto-clp-device-rescue-0.1.0.json");
   });
 
   it("returns fixed failure codes and cleans up after a download exception", () => {

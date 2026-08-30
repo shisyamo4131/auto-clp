@@ -23,7 +23,7 @@ async function addContainer(page: Page, name: string) {
 }
 
 test("undoes and redoes project, cargo, container, placement, and removal", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const undo = page.getByRole("button", { name: "元に戻す" });
   const redo = page.getByRole("button", { name: "やり直す" });
   await expect(undo).toHaveAttribute("aria-keyshortcuts", "Control+Z Meta+Z");
@@ -56,7 +56,7 @@ test("undoes and redoes project, cargo, container, placement, and removal", asyn
 });
 
 test("keeps native input undo local and blocks project history while a dialog is dirty", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "shortcut積荷");
   const undo = page.getByRole("button", { name: "元に戻す" });
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
@@ -70,7 +70,7 @@ test("keeps native input undo local and blocks project history while a dialog is
 });
 
 test("falls back when a selected candidate disappears and does not auto-select it on undo", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addContainer(page, "候補A");
   await addContainer(page, "候補B");
   const select = page.getByLabel("表示する候補");
@@ -84,7 +84,7 @@ test("falls back when a selected candidate disappears and does not auto-select i
 });
 
 test("discards redo after a new branch", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "分岐積荷");
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(page.getByRole("button", { name: "やり直す" })).toBeEnabled();
@@ -95,7 +95,7 @@ test("discards redo after a new branch", async ({ page }) => {
 
 test("history controls remain operable without horizontal overflow", async ({ page }) => {
   await page.setViewportSize({ width: 305, height: 700 });
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "H".repeat(120));
   await page.getByRole("button", { name: "元に戻す" }).press("Enter");
   expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);

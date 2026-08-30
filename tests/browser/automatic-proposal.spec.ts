@@ -310,16 +310,16 @@ async function releaseProposal(page: Page, index?: number) {
   }, index);
 }
 
-test("runs the real worker without WebGL for no-cargo and no-candidates without changing the project", async ({
+test("runs the real worker for no-cargo and no-candidates without changing the project", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const panel = page.locator(".automatic-proposal");
   const history = page.locator(".project-history__summary");
   const canonical = page.getByTestId("canonical-project-settings");
 
   await expect(panel).toBeVisible();
-  await expect(page.getByRole("heading", { name: "3D表示を利用できません" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "3D表示を利用できます" })).toBeVisible();
   const initialHistory = await history.textContent();
   const initialProject = await canonical.textContent();
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
@@ -345,7 +345,7 @@ test("runs the real worker without WebGL for no-cargo and no-candidates without 
 test("applies the real AP-02 plan as one confirmed history action and restores it with undo and redo", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "匿名積荷A");
   await addCargo(page, "匿名積荷B");
   await addContainer(page, "匿名AP02候補");
@@ -411,7 +411,7 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
 test("confirms a zero-current add, commits rapid double confirmation once, and keeps a same-plan reapply unchanged", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "匿名単一積荷");
   await addContainer(page, "匿名単一候補");
   const panel = page.locator(".automatic-proposal");
@@ -459,7 +459,7 @@ test("confirms a zero-current add, commits rapid double confirmation once, and k
 test("preserves the AP-03 structure warning through real preview, confirmation, apply, and physical validation", async ({
   page,
 }) => {
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "匿名支持積荷", {
     massKg: "1.001",
     canSupportCargo: true,
@@ -498,7 +498,7 @@ test("keeps a controlled complete-with-cutoff warning applicable in preview and 
   page,
 }) => {
   await installControlledProposalWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "匿名cutoff積荷");
   await addContainer(page, "優先匿名候補");
   await addContainer(page, "採用匿名候補");
@@ -529,7 +529,7 @@ test("closes confirmation on generation and persistence changes and shows fixed 
   page,
 }) => {
   await installControlledProposalWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await addCargo(page, "marker-sensitive-cargo");
   await addContainer(page, "匿名失敗候補", { lengthMm: "100" });
   const panel = page.locator(".automatic-proposal");
@@ -583,7 +583,7 @@ test("cancels a controlled slow worker responsively, ignores its late result, an
   page,
 }) => {
   await installControlledProposalWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const panel = page.locator(".automatic-proposal");
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
@@ -634,7 +634,7 @@ test("invalidates a running preview for Project commits, undo, redo, and generat
   page,
 }) => {
   await installControlledProposalWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const panel = page.locator(".automatic-proposal");
   const canonical = page.getByTestId("canonical-project-settings");
   const retry = () => panel.getByRole("button", { name: "現在の案件で再試行" });
@@ -673,7 +673,7 @@ test("invalidates a running proposal when persistence starts and after a valid J
   page,
 }) => {
   await installControlledProposalWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const panel = page.locator(".automatic-proposal");
   const persistenceStatus = page.locator(".project-persistence__status");
 
@@ -699,7 +699,7 @@ test("disables start for a draft and exposes keyboard, live, busy, and narrow-sc
   page,
 }) => {
   await installControlledProposalWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   const panel = page.locator(".automatic-proposal");
   const summary = panel.locator(".automatic-proposal__summary");
   const start = panel.getByRole("button", { name: "自動提案を開始" });
@@ -730,7 +730,7 @@ test("paginates more than 25 controlled candidate, placement, and unverified row
   page,
 }) => {
   await installControlledProposalWorker(page);
-  await page.goto("/?forceWebgl2=unsupported");
+  await page.goto("/");
   await importJson(page, projectJson("大量匿名案件", 26, 26));
   await expect(page.getByTestId("canonical-project-settings")).toContainText("大量匿名案件");
   const panel = page.locator(".automatic-proposal");

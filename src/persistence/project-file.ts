@@ -1,6 +1,8 @@
 import type { ProjectJsonSource } from "./project-json";
 
 export const PROJECT_EXPORT_FILENAME = "auto-clp-project-0.1.0.json";
+export const PROJECT_DEVICE_RESCUE_FILENAME =
+  "auto-clp-device-rescue-0.1.0.json";
 
 export type ProjectFileFailureCode =
   | "project-file.import-unavailable"
@@ -52,7 +54,10 @@ export function projectJsonSourceFromFile(
   }
 }
 
-export function downloadProjectJson(json: string): ProjectFileResult {
+export function downloadProjectJson(
+  json: string,
+  filename = PROJECT_EXPORT_FILENAME,
+): ProjectFileResult {
   if (!isProjectFileExportAvailable()) {
     return { ok: false, code: "project-file.export-unavailable" };
   }
@@ -75,7 +80,7 @@ export function downloadProjectJson(json: string): ProjectFileResult {
     );
     anchor = document.createElement("a");
     anchor.href = objectUrl;
-    anchor.download = PROJECT_EXPORT_FILENAME;
+    anchor.download = filename;
     anchor.hidden = true;
     document.body.append(anchor);
     anchor.click();
