@@ -5,6 +5,7 @@
 - Related specification: Placement and Validation; Operation History
 - Refines: 0010
 - Supersedes: None
+- Partial supersession: ADR 0019 replaces drag時のZ保持 with floor/support-surface snap while retaining the X/Y footprint boundary.
 
 ## Context
 

@@ -23,16 +23,22 @@ import {
 } from "../ui/placement-presentation";
 import {
   classifyFloorFootprint,
+  domainPositionDeltaToScene,
   floorQuarterTurnOrientation,
   placedFloorDragDisposition,
   projectContainerToScene,
+  resolveSupportSnapPosition,
   sceneFloorDragPositionMm,
   stagedCargoOverlapsContainerFloor,
   xAxisQuarterTurnOrientation,
   type SceneStagingOverride,
   type SceneVector3,
 } from "./project-scene";
-import { ThreeViewport, type CargoDragCommitResult } from "./ThreeViewport";
+import {
+  ThreeViewport,
+  type CargoDragCommitResult,
+  type CargoDragPreviewResult,
+} from "./ThreeViewport";
 
 interface SceneWorkspaceProps {
   readonly externalInteractionActive: boolean;
@@ -74,6 +80,7 @@ export function SceneWorkspace({
   const [selectedCargoId, setSelectedCargoId] = useState<string>();
   const [cargoQuery, setCargoQuery] = useState("");
   const [canvasStatus, setCanvasStatus] = useState("");
+  const dragPreviewStatusRef = useRef("");
   const [stagingOverrides, setStagingOverrides] = useState<
     Record<string, SceneStagingOverride>
   >({});
@@ -261,18 +268,91 @@ export function SceneWorkspace({
     setCanvasDragActive(active);
     if (active) {
       setCanvasStatus("床面に平行な配置移動をプレビュー中です。離すと1 mm単位で保存します。");
+    } else {
+      dragPreviewStatusRef.current = "";
     }
   }, []);
 
   const handleCargoDragCancel = useCallback((message: string) => {
     setCanvasDragActive(false);
+    dragPreviewStatusRef.current = "";
     setCanvasStatus(message);
   }, []);
+
+  const handleCargoDragPreview = useCallback(
+    (
+      cargoId: string,
+      deltaScene: Pick<SceneVector3, "x" | "z">,
+    ): CargoDragPreviewResult => {
+      const projectedCargo = projection?.cargoes.find(
+        (candidate) => candidate.cargoId === cargoId,
+      );
+      if (projectedCargo === undefined || effectiveContainerId === undefined) {
+        const positionMm = projectedCargo?.positionMm ?? {
+          xMm: 0,
+          yMm: 0,
+          zMm: 0,
+        };
+        return {
+          positionMm,
+          sceneDelta: { x: 0, y: 0, z: 0 },
+          state: "invalid",
+          supporterIds: [],
+        };
+      }
+      const rawPositionMm = sceneFloorDragPositionMm(
+        projectedCargo.positionMm,
+        deltaScene,
+      );
+      const resolved = resolveSupportSnapPosition(
+        project,
+        effectiveContainerId,
+        cargoId,
+        projectedCargo.orientation,
+        rawPositionMm,
+      );
+      const positionMm = resolved?.positionMm ?? rawPositionMm;
+      const supporterNames = (resolved?.supporterIds ?? [])
+        .map(
+          (supporterId) =>
+            project.cargoes.find((candidate) => candidate.id === supporterId)
+              ?.name ?? supporterId,
+        )
+        .join("、");
+      const message =
+        resolved?.disposition === "single-support"
+          ? `${supporterNames}の上面に単独支持としてスナップ中です。上面内で移動できます。`
+          : resolved?.disposition === "support-conditions-unverified"
+            ? `${supporterNames}の上面に仮スナップ中です。張り出し・複数支持等の支持条件は未確認です。`
+            : resolved?.disposition === "invalid-overlap"
+              ? "積荷同士が立体的に重なる位置です。Drop後は不適合として保存されます。"
+              : resolved?.disposition === "floor"
+                ? "荷室床面にスナップ中です。"
+                : "荷室外の作業スペースを移動中です。";
+      if (dragPreviewStatusRef.current !== message) {
+        dragPreviewStatusRef.current = message;
+        setCanvasStatus(message);
+      }
+      return {
+        positionMm,
+        sceneDelta: domainPositionDeltaToScene(
+          projectedCargo.positionMm,
+          positionMm,
+        ),
+        state:
+          resolved?.disposition === "invalid-overlap"
+            ? "invalid"
+            : (resolved?.disposition ?? "outside"),
+        supporterIds: resolved?.supporterIds ?? [],
+      };
+    },
+    [effectiveContainerId, project, projection],
+  );
 
   const handleCargoDragCommit = useCallback(
     (
       cargoId: string,
-      deltaScene: Pick<SceneVector3, "x" | "z">,
+      preview: CargoDragPreviewResult,
     ): CargoDragCommitResult => {
       if (externalInteractionActive) {
         return {
@@ -308,13 +388,11 @@ export function SceneWorkspace({
               "対象の積荷または候補が最新の案件に見つからないため、荷室外の作業スペースへ戻しました。",
           };
         }
-        const nextPosition = sceneFloorDragPositionMm(
-          projectedCargo.positionMm,
-          deltaScene,
-        );
+        const nextPosition = preview.positionMm;
         if (
           nextPosition.xMm === projectedCargo.positionMm.xMm &&
-          nextPosition.yMm === projectedCargo.positionMm.yMm
+          nextPosition.yMm === projectedCargo.positionMm.yMm &&
+          nextPosition.zMm === projectedCargo.positionMm.zMm
         ) {
           setCanvasStatus("荷室外の作業スペースで位置は変わりませんでした。");
           return { ok: true, message: "" };
@@ -372,6 +450,10 @@ export function SceneWorkspace({
         setCanvasStatus(
           footprintDisposition === "partial"
             ? `${cargo.name}を境界外の修正途中配置として保存しました。物理判定を再計算しています。`
+            : preview.state === "single-support"
+              ? `${cargo.name}を単独支持としてX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ配置しました。構造強度と安定性は未確認です。`
+              : preview.state === "support-conditions-unverified"
+                ? `${cargo.name}をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ配置しました。支持条件は未確認として保存されます。`
             : `${cargo.name}を荷室内のX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ配置しました。物理判定の再計算を開始しました。`,
         );
         return { ok: true, message: "" };
@@ -387,7 +469,7 @@ export function SceneWorkspace({
           message: "対象の配置が最新の案件に見つからないため、移動を保存せず元に戻しました。",
         };
       }
-      const nextPosition = sceneFloorDragPositionMm(placement.positionMm, deltaScene);
+      const nextPosition = preview.positionMm;
       const cargo = project.cargoes.find((candidate) => candidate.id === cargoId);
       const container = project.containers.find(
         (candidate) => candidate.id === effectiveContainerId,
@@ -471,7 +553,11 @@ export function SceneWorkspace({
         return { ok: true, message: "" };
       }
       setCanvasStatus(
-        `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動しました。物理判定の再計算を開始しました。`,
+        preview.state === "single-support"
+          ? `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動し、単独支持として保存しました。構造強度と安定性は未確認です。`
+          : preview.state === "support-conditions-unverified"
+            ? `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動しました。支持条件は未確認として保存されます。`
+            : `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動しました。物理判定の再計算を開始しました。`,
       );
       return { ok: true, message: "" };
     },
@@ -699,7 +785,7 @@ export function SceneWorkspace({
 
         <p id="scene-workspace-interaction-help" className="scene-workspace__status">
           {rendererMounted
-            ? "3Dでは積荷を直接選ぶか、検索と一覧から選択できます。荷室外の積荷は自由に退避でき、床面と重なるdropは修正途中を含む配置として保存されます。完全に外へ出すと未配置になります。空白の左ドラッグで視点回転、右ドラッグで平行移動し、＋と－で拡大・縮小します。ホイールはページをスクロールします。"
+            ? "3Dでは積荷を直接選ぶか、検索と一覧から選択できます。荷室内では床または支持可能な積荷上面へsnapし、単一支持面に収まる場合は上面内で移動できます。張り出しや複数支持は未確認のまま調整でき、完全に外へ出すと未配置になります。空白の左ドラッグで視点回転、右ドラッグで平行移動し、＋と－で拡大・縮小します。ホイールはページをスクロールします。"
             : "3D表示を利用できない場合も、検索、選択カード、ダイアログで積荷と配置を編集できます。"}
         </p>
 
@@ -727,6 +813,7 @@ export function SceneWorkspace({
           interactionDisabled={externalInteractionActive || placementInteractionActive}
           onCargoDragCancel={handleCargoDragCancel}
           onCargoDragCommit={handleCargoDragCommit}
+          onCargoDragPreview={handleCargoDragPreview}
           onCargoDragStateChange={handleCargoDragStateChange}
           onCargoXAxisRotation={() => handleCargoRotation("X")}
           onCargoZAxisRotation={() => handleCargoRotation("Z")}

@@ -10,7 +10,7 @@
 
 この文書は、Phase 1で端末内保存とJSON入出力に使う案件データ、およびデータを消費する計算モジュールの境界を定義する。完全な案件型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、案件・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、案件操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定、Projectを変更しない自動提案探索とpreview UI、再検証付きの配置一括適用と一履歴操作のUndo/Redoは実装済みである。操作履歴、UI状態、Three.jsオブジェクト、物理判定と自動提案の結果は本契約へ保存しない。
 
-仕様版 `0.14.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `0.15.0` と案件スキーマ版 `0.1.0` は別に管理する。仕様の文言変更だけでは案件スキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -65,12 +65,12 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 - 初回位置は積荷の先頭許可向き、Z=0 mm、案件の積荷順、100 mm間隔、最大向き適用寸法から負X側の決定的な非重複gridとして派生する。
 - 利用者が積荷全体を荷室外へdropした後は、SceneWorkspaceがcargo IDごとの `positionMm` とorientation overrideを現在のUI sessionだけに保持し、Project→scene adapterへ一方向に渡す。不許可になったoverride向きは積荷の先頭許可向きへfallbackする。向きまたは寸法編集後のAABBが荷室床面と正面積で重なるoverride位置は採用せず、新しい向き適用後寸法で完全に荷室外となる決定的初期gridへfallbackする。
 - 作業位置、作業向き、scene用中心、選択、drag preview、件数はProjectフィールドではなく、JSON、IndexedDB、案件履歴、物理判定へ保存しない。読込のscene barrierで破棄する。
-- 荷室外からのfine-pointer dropは、向き適用後AABB全体が対象コンテナの生の内部範囲へ入った場合だけ既存の配置追加commandへ渡す。AABB全体が荷室外ならsession位置を更新する。一部だけ床面へ正面積で重なるdrop、取消、競合はProjectを変更せず直前のsession位置を保持する。
+- 荷室外からのfine-pointer dropは、向き適用後AABBが対象コンテナの生の床面と正面積で重なる場合、床・支持面snap後の整数mm位置を既存の配置追加commandへ渡す。完全包含でないpartialも修正途中の境界不適合配置として保存する。床面との共通面積が0ならProjectを変更せずsession位置だけを更新し、取消・競合は直前のProjectとsession位置を保持する。
 - 配置済み積荷の完全drag-outは、drop位置と向きをsession overrideへ記録してから既存の配置削除commandへ渡す。Undo中はoverrideを保持したまま配置を表示し、Redoで同じ外側位置を再利用する。荷室外のX/Z回転は、回転後AABBが荷室床面と正面積で重ならない場合だけsession overrideへ反映し、重なる場合はProject・履歴・物理結果・直前poseを変えず拒否する。
 - 向き変更時は既定で最小角を保持し、暗黙の平行移動や丸めを行わない。床置きは `z = 0` である。
 - 正規データと判定は整数mmを維持する。Three.js表示では派生値だけを `1 mm = 0.001 scene unit` で変換し、mesh中心を最小角と向き適用後寸法から計算する。0.5mmの表示中心を正規案件へ逆流させない。
-- canvas dragは正規最小角を開始値として保持し、scene上のpointer差分をdomain X/Y差分へ写像して最近接1 mmへ正負対称に量子化する。mesh中心やtransformを保存値として読まず、Z・向きを保持し、既存application commandが成功した場合だけProjectを置換する。
-- 配置済みdragの量子化後X/Y占有範囲は、生の荷室床面 `[0, L] × [0, W]` との正面積重なりで配置保持を決める。X/Yのどちらも厳密に正の共通長を持つ場合だけ保持し、一部はみ出しは不適合な配置として保存する。面・辺だけの接触を含む0面積ではdrop poseを非永続作業状態へ保持して既存配置を削除する。Zはこのinteraction境界へ含めない。
+- canvas dragは正規最小角を開始値として保持し、scene上のpointer差分をdomain X/Y差分へ写像して最近接1 mmへ正負対称に量子化する。mesh中心やtransformを保存値として読まず、向きを保持し、床・支持面snapで整数mmのZを決め、既存application commandが成功した場合だけProjectを置換する。
+- 配置済みdragの量子化後X/Y占有範囲は、生の荷室床面 `[0, L] × [0, W]` との正面積重なりで配置保持を決める。X/Yのどちらも厳密に正の共通長を持つ場合だけ保持し、一部はみ出しもsnap後位置の不適合な配置として保存する。面・辺だけの接触を含む0面積ではdrop poseを非永続作業状態へ保持して既存配置を削除する。Zはこの保持・削除境界の分類には使わない。
 - 負座標や外側配置は修正途中の状態として保存できる。将来の境界判定では不適合となるが、scene投影は適合性を判定または保証しない。
 
 検証済みserializer、座標値を生成する配置UI・application command、利用者向けJSON入出力UI、手動端末保存は実装済みである。座標契約の採択時点ではSchema `0.1.0` の初回意味確定としてJSONの形と版を変更せず、その後の配置・保存実装も同じ契約を維持している。既存外部データが後から判明した場合は意味を推測して再解釈せず、新Schema版と明示的な移行を設計する。
@@ -80,10 +80,10 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 - `clearancesMm` は積荷ごとのhaloではなく、隣接する表面間に必要な実距離を軸別に表す。積荷間で設定値を2倍にせず、等値を合格とする。
 - 配置後の境界条件は `xMin >= cX`、`xMax <= L - cX`、`yMin >= cY`、`yMax <= W - cY`、`zMin >= 0`、`zMax <= H - cZ` とする。負X側開口面もX隙間の対象で、床だけはZ隙間を要求しない。
 - 支持関係ではない積荷ペアは、少なくとも一つの分離軸で表面間距離が対応する隙間以上なら合格とする。正体積重なりは常に不適合である。
-- 認定された支持面との完全一致接触ではZ隙間を要求せず、支持を構成するX・Y投影重なりへ積荷間隙間を適用しない。支持成立は100%被覆、同一高さ、段積み可否で別途判定する。
+- 単独支持または支持条件未確認を構成する正面積のZ接触ではZ隙間を要求せず、接触するX・Y投影へ積荷間隙間を適用しない。単独支持は一つの支持可能上面によるX/Y完全包含、条件未確認は支持可能面を含む複数・隙間・張り出し・支持可否混在として別途判定する。
 - 開口断面は従来どおり `cargoY + 2 × cY <= openingWidth`、`cargoZ + cZ <= openingHeight` とし、X隙間を使わない。配置後境界と搬入断面を混同しない。
 
-この意味はADR 0011で初めて確定した。物理判定と理由表示UI、手動端末保存、利用者向けJSON入出力UIは実装済みである。床下配置の `floor-penetration` を含む判定理由は保存値からローカルWorker内で毎回再計算する派生結果であり、JSONの形や意味を変えないためSchema `0.1.0` を据え置き、判定結果や隙間包絡をJSONへ保存しない。
+この意味はADR 0011で初めて確定し、単独支持・条件未確認の区分と支持接触の隙間例外をADR 0019で改定した。物理判定と理由表示UI、手動端末保存、利用者向けJSON入出力UIは実装済みである。床下配置の `floor-penetration` を含む判定理由は保存値からローカルWorker内で毎回再計算する派生結果であり、JSONの形や意味を変えないためSchema `0.1.0` を据え置き、判定結果や隙間包絡をJSONへ保存しない。
 
 ## Stored and Derived State
 
@@ -97,7 +97,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 
 不適合な配置も、座標値と参照整合性が有効なら保存できる。これにより、利用者が途中状態を失わず修正できる。読込時に不適合を成功扱いせず、再計算した理由を表示する。
 
-undo/redoは検証済み `Project` 参照を最大100件、実行中メモリだけに保持する。履歴対象は案件設定、積荷、候補、配置の成功した追加・更新・削除と、1回の3D床面dragにつき1件である。失敗、no-op、raw draft、削除確認、drag preview、候補・積荷選択、camera、Worker結果と理由ページは履歴へ入れない。undo後に別の案件変更を確定した場合はredo側を破棄し、JSON書出し・読込へ履歴を含めない。
+undo/redoは検証済み `Project` 参照を最大100件、実行中メモリだけに保持する。履歴対象は案件設定、積荷、候補、配置の成功した追加・更新・削除と、1回の3D dragにつき1件である。失敗、no-op、raw draft、削除確認、drag preview、候補・積荷選択、camera、Worker結果と理由ページは履歴へ入れない。undo後に別の案件変更を確定した場合はredo側を破棄し、JSON書出し・読込へ履歴を含めない。
 
 ## Import Transaction
 
@@ -122,7 +122,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | Planned module | Responsibility | Forbidden dependencies |
 | --- | --- | --- |
 | `domain/model` | 実装済み: 版、向き、寸法、隙間、積荷、候補、配置、案件のreadonly型 | React、Three.js、ブラウザ保存API |
-| `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、XY矩形の正面積重なり、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間、矩形開口寸法と許可向き抽出、支持面のXY矩形和集合による100%被覆、床・完全一致Z接触・段積み可を合成する幾何支持 | UI、描画、永続化 |
+| `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、XY矩形の正面積重なり、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間、矩形開口寸法と許可向き抽出、単独支持・条件未確認・接触不成立の幾何区分。旧XY矩形和集合100%被覆helperは回帰用に保持 | UI、描画、永続化 |
 | `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計、計算可否を区別する総質量・耐荷重評価、対象コンテナへの配置抽出、境界、隙間、開口、支持、耐荷重の独立理由と集約状態、計算不能結果 | React、Three.js、I/O |
 | `domain/automatic-proposal` | 実装済み: Schema・意味検証済みProjectだけを受ける、一候補完全案の決定的DFS、目的関数順位、向き重複排除、最大2,048点の遅延列挙、候補10,000・要求1,000,000 attempt境界、cutoff/no-complete-plan、未確認理由付き完全案。現在配置を入力anchorにせず変更もしない | Schema検証、Worker、取消、stale、UI、Projectへの適用、外部通信 |
 | `application/project-import`、`application/project-command`、`application/automatic-proposal-apply` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド、自動提案をSchema・意味・正本物理判定で再検証して配置だけを深いcopyで一括置換する適用境界 | DOM、Three.jsオブジェクトの所有、探索の再実装 |
@@ -131,7 +131,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 | `persistence/project-json`、`persistence/project-file` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し、標準File読込source、固定名Blob download | 3D描画、直接UI更新、案件名のファイル名反映 |
 | `persistence/project-store` | 実装済み: IndexedDB `current-project` 単一枠のtransaction完了後save、load、delete、未対応・open・read・write・delete失敗 | 自動保存、Project解釈、UI更新、外部通信 |
 | `persistence/project-import-preflight-client`、`workers/project-import-preflight` | 実装済み: one-shot module Workerで全候補を置換前に判定し、応答検証後に必ずWorkerを終了 | DOM、IndexedDB、同期fallback、理由の保存 |
-| `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointer床面dragのno-op先行と純粋な `xy-contained` / `partial` / `outside` 分類、完全drag-out作業位置、X/Z軸別90度回転、同一候補のcamera保持。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
+| `scene` | 実装済み: WebGL能力確認、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointer dragのno-op先行と純粋な `xy-contained` / `partial` / `outside` 分類、床・支持面snap、単一支持面内clamp、支持候補preview、完全drag-out作業位置、X/Z軸別90度回転、同一候補のcamera保持。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持 | 判定規則の再実装、永続データ型の変更 |
 | `ui` | 実装済み: raw draft、gからkgへの表示変換、案件・隙間・候補フォーム、全Project積荷の検索・選択、compact選択card、積荷定義と配置の別modal editor、非cascadeの配置取り外し・積荷削除、アクセシブルなfocus trap・dirty破棄確認・busy gate、canvas直接操作と正確な移動・向きのキーボードfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、案件履歴ボタン・ショートカット・状態通知、手動端末保存・読込・削除、JSON入出力 | 幾何・制約計算と正規入力変換の再実装 |
 | `ui/automatic-proposal-session`、`ui/automatic-proposal-view`、`ui/useAutomaticProposalSession`、`ui/AutomaticProposalPanel` | 実装済み: Project参照とinteraction generationを捕捉するセッション、取消・stale・retry・遅延結果mask、source ProjectとのID再相関、React hook、固定安全copy、25件単位のpreview、identityを一度だけ取得する確認付き適用、適用済み・変更なし表示。AppはProject/scene/persistenceのbusy、変更、一履歴commitを接続する | 探索だけでのProject/history変更、永続化、Scene選択の変更 |
 | `workers` | 実装済み: 物理判定のローカルmodule Worker。自動提案は正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答mask、Appからの実Worker接続まで実装 | DOM、React状態の直接操作、外部通信 |
@@ -155,8 +155,10 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
 - `evaluatePayloadCapacity(massesGrams, payloadCapacityGrams)` — 実装済み。非負safe integerの質量だけをoverflowなく合計し、計算可能なら総質量と耐荷重以内かを返す。等値は合格、超過は不合格とし、案件内の配置・参照選択と理由は扱わない。
 - `isRectangleFullyCoveredByUnion(target, coveringRectangles)` — 実装済み。safe integerの正面積XY矩形だけを受け、対象外をclipした支持矩形の和集合が対象矩形を100%覆うかを整数端点の走査で決定的に判定する。Z接触、段積み可否、対象ID、理由、隙間例外は扱わない。
-- `hasFullGeometricSupport(target, candidates)` — 実装済み。床面に接する正体積AABBを支持済みとし、床以外では段積み許可かつ上面Zが底面Zへ完全一致する候補だけのXY和集合が底面を100%覆うかを判定する。コンテナ境界、正体積重なり、参照、対象ID、理由、隙間例外、構造・安定性は扱わない。
-- `validatePlacementSet(project, containerId)` — 実装済み。対象コンテナの配置だけを参照解決し、境界、重なり、隙間、許可向きの開口寸法、100%幾何支持、耐荷重を決定的な順序で評価する。境界違反を座標理由として優先し、その違反だけを原因とする支持・隙間理由は連鎖させず、開口、耐荷重、完全支持時の構造・安定性未確認など独立理由は保持する。入力や計算が安全に評価できない場合は物理的不適合と混同せず `unavailable` を返す。
+- `hasFullGeometricSupport(target, candidates)` — 旧和集合100%被覆の低レベル回帰用helperとして実装を保持するが、仕様0.15.0の現行支持区分には使用しない。
+- `assessGeometricSupport(target, candidates)` — 実装済み。床、単一支持面によるX/Y完全包含、支持可能面を含む複数・隙間・張り出し・支持可否混在の条件未確認、接触なし・Z不一致・支持不可面だけの不適合を、正面積接触と安定したID順で純粋分類する。
+- `resolveSupportSnapPosition(project, containerId, cargoId, orientation, rawPositionMm)` — 実装済み。fine-pointer dragの整数mm位置を床または最も高い支持可能上面へsnapし、単一面で収容できる場合だけX/Yを完全包含範囲へ制限する。荷室外、支持条件未確認、立体重複を区別し、Projectを変更しない。
+- `validatePlacementSet(project, containerId)` — 実装済み。対象コンテナの配置だけを参照解決し、境界、重なり、隙間、許可向きの開口寸法、単独支持・支持条件未確認・支持接触不成立、耐荷重を決定的な順序で評価する。境界違反を座標理由として優先し、その違反だけを原因とする支持・隙間理由は連鎖させず、開口、耐荷重、単独支持時の構造・安定性未確認など独立理由は保持する。入力や計算が安全に評価できない場合は物理的不適合と混同せず `unavailable` を返す。
 
 各結果は対象ID、安定した理由コード、`valid`、`invalid`、`unverified` の状態を持つ。利用者向け文言はUI層で理由コードから生成する。
 
@@ -167,4 +169,4 @@ JSON読込は次の順序で行い、すべて成功するまで現在案件を�
 - 読込失敗時に既存状態が変わらないことを確認する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 
-[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、支持面矩形和集合の完全被覆・1 mm欠け・重複・外側clip・無効入力、床支持・完全一致Z接触・段積み可候補だけの支持合成、総質量の空・等値・1 g超過・safe integer・overflow、対象コンテナ抽出、境界違反のカスケード抑制、100%支持時だけの隙間例外、独立理由保持、安定した理由順・ID、幾何・耐荷重の計算不能、Worker集約・25件理由ページ・遅延応答破棄・手動再試行、非変異、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲、履歴の参照同一性・非変異・stale/no-op拒否・100件上限・分岐、File size/readと固定名、preflight応答・終了、IndexedDB未対応・open・blocked・abort・error・not-found・破損・delete・往復を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、物理理由の優先・併記・ページ表示・狭幅表示、1,000配置の実Worker応答性、案件CRUD・3D dragのundo/redo、入力中lock、native入力履歴の保護、実IndexedDB reload/delete、download/reimport、全JSON失敗段階、履歴barrier、遅延競合、削除focus、305/320/375px、1,000配置・100候補の実preflight Worker応答性を含む。
+[データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、単独支持の等値、1 mm張り出し、複数支持、支持台間隙、支持可否混在、辺・点、Z不一致、重複、床・支持面snap、自動提案除外、総質量の空・等値・1 g超過・safe integer・overflow、対象コンテナ抽出、境界違反のカスケード抑制、支持接触時の隙間例外、独立理由保持、安定した理由順・ID、幾何・耐荷重の計算不能、Worker集約・25件理由ページ・遅延応答破棄・手動再試行、非変異、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲、履歴の参照同一性・非変異・stale/no-op拒否・100件上限・分岐、File size/readと固定名、preflight応答・終了、IndexedDB未対応・open・blocked・abort・error・not-found・破損・delete・往復を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・削除時fallback、保存前の配置draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・床・支持面snap・条件未確認preview・drag・取消・視点操作・描画障害復旧、タッチ時のフォームfallback、WebGL非対応時の配置、物理理由の優先・併記・ページ表示・狭幅表示、1,000配置の実Worker応答性、案件CRUD・3D dragのundo/redo、入力中lock、native入力履歴の保護、実IndexedDB reload/delete、download/reimport、全JSON失敗段階、履歴barrier、遅延競合、削除focus、305/320/375px、1,000配置・100候補の実preflight Worker応答性を含む。

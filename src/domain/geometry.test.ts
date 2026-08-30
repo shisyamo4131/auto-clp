@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assessGeometricSupport,
   fittingOpeningOrientations,
   fitsRectangularOpening,
   hasFullGeometricSupport,
@@ -15,6 +16,7 @@ import {
 } from "./geometry";
 import type {
   GeometricSupportCandidateMm,
+  IdentifiedGeometricSupportCandidateMm,
   PlacementBoundsMm,
   RectangleBoundsMm,
 } from "./geometry";
@@ -1504,5 +1506,143 @@ describe("hasFullGeometricSupport", () => {
 
     expect(mutableTarget).toEqual(originalTarget);
     expect(candidates).toEqual(originalCandidates);
+  });
+});
+
+describe("assessGeometricSupport", () => {
+  const target = bounds(
+    { xMm: 0, yMm: 0, zMm: 10 },
+    { xMm: 10, yMm: 10, zMm: 20 },
+  );
+  const candidate = (
+    id: string,
+    candidateBounds: PlacementBoundsMm,
+    canSupportCargo = true,
+  ): IdentifiedGeometricSupportCandidateMm => ({
+    id,
+    bounds: candidateBounds,
+    canSupportCargo,
+  });
+
+  it("accepts equality and larger X/Y extents as one strict single support", () => {
+    const exact = candidate(
+      "exact",
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 0 },
+        { xMm: 10, yMm: 10, zMm: 10 },
+      ),
+    );
+    const larger = candidate(
+      "larger",
+      bounds(
+        { xMm: -1, yMm: -2, zMm: 0 },
+        { xMm: 11, yMm: 12, zMm: 10 },
+      ),
+    );
+
+    expect(assessGeometricSupport(target, [exact])).toEqual({
+      kind: "single",
+      contactIds: ["exact"],
+      eligibleContactIds: ["exact"],
+    });
+    expect(assessGeometricSupport(target, [larger])).toEqual({
+      kind: "single",
+      contactIds: ["larger"],
+      eligibleContactIds: ["larger"],
+    });
+  });
+
+  it("classifies overhang, multiple supports, gaps, and mixed permission as conditional", () => {
+    const left = candidate(
+      "left",
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 0 },
+        { xMm: 4, yMm: 10, zMm: 10 },
+      ),
+    );
+    const rightWithGap = candidate(
+      "right",
+      bounds(
+        { xMm: 6, yMm: 0, zMm: 0 },
+        { xMm: 10, yMm: 10, zMm: 10 },
+      ),
+    );
+    const permissionFalse = candidate(
+      "permission-false",
+      bounds(
+        { xMm: 4, yMm: 0, zMm: 0 },
+        { xMm: 6, yMm: 10, zMm: 10 },
+      ),
+      false,
+    );
+
+    expect(assessGeometricSupport(target, [left])).toMatchObject({
+      kind: "conditional",
+      contactIds: ["left"],
+    });
+    expect(
+      assessGeometricSupport(target, [left, rightWithGap]),
+    ).toEqual({
+      kind: "conditional",
+      contactIds: ["left", "right"],
+      eligibleContactIds: ["left", "right"],
+    });
+    expect(
+      assessGeometricSupport(target, [left, permissionFalse]),
+    ).toEqual({
+      kind: "conditional",
+      contactIds: ["left", "permission-false"],
+      eligibleContactIds: ["left"],
+    });
+  });
+
+  it("rejects no contact, Z mismatch, edge contact, and permission-false-only contact", () => {
+    const permissionFalse = candidate(
+      "permission-false",
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 0 },
+        { xMm: 10, yMm: 10, zMm: 10 },
+      ),
+      false,
+    );
+    const zMismatch = candidate(
+      "z-mismatch",
+      bounds(
+        { xMm: 0, yMm: 0, zMm: 1 },
+        { xMm: 10, yMm: 10, zMm: 11 },
+      ),
+    );
+    const edge = candidate(
+      "edge",
+      bounds(
+        { xMm: 10, yMm: 0, zMm: 0 },
+        { xMm: 20, yMm: 10, zMm: 10 },
+      ),
+    );
+
+    expect(assessGeometricSupport(target, [])).toMatchObject({ kind: "invalid" });
+    expect(assessGeometricSupport(target, [zMismatch])).toMatchObject({
+      kind: "invalid",
+    });
+    expect(assessGeometricSupport(target, [edge])).toMatchObject({
+      kind: "invalid",
+    });
+    expect(assessGeometricSupport(target, [permissionFalse])).toEqual({
+      kind: "invalid",
+      contactIds: ["permission-false"],
+      eligibleContactIds: [],
+    });
+  });
+
+  it("recognizes the floor independently from cargo support candidates", () => {
+    const floorTarget = bounds(
+      { xMm: 0, yMm: 0, zMm: 0 },
+      { xMm: 10, yMm: 10, zMm: 10 },
+    );
+    expect(assessGeometricSupport(floorTarget, [])).toEqual({
+      kind: "floor",
+      contactIds: [],
+      eligibleContactIds: [],
+    });
   });
 });

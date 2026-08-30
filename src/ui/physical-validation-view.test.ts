@@ -94,8 +94,8 @@ const invalidCopies = [
     "許可されたどの向きでも矩形開口の幅と高さに収まりません。",
   ],
   [
-    "support-not-full",
-    "床にない積荷の底面が、段積み可能な支持面で100%覆われていません。",
+    "support-contact-invalid",
+    "床より上の積荷が、支持可能な上面と同じ高さで正面積接触していません。Z座標と支持可否を確認してください。",
   ],
   [
     "payload-capacity-exceeded",
@@ -110,7 +110,11 @@ const unverifiedCopies = [
   ],
   [
     "structure-stability-unverified",
-    "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
+    "単一積荷の上面による幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
+  ],
+  [
+    "support-conditions-unverified",
+    "複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含みます。構造剛性、支持位置、重心、許容支持間隔を確認してください。",
   ],
 ] as const satisfies readonly (readonly [UnverifiedPhysicalReasonCode, string])[];
 
@@ -355,7 +359,7 @@ describe("toPhysicalValidationView", () => {
       },
       {
         status: "invalid",
-        code: "support-not-full",
+        code: "support-contact-invalid",
         target: { kind: "cargo", id: "cargo-related-b" },
         relatedCargoIds: [],
       },
@@ -437,7 +441,7 @@ describe("worker physical validation view adapters", () => {
       { length: PHYSICAL_VALIDATION_REASON_PAGE_SIZE },
       (_, index): PhysicalValidationReason => ({
         status: "invalid",
-        code: index % 2 === 0 ? "outside-container" : "support-not-full",
+        code: index % 2 === 0 ? "outside-container" : "support-contact-invalid",
         target: {
           kind: "cargo",
           id: index === 0 ? "cargo-known" : `unknown-${index}`,

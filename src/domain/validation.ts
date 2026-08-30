@@ -1,14 +1,15 @@
 import { ORIENTATIONS, type Project } from "./model";
 import {
+  assessGeometricSupport,
   fittingOpeningOrientations,
-  hasFullGeometricSupport,
   hasPositiveVolumeOverlap,
   hasRequiredAxisClearance,
   isPlacementWithinContainer,
   isPlacementWithinContainerWithClearance,
   orientedDimensions,
   placementBounds,
-  type GeometricSupportCandidateMm,
+  type GeometricSupportAssessment,
+  type IdentifiedGeometricSupportCandidateMm,
   type PlacementBoundsMm,
 } from "./geometry";
 
@@ -26,12 +27,13 @@ export type InvalidPhysicalReasonCode =
   | "positive-volume-overlap"
   | "axis-clearance-not-met"
   | "opening-no-fitting-orientation"
-  | "support-not-full"
+  | "support-contact-invalid"
   | "payload-capacity-exceeded";
 
 export type UnverifiedPhysicalReasonCode =
   | "opening-path-unverified"
-  | "structure-stability-unverified";
+  | "structure-stability-unverified"
+  | "support-conditions-unverified";
 
 export type PhysicalTarget =
   | { readonly kind: "container"; readonly id: string }
@@ -238,10 +240,7 @@ interface SelectedPlacementInput {
   readonly placement: Project["placements"][number];
 }
 
-interface SupportAssessment {
-  readonly full: boolean;
-  readonly contributorIds: readonly string[];
-}
+type SupportAssessment = GeometricSupportAssessment;
 
 function isPositiveSafeInteger(value: number): boolean {
   return Number.isSafeInteger(value) && value > 0;
@@ -340,18 +339,6 @@ function sortedUniqueCargoIds(ids: readonly string[]): readonly string[] {
   return [...new Set(ids)].sort(compareIds);
 }
 
-function hasPositiveXyProjectionOverlap(
-  first: PlacementBoundsMm,
-  second: PlacementBoundsMm,
-): boolean {
-  return (
-    first.min.xMm < second.max.xMm &&
-    second.min.xMm < first.max.xMm &&
-    first.min.yMm < second.max.yMm &&
-    second.min.yMm < first.max.yMm
-  );
-}
-
 function computeSupportAssessments(
   selectedPlacements: readonly SelectedPlacementEvaluation[],
   normalizeFloorPenetratingCandidates = false,
@@ -380,41 +367,32 @@ function computeSupportAssessments(
             }
           : candidate.bounds,
     }));
-    const contributorIds = sortedUniqueCargoIds(
-      diagnosticCandidates
-        .filter(
-          (candidate) =>
-            candidate.cargo.canSupportCargo &&
-            candidate.bounds.max.zMm === target.bounds.min.zMm &&
-            hasPositiveXyProjectionOverlap(candidate.bounds, target.bounds),
-        )
-        .map((candidate) => candidate.cargo.id),
-    );
-    const geometryCandidates = diagnosticCandidates.map<GeometricSupportCandidateMm>(
+    const geometryCandidates = diagnosticCandidates.map<IdentifiedGeometricSupportCandidateMm>(
       (candidate) => ({
+        id: candidate.cargo.id,
         bounds: candidate.bounds,
         canSupportCargo: candidate.cargo.canSupportCargo,
       }),
     );
 
-    assessments.set(target.cargo.id, {
-      full: hasFullGeometricSupport(target.bounds, geometryCandidates),
-      contributorIds,
-    });
+    assessments.set(
+      target.cargo.id,
+      assessGeometricSupport(target.bounds, geometryCandidates),
+    );
   }
 
   return assessments;
 }
 
-function isFullSupportContributor(
+function isSupportContactContributor(
   lower: SelectedPlacementEvaluation,
   upper: SelectedPlacementEvaluation,
   supportAssessments: ReadonlyMap<string, SupportAssessment>,
 ): boolean {
   const assessment = supportAssessments.get(upper.cargo.id);
   return (
-    assessment?.full === true &&
-    assessment.contributorIds.includes(lower.cargo.id)
+    (assessment?.kind === "single" || assessment?.kind === "conditional") &&
+    assessment.contactIds.includes(lower.cargo.id)
   );
 }
 
@@ -596,14 +574,14 @@ export function validatePlacementSet(
           relatedCargoIds,
         });
       } else if (
-        !isFullSupportContributor(first, second, supportAssessments) &&
-        !isFullSupportContributor(
+        !isSupportContactContributor(first, second, supportAssessments) &&
+        !isSupportContactContributor(
           first,
           second,
           floorNormalizedSupportAssessments,
         ) &&
-        !isFullSupportContributor(second, first, supportAssessments) &&
-        !isFullSupportContributor(
+        !isSupportContactContributor(second, first, supportAssessments) &&
+        !isSupportContactContributor(
           second,
           first,
           floorNormalizedSupportAssessments,
@@ -659,19 +637,29 @@ export function validatePlacementSet(
     )!;
     const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
 
-    if (assessment.full) {
+    if (assessment.kind === "single") {
       appendReason({
         status: "unverified",
         code: "structure-stability-unverified",
         target,
-        relatedCargoIds: assessment.contributorIds,
+        relatedCargoIds: assessment.contactIds,
       });
-    } else if (!floorNormalizedAssessment.full && selected.rawInside) {
+    } else if (assessment.kind === "conditional") {
+      appendReason({
+        status: "unverified",
+        code: "support-conditions-unverified",
+        target,
+        relatedCargoIds: assessment.contactIds,
+      });
+    } else if (
+      floorNormalizedAssessment.kind === "invalid" &&
+      selected.rawInside
+    ) {
       appendReason({
         status: "invalid",
-        code: "support-not-full",
+        code: "support-contact-invalid",
         target,
-        relatedCargoIds: assessment.contributorIds,
+        relatedCargoIds: assessment.contactIds,
       });
     }
   }

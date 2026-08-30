@@ -19,6 +19,7 @@ $floorPenetrationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0014-
 $sceneFeedbackDecisionPath = Join-Path $resolvedProject 'docs/decisions/0015-scene-wheel-drag-out-and-size-copy.md'
 $sceneWorkbenchDecisionPath = Join-Path $resolvedProject 'docs/decisions/0017-scene-workbench-rotation-and-compact-controls.md'
 $sceneCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0018-scene-drag-classification-and-dialog-editors.md'
+$supportSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0019-support-surface-snap-and-conditional-support.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -58,6 +59,7 @@ foreach ($path in @(
     $sceneFeedbackDecisionPath,
     $sceneWorkbenchDecisionPath,
     $sceneCompactDecisionPath,
+    $supportSnapDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -204,7 +206,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.14.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.15.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -267,7 +269,8 @@ if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
     -not $dataModel.Contains('decisions/0013-manual-local-persistence-and-json-files.md') -or
     -not $dataModel.Contains('decisions/0014-dedicated-floor-penetration-diagnostic.md') -or
     -not $dataModel.Contains('decisions/0017-scene-workbench-rotation-and-compact-controls.md') -or
-    -not $dataModel.Contains('decisions/0018-scene-drag-classification-and-dialog-editors.md')) {
+    -not $dataModel.Contains('decisions/0018-scene-drag-classification-and-dialog-editors.md') -or
+    -not $dataModel.Contains('ADR 0019')) {
     throw 'Data model does not identify the approved specification version, schema version, file, and size limit.'
 }
 
@@ -292,6 +295,7 @@ foreach ($requiredText in @(
     'wheelをpreventせずpage scrollへ渡す',
     '正の共通長',
     '`placement.delete`',
+    'Partial supersession: ADR 0019',
     'Project Schema `0.1.0`'
 )) {
     if (-not $sceneFeedbackDecision.Contains($requiredText)) {
@@ -321,6 +325,25 @@ foreach ($requiredText in @(
         throw "ADR 0018 does not contain the approved compact-scene marker: $requiredText"
     }
 }
+
+$supportSnapDecision = [IO.File]::ReadAllText($supportSnapDecisionPath)
+if ($supportSnapDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0019 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '単独支持成立',
+    '`support-conditions-unverified`',
+    '支持台間の隙間',
+    '支持不可積荷だけに接触',
+    '一回のdropを一回の配置履歴',
+    '自動提案v1は床置きまたは単独支持成立だけ',
+    'Project、JSON、Schema `0.1.0`は変更しない'
+)) {
+    if (-not $supportSnapDecision.Contains($requiredText)) {
+        throw "ADR 0019 does not contain the approved support-snap marker: $requiredText"
+    }
+}
+
 foreach ($requiredText in @(
     'UI session',
     'X軸90度回転',
@@ -340,7 +363,9 @@ $threeViewport = [IO.File]::ReadAllText($threeViewportPath)
 $sceneBrowserTest = [IO.File]::ReadAllText($sceneBrowserTestPath)
 foreach ($implementationMarker in @(
     @{ Name = 'geometry'; Text = $geometry; Required = 'export function hasPositiveAreaOverlap' },
+    @{ Name = 'geometric support'; Text = $geometry; Required = 'export function assessGeometricSupport' },
     @{ Name = 'scene workspace overlap'; Text = $sceneWorkspace; Required = 'placedFloorDragDisposition(' },
+    @{ Name = 'scene workspace snap'; Text = $sceneWorkspace; Required = 'resolveSupportSnapPosition(' },
     @{ Name = 'scene workspace classifier'; Text = $sceneWorkspace; Required = 'classifyFloorFootprint(' },
     @{ Name = 'scene workspace deletion'; Text = $sceneWorkspace; Required = 'action: "placement.delete"' },
     @{ Name = 'viewport wheel policy'; Text = $threeViewport; Required = 'controls.enableZoom = false' },
@@ -435,7 +460,7 @@ foreach ($requiredText in @(
 $acceptance = [IO.File]::ReadAllText($acceptancePath)
 foreach ($requiredText in @(
     'AC-01 Floor Layout and Manual Editing',
-    'AC-02 Exact Stack and 1 mm Support Failure',
+    'AC-02 Exact Single Support and 1 mm Conditional Overhang',
     'AC-03 Independent Floor Penetration Diagnostics',
     'AC-04 Recovery, Portability, and No-WebGL Fallback',
     'AP-01 Candidate objective',
@@ -480,7 +505,7 @@ $automaticProposalApply = [IO.File]::ReadAllText($automaticProposalApplyPath)
 $automaticProposalApplyTest = [IO.File]::ReadAllText($automaticProposalApplyTestPath)
 $app = [IO.File]::ReadAllText($appPath)
 foreach ($contract in @(
-    @{ Name = 'Application apply'; Text = $automaticProposalApply; Required = @('prepareAutomaticProposalApply', 'validatePlacementSet', 'automatic-proposal.apply-unverified-mismatch') },
+    @{ Name = 'Application apply'; Text = $automaticProposalApply; Required = @('prepareAutomaticProposalApply', 'validatePlacementSet', 'support-conditions-unverified', 'automatic-proposal.apply-unverified-mismatch') },
     @{ Name = 'Application apply test'; Text = $automaticProposalApplyTest; Required = @('expectFailurePreserves', 'toBe(frozenCurrent)', 'complete-with-cutoff') },
     @{ Name = 'React hook'; Text = $automaticProposalHook; Required = @('useSyncExternalStore', 'visibleSnapshot', 'interactionGeneration') },
     @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '提案を適用', '配置が変わる場合は、1回の取り消しで元へ戻せます。') },
@@ -568,6 +593,7 @@ foreach ($requiredText in @(
     scene_feedback_decision_0015_accepted = $true
     scene_workbench_decision_0017_accepted = $true
     scene_compact_decision_0018_accepted = $true
+    support_snap_decision_0019_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true

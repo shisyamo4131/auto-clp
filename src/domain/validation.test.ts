@@ -651,7 +651,7 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         pathReason("cargo-b"),
-        invalidCargoReason("support-not-full", "cargo-b"),
+        invalidCargoReason("support-contact-invalid", "cargo-b"),
       ],
     });
   });
@@ -681,12 +681,12 @@ describe("validatePlacementSet", () => {
         invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-b"]),
         pathReason("cargo-a"),
         pathReason("cargo-b"),
-        invalidCargoReason("support-not-full", "cargo-b"),
+        invalidCargoReason("support-contact-invalid", "cargo-b", ["cargo-a"]),
       ],
     });
   });
 
-  it("reports pair clearance and incomplete support for one permitted partial support", () => {
+  it("keeps one permitted partial support as a conditional arrangement", () => {
     const cargoUpper = physicalCargo("cargo-u", {
       dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
     });
@@ -704,17 +704,20 @@ describe("validatePlacementSet", () => {
     expect(validatePlacementSet(project, "container-1")).toEqual({
       kind: "evaluated",
       containerId: "container-1",
-      status: "invalid",
+      status: "unverified",
       reasons: [
-        invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-u"]),
         pathReason("cargo-a"),
         pathReason("cargo-u"),
-        invalidCargoReason("support-not-full", "cargo-u", ["cargo-a"]),
+        unverifiedCargoReason(
+          "support-conditions-unverified",
+          "cargo-u",
+          ["cargo-a"],
+        ),
       ],
     });
   });
 
-  it("grants pair clearance exceptions only when two halves fully support the target", () => {
+  it("classifies two supporting halves as conditional even with full union coverage", () => {
     const cargoUpper = physicalCargo("cargo-u", {
       dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
     });
@@ -741,7 +744,7 @@ describe("validatePlacementSet", () => {
         pathReason("cargo-b"),
         pathReason("cargo-u"),
         unverifiedCargoReason(
-          "structure-stability-unverified",
+          "support-conditions-unverified",
           "cargo-u",
           ["cargo-a", "cargo-b"],
         ),
@@ -749,7 +752,7 @@ describe("validatePlacementSet", () => {
     });
   });
 
-  it("keeps pair clearance and support failures for a representative 1 mm union hole", () => {
+  it("keeps a representative 1 mm support gap as a conditional arrangement", () => {
     const cargoUpper = physicalCargo("cargo-u", {
       dimensionsMm: { lengthMm: 21, widthMm: 10, heightMm: 10 },
     });
@@ -770,17 +773,16 @@ describe("validatePlacementSet", () => {
     expect(validatePlacementSet(project, "container-1")).toEqual({
       kind: "evaluated",
       containerId: "container-1",
-      status: "invalid",
+      status: "unverified",
       reasons: [
-        invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-u"]),
-        invalidCargoReason("axis-clearance-not-met", "cargo-b", ["cargo-u"]),
         pathReason("cargo-a"),
         pathReason("cargo-b"),
         pathReason("cargo-u"),
-        invalidCargoReason("support-not-full", "cargo-u", [
-          "cargo-a",
-          "cargo-b",
-        ]),
+        unverifiedCargoReason(
+          "support-conditions-unverified",
+          "cargo-u",
+          ["cargo-a", "cargo-b"],
+        ),
       ],
     });
   });
@@ -879,11 +881,6 @@ describe("validatePlacementSet", () => {
       supporter: physicalCargo("cargo-a", { canSupportCargo: false }),
       upperPosition: { xMm: 0, yMm: 0, zMm: 10 },
     },
-    {
-      label: "1 mm XY support loss",
-      supporter: physicalCargo("cargo-a"),
-      upperPosition: { xMm: 1, yMm: 0, zMm: 10 },
-    },
   ])("keeps support failure after floor normalization for $label", ({
     supporter,
     upperPosition,
@@ -903,7 +900,7 @@ describe("validatePlacementSet", () => {
     expect(result.kind).toBe("evaluated");
     if (result.kind === "evaluated") {
       expect(result.reasons).toContainEqual(
-        invalidCargoReason("support-not-full", "cargo-b"),
+        invalidCargoReason("support-contact-invalid", "cargo-b"),
       );
       expect(result.reasons).not.toContainEqual(
         unverifiedCargoReason("structure-stability-unverified", "cargo-b"),
@@ -971,11 +968,16 @@ describe("validatePlacementSet", () => {
         pathReason("cargo-a"),
         pathReason("cargo-b"),
         pathReason("cargo-u"),
+        unverifiedCargoReason(
+          "support-conditions-unverified",
+          "cargo-u",
+          ["cargo-a"],
+        ),
       ],
     });
   });
 
-  it("keeps pair and support failures when mixed supporters leave a 1 mm hole", () => {
+  it("keeps mixed raw and normalized supporters conditional when they leave a 1 mm hole", () => {
     const upper = physicalCargo("cargo-u", {
       dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
     });
@@ -999,11 +1001,14 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-b"),
-        invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-u"]),
         pathReason("cargo-a"),
         pathReason("cargo-b"),
         pathReason("cargo-u"),
-        invalidCargoReason("support-not-full", "cargo-u", ["cargo-a"]),
+        unverifiedCargoReason(
+          "support-conditions-unverified",
+          "cargo-u",
+          ["cargo-a"],
+        ),
       ],
     });
   });

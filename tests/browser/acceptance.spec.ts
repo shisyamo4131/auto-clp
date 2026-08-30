@@ -135,7 +135,7 @@ test("executes the AC-01 form subset for orientation, removal, undo, and no-WebG
   await expect(page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" })).toHaveCount(0);
 });
 
-test("reports a 1 mm support strip loss and undo restores the exact stack", async ({
+test("reports a 1 mm overhang as support-conditions-unverified and undo restores exact single support", async ({
   page,
 }) => {
   await page.goto("/?forceWebgl2=unsupported");
@@ -168,24 +168,27 @@ test("reports a 1 mm support strip loss and undo restores the exact stack", asyn
   const validation = page.locator(".physical-validation");
   const card = page.locator(".scene-selection-card");
   await expect(validation).toContainText(
-    "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
+    "単一積荷の上面による幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
   );
-  await expect(validation).not.toContainText("100%覆われていません");
+  await expect(validation).not.toContainText("支持条件は未確認");
 
   await page.getByLabel("操作する積荷").selectOption("cargo-2");
   await card.getByRole("button", { name: "座標を微調整" }).click();
   await page.getByLabel("X最小角").fill("501");
   await page.getByRole("button", { name: "配置を保存" }).click();
   await expect(validation).toContainText(
-    "床にない積荷の底面が、段積み可能な支持面で100%覆われていません。",
+    "複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含みます。",
   );
+  await expect(validation.locator(".physical-validation__summary")).toContainText("未確認");
   await expect(card).toContainText("501 mm");
 
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(card).toContainText("500 mm");
-  await expect(validation).not.toContainText("100%覆われていません");
+  await expect(validation).not.toContainText(
+    "複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含みます。",
+  );
   await expect(validation).toContainText(
-    "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
+    "単一積荷の上面による幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
   );
 });
 

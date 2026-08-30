@@ -8,6 +8,7 @@ async function addCargo(
   name: string,
   tipping = false,
   dimensions: { readonly height?: string; readonly length?: string; readonly width?: string } = {},
+  canSupportCargo = false,
 ) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await page.getByLabel("積荷名").fill(name);
@@ -16,6 +17,11 @@ async function addCargo(
   await page.getByLabel("高さ", { exact: true }).fill(dimensions.height ?? "300");
   await page.getByLabel("重量").fill("1");
   if (tipping) await page.getByLabel(/天地無用/).uncheck();
+  if (canSupportCargo) {
+    await page
+      .getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる")
+      .check();
+  }
   await page.getByRole("button", { name: "積荷を保存" }).click();
 }
 
@@ -354,6 +360,68 @@ test("returns a fully dragged-out placement to staging as one undoable deletion"
   await expect(card).toContainText("現在の候補に配置済み");
   await page.getByRole("button", { name: "やり直す" }).click();
   await expect(card).toContainText("荷室外（未配置）");
+});
+
+test("snaps a staged cargo onto a containing support surface and keeps the drop undoable", async ({ page }) => {
+  await page.goto("/");
+  await addCargo(
+    page,
+    "支持スナップ台",
+    false,
+    { length: "1200", width: "1000", height: "500" },
+    true,
+  );
+  await addCargo(page, "支持スナップ上段", false, {
+    length: "400",
+    width: "300",
+    height: "200",
+  });
+  await addContainer(page, "支持スナップ候補");
+  await place(page, "cargo-1", "2400", "700");
+  await page.getByLabel("操作する積荷").selectOption("cargo-2");
+
+  const canvas = page.getByRole("img", { name: previewName });
+  const card = page.locator(".scene-selection-card");
+  const status = page.locator("#scene-workspace-action-status");
+  const targets = [
+    [0.5, 0.5],
+    [0.5, 0.58],
+    [0.45, 0.55],
+    [0.55, 0.55],
+    [0.45, 0.62],
+    [0.55, 0.62],
+  ] as const;
+  let snapped = false;
+  for (const [xRatio, yRatio] of targets) {
+    const staged = await locateStagedCargoOnCanvas(canvas);
+    await page.mouse.move(staged.point.x, staged.point.y);
+    await page.mouse.down();
+    await page.mouse.move(
+      staged.bounds.x + staged.bounds.width * xRatio,
+      staged.bounds.y + staged.bounds.height * yRatio,
+      { steps: 12 },
+    );
+    await page.waitForTimeout(80);
+    if ((await status.textContent())?.includes("単独支持としてスナップ中")) {
+      await page.mouse.up();
+      snapped = true;
+      break;
+    }
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+  }
+
+  expect(snapped).toBe(true);
+  await expect(card).toContainText("現在の候補に配置済み");
+  await expect(card).toContainText("500 mm");
+  await expect(page.locator(".physical-validation")).toContainText(
+    "単一積荷の上面による幾何学的な支持は成立しています",
+  );
+  await expect(page.locator(".project-history__summary")).toContainText("配置の追加");
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await expect(card).toContainText("荷室外（未配置）");
+  await page.getByRole("button", { name: "やり直す" }).click();
+  await expect(card).toContainText("500 mm");
 });
 
 test("keeps placed selection no-op and partial drag atomic while preserving camera and page", async ({ page }) => {

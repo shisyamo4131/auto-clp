@@ -29,5 +29,6 @@
 | [0016](0016-project-coordination-and-session-capacity-routing.md) | プロジェクト調整とセッション容量経路 | Accepted | 2026-08-28 |
 | [0017](0017-scene-workbench-rotation-and-compact-controls.md) | 3D作業面・軸別回転・compact操作 | Accepted | 2026-08-28 |
 | [0018](0018-scene-drag-classification-and-dialog-editors.md) | 3D drag三状態分類とdialog編集 | Accepted | 2026-08-29 |
+| [0019](0019-support-surface-snap-and-conditional-support.md) | 支持面snapと支持条件未確認 | Accepted | 2026-08-30 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

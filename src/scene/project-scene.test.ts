@@ -16,6 +16,7 @@ import {
   MM_TO_SCENE_UNIT,
   placedFloorDragDisposition,
   projectContainerToScene,
+  resolveSupportSnapPosition,
   sceneBoundsReachRadius,
   sceneContainerBounds,
   sceneFloorDragPositionMm,
@@ -595,6 +596,147 @@ describe("project scene coordinate adapter", () => {
       },
     });
     expect(missingCargo).toEqual(original);
+  });
+});
+
+describe("support-surface drag snapping", () => {
+  function supportProject(options: {
+    readonly supportLengthMm: number;
+    readonly supportWidthMm: number;
+    readonly canSupportCargo?: boolean;
+  }): Project {
+    return {
+      schemaVersion: PROJECT_SCHEMA_VERSION,
+      projectId: "support-snap-project",
+      name: "匿名支持スナップ試験",
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
+      cargoes: [
+        {
+          id: "support",
+          name: "匿名支持台",
+          dimensionsMm: {
+            lengthMm: options.supportLengthMm,
+            widthMm: options.supportWidthMm,
+            heightMm: 500,
+          },
+          massGrams: 1_000,
+          canSupportCargo: options.canSupportCargo ?? true,
+          allowedOrientations: ["LWH"],
+        },
+        {
+          id: "upper",
+          name: "匿名上段荷",
+          dimensionsMm: { lengthMm: 400, widthMm: 300, heightMm: 200 },
+          massGrams: 1_000,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH"],
+        },
+      ],
+      containers: [
+        {
+          id: "container",
+          name: "匿名候補",
+          internalDimensionsMm: {
+            lengthMm: 3_000,
+            widthMm: 2_000,
+            heightMm: 2_000,
+          },
+          openingMm: { widthMm: 2_000, heightMm: 2_000 },
+          payloadCapacityGrams: 10_000,
+        },
+      ],
+      placements: [
+        {
+          cargoId: "support",
+          containerId: "container",
+          positionMm: { xMm: 100, yMm: 100, zMm: 0 },
+          orientation: "LWH",
+        },
+      ],
+    };
+  }
+
+  it("clamps an upper cargo inside a containing support surface and snaps Z", () => {
+    const result = resolveSupportSnapPosition(
+      supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 }),
+      "container",
+      "upper",
+      "LWH",
+      { xMm: 900, yMm: 800, zMm: 0 },
+    );
+
+    expect(result).toEqual({
+      disposition: "single-support",
+      positionMm: { xMm: 700, yMm: 600, zMm: 500 },
+      supporterIds: ["support"],
+    });
+  });
+
+  it("keeps X/Y free and marks a smaller support surface conditional", () => {
+    const project = supportProject({ supportLengthMm: 300, supportWidthMm: 200 });
+    const result = resolveSupportSnapPosition(
+      project,
+      "container",
+      "upper",
+      "LWH",
+      { xMm: 200, yMm: 150, zMm: 0 },
+    );
+
+    expect(result).toEqual({
+      disposition: "support-conditions-unverified",
+      positionMm: { xMm: 200, yMm: 150, zMm: 500 },
+      supporterIds: ["support"],
+    });
+  });
+
+  it("does not snap to a permission-false top face and exposes the resulting overlap", () => {
+    const result = resolveSupportSnapPosition(
+      supportProject({
+        supportLengthMm: 1_000,
+        supportWidthMm: 800,
+        canSupportCargo: false,
+      }),
+      "container",
+      "upper",
+      "LWH",
+      { xMm: 200, yMm: 200, zMm: 0 },
+    );
+
+    expect(result).toEqual({
+      disposition: "invalid-overlap",
+      positionMm: { xMm: 200, yMm: 200, zMm: 0 },
+      supporterIds: [],
+    });
+  });
+
+  it("snaps back to the floor away from supports and preserves an outside pose", () => {
+    const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 1_500, yMm: 1_000, zMm: 900 },
+      ),
+    ).toEqual({
+      disposition: "floor",
+      positionMm: { xMm: 1_500, yMm: 1_000, zMm: 0 },
+      supporterIds: [],
+    });
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: -500, yMm: 100, zMm: 900 },
+      ),
+    ).toEqual({
+      disposition: "outside",
+      positionMm: { xMm: -500, yMm: 100, zMm: 900 },
+      supporterIds: [],
+    });
   });
 });
 

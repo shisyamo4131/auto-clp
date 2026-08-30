@@ -464,7 +464,11 @@ function completePlan(
         !placements.some((placement) => placement.cargoId === cargo.id),
     ) ||
     validation.kind !== "evaluated" ||
-    validation.reasons.some((reason) => reason.status === "invalid")
+    validation.reasons.some(
+      (reason) =>
+        reason.status === "invalid" ||
+        reason.code === "support-conditions-unverified",
+    )
   ) {
     return undefined;
   }
@@ -554,7 +558,11 @@ function searchCandidate(
         const validation = validatePlacementSet(attemptProject, container.id);
         if (
           validation.kind !== "evaluated" ||
-          validation.reasons.some((reason) => reason.status === "invalid")
+          validation.reasons.some(
+            (reason) =>
+              reason.status === "invalid" ||
+              reason.code === "support-conditions-unverified",
+          )
         ) {
           continue;
         }

@@ -2,6 +2,7 @@
 
 - Date: 2026-08-27
 - Status: Accepted
+- Refinement: ADR 0019 replaces full-union support with single / conditional / invalid contact classification while preserving boundary-cascade suppression.
 - Related specification: Placement and Validation; Error Handling
 - Supersedes: None
 - Refines: 0003, 0006, 0008, 0011

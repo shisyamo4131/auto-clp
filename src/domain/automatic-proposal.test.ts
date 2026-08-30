@@ -351,6 +351,41 @@ describe("automatic proposal complete plans", () => {
     ]);
   });
 
+  it("does not generate a plan that requires conditional multi-support", () => {
+    const leftSupport = cargo(
+      "support-a",
+      { lengthMm: 10, widthMm: 10, heightMm: 200 },
+      { massGrams: 1, canSupportCargo: true },
+    );
+    const rightSupport = cargo(
+      "support-b",
+      { lengthMm: 10, widthMm: 10, heightMm: 200 },
+      { massGrams: 1, canSupportCargo: true },
+    );
+    const bridge = cargo(
+      "bridge",
+      { lengthMm: 20, widthMm: 10, heightMm: 10 },
+      { massGrams: 1, canSupportCargo: false },
+    );
+    const candidate = container(
+      "container-1",
+      { lengthMm: 20, widthMm: 10, heightMm: 210 },
+      {
+        openingMm: { widthMm: 10, heightMm: 210 },
+        payloadCapacityGrams: 3,
+      },
+    );
+
+    const result = generateAutomaticProposal(
+      validatedFixture(
+        project([leftSupport, rightSupport, bridge], [candidate]),
+      ),
+    );
+
+    expect(result.status).toBe("no-complete-plan");
+    expect("plan" in result).toBe(false);
+  });
+
   it("backtracks from the first orientation to find the complete plan", () => {
     const first = cargo(
       "cargo-a",

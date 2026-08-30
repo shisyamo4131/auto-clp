@@ -90,13 +90,14 @@ const INVALID_REASON_CODES = new Set([
   "positive-volume-overlap",
   "axis-clearance-not-met",
   "opening-no-fitting-orientation",
-  "support-not-full",
+  "support-contact-invalid",
   "payload-capacity-exceeded",
 ]);
 
 const UNVERIFIED_REASON_CODES = new Set([
   "opening-path-unverified",
   "structure-stability-unverified",
+  "support-conditions-unverified",
 ]);
 
 const UNAVAILABLE_CODES = new Set([

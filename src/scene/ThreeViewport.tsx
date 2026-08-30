@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
+import type { PositionMm } from "../domain/model";
 import {
   sceneBoundsReachRadius,
   sceneContainerBounds,
@@ -15,14 +16,32 @@ export interface CargoDragCommitResult {
   readonly ok: boolean;
 }
 
+export type CargoDragPreviewState =
+  | "outside"
+  | "floor"
+  | "single-support"
+  | "support-conditions-unverified"
+  | "invalid";
+
+export interface CargoDragPreviewResult {
+  readonly positionMm: PositionMm;
+  readonly sceneDelta: SceneVector3;
+  readonly state: CargoDragPreviewState;
+  readonly supporterIds: readonly string[];
+}
+
 interface ThreeViewportProps {
   readonly forceInitialRenderError?: boolean;
   readonly interactionDisabled: boolean;
   readonly onCargoDragCancel: (message: string) => void;
   readonly onCargoDragCommit: (
     cargoId: string,
-    deltaScene: Pick<SceneVector3, "x" | "z">,
+    preview: CargoDragPreviewResult,
   ) => CargoDragCommitResult;
+  readonly onCargoDragPreview: (
+    cargoId: string,
+    deltaScene: Pick<SceneVector3, "x" | "z">,
+  ) => CargoDragPreviewResult;
   readonly onCargoDragStateChange: (active: boolean) => void;
   readonly onCargoXAxisRotation: () => void;
   readonly onCargoZAxisRotation: () => void;
@@ -62,7 +81,7 @@ interface CargoPointerGesture {
   readonly startMeshPosition: THREE.Vector3;
   readonly startPlanePoint: THREE.Vector3;
   dragActive: boolean;
-  lastDelta: THREE.Vector3;
+  lastPreview?: CargoDragPreviewResult;
 }
 
 function setVector(target: THREE.Vector3, source: SceneVector3): void {
@@ -264,6 +283,7 @@ export function ThreeViewport({
   interactionDisabled,
   onCargoDragCancel,
   onCargoDragCommit,
+  onCargoDragPreview,
   onCargoDragStateChange,
   onCargoXAxisRotation,
   onCargoZAxisRotation,
@@ -355,7 +375,7 @@ export function ThreeViewport({
       }
     };
 
-    const updateSelection = (cargoId?: string): boolean => {
+    const applySelectionVisuals = (cargoId?: string): void => {
       for (const [candidateId, visual] of cargoVisuals) {
         const selected = candidateId === cargoId;
         const staged = visual.kind === "staged";
@@ -379,7 +399,11 @@ export function ThreeViewport({
           selected ? (staged ? 0x4a260c : 0x123c3a) : 0x000000,
         );
         visual.outline.visible = selected;
+        visual.outline.material.color.setHex(staged ? 0xffd19a : 0xffe69a);
       }
+    };
+    const updateSelection = (cargoId?: string): boolean => {
+      applySelectionVisuals(cargoId);
       return renderScene();
     };
     updateSelectionRef.current = updateSelection;
@@ -396,6 +420,7 @@ export function ThreeViewport({
     const restoreGesturePreview = () => {
       if (gesture !== undefined) {
         gesture.mesh.position.copy(gesture.startMeshPosition);
+        applySelectionVisuals(selectedCargoIdRef.current);
         renderScene();
       }
     };
@@ -458,7 +483,6 @@ export function ThreeViewport({
       gesture = {
         cargoId,
         dragActive: false,
-        lastDelta: new THREE.Vector3(),
         mesh,
         plane,
         pointerId: event.pointerId,
@@ -483,10 +507,42 @@ export function ThreeViewport({
       setPointerFromEvent(event);
       const currentPoint = new THREE.Vector3();
       if (raycaster.ray.intersectPlane(gesture.plane, currentPoint) === null) return;
-      gesture.lastDelta.copy(currentPoint).sub(gesture.startPlanePoint);
+      const rawDelta = currentPoint.sub(gesture.startPlanePoint);
+      const preview = onCargoDragPreview(gesture.cargoId, {
+        x: rawDelta.x,
+        z: rawDelta.z,
+      });
+      gesture.lastPreview = preview;
+      applySelectionVisuals(selectedCargoIdRef.current);
       gesture.mesh.position.copy(gesture.startMeshPosition);
-      gesture.mesh.position.x += gesture.lastDelta.x;
-      gesture.mesh.position.z += gesture.lastDelta.z;
+      gesture.mesh.position.x += preview.sceneDelta.x;
+      gesture.mesh.position.y += preview.sceneDelta.y;
+      gesture.mesh.position.z += preview.sceneDelta.z;
+      const draggedVisual = cargoVisuals.get(gesture.cargoId);
+      if (draggedVisual !== undefined) {
+        const stateColor =
+          preview.state === "single-support"
+            ? 0x55d68b
+            : preview.state === "support-conditions-unverified"
+              ? 0xedb852
+              : preview.state === "invalid"
+                ? 0xff6b6b
+                : preview.state === "outside"
+                  ? 0xf0a35b
+                  : 0x72eadc;
+        draggedVisual.mesh.material.color.setHex(stateColor);
+        draggedVisual.mesh.material.emissive.setHex(
+          preview.state === "invalid" ? 0x4a0f16 : 0x162c22,
+        );
+      }
+      for (const supporterId of preview.supporterIds) {
+        const supporter = cargoVisuals.get(supporterId);
+        if (supporter === undefined) continue;
+        supporter.outline.visible = true;
+        supporter.outline.material.color.setHex(
+          preview.state === "single-support" ? 0x55d68b : 0xedb852,
+        );
+      }
       renderScene();
     };
 
@@ -497,11 +553,11 @@ export function ThreeViewport({
       const completedGesture = gesture;
       restoreGesturePreview();
       releaseGesture();
-      if (completedGesture.dragActive) {
-        const result = onCargoDragCommit(completedGesture.cargoId, {
-          x: completedGesture.lastDelta.x,
-          z: completedGesture.lastDelta.z,
-        });
+      if (completedGesture.dragActive && completedGesture.lastPreview !== undefined) {
+        const result = onCargoDragCommit(
+          completedGesture.cargoId,
+          completedGesture.lastPreview,
+        );
         if (!result.ok) onCargoDragCancel(result.message);
       }
     };
@@ -736,7 +792,7 @@ export function ThreeViewport({
       zoomOutRef.current = () => undefined;
       dispose();
     };
-  }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
+  }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragPreview, onCargoDragStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
 
   return (
     <div className="viewport" ref={containerRef}>

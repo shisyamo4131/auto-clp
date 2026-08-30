@@ -454,6 +454,72 @@ describe("prepareAutomaticProposalApply", () => {
     });
   });
 
+  it("rejects a conditionally supported plan at the apply boundary", () => {
+    const project = ap02Project({
+      cargoes: [
+        {
+          ...cargo("support-a", { canSupportCargo: true }),
+          dimensionsMm: { lengthMm: 50, widthMm: 100, heightMm: 100 },
+        },
+        {
+          ...cargo("support-b", { canSupportCargo: true }),
+          dimensionsMm: { lengthMm: 50, widthMm: 100, heightMm: 100 },
+        },
+        cargo("upper"),
+      ],
+      containers: [
+        {
+          ...ap02Project().containers[0]!,
+          internalDimensionsMm: { lengthMm: 100, widthMm: 100, heightMm: 200 },
+          openingMm: { widthMm: 100, heightMm: 200 },
+          payloadCapacityGrams: 3_000,
+        },
+      ],
+    });
+    const placements: readonly Placement[] = [
+      {
+        cargoId: "support-a",
+        containerId: "container-a",
+        orientation: "LWH",
+        positionMm: { xMm: 0, yMm: 0, zMm: 0 },
+      },
+      {
+        cargoId: "support-b",
+        containerId: "container-a",
+        orientation: "LWH",
+        positionMm: { xMm: 50, yMm: 0, zMm: 0 },
+      },
+      {
+        cargoId: "upper",
+        containerId: "container-a",
+        orientation: "LWH",
+        positionMm: { xMm: 0, yMm: 0, zMm: 100 },
+      },
+    ];
+    const baseResult = resultFor(placements);
+    const result = {
+      ...baseResult,
+      plan: {
+        ...baseResult.plan,
+        unverifiedReasons: [
+          ...openingReasons(["support-a", "support-b", "upper"]),
+          {
+            status: "unverified" as const,
+            code: "support-conditions-unverified" as const,
+            target: { kind: "cargo" as const, id: "upper" },
+            relatedCargoIds: ["support-a", "support-b"],
+          },
+        ],
+      },
+    } as AutomaticProposalResult;
+
+    expectFailurePreserves({
+      code: "automatic-proposal.apply-physical-invalid",
+      currentProject: project,
+      result,
+    });
+  });
+
   it("maps an authoritative validator unavailable result without changing the Project", () => {
     const project = ap02Project();
     validationControl.unavailable = true;

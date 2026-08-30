@@ -44,7 +44,7 @@
 
 3D選択後にフォームでZ、向き、取り外しを完了できたかを記録する。操作を発見できない、一覧への移動で作業を中断する、または座標誤りが繰り返される場合だけ、canvas近傍の追加操作を検討する。
 
-## AC-02 Exact Stack and 1 mm Support Failure
+## AC-02 Exact Single Support and 1 mm Conditional Overhang
 
 ### Data
 
@@ -55,9 +55,9 @@
 
 ### Steps and Expected Results
 
-1. 完全一致配置では不適合理由が0件となる。両積荷の `opening-path-unverified` と、上段の `structure-stability-unverified` は残る。
-2. 上段Xを501 mmへ変更する。底面が1 mmだけ支持面から外れ、`support-not-full` が1件表示される。隙間0 mmのためpair隙間理由は追加しない。
-3. 取り消しでX=500 mmへ戻し、完全支持と構造・安定性未確認の表示を復元する。
+1. 完全一致配置では不適合理由が0件となる。単一上面のX/Y完全包含による幾何学的単独支持が成立し、両積荷の `opening-path-unverified` と、上段の `structure-stability-unverified` は残る。
+2. 上段Xを501 mmへ変更する。底面が1 mmだけ支持面から張り出し、不適合ではなく `support-conditions-unverified` が1件表示される。構造剛性、支持位置、重心、許容支持間隔の確認を促し、支持接触に対するpair隙間理由は追加しない。
+3. 取り消しでX=500 mmへ戻し、単独支持と構造・安定性未確認の表示を復元する。
 
 ## AC-03 Independent Floor Penetration Diagnostics
 
@@ -96,10 +96,10 @@
 ### Current Automated Mapping
 
 - AC-01: `tests/browser/acceptance.spec.ts` が正確な合成データでフォームによる向き変更、確認付き取り外し、undo、未確認理由、WebGL非対応subsetを実行する。WebGL有効時の選択・床面dragは `tests/browser/scene.spec.ts` の独立回帰で覆う。
-- AC-02: `tests/browser/acceptance.spec.ts` が正確な合成データで完全支持、Xを1 mmずらした支持不足、undo復元を実行する。
+- AC-02: `tests/browser/acceptance.spec.ts` が正確な合成データで単独支持、Xを1 mmずらした条件未確認の張り出し、undo復元を実行する。`tests/browser/scene.spec.ts` が支持面への実drag snapと一回のUndo/Redoを実行する。
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` が履歴、IndexedDB、固定JSON往復、WebGL非対応fallbackを分担して実行する。
-- 仕様0.14.0は、未配置・配置済み共通のdrag三状態分類、全積荷select、積荷・配置別dialog CRUD、非cascade削除、distinct X/Z icon、固定高statusを全単体928件・全browser69件の統合回帰へ含める。開発チーム内試用と実務利用者試用の証拠ではない。
+- 仕様0.15.0は、未配置・配置済み共通のdrag三状態分類、床・支持面snap、単一支持面内clamp、支持条件未確認、全積荷select、積荷・配置別dialog CRUD、非cascade削除、distinct X/Z icon、固定高statusを全単体938件・全browser70件の統合回帰へ含める。開発チーム内試用と実務利用者試用の証拠ではない。
 
 ## Observation Record Template
 

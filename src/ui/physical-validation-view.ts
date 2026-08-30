@@ -52,8 +52,8 @@ const INVALID_REASON_COPY = {
     "積荷同士の軸別隙間が不足しています。配置を調整してください。",
   "opening-no-fitting-orientation":
     "許可されたどの向きでも矩形開口の幅と高さに収まりません。",
-  "support-not-full":
-    "床にない積荷の底面が、段積み可能な支持面で100%覆われていません。",
+  "support-contact-invalid":
+    "床より上の積荷が、支持可能な上面と同じ高さで正面積接触していません。Z座標と支持可否を確認してください。",
   "payload-capacity-exceeded":
     "配置した積荷の合計重量がコンテナの耐荷重を超えています。",
 } satisfies Record<InvalidPhysicalReasonCode, string>;
@@ -62,7 +62,9 @@ const UNVERIFIED_REASON_COPY = {
   "opening-path-unverified":
     "矩形開口の寸法には収まりますが、回転・斜め通過・車内旋回を含む完全な搬入経路は未確認です。",
   "structure-stability-unverified":
-    "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
+    "単一積荷の上面による幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
+  "support-conditions-unverified":
+    "複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含みます。構造剛性、支持位置、重心、許容支持間隔を確認してください。",
 } satisfies Record<UnverifiedPhysicalReasonCode, string>;
 
 const UNAVAILABLE_REASON_COPY = {

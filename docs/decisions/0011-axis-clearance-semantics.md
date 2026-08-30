@@ -2,6 +2,7 @@
 
 - Date: 2026-08-27
 - Status: Accepted
+- Refinement: ADR 0019 applies the support-contact clearance exception to single-support and support-conditions-unverified positive-area contacts.
 - Related specification: Placement and Validation; Data and State
 - Supersedes: None
 - Refines: 0003, 0006, 0008, 0010

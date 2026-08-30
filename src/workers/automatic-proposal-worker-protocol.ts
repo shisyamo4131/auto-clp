@@ -54,6 +54,7 @@ const ORIENTATION_SET = new Set<Orientation>(ORIENTATIONS);
 const UNVERIFIED_REASON_CODES = new Set([
   "opening-path-unverified",
   "structure-stability-unverified",
+  "support-conditions-unverified",
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {

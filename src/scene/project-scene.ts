@@ -1,7 +1,10 @@
 import {
+  assessGeometricSupport,
   hasPositiveAreaOverlap,
+  hasPositiveVolumeOverlap,
   orientedDimensions,
   placementBounds,
+  type IdentifiedGeometricSupportCandidateMm,
 } from "../domain/geometry";
 import type {
   Cargo,
@@ -260,6 +263,196 @@ export function sceneFloorDragPositionMm(
   };
 }
 
+export function domainPositionDeltaToScene(
+  start: PositionMm,
+  end: PositionMm,
+): SceneVector3 {
+  return {
+    x: (end.xMm - start.xMm) * MM_TO_SCENE_UNIT,
+    y: (end.zMm - start.zMm) * MM_TO_SCENE_UNIT,
+    z: -(end.yMm - start.yMm) * MM_TO_SCENE_UNIT,
+  };
+}
+
+export type SupportSnapDisposition =
+  | "outside"
+  | "floor"
+  | "single-support"
+  | "support-conditions-unverified"
+  | "invalid-overlap";
+
+export interface SupportSnapResult {
+  readonly disposition: SupportSnapDisposition;
+  readonly positionMm: PositionMm;
+  readonly supporterIds: readonly string[];
+}
+
+function positiveOverlapAreaMm2(
+  first: ReturnType<typeof placementBounds>,
+  second: ReturnType<typeof placementBounds>,
+): number {
+  const overlapX = Math.max(
+    0,
+    Math.min(first.max.xMm, second.max.xMm) -
+      Math.max(first.min.xMm, second.min.xMm),
+  );
+  const overlapY = Math.max(
+    0,
+    Math.min(first.max.yMm, second.max.yMm) -
+      Math.max(first.min.yMm, second.min.yMm),
+  );
+  return overlapX * overlapY;
+}
+
+/**
+ * Resolves one quantized fine-pointer drag against the floor and eligible cargo
+ * top faces. A containing single support clamps X/Y to its usable range. A
+ * smaller or multi-surface support only snaps Z and remains freely repairable.
+ */
+export function resolveSupportSnapPosition(
+  project: Project,
+  containerId: string,
+  cargoId: string,
+  orientation: Orientation,
+  rawPositionMm: PositionMm,
+): SupportSnapResult | undefined {
+  const cargo = project.cargoes.find((candidate) => candidate.id === cargoId);
+  const container = project.containers.find(
+    (candidate) => candidate.id === containerId,
+  );
+  if (cargo === undefined || container === undefined) return undefined;
+
+  const rawBounds = placementBounds(cargo, {
+    orientation,
+    positionMm: rawPositionMm,
+  });
+  if (
+    !hasPositiveAreaOverlap(
+      {
+        min: { xMm: rawBounds.min.xMm, yMm: rawBounds.min.yMm },
+        max: { xMm: rawBounds.max.xMm, yMm: rawBounds.max.yMm },
+      },
+      {
+        min: { xMm: 0, yMm: 0 },
+        max: {
+          xMm: container.internalDimensionsMm.lengthMm,
+          yMm: container.internalDimensionsMm.widthMm,
+        },
+      },
+    )
+  ) {
+    return { disposition: "outside", positionMm: rawPositionMm, supporterIds: [] };
+  }
+
+  const placedCandidates = project.placements
+    .filter(
+      (placement) =>
+        placement.containerId === containerId && placement.cargoId !== cargoId,
+    )
+    .flatMap((placement) => {
+      const candidateCargo = project.cargoes.find(
+        (candidate) => candidate.id === placement.cargoId,
+      );
+      return candidateCargo === undefined
+        ? []
+        : [
+            {
+              cargo: candidateCargo,
+              bounds: placementBounds(candidateCargo, placement),
+            },
+          ];
+    });
+  const overlappingEligible = placedCandidates.filter(
+    (candidate) =>
+      candidate.cargo.canSupportCargo &&
+      candidate.bounds.min.zMm >= 0 &&
+      positiveOverlapAreaMm2(candidate.bounds, rawBounds) > 0,
+  );
+
+  let snappedPositionMm: PositionMm;
+  if (overlappingEligible.length === 0) {
+    snappedPositionMm = { ...rawPositionMm, zMm: 0 };
+  } else {
+    const highestTop = Math.max(
+      ...overlappingEligible.map((candidate) => candidate.bounds.max.zMm),
+    );
+    const highestCandidates = overlappingEligible.filter(
+      (candidate) => candidate.bounds.max.zMm === highestTop,
+    );
+    const dimensions = orientedDimensions(cargo, orientation);
+    const containingCandidates = highestCandidates
+      .filter(
+        (candidate) =>
+          candidate.bounds.max.xMm - candidate.bounds.min.xMm >= dimensions.xMm &&
+          candidate.bounds.max.yMm - candidate.bounds.min.yMm >= dimensions.yMm,
+      )
+      .sort((first, second) => {
+        const overlapDifference =
+          positiveOverlapAreaMm2(second.bounds, rawBounds) -
+          positiveOverlapAreaMm2(first.bounds, rawBounds);
+        if (overlapDifference !== 0) return overlapDifference;
+        return first.cargo.id < second.cargo.id
+          ? -1
+          : first.cargo.id > second.cargo.id
+            ? 1
+            : 0;
+      });
+    const containing = containingCandidates[0];
+    snappedPositionMm =
+      containing === undefined
+        ? { ...rawPositionMm, zMm: highestTop }
+        : {
+            xMm: Math.min(
+              Math.max(rawPositionMm.xMm, containing.bounds.min.xMm),
+              containing.bounds.max.xMm - dimensions.xMm,
+            ),
+            yMm: Math.min(
+              Math.max(rawPositionMm.yMm, containing.bounds.min.yMm),
+              containing.bounds.max.yMm - dimensions.yMm,
+            ),
+            zMm: highestTop,
+          };
+  }
+
+  const snappedBounds = placementBounds(cargo, {
+    orientation,
+    positionMm: snappedPositionMm,
+  });
+  if (
+    placedCandidates.some((candidate) =>
+      hasPositiveVolumeOverlap(snappedBounds, candidate.bounds),
+    )
+  ) {
+    return {
+      disposition: "invalid-overlap",
+      positionMm: snappedPositionMm,
+      supporterIds: [],
+    };
+  }
+  if (snappedPositionMm.zMm === 0) {
+    return { disposition: "floor", positionMm: snappedPositionMm, supporterIds: [] };
+  }
+
+  const assessment = assessGeometricSupport(
+    snappedBounds,
+    placedCandidates.map<IdentifiedGeometricSupportCandidateMm>((candidate) => ({
+      id: candidate.cargo.id,
+      bounds: candidate.bounds,
+      canSupportCargo: candidate.cargo.canSupportCargo,
+    })),
+  );
+  return {
+    disposition:
+      assessment.kind === "single"
+        ? "single-support"
+        : assessment.kind === "conditional"
+          ? "support-conditions-unverified"
+          : "invalid-overlap",
+    positionMm: snappedPositionMm,
+    supporterIds: assessment.contactIds,
+  };
+}
+
 export type PlacedFloorDragDisposition = "no-op" | "update" | "delete";
 export type FloorFootprintDisposition = "outside" | "partial" | "xy-contained";
 
@@ -310,7 +503,8 @@ export function placedFloorDragDisposition(
 ): PlacedFloorDragDisposition {
   if (
     nextPositionMm.xMm === placement.positionMm.xMm &&
-    nextPositionMm.yMm === placement.positionMm.yMm
+    nextPositionMm.yMm === placement.positionMm.yMm &&
+    nextPositionMm.zMm === placement.positionMm.zMm
   ) {
     return "no-op";
   }

@@ -174,7 +174,10 @@ export function prepareAutomaticProposalApply(
   }
   if (
     validation.status === "invalid" ||
-    validation.reasons.some(({ status }) => status === "invalid")
+    validation.reasons.some(
+      ({ code, status }) =>
+        status === "invalid" || code === "support-conditions-unverified",
+    )
   ) {
     return failure(currentProject, "automatic-proposal.apply-physical-invalid");
   }

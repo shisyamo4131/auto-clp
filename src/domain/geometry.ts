@@ -20,6 +20,33 @@ export interface GeometricSupportCandidateMm {
   readonly canSupportCargo: boolean;
 }
 
+export interface IdentifiedGeometricSupportCandidateMm
+  extends GeometricSupportCandidateMm {
+  readonly id: string;
+}
+
+export type GeometricSupportAssessment =
+  | {
+      readonly kind: "floor";
+      readonly contactIds: readonly string[];
+      readonly eligibleContactIds: readonly string[];
+    }
+  | {
+      readonly kind: "single";
+      readonly contactIds: readonly string[];
+      readonly eligibleContactIds: readonly string[];
+    }
+  | {
+      readonly kind: "conditional";
+      readonly contactIds: readonly string[];
+      readonly eligibleContactIds: readonly string[];
+    }
+  | {
+      readonly kind: "invalid";
+      readonly contactIds: readonly string[];
+      readonly eligibleContactIds: readonly string[];
+    };
+
 export interface RectangleBoundsMm {
   readonly min: Pick<PositionMm, "xMm" | "yMm">;
   readonly max: Pick<PositionMm, "xMm" | "yMm">;
@@ -266,6 +293,86 @@ export function hasFullGeometricSupport(
     targetRectangle,
     supportingRectangles,
   );
+}
+
+function rectangleContains(
+  outer: PlacementBoundsMm,
+  inner: PlacementBoundsMm,
+): boolean {
+  return (
+    outer.min.xMm <= inner.min.xMm &&
+    outer.max.xMm >= inner.max.xMm &&
+    outer.min.yMm <= inner.min.yMm &&
+    outer.max.yMm >= inner.max.yMm
+  );
+}
+
+/**
+ * Classifies the contact geometry for one elevated cargo. A single eligible
+ * top face must contain the whole target footprint in both axes. Any positive-
+ * area contact with at least one eligible face that does not meet that strict
+ * rule remains a conditional manual arrangement. Edge and point contact do not
+ * count as support contact.
+ */
+export function assessGeometricSupport(
+  target: PlacementBoundsMm,
+  candidates: readonly IdentifiedGeometricSupportCandidateMm[],
+): GeometricSupportAssessment {
+  const empty = {
+    contactIds: [] as readonly string[],
+    eligibleContactIds: [] as readonly string[],
+  };
+  if (!hasValidPlacementBounds(target) || target.min.zMm < 0) {
+    return { kind: "invalid", ...empty };
+  }
+  if (target.min.zMm === 0) {
+    return { kind: "floor", ...empty };
+  }
+  if (candidates.some((candidate) => !hasValidPlacementBounds(candidate.bounds))) {
+    return { kind: "invalid", ...empty };
+  }
+
+  const contacts = candidates
+    .filter(
+      (candidate) =>
+        candidate.bounds.max.zMm === target.min.zMm &&
+        hasPositiveAreaOverlap(
+          {
+            min: {
+              xMm: candidate.bounds.min.xMm,
+              yMm: candidate.bounds.min.yMm,
+            },
+            max: {
+              xMm: candidate.bounds.max.xMm,
+              yMm: candidate.bounds.max.yMm,
+            },
+          },
+          {
+            min: { xMm: target.min.xMm, yMm: target.min.yMm },
+            max: { xMm: target.max.xMm, yMm: target.max.yMm },
+          },
+        ),
+    )
+    .sort((first, second) =>
+      first.id < second.id ? -1 : first.id > second.id ? 1 : 0,
+    );
+  const contactIds = contacts.map((candidate) => candidate.id);
+  const eligibleContacts = contacts.filter(
+    (candidate) => candidate.canSupportCargo,
+  );
+  const eligibleContactIds = eligibleContacts.map((candidate) => candidate.id);
+
+  if (
+    contacts.length === 1 &&
+    eligibleContacts.length === 1 &&
+    rectangleContains(eligibleContacts[0]!.bounds, target)
+  ) {
+    return { kind: "single", contactIds, eligibleContactIds };
+  }
+  if (eligibleContacts.length > 0) {
+    return { kind: "conditional", contactIds, eligibleContactIds };
+  }
+  return { kind: "invalid", contactIds, eligibleContactIds };
 }
 
 export function isPlacementWithinContainer(
