@@ -1,7 +1,8 @@
 # 0007 積荷別の許可回転
 
 - Date: 2026-08-27
-- Status: Accepted
+- Status: Superseded
+- Superseded by: ADR 0022
 - Related specification: Cargo; Placement and Validation
 - Supersedes: None
 - Refines: 0002

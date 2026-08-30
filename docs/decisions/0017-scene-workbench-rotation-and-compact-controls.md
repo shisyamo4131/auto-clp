@@ -1,7 +1,7 @@
 # 0017 3D作業面・軸別回転・compact操作
 
 - Status: Accepted
-- Partial supersession: ADR 0018 supersedes the staged-partial rollback and projected-only picker scope. ADR 0021 replaces the mesh-projected rotation-control presentation with a fixed toolbar; all other decisions remain active.
+- Partial supersession: ADR 0018 supersedes the staged-partial rollback and projected-only picker scope. ADR 0021 replaces the mesh-projected rotation-control presentation with a fixed toolbar. ADR 0022 replaces the arbitrary allowed-orientation checkbox policy with the 天地無用-only two-state policy and always-available floor rotation; all other decisions remain active.
 - Date: 2026-08-28
 - Related specification: `../specification.md` 0.13.0
 - Refines: ADR 0007、ADR 0010、ADR 0015

@@ -1,6 +1,7 @@
 # 0021 固定回転toolbarと軸icon
 
 - Status: Accepted
+- Partial supersession: ADR 0022 replaces purple fill contrast and allowed-orientation-based Z disabling with zoom-aligned border emphasis and always-available floor rotation.
 - Date: 2026-08-30
 - Related specification: `../specification.md` 0.17.1
 - Refines: ADR 0017

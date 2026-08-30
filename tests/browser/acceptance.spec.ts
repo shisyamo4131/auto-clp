@@ -31,9 +31,7 @@ async function addCargo(page: Page, name: string, input: CargoInput = {}) {
       .check();
   }
   if (input.onlyLwh === true) {
-    await page
-      .getByLabel("WLH — X=幅・Y=長さ・Z=高さ（既定）")
-      .uncheck();
+    await page.getByLabel(/天地無用/).check();
   }
   await page.getByRole("button", { name: "積荷を保存" }).click();
 }

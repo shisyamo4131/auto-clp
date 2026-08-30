@@ -22,6 +22,7 @@ $sceneCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0018-scen
 $supportSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0019-support-surface-snap-and-conditional-support.md'
 $actionableOpeningDecisionPath = Join-Path $resolvedProject 'docs/decisions/0020-actionable-opening-diagnostics-and-drag-focus.md'
 $fixedRotationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0021-fixed-rotation-toolbar-and-axis-icons.md'
+$orientationPolicyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0022-upright-only-orientation-policy.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -47,6 +48,9 @@ $sceneWorkspacePath = Join-Path $resolvedProject 'src/scene/SceneWorkspace.tsx'
 $threeViewportPath = Join-Path $resolvedProject 'src/scene/ThreeViewport.tsx'
 $sceneBrowserTestPath = Join-Path $resolvedProject 'tests/browser/scene.spec.ts'
 $stylesPath = Join-Path $resolvedProject 'src/styles.css'
+$orientationPolicyPath = Join-Path $resolvedProject 'src/domain/orientation-policy.ts'
+$cargoEditorPath = Join-Path $resolvedProject 'src/ui/CargoEditorDialog.tsx'
+$projectPersistencePath = Join-Path $resolvedProject 'src/application/project-persistence.ts'
 
 foreach ($path in @(
     $schemaPath,
@@ -66,6 +70,7 @@ foreach ($path in @(
     $supportSnapDecisionPath,
     $actionableOpeningDecisionPath,
     $fixedRotationDecisionPath,
+    $orientationPolicyDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -90,7 +95,10 @@ foreach ($path in @(
     $sceneWorkspacePath,
     $threeViewportPath,
     $sceneBrowserTestPath,
-    $stylesPath
+    $stylesPath,
+    $orientationPolicyPath,
+    $cargoEditorPath,
+    $projectPersistencePath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "Required data-contract file is missing: $path"
@@ -197,7 +205,9 @@ foreach ($requiredText in @(
     '同じviewport固定toolbarへ常時表示'
     '一本の軸線へ矢印が回り込む同じSVG'
     '回転前後でbutton位置を変えない'
-    'opacity差だけに依存せず視覚的に区別する'
+    '積荷編集画面の向き設定は「天地無用」checkboxだけ'
+    '床面回転を禁止する積荷設定は設けない'
+    '紫色の塗り分けやopacity差だけに依存しない'
 )) {
     if (-not $specification.Contains($requiredText)) {
         throw "Specification does not contain the approved scene-feedback contract text: $requiredText"
@@ -220,7 +230,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.17.1' 'Approved specification version'
+Assert-Equal $specificationVersion '0.18.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -361,12 +371,27 @@ foreach ($requiredText in @(
     '一本の軸線へ矢印が回り込む同じSVG glyph',
     'X軸glyphだけをZ軸glyphに対して90度回して',
     '積荷未選択時も常時表示',
-    'opacity差だけに依存せず',
     'Project、JSON、IndexedDB、Schema `0.1.0`',
     '回転前後でbutton位置は変えない'
 )) {
     if (-not $fixedRotationDecision.Contains($requiredText)) {
         throw "ADR 0021 does not contain the approved fixed-rotation marker: $requiredText"
+    }
+}
+$orientationPolicyDecision = [IO.File]::ReadAllText($orientationPolicyDecisionPath)
+if ($orientationPolicyDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0022 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '向き設定は「天地無用」checkboxだけ',
+    'Z軸の床面回転',
+    '常に利用できる',
+    '旧JSONまたは端末保存を読込む時',
+    '拡大・縮小buttonと同じ青緑の強調枠',
+    'Schema `0.1.0`'
+)) {
+    if (-not $orientationPolicyDecision.Contains($requiredText)) {
+        throw "ADR 0022 does not contain the approved orientation-policy marker: $requiredText"
     }
 }
 foreach ($requiredText in @(
@@ -414,6 +439,9 @@ $sceneWorkspace = [IO.File]::ReadAllText($sceneWorkspacePath)
 $threeViewport = [IO.File]::ReadAllText($threeViewportPath)
 $sceneBrowserTest = [IO.File]::ReadAllText($sceneBrowserTestPath)
 $styles = [IO.File]::ReadAllText($stylesPath)
+$orientationPolicy = [IO.File]::ReadAllText($orientationPolicyPath)
+$cargoEditor = [IO.File]::ReadAllText($cargoEditorPath)
+$projectPersistence = [IO.File]::ReadAllText($projectPersistencePath)
 foreach ($implementationMarker in @(
     @{ Name = 'geometry'; Text = $geometry; Required = 'export function hasPositiveAreaOverlap' },
     @{ Name = 'geometric support'; Text = $geometry; Required = 'export function assessGeometricSupport' },
@@ -426,8 +454,11 @@ foreach ($implementationMarker in @(
     @{ Name = 'viewport drag de-emphasis'; Text = $threeViewport; Required = 'visual.mesh.material.opacity = 0.08' },
     @{ Name = 'viewport fixed rotation toolbar'; Text = $threeViewport; Required = 'className="viewport__rotation-controls"' },
     @{ Name = 'viewport common axis rotation icon'; Text = $threeViewport; Required = 'M4 12a8 5 0 0 0 13.7 3.5' },
-    @{ Name = 'viewport enabled rotation contrast'; Text = $styles; Required = 'background: #4b2b6f' },
-    @{ Name = 'viewport disabled rotation contrast'; Text = $styles; Required = 'background: #09131e' },
+    @{ Name = 'viewport enabled rotation border'; Text = $styles; Required = 'border-color: rgba(114, 234, 220, 0.75)' },
+    @{ Name = 'viewport disabled rotation border'; Text = $styles; Required = 'border-color: rgba(88, 112, 136, 0.48)' },
+    @{ Name = 'orientation policy normalization'; Text = $orientationPolicy; Required = 'normalizeProjectOrientationPolicies' },
+    @{ Name = 'cargo editor upright-only control'; Text = $cargoEditor; Required = '<strong>天地無用</strong>' },
+    @{ Name = 'persistence orientation migration'; Text = $projectPersistence; Required = 'normalizeProjectOrientationPolicies(result.nextState.project)' },
     @{ Name = 'scene browser drag focus'; Text = $sceneBrowserTest; Required = 'renders drag focus and restores normal cargo rendering after cancel' },
     @{ Name = 'scene browser fixed rotation'; Text = $sceneBrowserTest; Required = 'keeps axis rotation controls fixed, always visible, and distinguishable by orientation' },
     @{ Name = 'scene browser drag-out'; Text = $sceneBrowserTest; Required = 'returns a fully dragged-out placement to staging as one undoable deletion' }
@@ -660,6 +691,7 @@ foreach ($requiredText in @(
     support_snap_decision_0019_accepted = $true
     actionable_opening_decision_0020_accepted = $true
     fixed_rotation_decision_0021_accepted = $true
+    orientation_policy_decision_0022_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true

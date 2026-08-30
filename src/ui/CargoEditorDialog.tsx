@@ -6,7 +6,11 @@ import {
   type CargoDraft,
 } from "../application/project-command";
 import type { ProjectHistoryCommitHandler } from "../application/project-history";
-import { ORIENTATIONS, type Cargo, type Orientation, type Project } from "../domain/model";
+import type { Cargo, Project } from "../domain/model";
+import {
+  isUprightOnlyOrientationPolicy,
+  orientationsForUprightPolicy,
+} from "../domain/orientation-policy";
 import type { ValidationIssue } from "../domain/validation";
 import { ModalShell } from "./ModalShell";
 
@@ -25,15 +29,6 @@ interface CargoEditorDialogProps {
   readonly request: CargoEditorRequest;
 }
 
-const ORIENTATION_COPY: Record<Orientation, string> = {
-  LWH: "X=長さ・Y=幅・Z=高さ（既定）",
-  WLH: "X=幅・Y=長さ・Z=高さ（既定）",
-  LHW: "X=長さ・Y=高さ・Z=幅",
-  HLW: "X=高さ・Y=長さ・Z=幅",
-  WHL: "X=幅・Y=高さ・Z=長さ",
-  HWL: "X=高さ・Y=幅・Z=長さ",
-};
-const UPRIGHT_ORIENTATIONS: readonly Orientation[] = ["LWH", "WLH"];
 const EMPTY_CARGO_DRAFT: CargoDraft = {
   name: "",
   lengthMm: "",
@@ -41,7 +36,7 @@ const EMPTY_CARGO_DRAFT: CargoDraft = {
   heightMm: "",
   massKg: "",
   canSupportCargo: false,
-  allowedOrientations: ["LWH", "WLH"],
+  allowedOrientations: orientationsForUprightPolicy(true),
 };
 
 function gramsToKilograms(grams: number): string {
@@ -58,7 +53,9 @@ function cargoDraftFrom(cargo: Cargo): CargoDraft {
     heightMm: String(cargo.dimensionsMm.heightMm),
     massKg: gramsToKilograms(cargo.massGrams),
     canSupportCargo: cargo.canSupportCargo,
-    allowedOrientations: cargo.allowedOrientations,
+    allowedOrientations: orientationsForUprightPolicy(
+      isUprightOnlyOrientationPolicy(cargo.allowedOrientations),
+    ),
   };
 }
 
@@ -152,12 +149,7 @@ export function CargoEditorDialog({
   const placement = target === undefined
     ? undefined
     : project.placements.find((candidate) => candidate.cargoId === target.id);
-  const uprightOnly =
-    draft.allowedOrientations.length > 0 &&
-    draft.allowedOrientations.every((orientation) =>
-      UPRIGHT_ORIENTATIONS.includes(orientation),
-    );
-  const orientationIssue = issueFor(issues, "allowedOrientations");
+  const uprightOnly = isUprightOnlyOrientationPolicy(draft.allowedOrientations);
   const title = target?.name ?? (request.kind === "add" ? "積荷を追加" : "積荷情報");
 
   const requestClose = () => {
@@ -279,37 +271,19 @@ export function CargoEditorDialog({
           <Field id="cargo-massGrams" label="重量" unit="kg" maxLength={10} value={draft.massKg} issues={issues} onChange={(massKg) => setDraft({ ...draft, massKg })} />
         </fieldset>
         <fieldset>
-          <legend>許可する向き</legend>
+          <legend>取扱い</legend>
           <label className="check-row check-row--emphasis">
             <input
               type="checkbox"
               checked={uprightOnly}
               onChange={(event) => setDraft({
                 ...draft,
-                allowedOrientations: event.target.checked
-                  ? [...UPRIGHT_ORIENTATIONS]
-                  : [...ORIENTATIONS],
+                allowedOrientations: orientationsForUprightPolicy(event.target.checked),
               })}
             />
             <span><strong>天地無用</strong> — 高さを上向きに保ち、X軸回転を禁止する</span>
           </label>
-          <div className="orientation-grid" aria-invalid={orientationIssue === undefined ? undefined : true}>
-            {ORIENTATIONS.map((orientation) => (
-              <label key={orientation} className="check-row">
-                <input
-                  type="checkbox"
-                  checked={draft.allowedOrientations.includes(orientation)}
-                  onChange={(event) => setDraft({
-                    ...draft,
-                    allowedOrientations: event.target.checked
-                      ? [...draft.allowedOrientations, orientation]
-                      : draft.allowedOrientations.filter((value) => value !== orientation),
-                  })}
-                />
-                <span><strong>{orientation}</strong> — {ORIENTATION_COPY[orientation]}</span>
-              </label>
-            ))}
-          </div>
+          <p className="field-help">床面上のZ軸回転は常に利用できます。天地無用を外すとX軸回転による横倒しも許可します。向きコードは面の上下反転を区別しません。</p>
         </fieldset>
         <fieldset>
           <legend>段積み設定</legend>
@@ -319,7 +293,7 @@ export function CargoEditorDialog({
           </label>
         </fieldset>
         {placement === undefined ? null : (
-          <p className="warning-copy">{project.containers.find((container) => container.id === placement.containerId)?.name ?? "候補"}に配置中です。使用中の向きは許可から外せず、積荷自体を削除するには先に荷室から外してください。</p>
+          <p className="warning-copy">{project.containers.find((container) => container.id === placement.containerId)?.name ?? "候補"}に配置中です。横倒し配置中は天地無用へ変更できません。積荷自体を削除するには先に荷室から外してください。</p>
         )}
         <div className="button-row modal-shell__actions">
           <button className="primary-button" type="submit">{target === undefined ? "積荷を保存" : "積荷情報を保存"}</button>

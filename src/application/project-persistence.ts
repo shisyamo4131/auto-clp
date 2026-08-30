@@ -1,4 +1,5 @@
 import type { Project } from "../domain/model";
+import { normalizeProjectOrientationPolicies } from "../domain/orientation-policy";
 import type { ProjectImportPreflightClientResult } from "../persistence/project-import-preflight-client";
 import {
   MAX_PROJECT_FILE_BYTES,
@@ -112,5 +113,8 @@ export async function prepareProjectImport(
       code: importFailureCode(result.stage, result.issues[0]?.code),
     };
   }
-  return { ok: true, project: result.nextState.project };
+  return {
+    ok: true,
+    project: normalizeProjectOrientationPolicies(result.nextState.project),
+  };
 }

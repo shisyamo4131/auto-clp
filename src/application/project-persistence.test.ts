@@ -88,6 +88,49 @@ describe("project persistence application boundary", () => {
     expect(current.projectId).toBe("current");
   });
 
+  it("normalizes legacy orientation subsets after accepted import", async () => {
+    const current = project("current");
+    const incoming = {
+      ...project("incoming"),
+      cargoes: [
+        {
+          id: "cargo-upright",
+          name: "天地無用積荷",
+          dimensionsMm: { lengthMm: 100, widthMm: 80, heightMm: 60 },
+          massGrams: 1000,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH"] as const,
+        },
+        {
+          id: "cargo-tip",
+          name: "横倒し可能積荷",
+          dimensionsMm: { lengthMm: 100, widthMm: 80, heightMm: 60 },
+          massGrams: 1000,
+          canSupportCargo: false,
+          allowedOrientations: ["LHW"] as const,
+        },
+      ],
+    } satisfies Project;
+    const preflight = vi.fn(async () => ({ ok: true as const }));
+
+    const result = await prepareProjectImport(current, sourceFor(incoming), preflight);
+
+    expect(result).toEqual({
+      ok: true,
+      project: {
+        ...incoming,
+        cargoes: [
+          { ...incoming.cargoes[0], allowedOrientations: ["LWH", "WLH"] },
+          {
+            ...incoming.cargoes[1],
+            allowedOrientations: ["LWH", "WLH", "LHW", "HLW", "WHL", "HWL"],
+          },
+        ],
+      },
+    });
+    expect(preflight).toHaveBeenCalledWith(incoming);
+  });
+
   it.each([
     [
       "invalid declared size",

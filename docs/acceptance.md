@@ -21,7 +21,7 @@
 - キーボード操作と305、320、375 px幅で、主要操作、理由、確認、focusを失わない。
 - fine-pointer床面dragはno-opを先行し、両軸に正の共通長があるpartialを修正途中配置として保存し、面・辺・点接触を含むoutsideだけを荷室外作業状態にする。status出現でviewport位置を変えない。
 - 全積荷を検索・選択でき、他候補配置は所有候補へ切り替えてから扱う。積荷定義と配置は別dialog・別履歴で、配置取り外しと積荷削除をcascadeしない。
-- dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は固定toolbar上の同一glyphを90度差とaccessible nameで区別でき、天地無用はXだけを無効にする。
+- dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は固定toolbar上の同一glyphを90度差とaccessible nameで区別でき、積荷editorの向き設定は天地無用だけとする。Z軸床面回転は常に利用でき、天地無用はXだけを無効にする。
 
 ## AC-01 Floor Layout and Manual Editing
 
@@ -101,7 +101,8 @@
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` が履歴、IndexedDB、固定JSON往復、WebGL非対応fallbackを分担して実行する。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
-- 仕様0.17.1は、使用可の明るい紫色と使用不可の暗い低彩度について背景・枠・前景色を直接回帰し、opacity差だけに依存しない。回転確認用データは、天地無用でZだけ使用可の積荷と、全6向きでX/Zとも使用可の積荷を区別する。
+- 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。
+- 仕様0.18.0は、積荷editorに天地無用以外の向きcheckboxがないこと、旧1向き・横倒し部分集合を2向き・6向きへ正規化すること、天地無用でもZ軸床面回転が利用できること、天地無用OFFでX/Zとも利用できること、使用可の枠が拡大・縮小buttonと一致し使用不可の枠・iconが低彩度であることを回帰する。
 
 ## Observation Record Template
 

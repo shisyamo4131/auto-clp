@@ -22,7 +22,11 @@ import type {
   ProjectHistoryAction,
   ProjectHistoryCommitHandler,
 } from "../application/project-history";
-import { ORIENTATIONS, type Cargo, type Container, type Orientation, type Project } from "../domain/model";
+import type { Cargo, Container, Project } from "../domain/model";
+import {
+  isUprightOnlyOrientationPolicy,
+  orientationsForUprightPolicy,
+} from "../domain/orientation-policy";
 import type { ValidationIssue } from "../domain/validation";
 import type { CargoEditorIntent } from "./CargoEditorDialog";
 
@@ -35,17 +39,6 @@ interface ProjectWorkspaceProps {
   readonly project: Project;
 }
 
-const ORIENTATION_COPY: Record<Orientation, string> = {
-  LWH: "X=長さ・Y=幅・Z=高さ（既定）",
-  WLH: "X=幅・Y=長さ・Z=高さ（既定）",
-  LHW: "X=長さ・Y=高さ・Z=幅",
-  HLW: "X=高さ・Y=長さ・Z=幅",
-  WHL: "X=幅・Y=高さ・Z=長さ",
-  HWL: "X=高さ・Y=幅・Z=長さ",
-};
-
-const UPRIGHT_ORIENTATIONS: readonly Orientation[] = ["LWH", "WLH"];
-
 const EMPTY_CARGO_DRAFT: CargoDraft = {
   name: "",
   lengthMm: "",
@@ -53,7 +46,7 @@ const EMPTY_CARGO_DRAFT: CargoDraft = {
   heightMm: "",
   massKg: "",
   canSupportCargo: false,
-  allowedOrientations: ["LWH", "WLH"],
+  allowedOrientations: orientationsForUprightPolicy(true),
 };
 
 const EMPTY_CONTAINER_DRAFT: ContainerDraft = {
@@ -107,7 +100,9 @@ function cargoDraftFrom(cargo: Cargo): CargoDraft {
     heightMm: String(cargo.dimensionsMm.heightMm),
     massKg: gramsToKilograms(cargo.massGrams),
     canSupportCargo: cargo.canSupportCargo,
-    allowedOrientations: cargo.allowedOrientations,
+    allowedOrientations: orientationsForUprightPolicy(
+      isUprightOnlyOrientationPolicy(cargo.allowedOrientations),
+    ),
   };
 }
 
@@ -574,12 +569,7 @@ export function LegacyCargoManager({
     focusElement(`cargo-delete-${id}`);
   };
 
-  const orientationIssue = issues.find((issue) => isIssueFor(issue, "allowedOrientations"));
-  const uprightOnly =
-    draft.allowedOrientations.length > 0 &&
-    draft.allowedOrientations.every((orientation) =>
-      UPRIGHT_ORIENTATIONS.includes(orientation),
-    );
+  const uprightOnly = isUprightOnlyOrientationPolicy(draft.allowedOrientations);
 
   return (
     <section className="editor-card" aria-labelledby="cargo-title">
@@ -659,7 +649,7 @@ export function LegacyCargoManager({
             <Field id="cargo-mass" label="重量" unit="kg" help="0.001〜100,000 kg、小数3桁まで" maxLength={10} value={draft.massKg} issues={issues} issueField="massGrams" inputMode="decimal" onChange={(massKg) => setDraft({ ...draft, massKg })} />
           </fieldset>
           <fieldset>
-            <legend>許可する向き</legend>
+            <legend>取扱い</legend>
             <label className="check-row check-row--emphasis">
               <input
                 type="checkbox"
@@ -667,38 +657,13 @@ export function LegacyCargoManager({
                 onChange={(event) => {
                   setDraft({
                     ...draft,
-                    allowedOrientations: event.target.checked
-                      ? [...UPRIGHT_ORIENTATIONS]
-                      : [...ORIENTATIONS],
+                    allowedOrientations: orientationsForUprightPolicy(event.target.checked),
                   });
                 }}
               />
               <span><strong>天地無用</strong> — 高さを上向きに保ち、X軸回転を禁止する</span>
             </label>
-            <p className="field-help">天地無用は既存の許可向きへ反映します。向きコードは元の長さ・幅・高さを荷室X・Y・Z軸へ割り当て、面の上下反転までは区別しません。必要なら下で個別に調整できます。</p>
-            <div
-              className="orientation-grid"
-              aria-invalid={orientationIssue === undefined ? undefined : true}
-              aria-describedby={orientationIssue === undefined ? undefined : "orientation-error"}
-              tabIndex={orientationIssue === undefined ? undefined : -1}
-            >
-              {ORIENTATIONS.map((orientation) => (
-                <label key={orientation} className="check-row">
-                  <input
-                    type="checkbox"
-                    checked={draft.allowedOrientations.includes(orientation)}
-                    onChange={(event) => {
-                      const allowedOrientations = event.target.checked
-                        ? [...draft.allowedOrientations, orientation]
-                        : draft.allowedOrientations.filter((current) => current !== orientation);
-                      setDraft({ ...draft, allowedOrientations });
-                    }}
-                  />
-                  <span><strong>{orientation}</strong> — {ORIENTATION_COPY[orientation]}</span>
-                </label>
-              ))}
-            </div>
-            {orientationIssue === undefined ? null : <p id="orientation-error" className="field__error">エラー: {issueMessage(orientationIssue)}</p>}
+            <p className="field-help">床面上のZ軸回転は常に利用できます。天地無用を外すとX軸回転による横倒しも許可します。向きコードは面の上下反転を区別しません。</p>
           </fieldset>
           <fieldset>
             <legend>段積み設定</legend>

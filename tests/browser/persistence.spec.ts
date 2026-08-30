@@ -452,6 +452,47 @@ test("round-trips the single IndexedDB slot across reload, resets history, and d
   await expect(persistenceStatus).toHaveText("読込できる端末内保存はありません。");
 });
 
+test("normalizes a legacy one-orientation import so floor rotation remains available", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await openPersistenceDrawer(page);
+  await importJson(page, projectJson("旧向き方針", {
+    cargoes: [{
+      id: "cargo-legacy",
+      name: "旧1向き積荷",
+      dimensionsMm: { lengthMm: 200, widthMm: 180, heightMm: 150 },
+      massGrams: 1000,
+      canSupportCargo: false,
+      allowedOrientations: ["LWH"],
+    }],
+    containers: [{
+      id: "container-legacy",
+      name: "旧向き候補",
+      internalDimensionsMm: { lengthMm: 1000, widthMm: 800, heightMm: 800 },
+      openingMm: { widthMm: 800, heightMm: 800 },
+      payloadCapacityGrams: 10000,
+    }],
+  }));
+  await expect(page.locator(".project-persistence__status")).toContainText(
+    "案件JSONを読み込みました",
+  );
+  await page.getByRole("button", { name: "案件データを閉じる" }).click();
+  await page.getByLabel("操作する積荷").selectOption("cargo-legacy");
+
+  await expect(page.getByRole("button", { name: "X軸を中心に90°回転" })).toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await expect(page.getByRole("button", { name: "Z軸を中心に90°回転" })).not.toHaveAttribute(
+    "aria-disabled",
+    "true",
+  );
+  await page.getByRole("button", { name: "積荷情報を編集" }).click();
+  await expect(page.getByLabel(/天地無用/)).toBeChecked();
+  await expect(page.getByLabel(/^LWH/)).toHaveCount(0);
+});
+
 test("downloads the fixed JSON contract and reimports it without history or derived state", async ({
   page,
 }) => {

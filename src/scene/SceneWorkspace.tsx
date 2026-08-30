@@ -7,6 +7,7 @@ import {
 } from "../application/project-command";
 import type { ProjectHistoryCommitHandler } from "../application/project-history";
 import type { Project } from "../domain/model";
+import { isUprightOnlyOrientationPolicy } from "../domain/orientation-policy";
 import { PhysicalValidationPanel } from "../ui/PhysicalValidationPanel";
 import type { CargoEditorIntent } from "../ui/CargoEditorDialog";
 import {
@@ -178,12 +179,11 @@ export function SceneWorkspace({
     selectedOrientation === undefined
       ? undefined
       : xAxisQuarterTurnOrientation(selectedOrientation);
-  const zRotationAllowed =
-    nextZOrientation !== undefined &&
-    selectedCargo?.allowedOrientations.includes(nextZOrientation) === true;
+  const zRotationAllowed = nextZOrientation !== undefined && selectedCargo !== undefined;
   const xRotationAllowed =
     nextXOrientation !== undefined &&
-    selectedCargo?.allowedOrientations.includes(nextXOrientation) === true;
+    selectedCargo !== undefined &&
+    !isUprightOnlyOrientationPolicy(selectedCargo.allowedOrientations);
   const interactionActive = placementInteractionActive || canvasDragActive;
   const coordinateActionDisabled =
     externalInteractionActive ||
@@ -593,11 +593,12 @@ export function SceneWorkspace({
       axis === "X"
         ? xAxisQuarterTurnOrientation(rotationProjection.orientation)
         : floorQuarterTurnOrientation(rotationProjection.orientation);
-    if (!cargo.allowedOrientations.includes(nextOrientation)) {
+    if (
+      axis === "X" &&
+      isUprightOnlyOrientationPolicy(cargo.allowedOrientations)
+    ) {
       setCanvasStatus(
-        axis === "X"
-          ? "この積荷ではX軸回転後の向きが許可されていません。天地無用または許可する向きを確認してください。"
-          : "この積荷ではZ軸回転後の向きが許可されていません。許可する向きを確認してください。",
+        "この積荷は天地無用のため、X軸回転を利用できません。",
       );
       return;
     }
@@ -839,7 +840,7 @@ export function SceneWorkspace({
               ? "積荷を選択するとX軸回転できます。"
               : xRotationAllowed
                 ? "X軸を中心に90°回転します。"
-                : "天地無用または許可する向きにより、X軸回転は利用できません。"
+                : "天地無用のため、X軸回転は利用できません。"
           }
           zRotationDisabled={
             externalInteractionActive ||
@@ -858,7 +859,7 @@ export function SceneWorkspace({
               ? "積荷を選択するとZ軸回転できます。"
               : zRotationAllowed
                 ? "Z軸を中心に床面上で90°回転します。"
-                : "許可する向きにより、Z軸回転は利用できません。"
+                : "積荷を選択するとZ軸回転できます。"
           }
           selectedCargoId={selectedProjection === undefined ? undefined : selectedCargoId}
           statusDescriptionId="scene-workspace-status scene-workspace-action-status scene-workspace-interaction-help"

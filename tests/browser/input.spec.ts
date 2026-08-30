@@ -93,27 +93,15 @@ test("keeps cargo input available without WebGL and exposes permanent safety not
   await expect(page.getByText("積載可能性や物理的安全性を保証しません", { exact: false })).toBeVisible();
 });
 
-test("focuses an invalid orientation group", async ({ page }) => {
-  await page.goto("/?forceWebgl2=unsupported");
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await fillCargo(page, "向きなし積荷");
-  await page.getByLabel(/^LWH/).uncheck();
-  await expect(page.getByLabel(/^LWH/)).not.toBeChecked();
-  await page.getByLabel(/^WLH/).uncheck();
-  await expect(page.getByLabel(/^WLH/)).not.toBeChecked();
-  await page.getByRole("button", { name: "積荷を保存" }).click();
-  await expect(page.locator("#cargo-dialog-errors")).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "積荷を追加" })).toBeVisible();
-});
-
-test("maps 天地無用 to the existing upright orientation set", async ({ page }) => {
+test("uses 天地無用 as the only cargo orientation setting", async ({ page }) => {
   await page.goto("/?forceWebgl2=unsupported");
   await page.getByRole("button", { name: "積荷を追加" }).click();
   await fillCargo(page, "天地無用合成積荷");
   await expect(page.getByLabel(/天地無用/)).toBeChecked();
-  await expect(page.getByLabel(/^LWH/)).toBeChecked();
-  await expect(page.getByLabel(/^WLH/)).toBeChecked();
-  await expect(page.getByLabel(/^LHW/)).not.toBeChecked();
+  await expect(page.getByLabel(/^LWH/)).toHaveCount(0);
+  await expect(page.getByLabel(/^WLH/)).toHaveCount(0);
+  await expect(page.getByLabel(/^LHW/)).toHaveCount(0);
+  await expect(page.getByText("床面上のZ軸回転は常に利用できます。")).toBeVisible();
   await page.getByRole("button", { name: "積荷を保存" }).click();
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
   await expect(page.locator(".scene-selection-card")).toContainText("天地無用合成積荷");
