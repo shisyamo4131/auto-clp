@@ -330,6 +330,91 @@ describe("project scene coordinate adapter", () => {
     expect(project).toEqual(original);
   });
 
+  it("keeps peer staging positions fixed when one cargo rotates on the floor", () => {
+    const base = projectFixture();
+    const project: Project = {
+      ...base,
+      cargoes: [
+        {
+          id: "cargo-b",
+          name: "操作荷B",
+          dimensionsMm: { lengthMm: 200, widthMm: 180, heightMm: 150 },
+          massGrams: 1,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH", "WLH"],
+        },
+        {
+          id: "cargo-d",
+          name: "操作荷D",
+          dimensionsMm: { lengthMm: 260, widthMm: 220, heightMm: 120 },
+          massGrams: 1,
+          canSupportCargo: false,
+          allowedOrientations: ORIENTATIONS,
+        },
+        {
+          id: "cargo-f",
+          name: "操作荷F",
+          dimensionsMm: { lengthMm: 300, widthMm: 220, heightMm: 100 },
+          massGrams: 1,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH", "WLH"],
+        },
+        {
+          id: "cargo-h",
+          name: "操作荷H",
+          dimensionsMm: { lengthMm: 180, widthMm: 180, heightMm: 120 },
+          massGrams: 1,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH", "WLH"],
+        },
+      ],
+      containers: [{
+        ...base.containers[0]!,
+        internalDimensionsMm: { lengthMm: 1_800, widthMm: 900, heightMm: 900 },
+      }],
+      placements: [],
+    };
+
+    const before = projectContainerToScene(project, "container-1");
+    expect(before.ok).toBe(true);
+    if (!before.ok) return;
+    const cargoFBefore = before.projection.cargoes.find(
+      (cargo) => cargo.cargoId === "cargo-f",
+    )!;
+
+    const after = projectContainerToScene(project, "container-1", {
+      "cargo-f": {
+        orientation: "WLH",
+        positionMm: cargoFBefore.positionMm,
+      },
+    });
+
+    expect(after.ok).toBe(true);
+    if (!after.ok) return;
+    for (const cargoId of ["cargo-b", "cargo-d", "cargo-h"]) {
+      expect(
+        after.projection.cargoes.find((cargo) => cargo.cargoId === cargoId)?.positionMm,
+      ).toEqual(
+        before.projection.cargoes.find((cargo) => cargo.cargoId === cargoId)?.positionMm,
+      );
+    }
+    expect(
+      after.projection.cargoes.find((cargo) => cargo.cargoId === "cargo-h")?.positionMm,
+    ).toEqual({ xMm: -800, yMm: 500, zMm: 0 });
+    expect(
+      after.projection.cargoes.find((cargo) => cargo.cargoId === "cargo-f"),
+    ).toMatchObject({
+      orientation: "WLH",
+      positionMm: cargoFBefore.positionMm,
+    });
+    expect(
+      after.projection.cargoes.find((cargo) => cargo.cargoId === "cargo-f")?.dimensions,
+    ).toEqual(domainDimensionsToScene(orientedDimensions(project.cargoes[2]!, "WLH")));
+    expect(
+      after.projection.cargoes.find((cargo) => cargo.cargoId === "cargo-f")?.dimensions,
+    ).not.toEqual(cargoFBefore.dimensions);
+  });
+
   it("projects a session-only staged position and allowed orientation override", () => {
     const base = projectFixture();
     const cargo = {
@@ -456,7 +541,7 @@ describe("project scene coordinate adapter", () => {
     if (result.ok) {
       const stagedCargo = result.projection.cargoes[0]!;
       expect(stagedCargo.orientation).toBe("WLH");
-      expect(stagedCargo.positionMm).toEqual({ xMm: -1_500, yMm: 250, zMm: 0 });
+      expect(stagedCargo.positionMm).toEqual({ xMm: -1_500, yMm: -200, zMm: 0 });
       expect(
         stagedCargoOverlapsContainerFloor(
           cargo,

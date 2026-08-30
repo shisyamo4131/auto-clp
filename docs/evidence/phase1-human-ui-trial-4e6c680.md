@@ -221,6 +221,10 @@ X/Z回転は既存 `allowedOrientations` だけを使い、天地無用を `LWH`
 同じローカルChromeで旧端末保存を新方針により読込し、操作荷D（大）だけ天地無用OFF、操作荷B（小）を含む他の旧立置き部分集合を天地無用ONへ正規化して端末の単一枠へ明示保存した。page reload後にその端末保存を再読込し、操作荷BはX不可・Z可、操作荷DはX/Z可、使用可枠が拡大・縮小と同じ `rgba(114, 234, 220, 0.75)`、使用不可枠が `rgba(88, 112, 136, 0.48)` であることをDOMとcomputed styleで確認した。評価者本人による操作・視認性の最終再試用は未実施である。
 
 自動回帰では、旧1向き端末データの正規化、天地無用だけのeditor、X/Z可否、zoom同等枠線、永続化往復を含む全単体943件・全browser 71件、typecheck、lint、buildが成功した。buildは既知のlarge-chunk advisoryだけを保持する。
+
+続く人間再試用で、荷室外の操作荷FをZ軸回転すると未選択の操作荷Hが動くことが確認された。原因は、初期gridが現在向きの全体最大X/Y寸法を再計算し、Fの `300×220` から `220×300 mm` への交換でoverrideを持たないHの既定位置まで再投影していたためである。仕様0.18.1ではgridセルを各積荷の許可向き全体から得る最大X/Y footprintで固定し、回転対象以外のsession位置を維持する。Project、端末保存、JSON、Schema `0.1.0`、物理判定、案件履歴は変更しない。
+
+修正後の同じ端末保存をローカルin-app Browserへ再読込し、H選択時の画面を記録してからFをZ軸回転し、Hを再選択した画面と比較した。Hの表示位置は維持され、Fの向きだけが変わった。純粋投影試験はFのoverride前後でB・D・Hの各 `positionMm` が不変で、Hが `{ xMm: -800, yMm: 500, zMm: 0 }` を保持することを固定した。全単体944件・全browser 71件、typecheck、lint、buildが成功し、buildは既知のlarge-chunk advisoryだけを保持する。評価者本人による修正後の再試用は未実施である。
 - `HUT-01` 修正後の同じA/B fixtureによる人間再試用。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 

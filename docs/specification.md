@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-08-30
-- Specification version: 0.18.0
+- Specification version: 0.18.1
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -63,7 +63,7 @@
 ### Placement and Validation
 
 - 利用者は3D空間で積荷を選択し、移動、回転、取り外しができる。
-- 案件全体で未配置の積荷は、選択コンテナの外側にある非永続の作業スペースへ表示する。他の候補コンテナへ配置済みの積荷は重複表示しない。初回だけ先頭許可向き、床Z=0、決定的gridを使い、利用者が荷室外へdropした後はcargo IDごとの位置と向きを現在のUI sessionだけに保持する。作業位置、向き、選択は案件、JSON、端末保存、履歴、物理判定へ含めない。
+- 案件全体で未配置の積荷は、選択コンテナの外側にある非永続の作業スペースへ表示する。他の候補コンテナへ配置済みの積荷は重複表示しない。初回だけ先頭許可向き、床Z=0、決定的gridを使う。gridのセル寸法は各積荷の許可向き全体から得る最大X/Y footprintを使い、一つの積荷をX/Z回転しても他の未配置積荷を再配置しない。利用者が荷室外へdropした後はcargo IDごとの位置と向きを現在のUI sessionだけに保持する。作業位置、向き、選択は案件、JSON、端末保存、履歴、物理判定へ含めない。
 - fine pointerの床面dragは、scene差分を整数mmのX/Yへ量子化した後、向き適用後のX/Y占有範囲を生の荷室床面 `[0, L] × [0, W]` に対して `xy-contained`、`partial`、`outside` の三状態へ分類する。両軸で正の共通長を持つが完全包含でない場合を `partial`、面・辺・点の接触を含め一方でも共通長0の場合を `outside` とし、Zは分類に使わない。X/Yが変わらないno-opは分類より先に扱い、案件、履歴、session poseを変更しない。
 - 未配置積荷のdropが `xy-contained` または `partial` なら、量子化したX/Yと向き、および後述の床・支持面snapで決めたZを使って一回の `placement.add` とする。`partial` は修正途中の境界不適合配置として直ちに保存し、物理判定の再計算と不適合表示へ渡す。`outside` はProjectと履歴を変更せずsessionの作業位置だけを更新する。
 - 配置済み積荷のdropが `xy-contained` または `partial` なら、量子化したX/Yと向き、および床・支持面snapで決めたZを使って一回の `placement.drag-xy` とする。`outside` ならdrop位置と向きをsessionへ記録して一回の `placement.delete` とする。Undoは元配置を復元し、Redoは同じ外側作業位置へ戻す。失敗、取消、staleはstatusまたはpreviewを戻す以外、Project、履歴、session poseを変更しない。この三状態分類は3Dのfine-pointer dragだけに適用し、座標フォーム、JSON読込、回転、積荷・候補編集、既存Project配置を自動的に再分類しない。

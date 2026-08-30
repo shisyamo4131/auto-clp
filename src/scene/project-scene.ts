@@ -550,6 +550,16 @@ function stagedCargoesToScene(
       return {
         cargo,
         dimensions: orientedDimensions(cargo, effectiveOrientation),
+        layoutFootprint: cargo.allowedOrientations.reduce(
+          (maximum, allowedOrientation) => {
+            const allowedDimensions = orientedDimensions(cargo, allowedOrientation);
+            return {
+              xMm: Math.max(maximum.xMm, allowedDimensions.xMm),
+              yMm: Math.max(maximum.yMm, allowedDimensions.yMm),
+            };
+          },
+          { xMm: 0, yMm: 0 },
+        ),
         orientation: effectiveOrientation,
         override,
       };
@@ -560,10 +570,10 @@ function stagedCargoesToScene(
 
   const columnCount = Math.ceil(Math.sqrt(staged.length));
   const maxFootprintX = Math.max(
-    ...staged.map(({ dimensions }) => dimensions.xMm),
+    ...staged.map(({ layoutFootprint }) => layoutFootprint.xMm),
   );
   const maxFootprintY = Math.max(
-    ...staged.map(({ dimensions }) => dimensions.yMm),
+    ...staged.map(({ layoutFootprint }) => layoutFootprint.yMm),
   );
   const gridWidthY =
     columnCount * maxFootprintY + (columnCount - 1) * STAGING_GAP_MM;

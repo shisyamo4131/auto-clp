@@ -14,7 +14,7 @@
 
 ## Decision
 
-- 未配置積荷の決定的gridは初期位置にだけ使う。利用者がfine pointerで積荷全体を荷室外へdropした後は、cargo IDごとの位置と向きを現在のUI sessionだけに保持し、次のdrag開始位置とする。外側移動はProjectと履歴を変更しない。
+- 未配置積荷の決定的gridは初期位置にだけ使う。gridのセル寸法は各積荷の許可向き全体から得る最大X/Y footprintで固定し、一つの積荷のsession回転で他の未配置積荷を再配置しない。利用者がfine pointerで積荷全体を荷室外へdropした後は、cargo IDごとの位置と向きを現在のUI sessionだけに保持し、次のdrag開始位置とする。外側移動はProjectと履歴を変更しない。
 - 未配置積荷の全体が荷室内へ入ったdropだけを一回の `placement.add` とする。一部だけ荷室床面へ重なるdropは、配置済みの部分overhangと混同せず直前の外側作業位置へ戻す。
 - 配置済み積荷を床面から完全に外へdragした時は、そのdrop位置と向きをsession状態へ記録してから一回の `placement.delete` とする。Undoは配置を復元し、Redoは同じ外側作業位置へ戻す。配置済みの正面積overlap規則はADR 0015のままとする。
 - session上の外側位置、向き、選択、cameraはProject、JSON、IndexedDB、物理判定、案件履歴へ保存しない。読込によるscene barrierでは従来どおり破棄する。

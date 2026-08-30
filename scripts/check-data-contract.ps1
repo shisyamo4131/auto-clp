@@ -45,6 +45,8 @@ $appPath = Join-Path $resolvedProject 'src/App.tsx'
 $geometryPath = Join-Path $resolvedProject 'src/domain/geometry.ts'
 $placementValidationPath = Join-Path $resolvedProject 'src/domain/validation.ts'
 $sceneWorkspacePath = Join-Path $resolvedProject 'src/scene/SceneWorkspace.tsx'
+$projectScenePath = Join-Path $resolvedProject 'src/scene/project-scene.ts'
+$projectSceneTestPath = Join-Path $resolvedProject 'src/scene/project-scene.test.ts'
 $threeViewportPath = Join-Path $resolvedProject 'src/scene/ThreeViewport.tsx'
 $sceneBrowserTestPath = Join-Path $resolvedProject 'tests/browser/scene.spec.ts'
 $stylesPath = Join-Path $resolvedProject 'src/styles.css'
@@ -93,6 +95,8 @@ foreach ($path in @(
     $geometryPath,
     $placementValidationPath,
     $sceneWorkspacePath,
+    $projectScenePath,
+    $projectSceneTestPath,
     $threeViewportPath,
     $sceneBrowserTestPath,
     $stylesPath,
@@ -230,7 +234,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '0.18.0' 'Approved specification version'
+Assert-Equal $specificationVersion '0.18.1' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -436,6 +440,8 @@ foreach ($requiredText in @(
 $geometry = [IO.File]::ReadAllText($geometryPath)
 $placementValidation = [IO.File]::ReadAllText($placementValidationPath)
 $sceneWorkspace = [IO.File]::ReadAllText($sceneWorkspacePath)
+$projectScene = [IO.File]::ReadAllText($projectScenePath)
+$projectSceneTest = [IO.File]::ReadAllText($projectSceneTestPath)
 $threeViewport = [IO.File]::ReadAllText($threeViewportPath)
 $sceneBrowserTest = [IO.File]::ReadAllText($sceneBrowserTestPath)
 $styles = [IO.File]::ReadAllText($stylesPath)
@@ -449,6 +455,8 @@ foreach ($implementationMarker in @(
     @{ Name = 'scene workspace snap'; Text = $sceneWorkspace; Required = 'resolveSupportSnapPosition(' },
     @{ Name = 'scene workspace classifier'; Text = $sceneWorkspace; Required = 'classifyFloorFootprint(' },
     @{ Name = 'scene workspace deletion'; Text = $sceneWorkspace; Required = 'action: "placement.delete"' },
+    @{ Name = 'rotation-stable staging grid'; Text = $projectScene; Required = 'layoutFootprint: cargo.allowedOrientations.reduce' },
+    @{ Name = 'rotation-stable staging regression'; Text = $projectSceneTest; Required = 'keeps peer staging positions fixed when one cargo rotates on the floor' },
     @{ Name = 'viewport wheel policy'; Text = $threeViewport; Required = 'controls.enableZoom = false' },
     @{ Name = 'viewport dotted focus'; Text = $threeViewport; Required = 'new THREE.LineDashedMaterial' },
     @{ Name = 'viewport drag de-emphasis'; Text = $threeViewport; Required = 'visual.mesh.material.opacity = 0.08' },
