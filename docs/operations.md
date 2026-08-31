@@ -2,6 +2,8 @@
 
 ## Current Availability
 
+- Approved, implementation pending: 仕様1.2.0・ADR 0026の一行tab候補切替、side-relative荷室外anchor、共有camera、選択積荷の3軸寸法annotation、selector直下の固定context action row、物理判定lamp/dialog、版付き「使用上の重要事項」。実装と回帰が完了するまでは利用可能として案内しない。
+
 - Implemented viewer-first shell: Application Barにmenu、現在CLP名、小さな3D能力Chipを置き、新規CLP・CLP設定・端末保存・JSONを単一Navigation Drawerへ集約する。CLP設定はdialog、候補selectorはviewport上部、全CLP積荷の名前/ID検索・状態付きselectorはviewport下部overlayとし、3Dの寸法と位置を動かさない。未保存変更付きの新規CLPは破棄確認後、UUID付きの新 `projectId` と空履歴を作るbarrierとし、CLP設定dialogを開く。
 
 - Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、CLP JSON Schema `0.1.0`、完全なreadonly CLP型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、保存Navigation Drawerと操作単位のSnackbar、全候補の置換前Worker判定、CLP・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、viewport内のcompactな単一CLP履歴、積荷picker、選択積荷のcompactな寸法・座標card、成功したCLP変更を最大100件保持する非永続undo/redo、コンテナ包含・XY正面積重なり・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補選択、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置と荷室外作業スペースのThree.js描画、canvas積荷選択、fine pointerによる未配置積荷の自由な荷室外移動・初回配置と配置済み床面方向drag・完全drag-out削除、許可済みX/Z軸90°回転、天地無用入力補助、viewport wheelのpage scroll、明示的な `＋` / `－` による拡大縮小、同一候補更新時のcamera保持、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
@@ -11,7 +13,7 @@
 - Implemented transport: 正本Schema・意味検証後だけ探索するone-shot module Worker、固定code、厳格な応答検証、同期fallbackなしのclient、即時terminate取消と遅延・二重応答mask、Appからの実Worker接続。
 - Implemented orchestration, preview, and apply: React非依存の探索session、Project参照・interaction generationのstale判定、取消・retry・遅延結果mask、React hook/panel、Appのbusy・generation開始gate、source相関付き固定copy、25件pageの非永続preview DOM、Schema・意味・物理再検証付きの確認、一括適用、一回のUndo/Redo。Auto CLPの操作はWebGL 2能力確認と初回描画成功後だけ利用できる。
 - Verified technical evidence: AP-08代表規模は、Windows/headless Chromiumの記録環境で実Workerのcold 1回・warm 3回、決定性、main timer/rAF進行、native取消を初期性能gate内で検証した。記録は `evidence/automatic-proposal-ap08-1226b082.md`。一般端末SLA、最低GPU、実務受入、安全保証ではない。
-- Unavailable: 端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上の自由な連続Z移動・取り外し、touch drag、複数候補のtab切替とside-relative作業面、積荷画像、デプロイ、クラウド保存、外部API、実運用サポート。
+- Unavailable: 端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上の自由な連続Z移動・取り外し、touch drag、仕様1.2.0の承認済みscene改善（実装完了まで）、積荷画像、デプロイ、クラウド保存、外部API、実運用サポート。
 
 未実装機能を利用可能として案内してはならない。
 

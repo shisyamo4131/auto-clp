@@ -1,12 +1,12 @@
 # Future Scene Workspace Design Proposal
 
-- Status: Proposal — 未承認・未実装
+- Status: Partially Accepted — 複数候補workspaceはADR 0026で採用・修正、積荷画像は未承認・未実装
 - Product: Auto CLP
 - Last verified: 2026-08-31
 - Related roadmap: [Auto CLP roadmap](../roadmaps/auto-clp.md)
 - Related specification: [Planned Scene Extensions](../specification.md#planned-scene-extensions)
-- Related decisions: [ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0017](../decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0025](../decisions/0025-viewer-first-application-shell.md)
-- Authority: 本文書は実装前の設計提案であり、確定要件ではない。現行仕様とAccepted ADRが優先する。
+- Related decisions: [ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0017](../decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0025](../decisions/0025-viewer-first-application-shell.md)、[ADR 0026](../decisions/0026-tabbed-scene-annotations-and-validation-dialog.md)
+- Authority: 複数候補workspaceの確定要件は仕様1.2.0とADR 0026を優先する。積荷画像部分は引き続き設計提案であり、実装承認ではない。
 
 ## Purpose and Boundaries
 
@@ -15,7 +15,7 @@
 1. 複数のコンテナ・車両候補を切り替えても、荷室外に避けた未配置積荷の関係を維持する作業面。
 2. 寸法が似た積荷を人が識別しやすくする、任意の写真・識別画像。
 
-本提案はアプリ、Schema、保存データ、仕様版、進捗を変更しない。外部通信、実データ、画像URL、クラウド保存は対象外である。実装開始には、後述する未決定事項の承認、現行仕様への反映、新しいAccepted ADR、実装・テスト・運用・変更履歴の同期が必要となる。
+複数候補workspaceは2026-08-31に仕様1.2.0・ADR 0026として採用され、tab、side-relative anchor、共有cameraへ確定した。積荷画像はアプリ、Schema、保存データ、進捗を変更しない未承認提案である。外部通信、実データ、画像URL、クラウド保存は対象外である。
 
 ## Confirmed Repository Facts
 
@@ -85,9 +85,9 @@ StagingAnchor = {
 - 長名・重複名は表示を省略できるが、accessible nameとtitleには名前とIDを含める。
 - drag、dialog、永続化など既存busy gate中は切替を拒否する。候補削除時は先頭候補へfallbackし、Undoで復活しても自動再選択しない。
 
-### Candidate-specific camera
+### Shared camera (accepted refinement)
 
-`ThreeViewport` の単一camera refをcontainer ID別mapへ変更する。active候補のOrbit/zoomを保存し、再表示時に復元する。候補削除時は該当entryをpruneし、新規CLP・正常読込・端末読込の既存barrier remountで全cameraを消す。全体表示iconはactive候補だけをresetする。
+候補別cameraは採用しない。`ThreeViewport` は一つの視線方向・上下角度・荷室全体表示に対する距離倍率をsession内で共有し、候補切替時にactive候補の中心と大きさへrebaseする。全体表示iconは共有cameraをactive候補の既定へresetする。新規CLP・正常JSON読込・端末読込の既存barrierで共有cameraを初期化する。
 
 ### History, persistence and workers
 
@@ -167,7 +167,7 @@ session-only画像prototypeもSchema変更なしで撤去できる。永続画�
 
 - 4辺のencode/project往復、正負half-away-from-zero、corner tie、奇偶寸法、全6向き、候補寸法変更、積荷編集、safe-integer境界・overflow・fallback、完全荷室外postcondition、初期grid安定性、1,000積荷性能。
 - A→B→Aの退避距離・順序、他候補配置の除外、任意tabでの移動・回転、drag-out Undo/Redo、積荷・候補削除とUndo。
-- 候補別camera、同一候補編集、candidate prune、新規CLP・import barrier、active候補だけのreset。
+- 共有cameraの視線方向・上下角度・距離倍率、寸法差のあるA→B→A rebase、同一候補編集、新規CLP・import barrier、active候補基準のreset。
 - tab/anchor/cameraが履歴・保存dirty・JSONへ入らず、placement操作だけが既存履歴へ入ること。
 - 物理Workerの高速切替stale mask、自動提案がtab切替では生存し、Project変更ではstaleになること。
 - tab semantics、keyboard、focus、長名・重複名、0/1/100候補、305 / 320 / 375 / 560 / 720 pxで非重複・非overflow。
@@ -182,11 +182,11 @@ session-only画像prototypeもSchema変更なしで撤去できる。永続画�
 - sprite anchor、drag・回転・camera追従、pick・物理非影響、fallback、context loss、texture/object URL/ImageBitmap cleanup。
 - 画像なし1,000積荷、承認画像budget、100回置換・履歴、Worker clone、renderer memory/frame time。
 
-## Decisions Requiring Approval Before Implementation
+## Decisions Still Requiring Approval Before Implementation
 
-1. 複数候補の退避関係を、推奨する4辺・絶対mm gap・2倍中心offsetとするか。自動提案後の候補切替を明示操作だけにするか。
-2. 100候補を横scroll一行tablistとするか、別のcompact navigationを採るか。
-3. 積荷画像を選択card＋選択中spriteの識別補助とするか、物理面へ結び付けるか。全1,000積荷への画像を必須とするか。session画像でもCLP identity・cargo ID・generationによる所有権とbarrier cleanupを必須とするか。
-4. 永続画像を採用する場合のSchema形、対応形式、pixel/byte上限、追加・置換・削除のUndo/Redo、原子的annex cleanup、lossless救出・確認付きlossy downgradeをどうするか。
+複数候補の4辺anchor、一行tablist、共有cameraは仕様1.2.0・ADR 0026で承認済みである。次の画像事項だけは未承認のまま残る。
 
-回答前は、本提案を仕様、ADR、実装の承認として扱わない。
+1. 積荷画像を選択中の識別補助とするか、物理面へ結び付けるか。全1,000積荷への画像を必須とするか。session画像でもCLP identity・cargo ID・generationによる所有権とbarrier cleanupを必須とするか。
+2. 永続画像を採用する場合のSchema形、対応形式、pixel/byte上限、追加・置換・削除のUndo/Redo、原子的annex cleanup、lossless救出・確認付きlossy downgradeをどうするか。
+
+画像事項への回答前は、画像部分を仕様、ADR、実装の承認として扱わない。

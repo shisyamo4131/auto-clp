@@ -57,9 +57,9 @@
 
 ### Steps and Expected Results
 
-1. 完全一致配置では不適合理由が0件となる。単一上面のX/Y完全包含による幾何学的単独支持が成立し、上段の `structure-stability-unverified` だけが残る。
+1. 完全一致配置では不適合理由・積荷別未確認理由がともに0件となる。単一上面のX/Y完全包含による幾何学的単独支持が成立し、構造強度・安定性など未計算の範囲は版付きの「使用上の重要事項」で一度だけ確認できる。
 2. 上段Xを501 mmへ変更する。底面が1 mmだけ支持面から張り出し、不適合ではなく `support-conditions-unverified` が1件表示される。構造剛性、支持位置、重心、許容支持間隔の確認を促し、支持接触に対するpair隙間理由は追加しない。
-3. 取り消しでX=500 mmへ戻し、単独支持と構造・安定性未確認の表示を復元する。
+3. 取り消しでX=500 mmへ戻し、単独支持の適合へ復元して積荷別未確認理由を0件へ戻す。
 
 ## AC-03 Independent Floor Penetration Diagnostics
 
@@ -86,6 +86,16 @@
 3. `auto-clp-project-0.1.0.json` を書き出し、CLPを変更してから再読込する。Schema `0.1.0` の正規CLPだけを復元し、履歴、camera、判定結果をファイルへ含めない。
 4. WebGL 2非対応状態では、CLP編集、配置、物理判定、自動提案、履歴、端末保存・読込・削除、JSON読込を利用できず、通常作業面とcanvasを表示しない。「現在の作業データ」は障害直前まで画面が保持する内容、「端末に保存済みのデータ」は最後に「端末へ保存」した時点でその後の未保存作業を含まない内容として区別する。各固定出力名と復旧後のJSON読込を操作前に表示し、クリック後はダウンロード開始、対象ファイル名、ダウンロード一覧またはフォルダーの確認を持続表示する。読み取り専用ダウンロードはCLP・履歴・保存内容を変更しない。
 5. 初期Three.js描画失敗と描画後のWebGLコンテキスト喪失でも同じ全面停止へ移行し、現在CLPを保持する。WebGL 2が回復した状態で再読込した場合だけ通常操作へ戻る。
+
+## AC-05 Tabbed Scene, Selection Annotation, and Validation Dialog
+
+1. 候補3件以上を持つCLPで、Application BarのmenuがDOM・視覚とも右端となり、候補を一行tablistで直接切替できる。狭幅または長名で左右buttonと横scrollが現れ、scrollだけでは候補を変更しない。左右矢印・Home・End・Enter・Spaceとfocusが仕様どおり動く。
+2. 寸法差のある候補A/B間をA→B→Aと切り替えても、共有cameraの視線方向・上下角度・fit距離倍率と、未配置積荷のside・gap・接線方向関係・Z・向きが維持される。tab、camera、anchorはProject、dirty、履歴、端末保存、JSONへ入らない。
+3. scene積荷を選択した時だけ、現在向き適用後のX/Y/Z寸法線とmm値を表示し、選択解除・削除・候補切替・WebGL障害で消す。annotationはdrag・選択のpointer hitを奪わない。
+4. selector直下の固定action rowは、未選択でも高さを維持し、未配置・現在候補配置・他候補配置の各状態に対応する正しい操作だけを示す。積荷削除と荷室から外すは別確認・別履歴であり、drag中とdialog中は理由付きで無効となる。
+5. Undo/Redo横の判定lampは、灰・青・黄・赤を異なるicon・状態名・不適合件数・未確認件数とともに示す。dialogを閉じても判定を継続し、再度開くと最新結果を表示する。青は「実装済み確認項目内で問題なし」であり、安全保証とは表示しない。
+6. 初回または内容版更新後は操作開始前に「使用上の重要事項」を確認し、Drawerと物理判定dialogから再表示できる。確認状態はCLP、JSON、端末保存、履歴へ入らず、法的な利用規約同意とは表示しない。
+7. 305 / 320 / 375 px、候補0 / 1 / 100件、積荷0 / 1 / 1,000件、keyboard、touch、WebGL context lossでoverlay重複、page横overflow、focus消失、stale判定、他候補配置の重複表示がない。
 
 ## Evidence and Completion
 
@@ -125,7 +135,7 @@
 
 - AP-01 Candidate objective: 共通して隙間0、積荷1個 `50×50×50 mm`、1,000 g、`LWH` のみを使う。容積比較は `small=200×100×100` が `large=300×100×100` に勝つ。同容積比較は `floor-small=100×100×200` が `floor-large=200×100×100` に勝つ。同容積・床面積比較は `length-small=100×200×100` が `length-large=200×100×100` に勝つ。同寸法比較は入力配列と表示名を入れ替えても `container-a` が `container-b` に勝つ。各候補の開口と耐荷重は積荷を許容する値とする。
 - AP-02 Complete plan only: 隙間0、候補 `200×100×100 mm`、開口 `100×100 mm`、耐荷重2,000 g、積荷 `cargo-a` と `cargo-b` を各 `100×100×100 mm`、1,000 g、`LWH` のみとする。期待案は `(0,0,0)` と `(100,0,0)` に各積荷を一度ずつ置く。同じ出力から一方欠落、重複、未知ID、候補混在を作り、適用境界ですべて拒否する。候補長さを199 mmにした派生fixtureでは部分案を適用不可とする。
-- AP-03 Unverified preserved: 隙間0、候補 `100×100×200 mm`、開口 `100×200 mm`、耐荷重2,001 gとする。`support` は `100×100×100 mm`、1,001 g、支持可、`upper` は同寸法、1,000 g、支持不可とする。期待案はsupportを `(0,0,0)`、upperを `(0,0,100)` に置き、不適合0、upperの構造・安定性未確認1件をpreviewと適用確認に保持する。寸法適合した両積荷の搬入経路理由は生成しない。
+- AP-03 Exact single support accepted: 隙間0、候補 `100×100×200 mm`、開口 `100×200 mm`、耐荷重2,001 gとする。`support` は `100×100×100 mm`、1,001 g、支持可、`upper` は同寸法、1,000 g、支持不可とする。期待案はsupportを `(0,0,0)`、upperを `(0,0,100)` に置き、不適合0、積荷別未確認0とする。寸法適合した両積荷の搬入経路理由と、単独支持だけを根拠にした構造・安定性理由は生成しない。非保証範囲は版付きの「使用上の重要事項」で確認できる。
 - AP-04 Cutoff semantics: 純粋なattempt予算fixtureで候補1〜10,000回目を評価し10,001回目を拒否、要求1〜1,000,000回目を評価し1,000,001回目を拒否する。9,999回で自然終了、10,000回目で自然終了、10,000回後に未探索あり、上限ちょうどで成功を別々に固定する。より優先される候補が完全案なしcutoff、次候補が完全案の集約fixtureでは `complete-with-cutoff`、次候補選択、目的上最良未確認の専用警告、適用可とする。順位を逆転した時は劣後候補を探索せず通常成功とする。
 - AP-05 No complete plan: 隙間0、積荷 `101×100×100 mm`、1,000 g、`LWH` のみと、各 `100×100×100 mm`、開口 `100×100 mm`、耐荷重1,000 gの不可能候補2個を使う。向き事前filterでattempt 0、全候補探索済み、`no-complete-plan`、cutoffなし、適用不可、実積載不能の非証明copyを期待する。
 - AP-06 Preview and apply: 探索、preview、取消、失敗、staleでは現在Projectと履歴を同一参照で保持し、確認付き適用だけが配置を一括置換する。Undo/Redoで探索前後を正確に往復する。
@@ -136,7 +146,7 @@
 
 ### Automatic Proposal Automated Mapping
 
-- AP-01、AP-02、AP-03、AP-04、AP-05、AP-07: domain、Worker protocol/client、session/viewの単体試験が目的順位、完全案、未確認理由、cutoff、完全案なし、決定性と入力順非依存を検証する。
+- AP-01、AP-02、AP-03、AP-04、AP-05、AP-07: domain、Worker protocol/client、session/viewの単体試験が目的順位、完全案、単独支持時の未確認0件、cutoff、完全案なし、決定性と入力順非依存を検証する。
 - AP-06: `src/application/automatic-proposal-apply.test.ts` と `tests/browser/automatic-proposal.spec.ts` が、実Workerの完全案、未適用表示、Project・履歴の非変更、適用直前の再検証、常時確認、配置だけの一括置換、同一案no-op、一回のUndo/Redo、通常編集・未保存入力・保存・JSON置換によるstale、遅延結果破棄を検証する。
 - AP-08: `tests/browser/automatic-proposal-performance.spec.ts` が、WebGL 2利用可能状態でproduction module Workerを使う20積荷fixtureのcold 1回・warm 3回、各210 attempts、同一result hash、main timer/rAF進行、別fresh UI pageでのnative `terminate()` と取消表示、250 ms late-response mask、consoleを検証する。最初の成功記録は [AP-08技術証拠](evidence/automatic-proposal-ap08-1226b082.md) に保存する。既存browser試験のcontrolled Worker取消、keyboard、305/320/375 px回帰は独立して維持する。
 - 空入力: 同browser試験が実Workerの `no-cargo` と `no-candidates`、attempt 0相当の固定表示、Project・履歴の非変更を検証する。

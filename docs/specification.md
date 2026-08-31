@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
-- Last updated: 2026-08-30
-- Specification version: 1.1.1
+- Last updated: 2026-08-31
+- Specification version: 1.2.0
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -69,17 +69,22 @@
 
 ### Application Shell and Primary Workflow
 
-- 3D viewportを通常画面の主作業面とし、最上部のApplication BarにはNavigation Drawerを開くmenu button、`Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chipを置く。現在のCLP名はCLP設定dialogの入口とする。
+- 3D viewportを通常画面の主作業面とし、最上部のApplication Barは左から `Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chip、Navigation Drawerを開くmenu buttonの順に置く。menu buttonはDOM上も視覚上も右端とし、現在のCLP名はCLP設定dialogの入口とする。
 - 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`は一つのNavigation Drawerへまとめる。常設の保存cardとCLP設定cardは置かない。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
-- 旧3D候補cardの外枠と見出しは置かない。表示候補selectorはviewport上部へ、全CLP積荷を名前またはIDで検索する入力、未配置・現在候補・他候補の状態付き積荷selector、件数はviewport下部へoverlayする。overlayの出現、検索結果、操作statusはcanvasの寸法またはページ上の位置を変えない。
-- viewport上部の候補selectorと、Undo/Redo、X/Z回転、拡大・縮小、全体表示toolbarは共通の非重複領域へ置く。305 / 320 / 375 pxでは複数行へ積み、下部の積荷検索・selector・件数も複数行にして水平overflowを起こさない。overlay外のcanvas操作領域を残す。
-- compactな操作status、物理判定、自動配置案の順で3D viewportの後へ置く。積荷を選択しただけの成功通知と、一般的な非保証注意をviewport直下へ重複表示しない。drag、回転不可、失敗など次の判断に必要な操作statusと、物理判定内の具体的な未確認・非保証説明は維持する。積荷とコンテナ・車両候補の登録cardは維持する。
+- 旧3D候補cardの外枠と見出しは置かない。viewport上端へ候補を一行のsemantic tablistとして置き、候補数または名前が幅を超える場合はExcelのsheet tab相当の左右buttonと横scrollで表示範囲だけを移動する。tabは折り返さず、active tabを表示範囲へ入れ、左右矢印・Home・End・Enter・Space、touch・trackpadを提供する。tabの選択だけが候補を切り替え、scroll buttonは候補を切り替えない。
+- Undo/Redo、物理判定lamp、X/Z回転、拡大・縮小、全体表示toolbarはtablistと別の固定rowへ置く。物理判定lampは判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とし、色以外に異なるicon、状態名、不適合・未確認件数を持つaccessible buttonとする。クリックすると現在候補の理由をmodal dialogで開き、閉じても判定を継続する。
+- 全CLP積荷を名前またはIDで検索する入力、未配置・現在候補・他候補の状態付き積荷selector、件数、その下の固定context action rowをviewport下部へoverlayする。未選択でもrowの高さを予約し、選択積荷名、配置状態、配置済みなら正確な最小角X/Y/Zをcompactに示す。未配置では座標入力・積荷編集・積荷削除、現在候補へ配置済みでは座標微調整・積荷編集・荷室から外す、他候補へ配置済みでは配置先候補の表示・積荷編集を提供する。配置取り外しと積荷定義削除は別button、別確認、別履歴とする。
+- 305 / 320 / 375 pxではtablist、toolbar、検索・selector・action rowを必要な範囲で複数rowへし、水平overflowを起こさず、overlay外にcanvas操作領域を残す。可視の「荷室外の作業スペースN件」は置かないが、非視覚statusと積荷selectorの状態copyは維持する。overlayの出現、選択、検索結果、操作statusはcanvasの寸法またはページ上の位置を変えない。
+- compactな操作status、自動配置案の順で3D viewportの後へ置く。積荷を選択しただけの成功通知と一般的な非保証注意をviewport直下へ重複表示しない。drag、回転不可、失敗など次の判断に必要な操作statusは維持し、物理判定理由はlampから開くdialogへ集約する。積荷とコンテナ・車両候補の登録cardは維持する。
 - `新規CLP` はSchema制約内の衝突しない新しい `projectId` を持つ空CLPを作成し、CLP設定dialogを開く。現在CLPに最後の端末保存またはJSON書出し以後の変更がある場合は、対象と結果を説明する破棄確認を必須とする。新規作成はUndo/Redoへ入れず、旧履歴、draft、選択、camera、drag preview、Worker結果を破棄するhistory barrierとする。作成直後の空CLPを新しい保存基準とする。
 
 ### Placement and Validation
 
 - 利用者は3D空間で積荷を選択し、移動、回転、取り外しができる。
-- CLP全体で未配置の積荷は、選択コンテナの外側にある非永続の作業スペースへ表示する。他の候補コンテナへ配置済みの積荷は重複表示しない。初回だけ先頭許可向き、床Z=0、決定的gridを使う。gridのセル寸法は各積荷の許可向き全体から得る最大X/Y footprintを使い、一つの積荷をX/Z回転しても他の未配置積荷を再配置しない。利用者が荷室外へdropした後はcargo IDごとの位置と向きを現在のUI sessionだけに保持する。作業位置、向き、選択はCLP、JSON、端末保存、履歴、物理判定へ含めない。
+- CLP全体で未配置の積荷は、選択コンテナの外側にある非永続の作業スペースへ表示し、他候補へ配置済みの積荷は重複表示しない。初回だけ先頭許可向き、床Z=0、決定的gridを使い、gridのセル寸法は各積荷の許可向き全体から得る最大X/Y footprintを使う。初回poseまたは利用者のdropを、cargo IDごとの一つのside-relative anchorとして現在のUI sessionへmaterializeする。
+- side-relative anchorは向き、side `x-min` / `x-max` / `y-min` / `y-max`、荷室外面から積荷外面までの非負整数gap、接線方向の積荷中心と荷室中心の差を2倍した符号付き整数、safe integerのZを持つ。候補tab切替時はactive候補の内寸と向き適用後寸法へ再投影し、少なくとも一軸で積荷が完全に荷室外となることを保証する。cornerでは直前sideを維持できれば維持し、それ以外は最小gap、同値なら `x-min`、`x-max`、`y-min`、`y-max` の順に選ぶ。half mmは正負ともhalf away from zeroで丸め、非有限・overflow・不許可向き・荷室外postcondition失敗では決定的初期grid anchorへfallbackする。
+- 任意候補で荷室外積荷を動かすと同じcargo-global anchorを更新し、他候補でも同じ側・gap・接線方向関係として表示する。一つの積荷の移動・回転、他積荷の配置・削除、候補切替で他のanchorを再計算しない。配置中のanchorは隠して保持し、drag-outのUndo/Redoで再利用し、積荷定義削除時だけ破棄する。anchor、選択、tab、共有cameraはCLP、JSON、端末保存、履歴、物理判定へ含めない。
+- cameraは候補別に保存せず、全候補で一つの視線方向・上下角度・荷室全体表示に対する距離倍率を共有する。tab切替時は切替先の荷室中心と大きさへrebaseして同じ視点関係を維持し、候補寸法差で荷室全体が画面外へ失われないようにする。全体表示は共有cameraをactive候補の既定へresetする。
 - fine pointerの床面dragは、scene差分を整数mmのX/Yへ量子化した後、向き適用後のX/Y占有範囲を生の荷室床面 `[0, L] × [0, W]` に対して `xy-contained`、`partial`、`outside` の三状態へ分類する。両軸で正の共通長を持つが完全包含でない場合を `partial`、面・辺・点の接触を含め一方でも共通長0の場合を `outside` とし、Zは分類に使わない。X/Yが変わらないno-opは分類より先に扱い、CLP、履歴、session poseを変更しない。
 - 未配置積荷のdropが `xy-contained` または `partial` なら、量子化したX/Yと向き、および後述の床・支持面snapで決めたZを使って一回の `placement.add` とする。`partial` は修正途中の境界不適合配置として直ちに保存し、物理判定の再計算と不適合表示へ渡す。`outside` はProjectと履歴を変更せずsessionの作業位置だけを更新する。
 - 配置済み積荷のdropが `xy-contained` または `partial` なら、量子化したX/Yと向き、および床・支持面snapで決めたZを使って一回の `placement.drag-xy` とする。`outside` ならdrop位置と向きをsessionへ記録して一回の `placement.delete` とする。Undoは元配置を復元し、Redoは同じ外側作業位置へ戻す。失敗、取消、staleはstatusまたはpreviewを戻す以外、Project、履歴、session poseを変更しない。この三状態分類は3Dのfine-pointer dragだけに適用し、座標フォーム、JSON読込、回転、積荷・候補編集、既存Project配置を自動的に再分類しない。
@@ -90,8 +95,8 @@
 - 配置済み・荷室外の積荷は、X軸またはZ軸を中心に90度回転できる。Z軸遷移は `LWH↔WLH`、`LHW↔HLW`、`WHL↔HWL` とし、床面回転を禁止する積荷設定は設けない。X軸遷移は `LWH↔LHW`、`WLH↔WHL`、`HLW↔HWL` とし、天地無用の積荷だけ無効にする。配置済み回転は最小角を保持した一回の配置更新、荷室外回転はsession状態だけの変更とする。荷室外回転後のX/Y占有範囲が荷室床面と正面積で重なる場合は回転を拒否して直前poseを保持する。積荷寸法または天地無用の編集で既存session poseが同条件を失った場合は、新しい向き適用後寸法で完全に荷室外となる決定的初期位置へ戻す。
 - 積荷編集画面の向き設定は「天地無用」checkboxだけとし、6種類の許可向きcheckboxを表示しない。天地無用ONは `LWH` / `WLH`、OFFは全6向きを `allowedOrientations` へ保存する。旧JSON・端末保存はSchema・意味・物理preflight合格後、`LWH` / `WLH` だけの非空部分集合をONの2向き、それ以外の有効な非空部分集合をOFFの全6向きへ正規化し、次回保存で永続化する。横倒し配置中に天地無用ONへ変更する保存は拒否する。Schema `0.1.0` は変更しない。
 - X/Z回転はUndo/Redo、`＋` / `－` と同じviewport固定toolbarへ常時表示する44 px以上のicon-only buttonとする。両軸とも一本の軸線へ矢印が回り込む同じSVGを使い、X軸iconだけをZ軸iconに対して90度回して軸を区別し、回転前後でbutton位置を変えない。積荷未選択、操作中、天地無用のX軸では該当操作をfocus可能な `aria-disabled` controlとし、axis別のaccessible name、説明参照、title、操作statusで理由を示す。使用可は `＋` / `－` と同じ青緑の強調枠と暗い背景、使用不可は暗い低彩度の枠・前景とし、紫色の塗り分けやopacity差だけに依存しない。
-- 選択積荷cardは積荷名を見出しとし、「選択中の積荷」と寸法prefix `大きさ:` を表示しない。向き適用後寸法とcompactなX/Y/Zをdesktopでは2列、狭幅では1列にし、座標の意味と保存上の向きcodeは詳細表示へ残す。配置一覧も寸法prefixを表示しない。
-- 多数積荷でページを縦へ伸ばす積荷・配置一覧と常設編集フォームは主作業面へ置かない。積荷追加入口と全積荷select、選択cardの編集・取り外し・削除入口を維持し、積荷定義と配置座標は共有modal shell上の別dialog、別draft、別保存履歴として編集する。物理判定一覧は維持する。
+- 選択積荷cardは廃止する。選択中のscene積荷だけに、現在向き適用後の正規整数寸法を `X / 奥行`、`Y / 横幅`、`Z / 高さ` の3軸寸法線・矢印・mm値としてviewport overlayへ表示し、選択解除、候補切替、積荷削除、projection error、WebGL障害で消す。寸法はmesh scaleから逆算せずdomain値を使い、線とlabelはpointer hitを奪わず、screen reader向けの同値は下段の選択説明へ一度だけ持つ。寸法annotationと固定action rowでは寸法prefix `大きさ:` を表示しない。
+- 多数積荷でページを縦へ伸ばす積荷・配置一覧と常設編集フォームは主作業面へ置かない。積荷追加入口、全積荷select、固定context action rowを維持し、積荷定義と配置座標は共有modal shell上の別dialog、別draft、別保存履歴として編集する。正確な座標と保存向き詳細は座標dialogへ移す。drag中もaction rowの位置を変えず該当操作を無効にする。
 - dialogはfocus trap、背景のinert化、内部scroll、305 / 320 / 375 px対応、scrollbar shift防止、`preventScroll`付きfocus復帰を備える。clean状態のEscapeは閉じ、dirty状態は破棄確認を要求する。dialog表示中は履歴、3D drag・回転、候補切替、永続化・JSON読込、自動提案をbusy gateで拒否する。
 - 配置取り外しと積荷定義削除は別確認、別履歴としcascadeしない。配置取り外し後も積荷を選択したまま、既知の有効な外側poseがあれば維持し、なければ決定的gridへ戻す。配置中の積荷定義削除は拒否する。積荷削除のUndo復元はgridかつ未選択とする。配置で使用中の向きを許可集合から外す編集は拒否し、寸法・重量・支持条件の編集は配置を保持して物理判定を再計算する。
 - drag中の操作通知は固定高またはoverlay領域に表示し、文言の出現で3D viewportを移動させない。
@@ -105,7 +110,7 @@
 - 支持可能面と正面積で接触するが、複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含む場合は、保存可能な「支持条件未確認」とする。構造剛性、支持位置、重心、許容支持間隔の確認を促す。
 - 接触する支持可能面がない、Zが一致しない、支持不可積荷だけに接触する、または立体重複する配置は不適合とする。支持成立・未確認・不適合のいずれも実積載の安全性を保証しない。
 - システムは積荷重量合計がコンテナ耐荷重を超える場合に不適合を示す。
-- 積荷別上載荷重、荷重分布、重心、軸重、床面強度、荷崩れ、固縛、動荷重はPhase 1で計算せず、段積み時は幾何判定に合格しても「構造・安定性未確認」を示す。
+- 積荷別上載荷重、荷重分布、重心、軸重、床面強度、荷崩れ、固縛、動荷重はPhase 1で計算しない。単独支持の幾何条件を満たす積荷ごとに同じ「構造・安定性未確認」を生成せず、アプリ全体の「使用上の重要事項」として非保証範囲を一度だけ管理する。単独支持だけの配置は実装済み確認項目内の適合とし、複数支持、支持台間の隙間、張り出し、支持不可面との混在は対象積荷付きの「支持条件未確認」として残す。
 - 利用者はX・Y・Z軸それぞれの固定隙間を設定でき、判定に反映される。
 - 軸別固定隙間は、積荷ごとの外側余白ではなく、隣接する二つの表面間に必要な実距離とする。積荷同士では設定値を二重に加算せず、各軸の表面間距離がその軸の設定値以上なら等値を含めて満たす。
 - 配置後の積荷は、負X側開口面と正X側奥壁にX隙間、Y両側壁にY隙間、天井にZ隙間をそれぞれ確保する。床と認定された支持面にはZ隙間を要求しない。したがって占有範囲を `[xMin, xMax] × [yMin, yMax] × [zMin, zMax]` とすると、境界条件は `xMin >= X隙間`、`xMax <= L - X隙間`、`yMin >= Y隙間`、`yMax <= W - Y隙間`、`zMin >= 0`、`zMax <= H - Z隙間` とする。
@@ -142,19 +147,19 @@
 
 ### Planned Scene Extensions
 
-- 複数候補をtab等で切り替え、荷室外に残る積荷の退避関係を候補寸法に対して維持するUIは承認済みの将来要件であり、未実装である。tab表示、side-relativeな再投影、候補ごとのcamera、履歴と自動提案の境界を実装前に確定する。
 - 積荷写真または識別画像を直方体や選択UIへ表示する機能は承認済みの将来調査対象であり、未実装である。画像の選択、端末内保持、JSON可搬性、容量上限、texture面、thumbnail、失敗fallbackを技術調査後に別承認する。
 
 ### Planned Terms of Use
 
-- Auto CLPの利用規約は未作成であり、将来工程として整備する。3D描画、物理判定、自動提案が積載可能性、実積載の安全性、法令適合性を保証しないこと、利用者が確認すべき事項、規約の表示場所・同意・版管理を、公開または実務運用へ進む前に法務確認を含む別checkpointで確定する。規約完成までは、物理判定panelと現在の制限にある具体的な未確認事項を削除せず、画面から一般的な一文を除いたことを保証範囲の拡大として扱わない。
+- Auto CLPの法的な利用規約は未作成であり、公開または実務運用前に法務確認を含む別checkpointで整備する。それまで、版付きの「使用上の重要事項」を操作開始前に確認し、内容版の更新時は再確認を要求する。Drawerから常に再表示でき、物理判定dialogからも詳細へ到達できるようにする。確認状態はCLP、JSON、端末保存、履歴へ入れずapp preferenceとsessionに分離し、保存不能時は確認済みと推測しない。
+- 使用上の重要事項は、3D描画、実装済み物理判定、自動提案が積載可能性、完全な搬入経路、構造強度・安定性、重心、軸重、床面強度、荷崩れ、固縛、動荷重、法令適合性、実積載の安全性を保証しないことと、利用者が別途確認する責任を示す。法的な同意または規約承諾とは呼ばない。個別reasonから単独支持共通の非保証を除いても、保証範囲の拡大として扱わない。
 
 ### Automatic Proposal
 
 - 実装状態: 純粋探索、Worker transport、session/view、React panel、Appのbusy・generation配線、実Workerによる開始・取消・再試行、Projectを変更しないpreview DOM、適用直前のSchema・意味・物理再検証、確認付き一括適用とその一回のUndo/Redoを実装済み。通常編集、Undo/Redo、未保存入力、3D操作、保存・読込との競合では旧探索または確認をstaleとして破棄する。AP-08代表規模はWindows/headless Chromiumの記録環境でcold 1回・warm 3回、決定性、main timer/rAF進行、取消を初期性能gate内で検証済みである。これは一般端末SLA、最低GPU要件、実務受入、安全保証ではない。
 - v1は、CLPの全積荷をちょうど一度ずつ、一つの登録済み候補コンテナへ配置する完全案を、全候補から自動提案する。複数コンテナ同時利用、台数、部分積載、固定anchor、搬出順は扱わない。
 - 提案は現在の手動配置を探索条件にせず、正規CLPを変更しない派生previewとする。適用時だけ全配置を完全案へ一括置換し、一回の履歴操作としてUndo可能にする。
-- 完全案は正本の構造・意味検証と物理判定で不適合理由0件とする。構造・安定性の未確認理由は許容して表示し、完全な搬入経路、安全性、実積載可能性を保証しない範囲は恒常的な注意として表示する。
+- 完全案は正本の構造・意味検証と物理判定で不適合理由0件とする。v1が生成しない `support-conditions-unverified` も0件とし、完全な搬入経路、構造・安定性、安全性、実積載可能性を保証しない範囲は使用上の重要事項として表示する。
 - 完全案を得た候補は、内部容積、内部床面積、内部長さ、内部幅、内部高さ、候補IDの昇順で比較する。固定ヒューリスティックの最良既知案であり、大域最適性を保証しない。
 - 探索は乱数とwall-clock打切りを使わず、ADR 0004の固定順序、候補点上限2,048、一候補10,000 attempt、一要求1,000,000 attemptで決定的に行う。
 - 自動提案は床置きまたは幾何学的な単独支持成立だけを候補として採用し、`support-conditions-unverified` を含む複数支持、支持台間の隙間、張り出し、支持不可面との混在を自動生成しない。利用者が手動保存した未確認配置はProjectとして保持できるが、v1探索の完全案には使わない。

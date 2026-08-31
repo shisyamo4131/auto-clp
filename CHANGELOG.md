@@ -4,13 +4,14 @@
 
 ### Changed
 
+- 仕様1.2.0・ADR 0026で、右端menu、一行scroll tab、side-relative荷室外anchor、候補間共有camera、選択積荷の3軸寸法annotation、selector直下の固定context action row、物理判定lamp/dialog、版付き「使用上の重要事項」を承認した。単独支持共通の積荷別 `structure-stability-unverified` は廃止し、複数支持・隙間・張り出し等の `support-conditions-unverified` は維持する。実装と回帰は未完了、Schema 0.1.0と進捗98%は不変。
 - 仕様1.1.1で、積荷選択だけの成功通知とviewport直下の重複する一般的非保証文を除き、狭幅時の候補selectorを内容高へ修正し、荷室全体表示をaccessibleな `cube-outline` 相当icon-only buttonへ変更した。利用規約整備を公開・実務運用前の将来工程として記録し、具体的な物理未確認表示、Schema 0.1.0、進捗98%は変更しない。
 - 3D viewportを主作業面とし、Application Bar、3D能力Chip、CLP操作をまとめたNavigation Drawer、CLP設定dialog、viewport内の候補・積荷検索selectorへ再構成した。未保存確認付き新規CLPは新しいidentityと空履歴を作るbarrierとする。仕様1.1.0、ADR 0025。Schema 0.1.0は不変。
 - 利用者向けの「案件」を「CLP」、自動提案の未適用結果を「配置案」へ統一した。WebGL障害時の「作業データ」、内部 `Project` / `projectId`、Schema `0.1.0`、固定JSONファイル名は変更しない。仕様1.0.2、ADR 0024。
 
 ### Added
 
-- 未承認・未実装の将来設計として、複数候補のside-relative作業面と候補別camera、および積荷画像のthumbnail・selected-only sprite・永続化選択肢を比較する提案文書を追加した。仕様、Schema 0.1.0、アプリ、進捗98%は変更しない。
+- 複数候補のside-relative作業面とcamera選択肢、および積荷画像のthumbnail・selected-only sprite・永続化選択肢を比較する設計文書を追加した。複数候補部分は後にADR 0026でside-relative anchorと共有cameraへ採用・修正し、積荷画像部分は未承認のまま維持する。
 - Undo/Redo・拡大縮小と同じ固定toolbarへ常設するX/Z回転button、一本の軸線へ矢印が回り込む同一glyphの90度差、未選択・天地無用・busy時の理由付き無効状態、およびADR 0021。
 - drag中だけ操作対象以外の積荷をほぼ透明な中立面・灰色点線とし、支持候補を緑または黄の点線で示して終了時に通常表示へ戻す集中表示とADR 0020。
 - 床または支持可能な積荷上面へ3D drag中のZをsnapし、単一支持面内のX/Y制限、条件未確認preview、候補強調、一回のUndo/Redoを提供する支持面操作とADR 0019。

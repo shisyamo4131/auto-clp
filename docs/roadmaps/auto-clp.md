@@ -24,8 +24,9 @@
 
 1. WebGL 2非対応・初期描画失敗・context loss時の全面停止、復旧案内、現在CLP・端末保存の読み取り専用JSON救出と「作業データ」表現を人間が確認する。
 2. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
-3. 公開または実務運用へ進む前に、3D描画・物理判定・自動提案の非保証範囲、利用者確認事項、表示・同意・版管理を含む利用規約を法務確認付きの別checkpointで整備する。画面上の具体的な未確認事項はそれまで維持する。
-4. [将来scene設計提案](../designs/future-scene-workspace.md)をレビューし、複数候補のside-relative anchor・navigation・camera境界と、積荷画像の段階・保存範囲・上限を承認または差し戻す。承認前は仕様、Schema、アプリを変更しない。JSON名のCLP名利用は現仕様・ADRと衝突するため別承認まで変更しない。
+3. 仕様1.2.0・ADR 0026の一行tab、side-relative anchor、共有camera、寸法annotation、固定context action row、物理判定lamp/dialog、版付き「使用上の重要事項」を実装し、自動・人間試用で確認する。単独支持の積荷別 `structure-stability-unverified` はdomainから廃止する。Schema 0.1.0と進捗98%は受入完了まで維持する。
+4. 公開または実務運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
+5. [将来scene設計提案](../designs/future-scene-workspace.md)に残る積荷画像の段階・保存範囲・上限を別checkpointで承認または差し戻す。JSON名のCLP名利用は現仕様・ADRと衝突するため別承認まで変更しない。
 
 ## Deliverables and Verification Evidence
 
@@ -114,3 +115,4 @@
 | 2026-08-30 | 98% | +0 | 仕様1.1.0とADR 0025で、3Dを主作業面とするApplication Bar、能力Chip、CLP操作Drawer、設定dialog、viewport内候補・全積荷検索selector、未保存確認付き新規CLPとhistory barrierを実装。Schema 0.1.0と完了済みマイルストーン配点は変更せず、新レイアウトの人間確認を残すため進捗98%を維持 |
 | 2026-08-30 | 98% | +0 | 仕様1.1.1で、選択だけの成功通知と重複する一般的非保証文を主作業面から除き、狭幅候補selectorのcolumn flex basisを修正、荷室全体表示をaccessibleな立方体輪郭iconへ変更した。利用規約は公開・実務運用前の将来工程として記録し、具体的な物理未確認表示、Schema 0.1.0、完了済み配点は変更しないため進捗据え置き |
 | 2026-08-31 | 98% | +0 | 人間試用を待たずに進められる設計調査として、複数候補のside-relative作業面・候補別camera・非履歴境界と、積荷画像のthumbnail・selected-only sprite・永続化選択肢を未承認の提案へ整理した。仕様、Schema 0.1.0、実装、完了済み配点は変更しないため進捗据え置き |
+| 2026-08-31 | 98% | +0 | 仕様1.2.0・ADR 0026で、右端menu、一行scroll tab、side-relative荷室外anchor、候補間共有camera、選択積荷の3軸寸法annotation、selector直下の固定context action row、物理判定lamp/dialog、版付き「使用上の重要事項」を承認した。単独支持共通の積荷別未確認理由は廃止し、複数支持・隙間・張り出し等の個別未確認は維持する。実装・回帰・人間確認前のためSchema 0.1.0と進捗98%は据え置き |

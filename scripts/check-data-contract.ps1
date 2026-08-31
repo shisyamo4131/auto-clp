@@ -26,6 +26,7 @@ $orientationPolicyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0022
 $webglRequiredDecisionPath = Join-Path $resolvedProject 'docs/decisions/0023-webgl-required-operation-and-read-only-rescue.md'
 $clpTerminologyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0024-user-facing-clp-terminology.md'
 $viewerFirstShellDecisionPath = Join-Path $resolvedProject 'docs/decisions/0025-viewer-first-application-shell.md'
+$tabbedSceneDecisionPath = Join-Path $resolvedProject 'docs/decisions/0026-tabbed-scene-annotations-and-validation-dialog.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -81,6 +82,8 @@ foreach ($path in @(
     $orientationPolicyDecisionPath,
     $webglRequiredDecisionPath,
     $clpTerminologyDecisionPath,
+    $viewerFirstShellDecisionPath,
+    $tabbedSceneDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -271,7 +274,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.1.1' 'Approved specification version'
+Assert-Equal $specificationVersion '1.2.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -300,6 +303,23 @@ foreach ($requiredText in @(
 $viewerFirstShellDecision = [IO.File]::ReadAllText($viewerFirstShellDecisionPath)
 if ($viewerFirstShellDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0025 does not have Accepted status.'
+}
+$tabbedSceneDecision = [IO.File]::ReadAllText($tabbedSceneDecisionPath)
+if ($tabbedSceneDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0026 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    'semantic tablist',
+    'side-relative anchor',
+    'cameraは候補別に保存せず',
+    '固定context action row',
+    '`structure-stability-unverified`',
+    '使用上の重要事項',
+    'Schema `0.1.0`'
+)) {
+    if (-not $tabbedSceneDecision.Contains($requiredText)) {
+        throw "ADR 0026 does not contain the approved tabbed-scene marker: $requiredText"
+    }
 }
 foreach ($requiredText in @(
     'Application Bar',
@@ -812,6 +832,7 @@ foreach ($requiredText in @(
     webgl_required_decision_0023_accepted = $true
     clp_terminology_decision_0024_accepted = $true
     viewer_first_shell_decision_0025_accepted = $true
+    tabbed_scene_decision_0026_accepted = $true
     optimization_decision_0004_accepted = $true
     synthetic_acceptance_contract_current = $true
     automatic_proposal_domain_implemented = $true
