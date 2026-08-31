@@ -2,7 +2,7 @@
 
 - Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと配置案を得られるローカルWebアプリを完成させる。
 - Current progress: 98%
-- Last reviewed: 2026-08-30
+- Last reviewed: 2026-08-31
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
 ## Milestones
@@ -25,7 +25,7 @@
 1. WebGL 2非対応・初期描画失敗・context loss時の全面停止、復旧案内、現在CLP・端末保存の読み取り専用JSON救出と「作業データ」表現を人間が確認する。
 2. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
 3. 公開または実務運用へ進む前に、3D描画・物理判定・自動提案の非保証範囲、利用者確認事項、表示・同意・版管理を含む利用規約を法務確認付きの別checkpointで整備する。画面上の具体的な未確認事項はそれまで維持する。
-4. 複数候補tabとside-relative作業面、積荷画像は承認済みの将来設計として別checkpointで調査・設計する。JSON名のCLP名利用は現仕様・ADRと衝突するため別承認まで変更しない。
+4. [将来scene設計提案](../designs/future-scene-workspace.md)をレビューし、複数候補のside-relative anchor・navigation・camera境界と、積荷画像の段階・保存範囲・上限を承認または差し戻す。承認前は仕様、Schema、アプリを変更しない。JSON名のCLP名利用は現仕様・ADRと衝突するため別承認まで変更しない。
 
 ## Deliverables and Verification Evidence
 
@@ -113,3 +113,4 @@
 | 2026-08-30 | 98% | +0 | 利用者向けの「案件」を「CLP」、自動提案の未適用結果を「配置案」へ統一する仕様1.0.2・ADR 0024を承認。WebGL障害時は平易な「作業データ」を維持し、内部 `Project` / `projectId`、Schema 0.1.0、固定ファイル名、進捗を変更しない |
 | 2026-08-30 | 98% | +0 | 仕様1.1.0とADR 0025で、3Dを主作業面とするApplication Bar、能力Chip、CLP操作Drawer、設定dialog、viewport内候補・全積荷検索selector、未保存確認付き新規CLPとhistory barrierを実装。Schema 0.1.0と完了済みマイルストーン配点は変更せず、新レイアウトの人間確認を残すため進捗98%を維持 |
 | 2026-08-30 | 98% | +0 | 仕様1.1.1で、選択だけの成功通知と重複する一般的非保証文を主作業面から除き、狭幅候補selectorのcolumn flex basisを修正、荷室全体表示をaccessibleな立方体輪郭iconへ変更した。利用規約は公開・実務運用前の将来工程として記録し、具体的な物理未確認表示、Schema 0.1.0、完了済み配点は変更しないため進捗据え置き |
+| 2026-08-31 | 98% | +0 | 人間試用を待たずに進められる設計調査として、複数候補のside-relative作業面・候補別camera・非履歴境界と、積荷画像のthumbnail・selected-only sprite・永続化選択肢を未承認の提案へ整理した。仕様、Schema 0.1.0、実装、完了済み配点は変更しないため進捗据え置き |

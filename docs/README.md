@@ -1,7 +1,7 @@
 # Documentation Map
 
 - Status: Active
-- Last verified: 2026-08-30
+- Last verified: 2026-08-31
 - Authority: この文書は案内専用です。確定要件は `specification.md`、検証済み進捗は `roadmaps/` を正とします。
 
 ## How to Start Work
@@ -18,7 +18,7 @@
 | --- | --- | --- |
 | 要件・仕様 | [仕様](specification.md)、[ロードマップ](roadmaps/auto-clp.md)、関連[ADR](decisions/README.md)、[利用者向けCLP用語](decisions/0024-user-facing-clp-terminology.md)、[viewer-first Application Shell](decisions/0025-viewer-first-application-shell.md) | 影響する実装、テスト、運用、変更履歴 |
 | データ・保存 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md) | JSON Schema、意味検証、座標意味、往復・失敗時保持テスト |
-| 3D表示・操作 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0001](decisions/0001-local-first-web-architecture.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0015](decisions/0015-scene-wheel-drag-out-and-size-copy.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0023](decisions/0023-webgl-required-operation-and-read-only-rescue.md)、[ADR 0025](decisions/0025-viewer-first-application-shell.md) | 実装後の3Dコード、能力ゲート、救出境界、座標adapter、単体テスト、ブラウザ証拠 |
+| 3D表示・操作 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0001](decisions/0001-local-first-web-architecture.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0015](decisions/0015-scene-wheel-drag-out-and-size-copy.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0023](decisions/0023-webgl-required-operation-and-read-only-rescue.md)、[ADR 0025](decisions/0025-viewer-first-application-shell.md)、[将来scene設計提案](designs/future-scene-workspace.md) | 実装後の3Dコード、能力ゲート、救出境界、座標adapter、単体テスト、ブラウザ証拠。設計提案は未承認として扱う |
 | 積載制約 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0003](decisions/0003-loading-constraints.md)、[ADR 0006](decisions/0006-rectangular-opening-model.md)、[ADR 0008](decisions/0008-stacking-support-and-load.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md) | 実装後の計算コード、境界・失敗系テスト |
 | 自動提案 | [仕様](specification.md)、[ADR 0004](decisions/0004-optimization-objective.md)、[ロードマップ](roadmaps/auto-clp.md) | 決定性、性能、最適性評価の[証拠索引](evidence/README.md) |
 | テスト・レビュー | [仕様](specification.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 対象差分、独立した終了コード、UI証拠 |
@@ -36,6 +36,7 @@
 | `data-model.md` | CLP JSONの意味契約、参照整合性、予定モジュール境界 |
 | `roadmaps/` | 目標、残作業、完了条件、検証済み進捗 |
 | `decisions/` | 重要判断の状態と根拠 |
+| `designs/` | 未承認の実装前設計提案。確定要件またはAccepted ADRとして扱わない |
 | `operations.md` | 実装済み、計画済み、利用不可の運用 |
 | `runbooks/project-coordination.md` | checkpoint、callback、Git統合、task交代、session容量確認の実行手順 |
 | `handoffs/` | 一時task ID、baseline、pending checkpoint、ownership移転の記録 |
