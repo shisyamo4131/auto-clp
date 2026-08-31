@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-08-31
-- Specification version: 1.2.1
+- Specification version: 1.2.2
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -70,7 +70,8 @@
 ### Application Shell and Primary Workflow
 
 - 3D viewportを通常画面の主作業面とし、最上部のApplication Barは左から `Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chip、Navigation Drawerを開くmenu buttonの順に置く。menu buttonはDOM上も視覚上も右端とし、現在のCLP名はCLP設定dialogの入口とする。
-- 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`は一つのNavigation Drawerへまとめる。常設の保存cardとCLP設定cardは置かない。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
+- 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`、`操作方法` は一つのNavigation Drawerへまとめる。常設の保存cardとCLP設定cardは置かない。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
+- `操作方法` はDrawerを閉じてから独立した読み取り専用dialogを開き、3Dの積荷選択、空いた領域の左dragによる視点回転、Shift付き左dragまたは右dragによる平行移動、wheelのpage scroll、zoom・全体表示、積荷移動・回転、履歴、判定、座標・積荷編集の入口を簡潔に示す。touchは積荷選択とpage scrollを主とし、正確な座標・情報編集は下段button/dialogを案内する。版確認の `使用上の重要事項` とは分離し、CLP、履歴、保存、camera、判定状態を変更しない。
 - 旧3D候補cardの外枠と見出しは置かない。候補tablistは3D viewportの直前、canvasおよびviewport overlayの外側上部へ一行で置き、候補数または名前が幅を超える場合はExcelのsheet tab相当の左右buttonと横scrollで表示範囲だけを移動する。tabは折り返さず、active tabを表示範囲へ入れ、左右矢印・Home・End・Enter・Space、touch・trackpadを提供する。tabの選択だけが候補を切り替え、scroll buttonは候補を切り替えない。tablistはcanvasを覆わず、その表示・scrollでcanvasの寸法またはpage位置を変えない。
 - Undo/Redo、物理判定lamp、X/Z回転、拡大・縮小、全体表示toolbarはviewport内上段の固定rowへ置く。物理判定lampの常設表示は、判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とする状態別のicon-only buttonとし、色だけに依存しない。accessible nameとtitleに状態名、不適合・未確認件数、詳細を開く操作を持たせる。クリックすると現在候補の理由をmodal dialogで開き、閉じても判定を継続する。
 - 全CLP積荷を名前またはIDで検索する入力、未配置・現在候補・他候補の状態付き積荷selector、件数、その下の固定context action rowをviewport下部へoverlayする。未選択でもrowの高さを予約し、選択積荷名、配置状態、配置済みなら正確な最小角X/Y/Zをcompactに示す。未配置では座標入力・積荷編集・積荷削除、現在候補へ配置済みでは座標微調整・積荷編集・荷室から外す、他候補へ配置済みでは配置先候補の表示・積荷編集を提供する。配置取り外しと積荷定義削除は別button、別確認、別履歴とする。
@@ -80,6 +81,8 @@
 
 ### Placement and Validation
 
+- 現在候補へ配置済みの選択積荷は、下段固定操作欄に `現在の座標 — X ... / Y ... / Z ... mm` と示す。他候補への所有を示す候補名と、荷室の意味で使う `現在の候補` は変えない。
+- 選択積荷の寸法線は、`4 × 4`、基準点 `2 / 2` のcompactな外向き矢印markerを両端に使う。既存の線、witness、`整数 mm` label、viewport内clamp、pointer非干渉を維持する。
 - 利用者は3D空間で積荷を選択し、移動、回転、取り外しができる。
 - CLP全体で未配置の積荷は、選択コンテナの外側にある非永続の作業スペースへ表示し、他候補へ配置済みの積荷は重複表示しない。初回だけ先頭許可向き、床Z=0、決定的gridを使い、gridのセル寸法は各積荷の許可向き全体から得る最大X/Y footprintを使う。初回poseまたは利用者のdropを、cargo IDごとの一つのside-relative anchorとして現在のUI sessionへmaterializeする。
 - side-relative anchorは向き、side `x-min` / `x-max` / `y-min` / `y-max`、荷室外面から積荷外面までの非負整数gap、接線方向の積荷中心と荷室中心の差を2倍した符号付き整数、safe integerのZを持つ。候補tab切替時はactive候補の内寸と向き適用後寸法へ再投影し、少なくとも一軸で積荷が完全に荷室外となることを保証する。cornerでは直前sideを維持できれば維持し、それ以外は最小gap、同値なら `x-min`、`x-max`、`y-min`、`y-max` の順に選ぶ。half mmは正負ともhalf away from zeroで丸め、非有限・overflow・不許可向き・荷室外postcondition失敗では決定的初期grid anchorへfallbackする。

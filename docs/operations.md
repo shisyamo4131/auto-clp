@@ -2,7 +2,7 @@
 
 ## Current Availability
 
-- Implemented scene workspace 1.2.1: Application Bar右端menu、3D欄外上部の一行scroll tab、cargo-global side-relative荷室外anchor、候補間共有camera、`整数 mm` だけを外向き矢印で示す選択積荷の3軸寸法annotation、selector直下の固定context action row、icon-only判定lampとdialog、版付き「使用上の重要事項」を実装した。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
+- Implemented scene workspace 1.2.2: Application Bar右端menu、3D欄外上部の一行scroll tab、cargo-global side-relative荷室外anchor、候補間共有camera、`整数 mm` だけをcompactな外向き矢印で示す選択積荷の3軸寸法annotation、selector直下の固定context action rowと `現在の座標` copy、icon-only判定lampとdialog、Drawerから開く独立 `操作方法` dialog、版付き「使用上の重要事項」を実装した。操作方法dialogはCLP・履歴・保存・camera・判定を変更せず、左drag回転、Shift付き左drag・右drag平行移動などの現行操作を案内する。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
 
 - Implemented viewer-first shell: Application Barにmenu、現在CLP名、小さな3D能力Chipを置き、新規CLP・CLP設定・端末保存・JSONを単一Navigation Drawerへ集約する。CLP設定はdialog、候補tablistは3D viewport欄外上部、全CLP積荷の名前/ID検索・状態付きselectorはviewport下部overlayとし、3Dの寸法と位置を動かさない。未保存変更付きの新規CLPは破棄確認後、UUID付きの新 `projectId` と空履歴を作るbarrierとし、CLP設定dialogを開く。
 

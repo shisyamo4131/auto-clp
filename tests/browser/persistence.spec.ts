@@ -137,6 +137,90 @@ async function expectNoHorizontalOverflow(page: Page) {
   ).toBe(false);
 }
 
+async function scrollPageTo(page: Page, top: number) {
+  await page.evaluate((targetTop) => {
+    const browserGlobal = globalThis as unknown as {
+      scrollTo: (left: number, top: number) => void;
+    };
+    browserGlobal.scrollTo(0, targetTop);
+  }, top);
+}
+
+async function pageScrollTop(page: Page) {
+  return page.evaluate(() => {
+    const browserGlobal = globalThis as unknown as { readonly scrollY: number };
+    return browserGlobal.scrollY;
+  });
+}
+
+async function readDeviceSavedJson(page: Page) {
+  return page.evaluate<string>(`
+    new Promise((resolve, reject) => {
+      const open = indexedDB.open("auto-clp", 1);
+      open.onerror = () => reject(new Error("failed to open the synthetic device slot"));
+      open.onsuccess = () => {
+        const database = open.result;
+        const transaction = database.transaction("projects", "readonly");
+        const request = transaction.objectStore("projects").get("current-project");
+        request.onerror = () => reject(new Error("failed to read the synthetic device slot"));
+        request.onsuccess = () => {
+          database.close();
+          if (typeof request.result !== "string") {
+            reject(new Error("the synthetic device slot did not contain JSON"));
+            return;
+          }
+          resolve(request.result);
+        };
+      };
+    })
+  `);
+}
+
+async function selectedAnnotationGeometry(page: Page) {
+  const annotation = page.locator(".viewport__dimension-annotations");
+  return Promise.all(
+    (["X", "Y", "Z"] as const).map(async (axis) => {
+      const group = annotation.locator(`g[data-axis="${axis}"]`);
+      const line = group.locator("line:not(.viewport__dimension-witness)");
+      return {
+        axis,
+        line: {
+          x1: await line.getAttribute("x1"),
+          y1: await line.getAttribute("y1"),
+          x2: await line.getAttribute("x2"),
+          y2: await line.getAttribute("y2"),
+        },
+        labelBounds: await group.locator("text").boundingBox(),
+      };
+    }),
+  );
+}
+
+function expectSameAnnotationGeometry(
+  actual: Awaited<ReturnType<typeof selectedAnnotationGeometry>>,
+  expected: Awaited<ReturnType<typeof selectedAnnotationGeometry>>,
+) {
+  expect(actual).toHaveLength(expected.length);
+  for (const [index, actualAxis] of actual.entries()) {
+    const expectedAxis = expected[index]!;
+    expect(actualAxis.axis).toBe(expectedAxis.axis);
+    for (const coordinate of ["x1", "y1", "x2", "y2"] as const) {
+      expect(
+        Math.abs(Number(actualAxis.line[coordinate]) - Number(expectedAxis.line[coordinate])),
+      ).toBeLessThanOrEqual(0.01);
+    }
+    expect(actualAxis.labelBounds).not.toBeNull();
+    expect(expectedAxis.labelBounds).not.toBeNull();
+    for (const coordinate of ["x", "y", "width", "height"] as const) {
+      expect(
+        Math.abs(
+          actualAxis.labelBounds![coordinate] - expectedAxis.labelBounds![coordinate],
+        ),
+      ).toBeLessThanOrEqual(0.1);
+    }
+  }
+}
+
 async function openPersistenceDrawer(page: Page) {
   const entry = page.getByRole("button", { name: "CLPデータを開く" });
   if ((await entry.getAttribute("aria-expanded")) !== "true") {
@@ -144,6 +228,15 @@ async function openPersistenceDrawer(page: Page) {
   }
   await expect(entry).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("button", { name: "CLPデータを閉じる" })).toBeFocused();
+}
+
+async function openOperationGuide(page: Page) {
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "操作方法", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "保存・再読込" })).toHaveCount(0);
+  const dialog = page.getByRole("dialog", { name: "操作方法" });
+  await expect(dialog).toBeVisible();
+  return dialog;
 }
 
 async function expectModalFocusCycle(page: Page) {
@@ -230,6 +323,180 @@ test("keeps the navigation drawer initially closed and restores focus while safe
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(undo).toBeEnabled();
 });
+
+test("opens the operation guide without changing CLP, history, or scene and restores focus and scroll", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 620 });
+  await page.goto("/");
+  await saveProjectName(page, "操作ガイド状態保持CLP");
+  await addCargo(page, "操作ガイド状態保持積荷");
+  await addContainer(page, "操作ガイド状態保持候補");
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "端末へ保存" }).click();
+  await expect(page.locator(".project-persistence__status")).toHaveText(
+    "現在のCLPをこの端末へ保存しました。",
+  );
+  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
+  const savedJsonBefore = await readDeviceSavedJson(page);
+  expect(JSON.parse(savedJsonBefore)).toMatchObject({
+    name: "操作ガイド状態保持CLP",
+    cargoes: [{ name: "操作ガイド状態保持積荷" }],
+    containers: [{ name: "操作ガイド状態保持候補" }],
+  });
+
+  const annotation = page.locator(".viewport__dimension-annotations");
+  const defaultAnnotationGeometry = await selectedAnnotationGeometry(page);
+  await page.getByRole("button", { name: "拡大" }).click();
+  await page.getByRole("button", { name: "拡大" }).click();
+  await expect
+    .poll(() => selectedAnnotationGeometry(page))
+    .not.toEqual(defaultAnnotationGeometry);
+  const zoomedAnnotationGeometry = await selectedAnnotationGeometry(page);
+
+  const lamp = page.locator("#physical-validation-lamp");
+  await expect(lamp).toHaveAttribute("data-status", "valid");
+  const physicalBefore = {
+    status: await lamp.getAttribute("data-status"),
+    ariaLabel: await lamp.getAttribute("aria-label"),
+  };
+  await lamp.click();
+  const physicalDialog = page.getByRole("dialog", { name: "物理判定" });
+  await expect(physicalDialog).toBeVisible();
+  const physicalSummaryBefore = await physicalDialog
+    .locator(".physical-validation__summary")
+    .textContent();
+  await page.getByRole("button", { name: "物理判定を閉じる" }).click();
+
+  await scrollPageTo(page, 600);
+  await expect.poll(() => pageScrollTop(page)).toBe(600);
+
+  const menu = page.locator("#app-navigation-button");
+  const canonical = page.getByTestId("canonical-project-settings");
+  const history = page.locator(".project-history__summary");
+  const selector = page.getByLabel("操作する積荷");
+  const undo = page.getByRole("button", { name: "元に戻す" });
+  const redo = page.getByRole("button", { name: "やり直す" });
+  await expect(undo).toBeEnabled();
+  await expect(redo).toBeDisabled();
+  const stateBefore = {
+    canonical: await canonical.textContent(),
+    history: await history.textContent(),
+    selectedCargo: await selector.inputValue(),
+    annotation: await annotation.textContent(),
+    scrollY: await pageScrollTop(page),
+  };
+
+  const dialog = await openOperationGuide(page);
+  await expect(dialog).toHaveAttribute("aria-modal", "true");
+  await expect(page.locator(".app-shell")).toHaveAttribute("inert", "");
+  await expect(page.locator("html")).toHaveClass(/modal-active/);
+  await expect(undo).toBeDisabled();
+  await expect(redo).toBeDisabled();
+  expectSameAnnotationGeometry(
+    await selectedAnnotationGeometry(page),
+    zoomedAnnotationGeometry,
+  );
+  const close = dialog.getByRole("button", { name: "操作方法を閉じる" });
+  await expect(close).toBeFocused();
+  for (const copy of [
+    "3D上の積荷をクリックするか、画面下部の積荷選択から操作対象を選びます。",
+    "積荷以外の3D領域を左ドラッグします。",
+    "積荷以外の3D領域をShift＋左ドラッグ、または右ドラッグします。",
+    "ホイールはページをスクロールします。",
+    "立方体のボタンで荷室全体を表示します。",
+    "積荷を左ドラッグして移動できます。",
+    "X／Zボタンは90°回転し、天地無用の積荷はX軸回転できません。",
+    "Undo／Redoボタンを使います。",
+    "ランプから物理判定の詳細を開けます。",
+    "座標調整、積荷情報の編集、荷室からの取り外し",
+    "タッチ操作では積荷選択とページスクロールを行えます。",
+    "正確な配置や編集には、画面下部のボタンとダイアログを使用してください。",
+  ]) {
+    await expect(dialog).toContainText(copy);
+  }
+
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Control+z");
+  await expect(canonical).toHaveText(stateBefore.canonical ?? "");
+  await expect(history).toHaveText("入力または3D操作を完了すると、履歴操作を利用できます。");
+  await expect(selector).toHaveValue(stateBefore.selectedCargo);
+  await expect(annotation).toHaveText(stateBefore.annotation ?? "");
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(menu).toBeFocused();
+  await expect(page.locator(".app-shell")).not.toHaveAttribute("inert", "");
+  await expect(page.locator("html")).not.toHaveClass(/modal-active/);
+  await expect(history).toHaveText(stateBefore.history ?? "");
+  await expect.poll(() => pageScrollTop(page)).toBe(stateBefore.scrollY);
+  expectSameAnnotationGeometry(
+    await selectedAnnotationGeometry(page),
+    zoomedAnnotationGeometry,
+  );
+  await expect(lamp).toHaveAttribute("data-status", physicalBefore.status ?? "");
+  await expect(lamp).toHaveAttribute("aria-label", physicalBefore.ariaLabel ?? "");
+
+  const reopened = await openOperationGuide(page);
+  await reopened.getByRole("button", { name: "操作方法を閉じる" }).click();
+  await expect(reopened).toHaveCount(0);
+  await expect(menu).toBeFocused();
+  await expect(canonical).toHaveText(stateBefore.canonical ?? "");
+  await expect(history).toHaveText(stateBefore.history ?? "");
+  await expect(selector).toHaveValue(stateBefore.selectedCargo);
+  await expect(annotation).toHaveText(stateBefore.annotation ?? "");
+  await expect.poll(() => pageScrollTop(page)).toBe(stateBefore.scrollY);
+
+  const backdropDialog = await openOperationGuide(page);
+  await page.locator(".modal-backdrop").click({ position: { x: 4, y: 4 } });
+  await expect(backdropDialog).toHaveCount(0);
+  await expect(menu).toBeFocused();
+  await expect.poll(() => pageScrollTop(page)).toBe(stateBefore.scrollY);
+  expectSameAnnotationGeometry(
+    await selectedAnnotationGeometry(page),
+    zoomedAnnotationGeometry,
+  );
+
+  await lamp.click();
+  await expect(physicalDialog).toBeVisible();
+  await expect(physicalDialog.locator(".physical-validation__summary")).toHaveText(
+    physicalSummaryBefore ?? "",
+  );
+  await page.getByRole("button", { name: "物理判定を閉じる" }).click();
+  expect(await readDeviceSavedJson(page)).toBe(savedJsonBefore);
+});
+
+for (const width of [305, 320, 375] as const) {
+  test(`keeps the operation guide inside a ${width}px viewport with internal vertical scrolling`, async ({
+    page,
+  }) => {
+    const height = 420;
+    await page.setViewportSize({ width, height });
+    await page.goto("/");
+    const dialog = await openOperationGuide(page);
+    const shell = dialog.locator(".modal-shell__body");
+    const bounds = await dialog.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width + 0.5);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(height + 0.5);
+    expect(
+      await shell.evaluate((element) => ({
+        hasVerticalOverflow: element.scrollHeight > element.clientHeight,
+        hasHorizontalOverflow: element.scrollWidth > element.clientWidth,
+      })),
+    ).toEqual({ hasVerticalOverflow: true, hasHorizontalOverflow: false });
+    await shell.evaluate((element) => element.scrollTo(0, element.scrollHeight));
+    await expect.poll(() => shell.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expectNoHorizontalOverflow(page);
+  });
+}
 
 test("creates a fresh CLP across the unsaved barrier and restores focus without stale confirmation", async ({
   page,

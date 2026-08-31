@@ -1019,7 +1019,7 @@ export function SceneWorkspace({
                         {selectedAnyPlacement === undefined
                           ? "荷室外（未配置）"
                           : selectedOtherContainer === undefined
-                            ? `現在の候補 — X ${selectedAnyPlacement.positionMm.xMm} / Y ${selectedAnyPlacement.positionMm.yMm} / Z ${selectedAnyPlacement.positionMm.zMm} mm`
+                            ? `現在の座標 — X ${selectedAnyPlacement.positionMm.xMm} / Y ${selectedAnyPlacement.positionMm.yMm} / Z ${selectedAnyPlacement.positionMm.zMm} mm`
                             : `${selectedOtherContainer.name}に配置 — X ${selectedAnyPlacement.positionMm.xMm} / Y ${selectedAnyPlacement.positionMm.yMm} / Z ${selectedAnyPlacement.positionMm.zMm} mm`}
                       </span>
                       {selectedPresentation === undefined ? null : (

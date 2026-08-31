@@ -1171,11 +1171,11 @@ export function ThreeViewport({
           focusable="false"
         >
           <defs>
-            <marker id="dimension-arrow-start" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
-              <path d="M0 0 8 4 0 8Z" />
+            <marker id="dimension-arrow-start" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto-start-reverse">
+              <path d="M0 0 4 2 0 4Z" />
             </marker>
-            <marker id="dimension-arrow-end" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-              <path d="M0 0 8 4 0 8Z" />
+            <marker id="dimension-arrow-end" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto">
+              <path d="M0 0 4 2 0 4Z" />
             </marker>
           </defs>
           {dimensionAnnotations.map((annotation) => {

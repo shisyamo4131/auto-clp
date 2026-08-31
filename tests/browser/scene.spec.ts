@@ -453,13 +453,13 @@ test("commits a staged fine-pointer partial drop once and cancels its preview sa
 
   staged = await locateStagedCargoOnCanvas(page, canvas);
   await dragCargoToPartialFloorBoundary(page, staged.point, staged.bounds);
-  await expect(card).toContainText("現在の候補 —");
+  await expect(card).toContainText("現在の座標 —");
   await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "invalid");
   await expect(history).toContainText("配置の追加");
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(card).toContainText("荷室外（未配置）");
   await page.getByRole("button", { name: "やり直す" }).click();
-  await expect(card).toContainText("現在の候補 —");
+  await expect(card).toContainText("現在の座標 —");
 });
 
 test("returns a fully dragged-out placement to staging as one undoable deletion", async ({ page }) => {
@@ -479,7 +479,7 @@ test("returns a fully dragged-out placement to staging as one undoable deletion"
   await expect(page.locator(".viewport__staging-label")).toHaveCount(0);
   await expect(page.locator(".project-history__summary")).toContainText("配置の削除");
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(card).toContainText("現在の候補 —");
+  await expect(card).toContainText("現在の座標 —");
   await page.getByRole("button", { name: "やり直す" }).click();
   await expect(card).toContainText("荷室外（未配置）");
 });
@@ -532,7 +532,7 @@ test("snaps a staged cargo onto a containing support surface and keeps the drop 
   }
 
   expect(snapped).toBe(true);
-  await expect(card).toContainText("現在の候補 —");
+  await expect(card).toContainText("現在の座標 —");
   await expect(card).toContainText("Z 500 mm");
   await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "valid");
   await expect(page.locator(".project-history__summary")).toContainText("配置の追加");

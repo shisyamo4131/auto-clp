@@ -38,5 +38,6 @@
 | [0025](0025-viewer-first-application-shell.md) | 3D主作業面を優先するApplication Shell | Accepted | 2026-08-30 |
 | [0026](0026-tabbed-scene-annotations-and-validation-dialog.md) | 荷室tab・選択annotation・物理判定dialog | Accepted | 2026-08-31 |
 | [0027](0027-external-tabs-compact-dimensions-and-icon-lamp.md) | 欄外荷室tab・簡略寸法・icon-only判定lamp | Accepted | 2026-08-31 |
+| [0028](0028-operation-guide-and-compact-dimension-arrows.md) | 操作方法dialogとcompact寸法矢印 | Accepted | 2026-08-31 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

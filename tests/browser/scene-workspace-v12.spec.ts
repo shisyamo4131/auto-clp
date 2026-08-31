@@ -257,6 +257,13 @@ test("shows selected domain dimensions without pointer interception and exposes 
   );
   const startMarker = annotation.locator("#dimension-arrow-start");
   const endMarker = annotation.locator("#dimension-arrow-end");
+  for (const marker of [startMarker, endMarker]) {
+    await expect(marker).toHaveAttribute("markerWidth", "4");
+    await expect(marker).toHaveAttribute("markerHeight", "4");
+    await expect(marker).toHaveAttribute("refX", "2");
+    await expect(marker).toHaveAttribute("refY", "2");
+    await expect(marker.locator("path")).toHaveAttribute("d", "M0 0 4 2 0 4Z");
+  }
   await expect(startMarker).toHaveAttribute("orient", "auto-start-reverse");
   await expect(endMarker).toHaveAttribute("orient", "auto");
   expect(await startMarker.locator("path").getAttribute("d")).toBe(
@@ -269,6 +276,8 @@ test("shows selected domain dimensions without pointer interception and exposes 
   }
   await expect(annotation).toHaveCSS("pointer-events", "none");
   await expectDimensionLabelsInsideCanvas(page);
+  await expect(actions).toContainText("現在の座標 — X 100 / Y 100 / Z 0 mm");
+  await expect(actions).not.toContainText("現在の候補 — X");
   await expect(actions.getByRole("button", { name: "座標を微調整" })).toBeVisible();
   await expect(actions.getByRole("button", { name: "荷室から外す" })).toBeVisible();
   await expect(actions.getByRole("button", { name: "積荷自体を削除" })).toHaveCount(0);

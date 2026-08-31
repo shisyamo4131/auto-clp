@@ -72,7 +72,7 @@ test("separates placement removal from cargo deletion and restores fallback focu
   const historyBeforeBlockedDelete = await page.locator(".project-history__summary").textContent();
   await expect(card.getByRole("button", { name: "積荷自体を削除" })).toHaveCount(0);
   await expect(card.getByRole("button", { name: "荷室から外す" })).toBeVisible();
-  await expect(card).toContainText("現在の候補 — X 0 / Y 0 / Z 0 mm");
+  await expect(card).toContainText("現在の座標 — X 0 / Y 0 / Z 0 mm");
   expect(await page.locator(".project-history__summary").textContent()).toBe(historyBeforeBlockedDelete);
 
   await card.getByRole("button", { name: "荷室から外す" }).click();

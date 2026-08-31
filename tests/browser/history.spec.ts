@@ -48,11 +48,11 @@ test("undoes and redoes project, cargo, container, placement, and removal", asyn
   await undo.click();
   await expect(card).toContainText("荷室外（未配置）");
   await redo.click();
-  await expect(card).toContainText("現在の候補 — X 0 / Y 0 / Z 0 mm");
+  await expect(card).toContainText("現在の座標 — X 0 / Y 0 / Z 0 mm");
   await card.getByRole("button", { name: "荷室から外す" }).click();
   await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
   await undo.click();
-  await expect(card).toContainText("現在の候補 — X 0 / Y 0 / Z 0 mm");
+  await expect(card).toContainText("現在の座標 — X 0 / Y 0 / Z 0 mm");
 });
 
 test("keeps native input undo local and blocks project history while a dialog is dirty", async ({ page }) => {

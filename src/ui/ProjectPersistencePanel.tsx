@@ -17,6 +17,7 @@ import {
   isProjectFileImportAvailable,
 } from "../persistence/project-file";
 import { isProjectStoreAvailable } from "../persistence/project-store";
+import { OperationGuideDialog } from "./OperationGuideDialog";
 
 type PersistenceAction =
   | "save-device"
@@ -145,6 +146,7 @@ export function ProjectPersistencePanel({
 }: ProjectPersistencePanelProps) {
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const [newProjectConfirmation, setNewProjectConfirmation] = useState(false);
+  const [operationGuideOpen, setOperationGuideOpen] = useState(false);
   const [operation, setOperation] = useState<PersistenceAction>();
   const [status, setStatus] = useState("");
   const [notification, setNotification] = useState<PersistenceNotification>();
@@ -162,7 +164,12 @@ export function ProjectPersistencePanel({
   const restoreEntryFocusRef = useRef(false);
   const restoreDeleteFocusRef = useRef(false);
   const restoreNewProjectFocusRef = useRef(false);
-  const interactionActive = drawerOpen || deleteConfirmation || newProjectConfirmation || operation !== undefined;
+  const interactionActive =
+    drawerOpen ||
+    deleteConfirmation ||
+    newProjectConfirmation ||
+    operationGuideOpen ||
+    operation !== undefined;
   const deviceAvailable = isProjectStoreAvailable();
   const fileImportAvailable = isProjectFileImportAvailable();
   const fileExportAvailable = isProjectFileExportAvailable();
@@ -478,6 +485,18 @@ export function ProjectPersistencePanel({
                 >
                   CLP設定
                 </button>
+              </div>
+            </div>
+            <div className="project-persistence__group">
+              <h3>ヘルプ</h3>
+              <div className="button-row">
+                <button
+                  type="button"
+                  disabled={controlsDisabled}
+                  onClick={() => finishDrawerAction(() => setOperationGuideOpen(true))}
+                >
+                  操作方法
+                </button>
                 <button
                   type="button"
                   disabled={controlsDisabled}
@@ -632,6 +651,10 @@ export function ProjectPersistencePanel({
           </aside>
         </aside>
       </div>
+
+      {operationGuideOpen ? (
+        <OperationGuideDialog onClose={() => setOperationGuideOpen(false)} />
+      ) : null}
 
       {notification === undefined || drawerOpen ? null : (
         <div

@@ -91,17 +91,19 @@
 
 1. 候補3件以上を持つCLPで、Application BarのmenuがDOM・視覚とも右端となり、3D viewportの欄外上部にある一行tablistで候補を直接切替できる。tablistはcanvasと重ならず、狭幅または長名で左右buttonと横scrollが現れ、scrollだけでは候補を変更しない。左右矢印・Home・End・Enter・Spaceとfocusが仕様どおり動く。
 2. 寸法差のある候補A/B間をA→B→Aと切り替えても、共有cameraの視線方向・上下角度・fit距離倍率と、未配置積荷のside・gap・接線方向関係・Z・向きが維持される。tab、camera、anchorはProject、dirty、履歴、端末保存、JSONへ入らない。
-3. scene積荷を選択した時だけ、現在向き適用後の3軸寸法線、両端から外向きの矢印、`整数 mm` だけの可視labelを表示し、選択解除・削除・候補切替・WebGL障害で消す。軸と奥行・横幅・高さの同値は下段の非視覚説明に一度だけ持ち、annotationはdrag・選択のpointer hitを奪わない。
+3. scene積荷を選択した時だけ、現在向き適用後の3軸寸法線、両端から外向きのcompactな `4 × 4` 矢印、`整数 mm` だけの可視labelを表示し、選択解除・削除・候補切替・WebGL障害で消す。軸と奥行・横幅・高さの同値は下段の非視覚説明に一度だけ持ち、annotationはdrag・選択のpointer hitを奪わない。
 4. selector直下の固定action rowは、未選択でも高さを維持し、未配置・現在候補配置・他候補配置の各状態に対応する正しい操作だけを示す。積荷削除と荷室から外すは別確認・別履歴であり、drag中とdialog中は理由付きで無効となる。
 5. Undo/Redo横の判定lampは、灰・青・黄・赤と異なる可視iconだけを常設し、accessible nameとtitleで状態名・不適合件数・未確認件数を示す。dialogを閉じても判定を継続し、再度開くと最新結果を表示する。青は「実装済み確認項目内で問題なし」であり、安全保証とは表示しない。
 6. 初回または内容版更新後は操作開始前に「使用上の重要事項」を確認し、Drawerと物理判定dialogから再表示できる。確認状態はCLP、JSON、端末保存、履歴へ入らず、法的な利用規約同意とは表示しない。
 7. 305 / 320 / 375 px、候補0 / 1 / 100件、積荷0 / 1 / 1,000件、keyboard、touch、WebGL context lossでoverlay重複、page横overflow、focus消失、stale判定、他候補配置の重複表示がない。
+8. Drawerの `操作方法` は独立dialogを開き、積荷選択、視点回転・平行移動、wheel、toolbar、積荷drag・回転、Undo/Redo、判定、座標・積荷編集とtouch境界を正しく案内する。dialogはCLP・履歴・保存・sceneを変更せず、背景inert、Tab trap、Escape・close、menu buttonへのfocusとpage scroll復帰、狭幅内部scrollを維持する。現在候補の配置は `現在の座標` と明記する。
 
 ## Evidence and Completion
 
 - 自動証拠: domainと表示の単体試験、Worker経由のブラウザ試験、履歴、IndexedDB、JSON往復、WebGL必須能力ゲートと読み取り専用救出回帰を個別の終了コードで記録する。
 - 仕様1.2.0自動証拠: typecheck、lint、単体28ファイル952件、ブラウザ81件、buildに合格。AC-05の候補0/1/100、keyboard・overflow、4辺anchor・候補寸法差A→B→A、共有camera、3軸annotation、固定action行列、lamp/dialog、使用事項の保存成功・session-only失敗、下段safe areaとconsole error 0を回帰した。これは人間または実務利用者受入の証拠ではない。
 - 仕様1.2.1自動証拠: typecheck、lint、単体28ファイル952件、ブラウザ89件、buildに合格。tablistが3D viewport外の直前にありcanvasと非重複であること、狭幅・多数候補のscrollでcanvas文書位置と寸法を変えないこと、`整数 mm`だけの可視寸法と外向きmarker契約、icon-only lampの状態別icon・accessible name・件数・最新dialogを回帰した。camera平行移動はsource contractと実画面確認に分け、headless browserの自動証拠とは扱わない。これは人間または実務利用者受入の証拠ではない。
+- 仕様1.2.2自動証拠: typecheck、lint、単体28ファイル952件、ブラウザ93件、buildに合格。Drawerと独立操作方法dialog、案内copy、背景inert、focus trap、Escape・closeのfocus・scroll復帰、CLP・履歴・scene非変更、305 / 320 / 375 pxの内部scroll・水平overflowなし、`4 × 4` marker契約、`現在の座標` copyを回帰した。寸法矢印の見た目と案内文の理解は差分中心の人間確認を残す。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
 - canvas追加操作の判断: AC-01で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。
