@@ -119,7 +119,7 @@ function completeResult(
       unverifiedReasons: [
         {
           status: "unverified" as const,
-          code: "structure-stability-unverified" as const,
+          code: "support-conditions-unverified" as const,
           target: { kind: "cargo" as const, id: "cargo-b" },
           relatedCargoIds: ["cargo-a"],
         },
@@ -362,8 +362,8 @@ describe("automaticProposalView ready statuses", () => {
 
     expect(view.unverifiedReasons.rows).toEqual([
       {
-        code: "structure-stability-unverified",
-        message: "支持後の構造・安定性は未確認です。",
+        code: "support-conditions-unverified",
+        message: "複数支持、隙間、張り出し等の支持条件は未確認です。",
         targetCargoId: "cargo-b",
         targetCargoName: "Beta",
         relatedCargoLabels: ["Alpha (cargo-a)"],
@@ -488,7 +488,7 @@ function largeFixture() {
   }));
   const reasons = cargoes.map(({ id }) => ({
     status: "unverified" as const,
-    code: "structure-stability-unverified" as const,
+    code: "support-conditions-unverified" as const,
     target: { kind: "cargo" as const, id },
     relatedCargoIds: [id],
   }));

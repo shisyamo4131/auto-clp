@@ -1,5 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-import { saveProjectName } from "./ui-helpers";
+import { expect, test, type Page } from "./fixtures";
+import { activateContainer, saveProjectName } from "./ui-helpers";
 
 async function addCargo(page: Page, name: string) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
@@ -41,18 +41,18 @@ test("undoes and redoes project, cargo, container, placement, and removal", asyn
   await redo.click();
   await addContainer(page, "履歴候補");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   await card.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByRole("button", { name: "配置を保存" }).click();
-  await expect(card).toContainText("0 mm");
+  await expect(card).toContainText("X 0 / Y 0 / Z 0 mm");
   await undo.click();
   await expect(card).toContainText("荷室外（未配置）");
   await redo.click();
-  await expect(card).toContainText("現在の候補に配置済み");
+  await expect(card).toContainText("現在の候補 — X 0 / Y 0 / Z 0 mm");
   await card.getByRole("button", { name: "荷室から外す" }).click();
   await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
   await undo.click();
-  await expect(card).toContainText("現在の候補に配置済み");
+  await expect(card).toContainText("現在の候補 — X 0 / Y 0 / Z 0 mm");
 });
 
 test("keeps native input undo local and blocks project history while a dialog is dirty", async ({ page }) => {
@@ -73,13 +73,12 @@ test("falls back when a selected candidate disappears and does not auto-select i
   await page.goto("/");
   await addContainer(page, "候補A");
   await addContainer(page, "候補B");
-  const select = page.getByLabel("表示する候補");
-  await select.selectOption("container-2");
+  await activateContainer(page, "container-2");
   await page.getByRole("button", { name: "削除: 候補B" }).click();
   await page.getByRole("button", { name: "削除を確定: 候補B" }).click();
-  await expect(select).toHaveValue("container-1");
+  await expect(page.getByRole("tab", { name: /ID: container-1/ })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(select).toHaveValue("container-1");
+  await expect(page.getByRole("tab", { name: /ID: container-1/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("list", { name: "候補一覧" })).toContainText("候補B");
 });
 

@@ -52,7 +52,6 @@ const CUTOFF_SOURCES = new Set<AutomaticProposalCutoffSource>([
 ]);
 const ORIENTATION_SET = new Set<Orientation>(ORIENTATIONS);
 const UNVERIFIED_REASON_CODES = new Set([
-  "structure-stability-unverified",
   "support-conditions-unverified",
 ]);
 

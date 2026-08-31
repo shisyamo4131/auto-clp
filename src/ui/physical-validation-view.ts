@@ -59,8 +59,6 @@ const INVALID_REASON_COPY = {
 } satisfies Record<InvalidPhysicalReasonCode, string>;
 
 const UNVERIFIED_REASON_COPY = {
-  "structure-stability-unverified":
-    "単一積荷の上面による幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
   "support-conditions-unverified":
     "複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含みます。構造剛性、支持位置、重心、許容支持間隔を確認してください。",
 } satisfies Record<UnverifiedPhysicalReasonCode, string>;
@@ -176,11 +174,11 @@ export function toPhysicalValidationSummaryView(
   if (summary.status === "valid") {
     return {
       status: summary.status,
-      statusLabel: "適合",
+      statusLabel: "問題なし",
       summary:
         summary.placementCount === 0
-          ? "適合：この候補には配置済みの積荷がありません。"
-          : "適合：現在の保存済み配置は、実装済みの物理制約に適合しています。",
+          ? "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。"
+          : "実装済み確認項目内で問題なし：現在の保存済み配置に不適合・未確認はありません。",
     };
   }
 
@@ -237,11 +235,11 @@ export function toPhysicalValidationView(
   if (result.status === "valid") {
     return {
       status: result.status,
-      statusLabel: "適合",
+      statusLabel: "問題なし",
       summary:
         placementCount === 0
-          ? "適合：この候補には配置済みの積荷がありません。"
-          : "適合：現在の保存済み配置は、実装済みの物理制約に適合しています。",
+          ? "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。"
+          : "実装済み確認項目内で問題なし：現在の保存済み配置に不適合・未確認はありません。",
       invalidReasons,
       unverifiedReasons,
     };

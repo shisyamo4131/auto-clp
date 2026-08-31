@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
+import { activateContainer, openPhysicalValidation } from "./ui-helpers";
 
 async function addContainer(page: Page, name: string) {
   await page.getByRole("button", { name: "候補を追加" }).click();
@@ -155,6 +156,8 @@ test("masks old generations and ignores terminated workers and stale page reques
   await page.goto("/");
   await addContainer(page, "遅い候補A");
   await addContainer(page, "最新候補B");
+  await activateContainer(page, "container-2");
+  await openPhysicalValidation(page);
 
   await page.evaluate(() => {
     const browserGlobal = globalThis as unknown as {
@@ -180,7 +183,6 @@ test("masks old generations and ignores terminated workers and stale page reques
     }).observe(summary, { childList: true, characterData: true, subtree: true });
   });
 
-  await page.getByLabel("表示する候補").selectOption("container-2");
   const panel = page.locator(".physical-validation");
   await expect(panel.locator(".physical-validation__summary")).toHaveText(
     "不適合：修正が必要な理由が36件あります。未確認事項0件も保持して表示します。",
@@ -208,7 +210,7 @@ test("masks old generations and ignores terminated workers and stale page reques
   });
   expect(stats.created).toBeGreaterThanOrEqual(3);
   expect(stats.terminated).toBeGreaterThanOrEqual(2);
-  expect(stats.observedSummaries.some((summary) => summary.startsWith("適合："))).toBe(
+  expect(stats.observedSummaries.some((summary) => summary.startsWith("実装済み確認項目内で問題なし："))).toBe(
     false,
   );
 });
@@ -220,10 +222,11 @@ test("terminates the completed last-candidate worker, clears old reasons, and ev
   await page.goto("/");
   await addContainer(page, "削除前候補");
 
+  await openPhysicalValidation(page);
   const panel = page.locator(".physical-validation");
   const summary = panel.locator(".physical-validation__summary");
   await expect(summary).toHaveText(
-    "適合：この候補には配置済みの積荷がありません。",
+    "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。",
   );
   const beforeDelete = await page.evaluate(() => {
     const browserGlobal = globalThis as unknown as {
@@ -232,15 +235,13 @@ test("terminates the completed last-candidate worker, clears old reasons, and ev
     return structuredClone(browserGlobal.__physicalWorkerStats);
   });
 
+  await page.getByRole("button", { name: "物理判定を閉じる" }).click();
   await page.getByRole("button", { name: "削除: 削除前候補" }).click();
   await page.getByRole("button", { name: "削除を確定: 削除前候補" }).click();
   await expect(page.getByText("候補0件、積荷0件。")).toBeVisible();
-  await expect(summary).toHaveText("判定対象なし：候補コンテナを追加してください。");
-  await expect(panel.getByRole("region", { name: "不適合理由" })).toHaveCount(0);
-  await expect(panel.getByRole("region", { name: "未確認理由" })).toHaveCount(0);
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "neutral");
   await page.waitForTimeout(460);
-  await expect(summary).toHaveText("判定対象なし：候補コンテナを追加してください。");
-  await expect(panel.locator(".physical-validation__reason")).toHaveCount(0);
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "neutral");
 
   const afterDelete = await page.evaluate(() => {
     const browserGlobal = globalThis as unknown as {
@@ -251,11 +252,10 @@ test("terminates the completed last-candidate worker, clears old reasons, and ev
   expect(afterDelete.terminated).toBeGreaterThan(beforeDelete.terminated);
 
   await addContainer(page, "再追加候補");
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "valid");
+  await openPhysicalValidation(page);
   await expect(summary).toHaveText(
-    "判定中：保存済み配置の物理判定を計算しています。",
-  );
-  await expect(summary).toHaveText(
-    "適合：この候補には配置済みの積荷がありません。",
+    "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。",
   );
   const afterReAdd = await page.evaluate(() => {
     const browserGlobal = globalThis as unknown as {
@@ -320,18 +320,21 @@ test("surfaces worker-failed as a retryable transport error without synchronous 
   await addCargo(page, "失敗時積荷");
   await addContainer(page, "失敗候補");
 
+  await openPhysicalValidation(page);
   const panel = page.locator(".physical-validation");
   const summary = panel.locator(".physical-validation__summary");
   await expect(summary).toHaveText(
     "判定不能：物理判定の処理を開始または完了できませんでした。再試行してください。",
   );
   await expect(summary).not.toContainText("CLPデータの参照または意味整合性");
+  await page.getByRole("button", { name: "物理判定を閉じる" }).click();
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
   await page.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByRole("button", { name: "配置を保存" }).click();
   await expect(page.locator("#scene-workspace-action-status")).toContainText(
     "座標で配置し、物理判定を再計算しています。",
   );
+  await openPhysicalValidation(page);
   await expect(summary).toHaveText(
     "判定不能：物理判定の処理を開始または完了できませんでした。再試行してください。",
   );

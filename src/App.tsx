@@ -43,6 +43,10 @@ import {
 } from "./ui/CargoEditorDialog";
 import { ProjectPersistencePanel } from "./ui/ProjectPersistencePanel";
 import { ProjectSettingsDialog, ProjectWorkspace } from "./ui/ProjectWorkspace";
+import {
+  UsageRequirementsDialog,
+  hasConfirmedCurrentUsageRequirements,
+} from "./ui/UsageRequirementsDialog";
 
 type AppState =
   | "checking"
@@ -141,6 +145,9 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     useState<CargoEditorRequest>();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
+  const [usageRequirementsConfirmed, setUsageRequirementsConfirmed] = useState(false);
+  const [usageRequirementsOpen, setUsageRequirementsOpen] = useState(false);
+  const usageRequirementsOpenRef = useRef(false);
   const project = history.present;
 
   const bumpProjectInteractionGeneration = useCallback(() => {
@@ -171,8 +178,12 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
 
   const handleRendererReady = useCallback(() => {
     if (stateRef.current !== "renderer-checking") return;
-    operationalRef.current = true;
+    const confirmed = hasConfirmedCurrentUsageRequirements();
+    operationalRef.current = confirmed;
     stateRef.current = "supported";
+    usageRequirementsOpenRef.current = !confirmed;
+    setUsageRequirementsConfirmed(confirmed);
+    setUsageRequirementsOpen(!confirmed);
     setState("supported");
   }, []);
 
@@ -196,6 +207,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         next.cargoDialog ||
         next.project ||
         next.scene ||
+        usageRequirementsOpenRef.current ||
         persistenceInteractionRef.current ||
         persistenceOperationRef.current;
       setBusySources(next);
@@ -240,6 +252,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         busySourcesRef.current.cargoDialog ||
         busySourcesRef.current.project ||
         busySourcesRef.current.scene ||
+        usageRequirementsOpenRef.current ||
         active ||
         persistenceOperationRef.current;
       setPersistenceInteractionActive(active);
@@ -350,6 +363,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           busySourcesRef.current.cargoDialog ||
           busySourcesRef.current.project ||
           busySourcesRef.current.scene ||
+          usageRequirementsOpenRef.current ||
           persistenceInteractionRef.current;
         setPersistenceOperationActive(false);
       }
@@ -366,6 +380,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         busySourcesRef.current.cargoDialog ||
         busySourcesRef.current.project ||
         busySourcesRef.current.scene ||
+        usageRequirementsOpenRef.current ||
         persistenceInteractionRef.current ||
         persistenceOperationRef.current,
     }),
@@ -510,6 +525,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       sources.cargoDialog ||
       sources.project ||
       sources.scene ||
+      usageRequirementsOpenRef.current ||
       persistenceOperationRef.current
     ) return;
     handleBusyChange("project", true);
@@ -521,6 +537,58 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     handleBusyChange("project", false);
   }, [handleBusyChange]);
 
+  const handleOpenUsageRequirements = useCallback(() => {
+    const sources = busySourcesRef.current;
+    if (
+      !operationalRef.current ||
+      sources.cargoDialog ||
+      sources.project ||
+      sources.scene ||
+      persistenceOperationRef.current
+    ) return;
+    usageRequirementsOpenRef.current = true;
+    busyRef.current = true;
+    setUsageRequirementsOpen(true);
+  }, []);
+
+  const handleOpenUsageRequirementsFromScene = useCallback(() => {
+    const sources = busySourcesRef.current;
+    if (
+      !operationalRef.current ||
+      sources.cargoDialog ||
+      sources.project ||
+      persistenceOperationRef.current
+    ) return;
+    usageRequirementsOpenRef.current = true;
+    busyRef.current = true;
+    setUsageRequirementsOpen(true);
+  }, []);
+
+  const handleCloseUsageRequirements = useCallback(() => {
+    if (!usageRequirementsConfirmed) return;
+    usageRequirementsOpenRef.current = false;
+    busyRef.current =
+      busySourcesRef.current.cargoDialog ||
+      busySourcesRef.current.project ||
+      busySourcesRef.current.scene ||
+      persistenceInteractionRef.current ||
+      persistenceOperationRef.current;
+    setUsageRequirementsOpen(false);
+  }, [usageRequirementsConfirmed]);
+
+  const handleConfirmUsageRequirements = useCallback(() => {
+    operationalRef.current = true;
+    usageRequirementsOpenRef.current = false;
+    setUsageRequirementsConfirmed(true);
+    setUsageRequirementsOpen(false);
+    busyRef.current =
+      busySourcesRef.current.cargoDialog ||
+      busySourcesRef.current.project ||
+      busySourcesRef.current.scene ||
+      persistenceInteractionRef.current ||
+      persistenceOperationRef.current;
+  }, []);
+
   const handleCreateNewProject = useCallback(() => {
     const sources = busySourcesRef.current;
     if (
@@ -528,6 +596,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       sources.cargoDialog ||
       sources.project ||
       sources.scene ||
+      usageRequirementsOpenRef.current ||
       persistenceOperationRef.current
     ) return;
     const nextProject = createInitialProject(`project-${crypto.randomUUID()}`);
@@ -613,7 +682,8 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     busySources.cargoDialog ||
     busySources.project ||
     busySources.scene ||
-    persistenceOperationActive;
+    persistenceOperationActive ||
+    usageRequirementsOpen;
   const historyBusy = externalPersistenceBusy || persistenceInteractionActive;
 
   const sceneWorkspace = (
@@ -624,7 +694,9 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         busySources.cargoDialog ||
         busySources.project ||
         persistenceInteractionActive ||
-        persistenceOperationActive
+        persistenceOperationActive ||
+        usageRequirementsOpen ||
+        !usageRequirementsConfirmed
       }
       forceInitialRenderError={forceInitialRenderError}
       historyControls={{
@@ -642,6 +714,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       historyRevision={historyRevision}
       onBusyChange={handleSceneBusyChange}
       onOpenCargoEditor={handleOpenCargoEditor}
+      onOpenUsageRequirements={handleOpenUsageRequirementsFromScene}
       onProjectCommit={handleProjectCommit}
       project={project}
       rendererMounted={rendererMounted}
@@ -687,12 +760,25 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       <ApplicationBar
         capabilityState={state}
         drawerOpen={navigationOpen}
-        navigationDisabled={busySources.cargoDialog || busySources.project || busySources.scene}
+        navigationDisabled={
+          !usageRequirementsConfirmed ||
+          busySources.cargoDialog ||
+          busySources.project ||
+          busySources.scene
+        }
         onOpenNavigation={() => setNavigationOpen(true)}
         onOpenProjectSettings={handleOpenProjectSettings}
         projectName={project.name}
         projectSettingsDisabled={externalPersistenceBusy}
       />
+
+      {usageRequirementsOpen ? (
+        <UsageRequirementsDialog
+          required={!usageRequirementsConfirmed}
+          onClose={handleCloseUsageRequirements}
+          onConfirm={handleConfirmUsageRequirements}
+        />
+      ) : null}
 
       <ProjectPersistencePanel
         busy={externalPersistenceBusy}
@@ -705,19 +791,13 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         onLoadDevice={handleLoadDevice}
         onOpenChange={setNavigationOpen}
         onOpenProjectSettings={handleOpenProjectSettings}
+        onOpenUsageRequirements={handleOpenUsageRequirements}
         onSaveDevice={handleSaveDevice}
         open={navigationOpen}
         project={project}
       />
 
       {sceneWorkspace}
-
-      <aside className="safety-note" aria-label="現在の制限">
-        <strong>現在の段階</strong>
-        <span>
-          実装済みの物理判定に適合しても、完全な搬入経路、構造・安定性、重心、軸重、床面強度、荷崩れ、固縛、動荷重、法令適合性や実積載の安全性は未確認です。
-        </span>
-      </aside>
 
       <AutomaticProposalPanel
         applyProposal={handleAutomaticProposalApply}
@@ -732,7 +812,8 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           busySources.cargoDialog ||
           busySources.scene ||
           persistenceInteractionActive ||
-          persistenceOperationActive
+          persistenceOperationActive ||
+          usageRequirementsOpen
         }
         key={`project-${projectBarrierRevision}`}
         historyRevision={historyRevision}

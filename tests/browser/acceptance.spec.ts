@@ -1,5 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
-import { openProjectSettings } from "./ui-helpers";
+import { expect, test, type Page } from "./fixtures";
+import { openPhysicalValidation, openProjectSettings } from "./ui-helpers";
 
 interface CargoInput {
   readonly lengthMm?: string;
@@ -117,21 +117,19 @@ test("executes the AC-01 form subset for orientation, removal, and undo", async 
   await placeCargo(page, "合成積荷A", { xMm: "100", yMm: "100", zMm: "0" });
   await placeCargo(page, "合成積荷B", { xMm: "1500", yMm: "100", zMm: "0" });
 
-  const card = page.locator(".scene-selection-card");
-  const validation = page.locator(".physical-validation");
+  const card = page.locator(".viewport-context-actions");
   await page.getByLabel("操作する積荷").selectOption("cargo-2");
   await card.getByRole("button", { name: "座標を微調整" }).click();
   await page.getByLabel("向き").selectOption("WLH");
   await page.getByRole("button", { name: "配置を保存" }).click();
-  await expect(card).toContainText("1500 mm");
-  await expect(validation.getByRole("heading", { name: "不適合理由", exact: false })).toHaveCount(0);
-  await expect(validation.getByRole("heading", { name: "未確認理由", exact: false })).toHaveCount(0);
+  await expect(card).toContainText("X 1500 / Y 100 / Z 0 mm");
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "valid");
 
   await card.getByRole("button", { name: "荷室から外す" }).click();
   await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
   await expect(card.getByRole("button", { name: "座標を入力して配置" })).toBeVisible();
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(card).toContainText("1500 mm");
+  await expect(card).toContainText("X 1500 / Y 100 / Z 0 mm");
   await expect(page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" })).toBeVisible();
 });
 
@@ -165,31 +163,27 @@ test("reports a 1 mm overhang as support-conditions-unverified and undo restores
   await placeCargo(page, "合成支持台", { xMm: "500", yMm: "500", zMm: "0" });
   await placeCargo(page, "合成上段荷", { xMm: "500", yMm: "500", zMm: "500" });
 
-  const validation = page.locator(".physical-validation");
-  const card = page.locator(".scene-selection-card");
-  await expect(validation).toContainText(
-    "単一積荷の上面による幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
-  );
-  await expect(validation).not.toContainText("支持条件は未確認");
+  const card = page.locator(".viewport-context-actions");
+  const lamp = page.locator("#physical-validation-lamp");
+  await expect(lamp).toHaveAttribute("data-status", "valid");
 
   await page.getByLabel("操作する積荷").selectOption("cargo-2");
   await card.getByRole("button", { name: "座標を微調整" }).click();
   await page.getByLabel("X最小角").fill("501");
   await page.getByRole("button", { name: "配置を保存" }).click();
+  await expect(lamp).toHaveAttribute("data-status", "unverified");
+  await openPhysicalValidation(page);
+  const validation = page.locator(".physical-validation");
   await expect(validation).toContainText(
     "複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含みます。",
   );
   await expect(validation.locator(".physical-validation__summary")).toContainText("未確認");
-  await expect(card).toContainText("501 mm");
+  await expect(card).toContainText("X 501 / Y 500 / Z 500 mm");
 
+  await page.getByRole("button", { name: "物理判定を閉じる" }).click();
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(card).toContainText("500 mm");
-  await expect(validation).not.toContainText(
-    "複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含みます。",
-  );
-  await expect(validation).toContainText(
-    "単一積荷の上面による幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
-  );
+  await expect(card).toContainText("X 500 / Y 500 / Z 500 mm");
+  await expect(lamp).toHaveAttribute("data-status", "valid");
 });
 
 test("orders floor penetration before independent opening and payload failures", async ({
@@ -217,6 +211,7 @@ test("orders floor penetration before independent opening and payload failures",
     zMm: "-1",
   });
 
+  await openPhysicalValidation(page);
   const validation = page.locator(".physical-validation");
   await expect(validation.getByRole("heading", { name: "不適合理由（3件）" })).toBeVisible();
   const invalidReasons = validation.locator(".physical-validation__reason--invalid");
@@ -276,6 +271,7 @@ test("suppresses the human-trial floor-derived support message through the Worke
     orientation: "WLH",
   });
 
+  await openPhysicalValidation(page);
   const validation = page.locator(".physical-validation");
   await expect(
     validation.getByRole("heading", { name: "不適合理由（1件）" }),

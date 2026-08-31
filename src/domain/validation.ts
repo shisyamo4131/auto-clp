@@ -30,9 +30,7 @@ export type InvalidPhysicalReasonCode =
   | "support-contact-invalid"
   | "payload-capacity-exceeded";
 
-export type UnverifiedPhysicalReasonCode =
-  | "structure-stability-unverified"
-  | "support-conditions-unverified";
+export type UnverifiedPhysicalReasonCode = "support-conditions-unverified";
 
 export type PhysicalTarget =
   | { readonly kind: "container"; readonly id: string }
@@ -629,14 +627,7 @@ export function validatePlacementSet(
     )!;
     const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
 
-    if (assessment.kind === "single") {
-      appendReason({
-        status: "unverified",
-        code: "structure-stability-unverified",
-        target,
-        relatedCargoIds: assessment.contactIds,
-      });
-    } else if (assessment.kind === "conditional") {
+    if (assessment.kind === "conditional") {
       appendReason({
         status: "unverified",
         code: "support-conditions-unverified",

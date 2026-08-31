@@ -37,7 +37,7 @@ function plan(containerId = "container-1") {
     unverifiedReasons: [
       {
         status: "unverified",
-        code: "structure-stability-unverified",
+        code: "support-conditions-unverified",
         target: { kind: "cargo", id: "cargo-upper" },
         relatedCargoIds: ["cargo-support"],
       },
@@ -323,6 +323,7 @@ describe("isAutomaticProposalWorkerResponse", () => {
     ["NaN coordinate", (value: Record<string, unknown>) => { const placements = nested(nested(value, "result"), "plan").placements as Array<Record<string, unknown>>; nested(placements[0], "positionMm").xMm = Number.NaN; }],
     ["unknown reason", (value: Record<string, unknown>) => { const reasons = nested(nested(value, "result"), "plan").unverifiedReasons as Array<Record<string, unknown>>; reasons[0]!.code = "unknown"; }],
     ["retired opening-path reason", (value: Record<string, unknown>) => { const reasons = nested(nested(value, "result"), "plan").unverifiedReasons as Array<Record<string, unknown>>; reasons[0]!.code = "opening-path-unverified"; reasons[0]!.relatedCargoIds = []; }],
+    ["retired structure reason", (value: Record<string, unknown>) => { const reasons = nested(nested(value, "result"), "plan").unverifiedReasons as Array<Record<string, unknown>>; reasons[0]!.code = "structure-stability-unverified"; }],
     ["unknown reason target", (value: Record<string, unknown>) => { const reasons = nested(nested(value, "result"), "plan").unverifiedReasons as Array<Record<string, unknown>>; nested(reasons[0], "target").id = "cargo-unknown"; }],
     ["duplicate placement cargo", (value: Record<string, unknown>) => { const placements = nested(nested(value, "result"), "plan").placements as Array<Record<string, unknown>>; placements[1]!.cargoId = placements[0]!.cargoId; }],
     ["placement container mismatch", (value: Record<string, unknown>) => { const placements = nested(nested(value, "result"), "plan").placements as Array<Record<string, unknown>>; placements[1]!.containerId = "container-other"; }],
@@ -367,13 +368,13 @@ describe("isAutomaticProposalWorkerResponse", () => {
         },
         {
           status: "unverified",
-          code: "structure-stability-unverified",
+          code: "support-conditions-unverified",
           target: { kind: "cargo", id: "cargo-support" },
           relatedCargoIds: ["cargo-upper"],
         },
         {
           status: "unverified",
-          code: "structure-stability-unverified",
+          code: "support-conditions-unverified",
           target: { kind: "cargo", id: "cargo-support" },
           relatedCargoIds: ["cargo-upper"],
         },

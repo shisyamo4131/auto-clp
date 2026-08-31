@@ -10,13 +10,24 @@ import {
   type PhysicalValidationViewStatus,
 } from "./physical-validation-view";
 import {
-  usePhysicalValidationWorker,
   type PhysicalValidationReasonPageSnapshot,
+  type PhysicalValidationWorkerController,
   type PhysicalValidationWorkerSnapshot,
 } from "./usePhysicalValidationWorker";
+import { ModalShell } from "./ModalShell";
 
 interface PhysicalValidationPanelProps {
-  readonly containerId?: string;
+  readonly controller: PhysicalValidationWorkerController;
+  readonly onClose: () => void;
+  readonly onOpenUsageRequirements: () => void;
+  readonly open: boolean;
+  readonly project: Project;
+}
+
+interface PhysicalValidationLampProps {
+  readonly controller: PhysicalValidationWorkerController;
+  readonly disabled?: boolean;
+  readonly onOpen: () => void;
   readonly project: Project;
 }
 
@@ -70,6 +81,60 @@ function panelSummary(
     };
   }
   return toPhysicalValidationSummaryView(labels, snapshot.summary);
+}
+
+export function PhysicalValidationLamp({
+  controller,
+  disabled = false,
+  onOpen,
+  project,
+}: PhysicalValidationLampProps) {
+  const labels = useMemo(() => createPhysicalValidationLabelMaps(project), [project]);
+  const summary = useMemo(
+    () => panelSummary(controller.snapshot, labels),
+    [controller.snapshot, labels],
+  );
+  const ready = controller.snapshot.phase === "ready" ? controller.snapshot.summary : undefined;
+  const invalidCount = ready?.kind === "evaluated" ? ready.invalidCount : 0;
+  const unverifiedCount = ready?.kind === "evaluated" ? ready.unverifiedCount : 0;
+  const lampStatus =
+    summary.status === "loading" || summary.status === "none"
+      ? "neutral"
+      : summary.status === "valid"
+        ? "valid"
+        : summary.status === "unverified"
+          ? "unverified"
+          : "invalid";
+  const statusLabel = summary.status === "valid"
+    ? "実装済み確認項目内で問題なし"
+    : summary.statusLabel;
+  const icon = lampStatus === "valid"
+    ? "✓"
+    : lampStatus === "unverified"
+      ? "△"
+      : summary.status === "unavailable"
+        ? "×"
+        : lampStatus === "invalid"
+          ? "!"
+          : "○";
+  return (
+    <button
+      id="physical-validation-lamp"
+      className="physical-validation-lamp"
+      type="button"
+      data-status={lampStatus}
+      aria-haspopup="dialog"
+      aria-disabled={disabled ? true : undefined}
+      aria-label={`物理判定: ${statusLabel}。不適合${invalidCount}件、未確認${unverifiedCount}件。詳細を開く`}
+      title={`${statusLabel} — 不適合${invalidCount}件・未確認${unverifiedCount}件`}
+      onClick={() => {
+        if (!disabled) onOpen();
+      }}
+    >
+      <span aria-hidden="true" className="physical-validation-lamp__icon">{icon}</span>
+      <span className="physical-validation-lamp__label">{statusLabel}</span>
+    </button>
+  );
 }
 
 function ReasonGroup({
@@ -158,13 +223,13 @@ function ReasonGroup({
 }
 
 export function PhysicalValidationPanel({
-  containerId,
+  controller,
+  onClose,
+  onOpenUsageRequirements,
+  open,
   project,
 }: PhysicalValidationPanelProps) {
-  const { requestReasonPage, retry, snapshot } = usePhysicalValidationWorker(
-    project,
-    containerId,
-  );
+  const { requestReasonPage, retry, snapshot } = controller;
   const [pageSelection, setPageSelection] = useState<PageSelection>({
     generation: -1,
     invalidOffset: 0,
@@ -218,7 +283,14 @@ export function PhysicalValidationPanel({
   const reasonsLoading = Boolean(invalidPage?.loading || unverifiedPage?.loading);
   const busy = snapshot.phase === "loading" || reasonsLoading;
 
+  if (!open) return null;
+
   return (
+    <ModalShell
+      fallbackFocusIds={["physical-validation-lamp"]}
+      onRequestClose={onClose}
+      title="物理判定"
+    >
     <section
       className="physical-validation"
       aria-labelledby="physical-validation-title"
@@ -292,8 +364,12 @@ export function PhysicalValidationPanel({
       ) : null}
 
       <p className="physical-validation__disclaimer">
-        この判定は計画支援です。完全な搬入経路、構造・安定性、重心、軸重、床面強度、荷崩れ、固縛、動荷重、法令適合性や実積載の安全性を保証しません。
+        この判定は実装済み確認項目だけを示し、積載可能性や実積載の安全性を保証しません。
+        <button className="link-button" type="button" onClick={onOpenUsageRequirements}>
+          使用上の重要事項を確認
+        </button>
       </p>
     </section>
+    </ModalShell>
   );
 }

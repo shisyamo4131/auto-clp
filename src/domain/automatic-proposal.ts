@@ -22,7 +22,7 @@ import {
 } from "./validation";
 
 export const AUTOMATIC_PROPOSAL_ALGORITHM_VERSION =
-  "automatic-proposal-v1" as const;
+  "automatic-proposal-v2" as const;
 export const AUTOMATIC_PROPOSAL_CANDIDATE_POINT_LIMIT = 2_048 as const;
 export const AUTOMATIC_PROPOSAL_CANDIDATE_ATTEMPT_LIMIT = 10_000 as const;
 export const AUTOMATIC_PROPOSAL_REQUEST_ATTEMPT_LIMIT = 1_000_000 as const;

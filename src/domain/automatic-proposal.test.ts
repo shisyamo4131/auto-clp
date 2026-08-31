@@ -289,7 +289,7 @@ describe("automatic proposal complete plans", () => {
     expect("plan" in result).toBe(false);
   });
 
-  it("reproduces AP-03 and preserves all unverified reasons", () => {
+  it("reproduces AP-03 with exact single support and no per-cargo unverified reason", () => {
     const support = cargo(
       "support",
       { lengthMm: 100, widthMm: 100, heightMm: 100 },
@@ -329,14 +329,7 @@ describe("automatic proposal complete plans", () => {
         positionMm: { xMm: 0, yMm: 0, zMm: 100 },
       },
     ]);
-    expect(result.plan.unverifiedReasons).toEqual([
-      {
-        status: "unverified",
-        code: "structure-stability-unverified",
-        target: { kind: "cargo", id: "upper" },
-        relatedCargoIds: ["support"],
-      },
-    ]);
+    expect(result.plan.unverifiedReasons).toEqual([]);
   });
 
   it("does not generate a plan that requires conditional multi-support", () => {

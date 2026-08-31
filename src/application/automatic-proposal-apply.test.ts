@@ -167,14 +167,7 @@ function ap03Fixture() {
       positionMm: { xMm: 0, yMm: 0, zMm: 100 },
     },
   ];
-  const reasons = [
-    {
-      status: "unverified" as const,
-      code: "structure-stability-unverified" as const,
-      target: { kind: "cargo" as const, id: "upper" },
-      relatedCargoIds: ["support"],
-    },
-  ];
+  const reasons = [] as const;
   const result = resultFor(placements);
   return {
     project,
@@ -282,7 +275,7 @@ describe("prepareAutomaticProposalApply", () => {
     },
   );
 
-  it("preserves the authoritative AP-03 structure warning exactly", () => {
+  it("preserves authoritative AP-03 with no per-cargo structure warning", () => {
     const { project, reasons, result } = ap03Fixture();
 
     const prepared = prepareAutomaticProposalApply(project, project, result);
@@ -294,7 +287,7 @@ describe("prepareAutomaticProposalApply", () => {
         containerId: "container-a",
         placementCount: 2,
         replacedPlacementCount: 0,
-        unverifiedReasonCount: 1,
+        unverifiedReasonCount: 0,
       },
       unverifiedReasons: reasons,
     });
@@ -523,26 +516,24 @@ describe("prepareAutomaticProposalApply", () => {
     }
   });
 
-  it.each([
-    ["missing", (reasons: readonly unknown[]) => reasons.slice(0, 0)],
-    ["duplicate", (reasons: readonly unknown[]) => [reasons[0]!, reasons[0]!]],
-    [
-      "changed relation",
-      (reasons: readonly unknown[]) => [
-        {
-          ...(reasons[0] as Record<string, unknown>),
-          relatedCargoIds: ["upper"],
-        },
-      ],
-    ],
-  ] as const)("rejects %s unverified reasons", (_label, unverifiedReasons) => {
+  it("rejects an unexpected unverified reason for exact AP-03 support", () => {
     const { project, reasons, result } = ap03Fixture();
     if (result.status !== "complete" && result.status !== "complete-with-cutoff") {
       throw new Error("Expected a complete AP-03 result");
     }
     const mismatch = {
       ...result,
-      plan: { ...result.plan, unverifiedReasons: unverifiedReasons(reasons) },
+      plan: {
+        ...result.plan,
+        unverifiedReasons: [
+          {
+            status: "unverified",
+            code: "support-conditions-unverified",
+            target: { kind: "cargo", id: "upper" },
+            relatedCargoIds: ["support"],
+          },
+        ],
+      },
     } as AutomaticProposalResult;
 
     expectFailurePreserves({
@@ -550,5 +541,6 @@ describe("prepareAutomaticProposalApply", () => {
       currentProject: project,
       result: mismatch,
     });
+    expect(reasons).toEqual([]);
   });
 });

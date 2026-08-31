@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
@@ -52,6 +52,7 @@ interface ThreeViewportProps {
   readonly onRendererReady: () => void;
   readonly projection: ProjectSceneProjection | null;
   readonly historyControls: ReactNode;
+  readonly validationControl?: ReactNode;
   readonly xRotationDisabled: boolean;
   readonly xRotationExplanation: string;
   readonly zRotationDisabled: boolean;
@@ -63,8 +64,22 @@ interface ThreeViewportProps {
 
 interface CameraViewState {
   readonly containerId: string;
+  readonly direction: readonly [number, number, number];
+  readonly distanceRatio: number;
   readonly position: readonly [number, number, number];
   readonly target: readonly [number, number, number];
+}
+
+interface DimensionAnnotationLine {
+  readonly axis: "X" | "Y" | "Z";
+  readonly end: readonly [number, number];
+  readonly label: string;
+  readonly labelPosition: readonly [number, number];
+  readonly start: readonly [number, number];
+  readonly witnesses: readonly {
+    readonly end: readonly [number, number];
+    readonly start: readonly [number, number];
+  }[];
 }
 
 interface CargoVisual {
@@ -327,6 +342,7 @@ export function ThreeViewport({
   onRendererReady,
   projection,
   historyControls,
+  validationControl,
   xRotationDisabled,
   xRotationExplanation,
   zRotationDisabled,
@@ -337,6 +353,7 @@ export function ThreeViewport({
 }: ThreeViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const bottomOverlayRef = useRef<HTMLDivElement>(null);
   const interactionDisabledRef = useRef(interactionDisabled);
   const resetViewRef = useRef<() => void>(() => undefined);
   const zoomInRef = useRef<() => void>(() => undefined);
@@ -344,8 +361,9 @@ export function ThreeViewport({
   const selectedCargoIdRef = useRef(selectedCargoId);
   const updateSelectionRef = useRef<(cargoId?: string) => void>(() => undefined);
   const cameraViewRef = useRef<CameraViewState | undefined>(undefined);
-  const stagedCargoCount =
-    projection?.cargoes.filter((cargo) => cargo.kind === "staged").length ?? 0;
+  const [dimensionAnnotations, setDimensionAnnotations] = useState<
+    readonly DimensionAnnotationLine[]
+  >([]);
 
   useEffect(() => {
     interactionDisabledRef.current = interactionDisabled;
@@ -355,6 +373,42 @@ export function ThreeViewport({
     selectedCargoIdRef.current = selectedCargoId;
     updateSelectionRef.current(selectedCargoId);
   }, [selectedCargoId]);
+
+  const hasBottomOverlay = bottomOverlay !== undefined;
+  useEffect(() => {
+    const container = containerRef.current;
+    const overlay = bottomOverlayRef.current;
+    if (container === null || overlay === null) return;
+    let animationFrame: number | undefined;
+    let appliedSafeAreaPx = -1;
+    const measureAndApplySafeArea = () => {
+      animationFrame = undefined;
+      const bottomOffsetPx = Number.parseFloat(window.getComputedStyle(overlay).bottom);
+      const safeAreaPx = Math.max(
+        0,
+        overlay.offsetHeight +
+          (Number.isFinite(bottomOffsetPx) ? Math.ceil(bottomOffsetPx) : 0) +
+          8,
+      );
+      if (Math.abs(safeAreaPx - appliedSafeAreaPx) < 1) return;
+      appliedSafeAreaPx = safeAreaPx;
+      container.style.setProperty("--viewport-bottom-safe-area", `${safeAreaPx}px`);
+    };
+    const scheduleSafeAreaUpdate = () => {
+      if (animationFrame !== undefined) return;
+      animationFrame = window.requestAnimationFrame(measureAndApplySafeArea);
+    };
+    const resizeObserver = new ResizeObserver(scheduleSafeAreaUpdate);
+    resizeObserver.observe(overlay);
+    scheduleSafeAreaUpdate();
+    return () => {
+      resizeObserver.disconnect();
+      if (animationFrame !== undefined) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+      container.style.removeProperty("--viewport-bottom-safe-area");
+    };
+  }, [hasBottomOverlay]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -386,6 +440,233 @@ export function ThreeViewport({
       if (disposed || renderer === undefined) return false;
       try {
         renderer.render(scene, camera);
+        const selected = projection?.cargoes.find(
+          (cargo) => cargo.cargoId === selectedCargoIdRef.current,
+        );
+        if (selected === undefined) {
+          setDimensionAnnotations((current) =>
+            current.length === 0 ? current : [],
+          );
+        } else {
+          const next = (() => {
+            const canvasBounds = canvas.getBoundingClientRect();
+            const containerBounds = container.getBoundingClientRect();
+            if (canvasBounds.width <= 0 || canvasBounds.height <= 0) return [];
+            const half = new THREE.Vector3(
+              selected.dimensions.x / 2,
+              selected.dimensions.y / 2,
+              selected.dimensions.z / 2,
+            );
+            const visualCenter = cargoVisuals.get(selected.cargoId)?.mesh.position;
+            const center = visualCenter?.clone() ?? new THREE.Vector3(
+              selected.center.x,
+              selected.center.y,
+              selected.center.z,
+            );
+            if (
+              Math.abs(camera.position.x - center.x) <= half.x &&
+              Math.abs(camera.position.y - center.y) <= half.y &&
+              Math.abs(camera.position.z - center.z) <= half.z
+            ) {
+              return [];
+            }
+
+            type CornerSign = -1 | 1;
+            interface ProjectedCorner {
+              readonly cameraDepth: number;
+              readonly clipDepthVisible: boolean;
+              readonly ndc: THREE.Vector3;
+              readonly screen: readonly [number, number];
+              readonly signs: readonly [CornerSign, CornerSign, CornerSign];
+            }
+            const signs = [-1, 1] as const;
+            const corners: ProjectedCorner[] = [];
+            const cornerByKey = new Map<string, ProjectedCorner>();
+            const cornerKey = (
+              xSign: CornerSign,
+              ySign: CornerSign,
+              zSign: CornerSign,
+            ) => `${xSign},${ySign},${zSign}`;
+            for (const xSign of signs) {
+              for (const ySign of signs) {
+                for (const zSign of signs) {
+                  const point = new THREE.Vector3(
+                    center.x + half.x * xSign,
+                    center.y + half.y * ySign,
+                    center.z + half.z * zSign,
+                  );
+                  const cameraPoint = point.clone().applyMatrix4(camera.matrixWorldInverse);
+                  const cameraDepth = -cameraPoint.z;
+                  const ndc = point.clone().project(camera);
+                  const finite = [cameraDepth, ndc.x, ndc.y, ndc.z].every(Number.isFinite);
+                  const corner: ProjectedCorner = {
+                    cameraDepth,
+                    clipDepthVisible:
+                      finite &&
+                      cameraDepth >= camera.near &&
+                      cameraDepth <= camera.far &&
+                      ndc.z >= -1 &&
+                      ndc.z <= 1,
+                    ndc,
+                    screen: [
+                      canvasBounds.left - containerBounds.left +
+                        (ndc.x + 1) * canvasBounds.width / 2,
+                      canvasBounds.top - containerBounds.top +
+                        (1 - ndc.y) * canvasBounds.height / 2,
+                    ],
+                    signs: [xSign, ySign, zSign],
+                  };
+                  corners.push(corner);
+                  cornerByKey.set(cornerKey(xSign, ySign, zSign), corner);
+                }
+              }
+            }
+            const clipCorners = corners.filter((corner) => corner.clipDepthVisible);
+            if (clipCorners.length === 0) return [];
+            const minNdcX = Math.min(...clipCorners.map((corner) => corner.ndc.x));
+            const maxNdcX = Math.max(...clipCorners.map((corner) => corner.ndc.x));
+            const minNdcY = Math.min(...clipCorners.map((corner) => corner.ndc.y));
+            const maxNdcY = Math.max(...clipCorners.map((corner) => corner.ndc.y));
+            if (maxNdcX < -1 || minNdcX > 1 || maxNdcY < -1 || minNdcY > 1) {
+              return [];
+            }
+
+            const adjacentCorners = (corner: ProjectedCorner) => {
+              const [xSign, ySign, zSign] = corner.signs;
+              return [
+                cornerByKey.get(cornerKey(xSign === 1 ? -1 : 1, ySign, zSign)),
+                cornerByKey.get(cornerKey(xSign, ySign, zSign === 1 ? -1 : 1)),
+                cornerByKey.get(cornerKey(xSign, ySign === 1 ? -1 : 1, zSign)),
+              ] as const;
+            };
+            const candidates = clipCorners.filter((corner) =>
+              adjacentCorners(corner).every(
+                (adjacent) => adjacent?.clipDepthVisible === true,
+              ),
+            );
+            if (candidates.length === 0) return [];
+            const screenCenter: readonly [number, number] = [
+              clipCorners.reduce((sum, corner) => sum + corner.screen[0], 0) /
+                clipCorners.length,
+              clipCorners.reduce((sum, corner) => sum + corner.screen[1], 0) /
+                clipCorners.length,
+            ];
+            const preferredSigns: readonly [CornerSign, CornerSign, CornerSign] = [
+              camera.position.x >= center.x ? 1 : -1,
+              camera.position.y >= center.y ? 1 : -1,
+              camera.position.z >= center.z ? 1 : -1,
+            ];
+            const viewportDistanceSquared = (corner: ProjectedCorner) => {
+              const xDistance = corner.ndc.x < -1
+                ? -1 - corner.ndc.x
+                : corner.ndc.x > 1
+                  ? corner.ndc.x - 1
+                  : 0;
+              const yDistance = corner.ndc.y < -1
+                ? -1 - corner.ndc.y
+                : corner.ndc.y > 1
+                  ? corner.ndc.y - 1
+                  : 0;
+              return xDistance * xDistance + yDistance * yDistance;
+            };
+            const preferredMatchCount = (corner: ProjectedCorner) =>
+              corner.signs.reduce(
+                (count, sign, index) => count + (sign === preferredSigns[index] ? 1 : 0),
+                0,
+              );
+            const baseCorner = [...candidates].sort((first, second) => {
+              const viewportDifference =
+                viewportDistanceSquared(first) - viewportDistanceSquared(second);
+              if (viewportDifference !== 0) return viewportDifference;
+              const preferredDifference =
+                preferredMatchCount(second) - preferredMatchCount(first);
+              if (preferredDifference !== 0) return preferredDifference;
+              const firstRadius = Math.hypot(
+                first.screen[0] - screenCenter[0],
+                first.screen[1] - screenCenter[1],
+              );
+              const secondRadius = Math.hypot(
+                second.screen[0] - screenCenter[0],
+                second.screen[1] - screenCenter[1],
+              );
+              return secondRadius - firstRadius || first.cameraDepth - second.cameraDepth;
+            })[0];
+            if (baseCorner === undefined) return [];
+            const adjacent = adjacentCorners(baseCorner);
+            if (adjacent.some((corner) => corner === undefined)) return [];
+            const definitions = [
+              {
+                axis: "X" as const,
+                adjacent: adjacent[0]!,
+                label: `X / 奥行 ${selected.dimensionsMm.xMm} mm`,
+              },
+              {
+                axis: "Y" as const,
+                adjacent: adjacent[1]!,
+                label: `Y / 横幅 ${selected.dimensionsMm.yMm} mm`,
+              },
+              {
+                axis: "Z" as const,
+                adjacent: adjacent[2]!,
+                label: `Z / 高さ ${selected.dimensionsMm.zMm} mm`,
+              },
+            ];
+            const lineOffset = 18;
+            const labelOffset = 12;
+            return definitions.map(({ adjacent: edgeEnd, axis, label }) => {
+              const edgeStart = baseCorner.screen;
+              const edgeEndScreen = edgeEnd.screen;
+              const midpoint: readonly [number, number] = [
+                (edgeStart[0] + edgeEndScreen[0]) / 2,
+                (edgeStart[1] + edgeEndScreen[1]) / 2,
+              ];
+              let outwardX = midpoint[0] - screenCenter[0];
+              let outwardY = midpoint[1] - screenCenter[1];
+              let outwardLength = Math.hypot(outwardX, outwardY);
+              if (outwardLength < 0.5) {
+                const edgeX = edgeEndScreen[0] - edgeStart[0];
+                const edgeY = edgeEndScreen[1] - edgeStart[1];
+                outwardX = -edgeY;
+                outwardY = edgeX;
+                if (
+                  outwardX * (edgeStart[0] - screenCenter[0]) +
+                    outwardY * (edgeStart[1] - screenCenter[1]) <
+                  0
+                ) {
+                  outwardX *= -1;
+                  outwardY *= -1;
+                }
+                outwardLength = Math.hypot(outwardX, outwardY);
+              }
+              if (!Number.isFinite(outwardLength) || outwardLength === 0) {
+                outwardX = 0;
+                outwardY = -1;
+                outwardLength = 1;
+              }
+              outwardX /= outwardLength;
+              outwardY /= outwardLength;
+              const offsetPoint = (
+                point: readonly [number, number],
+                distance: number,
+              ): readonly [number, number] => [
+                point[0] + outwardX * distance,
+                point[1] + outwardY * distance,
+              ];
+              return {
+                axis,
+                start: offsetPoint(edgeStart, lineOffset),
+                end: offsetPoint(edgeEndScreen, lineOffset),
+                label,
+                labelPosition: offsetPoint(midpoint, lineOffset + labelOffset),
+                witnesses: [
+                  { start: edgeStart, end: offsetPoint(edgeStart, lineOffset - 4) },
+                  { start: edgeEndScreen, end: offsetPoint(edgeEndScreen, lineOffset - 4) },
+                ],
+              };
+            });
+          })();
+          setDimensionAnnotations(next);
+        }
         return true;
       } catch {
         reportRendererError();
@@ -668,14 +949,35 @@ export function ThreeViewport({
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setClearColor(0x07111f, 1);
 
+      const rememberCameraView = () => {
+        if (projection === null || controls === undefined) return;
+        const bounds = sceneContainerBounds(projection);
+        const radius = Math.max(bounds.radius, 0.001);
+        const offset = camera.position.clone().sub(controls.target);
+        const distance = offset.length();
+        const framingDistance = cameraFramingDistance(camera, radius);
+        cameraViewRef.current = {
+          containerId: projection.container.id,
+          direction: distance > 0
+            ? [offset.x / distance, offset.y / distance, offset.z / distance]
+            : [-1, 0.72, 0.9],
+          distanceRatio: Number.isFinite(distance / framingDistance)
+            ? distance / framingDistance
+            : 1,
+          position: [camera.position.x, camera.position.y, camera.position.z],
+          target: [controls.target.x, controls.target.y, controls.target.z],
+        };
+      };
+
       const resizeAndRender = () => {
         if (disposed || renderer === undefined) return;
         try {
-          const width = Math.max(container.clientWidth, 1);
-          const height = Math.max(container.clientHeight, 1);
+          const width = Math.max(canvas.clientWidth, 1);
+          const height = Math.max(canvas.clientHeight, 1);
           renderer.setSize(width, height, false);
           camera.aspect = width / height;
           camera.updateProjectionMatrix();
+          rememberCameraView();
           if (!renderScene()) return;
           if (!readyReported) {
             readyReported = true;
@@ -686,8 +988,8 @@ export function ThreeViewport({
         }
       };
 
-      const width = Math.max(container.clientWidth, 1);
-      const height = Math.max(container.clientHeight, 1);
+      const width = Math.max(canvas.clientWidth, 1);
+      const height = Math.max(canvas.clientHeight, 1);
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
       const initialTarget = fitCamera(camera, projection);
@@ -695,10 +997,20 @@ export function ThreeViewport({
       const savedView = cameraViewRef.current;
       if (
         projection !== null &&
-        savedView?.containerId === projection.container.id
+        savedView !== undefined &&
+        savedView.containerId === projection.container.id
       ) {
         camera.position.set(...savedView.position);
         controls.target.set(...savedView.target);
+      } else if (projection !== null && savedView !== undefined) {
+        const bounds = sceneContainerBounds(projection);
+        const radius = Math.max(bounds.radius, 0.001);
+        const target = new THREE.Vector3(bounds.center.x, bounds.center.y, bounds.center.z);
+        const distance = cameraFramingDistance(camera, radius) * savedView.distanceRatio;
+        controls.target.copy(target);
+        camera.position
+          .copy(target)
+          .addScaledVector(new THREE.Vector3(...savedView.direction), distance);
       } else {
         controls.target.copy(initialTarget);
       }
@@ -710,13 +1022,7 @@ export function ThreeViewport({
       controls.screenSpacePanning = true;
       controls.update();
       const renderAndRememberView = () => {
-        if (projection !== null && controls !== undefined) {
-          cameraViewRef.current = {
-            containerId: projection.container.id,
-            position: [camera.position.x, camera.position.y, camera.position.z],
-            target: [controls.target.x, controls.target.y, controls.target.z],
-          };
-        }
+        rememberCameraView();
         renderScene();
       };
       controls.addEventListener("change", renderAndRememberView);
@@ -755,6 +1061,7 @@ export function ThreeViewport({
       if (!updateSelection(selectedCargoIdRef.current)) return dispose;
       resizeObserver = new ResizeObserver(resizeAndRender);
       resizeObserver.observe(container);
+      resizeObserver.observe(canvas);
       if (forceInitialRenderError) throw new Error("Forced initial renderer failure");
       resizeAndRender();
     } catch {
@@ -766,6 +1073,7 @@ export function ThreeViewport({
       zoomInRef.current = () => undefined;
       zoomOutRef.current = () => undefined;
       dispose();
+      setDimensionAnnotations([]);
     };
   }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragPreview, onCargoDragStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
 
@@ -781,6 +1089,7 @@ export function ThreeViewport({
           aria-label="3D作業の操作"
         >
           {historyControls}
+          {validationControl}
           <div className="viewport__rotation-controls" role="group" aria-label="選択した積荷の回転">
           <button
             type="button"
@@ -825,15 +1134,64 @@ export function ThreeViewport({
           </button>
         </div>
       </div>
-      {stagedCargoCount === 0 ? null : (
-        <div className="viewport__staging-label">
-          荷室外の作業スペース <strong>{stagedCargoCount}件</strong>
-        </div>
+      {dimensionAnnotations.length === 0 ? null : (
+        <svg
+          className="viewport__dimension-annotations"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <defs>
+            <marker id="dimension-arrow-start" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
+              <path d="M8 0 0 4l8 4Z" />
+            </marker>
+            <marker id="dimension-arrow-end" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+              <path d="M0 0 8 4 0 8Z" />
+            </marker>
+          </defs>
+          {dimensionAnnotations.map((annotation) => {
+            return (
+              <g key={annotation.axis} data-axis={annotation.axis}>
+                {annotation.witnesses.map((witness, index) => (
+                  <line
+                    className="viewport__dimension-witness"
+                    key={index}
+                    x1={witness.start[0]}
+                    y1={witness.start[1]}
+                    x2={witness.end[0]}
+                    y2={witness.end[1]}
+                  />
+                ))}
+                <line
+                  x1={annotation.start[0]}
+                  y1={annotation.start[1]}
+                  x2={annotation.end[0]}
+                  y2={annotation.end[1]}
+                  markerStart="url(#dimension-arrow-start)"
+                  markerEnd="url(#dimension-arrow-end)"
+                />
+                <text
+                  x={annotation.labelPosition[0]}
+                  y={annotation.labelPosition[1]}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                >
+                  {annotation.label}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
       )}
       {bottomOverlay === undefined ? null : (
-        <div className="viewport__overlay viewport__overlay--bottom">{bottomOverlay}</div>
+        <div
+          ref={bottomOverlayRef}
+          className="viewport__overlay viewport__overlay--bottom"
+        >
+          {bottomOverlay}
+        </div>
       )}
       <canvas
+        id="scene-viewport-canvas"
         ref={canvasRef}
         role="img"
         aria-label="積荷を選択・床面移動できる3Dプレビュー"

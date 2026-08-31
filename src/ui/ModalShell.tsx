@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 
 interface ModalShellProps {
   readonly children: ReactNode;
+  readonly dismissible?: boolean;
   readonly fallbackFocusIds?: readonly string[];
   readonly initialFocusId?: string;
   readonly onRequestClose: () => void;
@@ -27,6 +28,7 @@ const FOCUSABLE = [
 
 export function ModalShell({
   children,
+  dismissible = true,
   fallbackFocusIds = [],
   initialFocusId,
   onRequestClose,
@@ -93,7 +95,7 @@ export function ModalShell({
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
-      onRequestClose();
+      if (dismissible) onRequestClose();
       return;
     }
     if (event.key !== "Tab") return;
@@ -120,7 +122,7 @@ export function ModalShell({
     <div
       className="modal-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onRequestClose();
+        if (dismissible && event.target === event.currentTarget) onRequestClose();
       }}
     >
       <div
@@ -134,9 +136,11 @@ export function ModalShell({
       >
         <header className="modal-shell__header">
           <h2 id={titleId}>{title}</h2>
-          <button type="button" aria-label={`${title}を閉じる`} onClick={onRequestClose}>
-            ×
-          </button>
+          {dismissible ? (
+            <button type="button" aria-label={`${title}を閉じる`} onClick={onRequestClose}>
+              ×
+            </button>
+          ) : null}
         </header>
         <div className="modal-shell__body">{children}</div>
       </div>

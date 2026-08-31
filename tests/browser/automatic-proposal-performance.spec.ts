@@ -4,7 +4,7 @@ import os from "node:os";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 const runtimeBaseUrlEnvironmentVariable = "AUTO_CLP_BROWSER_BASE_URL";
 const baseUrl = process.env[runtimeBaseUrlEnvironmentVariable];
@@ -100,7 +100,7 @@ function assertReadyCompleteResponse(response: unknown, requestId: number) {
   }
 
   const result = response.result;
-  expect(result.algorithmVersion).toBe("automatic-proposal-v1");
+  expect(result.algorithmVersion).toBe("automatic-proposal-v2");
   expect(result.status).toBe("complete");
   expect(Object.prototype.hasOwnProperty.call(result, "cutoffSource")).toBe(false);
   expect(result.effectiveLimits).toEqual({
@@ -595,6 +595,9 @@ test("records the AP-08 native Worker gate and cancellation evidence", async ({
   await directContext.close();
 
   const uiContext = await browser.newContext();
+  await uiContext.addInitScript(() => {
+    globalThis.localStorage.setItem("auto-clp.usage-requirements-version", "1.0.0");
+  });
   const uiPage = await uiContext.newPage();
   uiPage.on("console", (message) => {
     if (message.type() === "warning" || message.type() === "error") {
@@ -687,7 +690,7 @@ test("records the AP-08 native Worker gate and cancellation evidence", async ({
     checkpoint: "CP-AUTO-PROPOSAL-AP08-TEST-001",
     commitSha,
     schemaVersion: ap08Project.schemaVersion,
-    algorithmVersion: "automatic-proposal-v1",
+    algorithmVersion: "automatic-proposal-v2",
     environment: {
       nodeVersion: process.version,
       playwrightVersion,

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
+import { activateContainer } from "./ui-helpers";
 
 async function addCargo(page: Page, name: string) {
   await page.getByRole("button", { name: "積荷を追加" }).click();
@@ -36,12 +37,12 @@ async function expectNoHorizontalOverflow(page: Page) {
 test("creates, validates, edits, switches, and removes a placement through compact dialogs", async ({ page }) => {
   await page.goto("/");
   await fixture(page);
-  const card = page.locator(".scene-selection-card");
-  const sceneSelect = page.getByLabel("表示する候補");
+  const card = page.locator(".viewport-context-actions");
+  const firstTab = page.getByRole("tab", { name: /ID: container-1/ });
   await card.getByRole("button", { name: "座標を入力して配置" }).click();
   await expect(page.getByRole("dialog", { name: "合成配置積荷" })).toBeVisible();
   await expect(page.getByLabel("X最小角")).toBeFocused();
-  await expect(sceneSelect).toBeDisabled();
+  await expect(firstTab).toBeDisabled();
   await page.getByLabel("X最小角").fill("1.5");
   await page.getByRole("button", { name: "配置を保存" }).click();
   await expect(page.getByLabel("X最小角")).toHaveAttribute("aria-invalid", "true");
@@ -50,16 +51,18 @@ test("creates, validates, edits, switches, and removes a placement through compa
   await page.getByLabel("Z最小角").fill("-1");
   await page.getByLabel("向き").selectOption("WLH");
   await page.getByRole("button", { name: "配置を保存" }).click();
-  await expect(card).toContainText("-1000000 mm");
-  await expect(page.locator(".physical-validation__summary")).toContainText("不適合");
-  await sceneSelect.selectOption("container-2");
-  await expect(card).toContainText("合成配置候補Aに配置済み");
+  await expect(card).toContainText("X -1000000 / Y 1000000 / Z -1 mm");
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "invalid");
+  await activateContainer(page, "container-2");
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await expect(card).toContainText("合成配置候補Aに配置");
   await card.getByRole("button", { name: "合成配置候補Aを表示" }).click();
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
   await card.getByRole("button", { name: "座標を微調整" }).click();
   await page.getByLabel("X最小角").fill("123");
   await page.getByRole("button", { name: "キャンセル" }).click();
   await page.getByRole("button", { name: "入力を破棄して閉じる" }).click();
-  await expect(card).toContainText("-1000000 mm");
+  await expect(card).toContainText("X -1000000 / Y 1000000 / Z -1 mm");
   await card.getByRole("button", { name: "荷室から外す" }).click();
   await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
   await expect(card).toContainText("荷室外（未配置）");
@@ -70,12 +73,12 @@ test("keeps placement CRUD available with the required 3D view", async ({ page }
   await addCargo(page, "非対応時配置積荷");
   await addContainer(page, "非対応時配置候補");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   await expect(page.getByRole("img", { name: /3Dプレビュー/ })).toBeVisible();
   await card.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByLabel("X最小角").fill("-2");
   await page.getByRole("button", { name: "配置を保存" }).click();
-  await expect(card).toContainText("-2 mm");
+  await expect(card).toContainText("X -2 / Y 0 / Z 0 mm");
   await card.getByRole("button", { name: "荷室から外す" }).click();
   await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
   await expect(card).toContainText("荷室外（未配置）");

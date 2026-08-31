@@ -1,5 +1,5 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
-import { openProjectSettings } from "./ui-helpers";
+import { expect, test, type Locator, type Page } from "./fixtures";
+import { activateContainer, openProjectSettings } from "./ui-helpers";
 import { inflateSync } from "node:zlib";
 
 const previewName = "積荷を選択・床面移動できる3Dプレビュー";
@@ -26,14 +26,18 @@ async function addCargo(
   await page.getByRole("button", { name: "積荷を保存" }).click();
 }
 
-async function addContainer(page: Page, name: string) {
+async function addContainer(
+  page: Page,
+  name: string,
+  dimensions: { readonly height?: string; readonly length?: string; readonly width?: string } = {},
+) {
   await page.getByRole("button", { name: "候補を追加" }).click();
   await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill("6000");
-  await page.getByLabel("内部幅").fill("2400");
-  await page.getByLabel("内部高さ").fill("2600");
-  await page.getByLabel("開口幅").fill("2400");
-  await page.getByLabel("開口高さ").fill("2500");
+  await page.getByLabel("内部長さ").fill(dimensions.length ?? "6000");
+  await page.getByLabel("内部幅").fill(dimensions.width ?? "2400");
+  await page.getByLabel("内部高さ").fill(dimensions.height ?? "2600");
+  await page.getByLabel("開口幅").fill(dimensions.width ?? "2400");
+  await page.getByLabel("開口高さ").fill(dimensions.height ?? "2500");
   await page.getByLabel("総耐荷重").fill("100000");
   await page.getByRole("button", { name: "候補を保存" }).click();
 }
@@ -69,27 +73,160 @@ async function selectCargoOnCanvas(
       y: bounds.y + bounds.height * yRatio,
     };
     await page.mouse.click(point.x, point.y);
-    if ((await card.getAttribute("aria-current")) === "true") return point;
+    if ((await card.textContent())?.includes("積荷を選択すると操作を表示します。") !== true) return point;
   }
   throw new Error("Synthetic cargo was not hit by the tested canvas points");
 }
 
-async function locateStagedCargoOnCanvas(page: Page, canvas: Locator, card: Locator) {
+async function locateStagedCargoOnCanvas(page: Page, canvas: Locator) {
   await canvas.scrollIntoViewIfNeeded();
   const bounds = await canvas.boundingBox();
   if (bounds === null) throw new Error("3D canvas has no bounding box");
-  await page.getByLabel("操作する積荷").selectOption("");
-  const warmCandidates = measureStagedCargo(await canvas.screenshot());
-  expect(warmCandidates.length).toBeGreaterThan(0);
-  for (const candidate of warmCandidates) {
-    const point = {
-      x: bounds.x + bounds.width * candidate.centerXRatio,
-      y: bounds.y + bounds.height * candidate.centerYRatio,
-    };
-    await page.mouse.click(point.x, point.y);
-    if ((await card.getAttribute("aria-current")) === "true") return { bounds, point };
+  const selector = page.getByLabel("操作する積荷");
+  let expectedCargoId = await selector.inputValue();
+  if (expectedCargoId === "") {
+    const firstCargoId = await selector.locator("option").nth(1).getAttribute("value");
+    if (firstCargoId === null) throw new Error("Staged cargo selector has no cargo option");
+    expectedCargoId = firstCargoId;
   }
-  throw new Error("Staged cargo was not hit at any warm rendered component");
+  await selector.selectOption(expectedCargoId);
+  const witnesses = page.locator(".viewport__dimension-witness");
+  await expect(witnesses).toHaveCount(6);
+  const projectedCorners = await witnesses.evaluateAll((lines) => {
+    const unique = new Map<string, readonly [number, number]>();
+    for (const line of lines) {
+      const x = Number(line.getAttribute("x1"));
+      const y = Number(line.getAttribute("y1"));
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      unique.set(`${x}:${y}`, [x, y] as const);
+    }
+    return [...unique.values()];
+  });
+  expect(projectedCorners.length).toBeGreaterThanOrEqual(4);
+  const pointSets = [
+    projectedCorners,
+    ...projectedCorners.slice(1).map((_, omittedIndex) =>
+      projectedCorners.filter((__, index) => index !== omittedIndex + 1),
+    ),
+  ];
+  const projectedCenter = projectedCorners.reduce(
+    (total, [x, y]) => ({ x: total.x + x, y: total.y + y }),
+    { x: 0, y: 0 },
+  );
+  projectedCenter.x /= projectedCorners.length;
+  projectedCenter.y /= projectedCorners.length;
+  const projectedCandidates = [
+    ...pointSets.map((points) => {
+      const sum = points.reduce(
+        (total, [x, y]) => ({ x: total.x + x, y: total.y + y }),
+        { x: 0, y: 0 },
+      );
+      return { x: sum.x / points.length, y: sum.y / points.length };
+    }),
+    ...projectedCorners.flatMap(([x, y]) => [0.25, 0.5, 0.75].map((ratio) => ({
+      x: x + (projectedCenter.x - x) * ratio,
+      y: y + (projectedCenter.y - y) * ratio,
+    }))),
+  ].map((point) => ({
+    x: bounds.x + point.x,
+    y: bounds.y + point.y,
+  }));
+  const diagnostics: string[] = [];
+  for (const point of projectedCandidates) {
+    const hitElement = await page.evaluate(({ x, y }) => {
+      const browserGlobal = globalThis as unknown as {
+        document: {
+          elementFromPoint(clientX: number, clientY: number): {
+            readonly className?: unknown;
+            readonly tagName: string;
+          } | null;
+        };
+      };
+      const element = browserGlobal.document.elementFromPoint(x, y);
+      return element === null
+        ? "none"
+        : `${element.tagName.toLowerCase()}.${typeof element.className === "string" ? element.className.trim().replaceAll(" ", ".") : ""}`;
+    }, point);
+    diagnostics.push(`${Math.round(point.x)},${Math.round(point.y)}=${hitElement}`);
+    if (hitElement !== "canvas.") continue;
+    await selector.selectOption("");
+    await page.mouse.click(point.x, point.y);
+    if ((await selector.inputValue()) === expectedCargoId) return { bounds, point };
+  }
+  throw new Error(
+    `Selected cargo did not accept a pointer hit inside its projected annotation: ${diagnostics.join("; ")}`,
+  );
+}
+
+async function dragCargoToPartialFloorBoundary(
+  page: Page,
+  start: { readonly x: number; readonly y: number },
+  bounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number },
+) {
+  const status = page.locator("#scene-workspace-action-status");
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  let inside: { x: number; y: number } | undefined;
+  for (const [xRatio, yRatio] of [
+    [0.5, 0.55], [0.45, 0.55], [0.55, 0.55], [0.5, 0.48], [0.5, 0.62],
+  ] as const) {
+    const candidate = {
+      x: bounds.x + bounds.width * xRatio,
+      y: bounds.y + bounds.height * yRatio,
+    };
+    await page.mouse.move(candidate.x, candidate.y, { steps: 8 });
+    await page.waitForTimeout(30);
+    if ((await status.textContent())?.includes("荷室床面にスナップ中")) {
+      inside = candidate;
+      break;
+    }
+  }
+  if (inside === undefined) {
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+    throw new Error("Could not find an inside floor preview for partial-boundary search");
+  }
+
+  const viewport = page.viewportSize();
+  const outsideCandidates = [
+    { x: 1, y: inside.y },
+    { x: Math.max(1, (viewport?.width ?? 1280) - 2), y: inside.y },
+    { x: inside.x, y: 1 },
+    { x: inside.x, y: Math.max(1, (viewport?.height ?? 720) - 2) },
+  ];
+  let outside: { x: number; y: number } | undefined;
+  for (const candidate of outsideCandidates) {
+    await page.mouse.move(candidate.x, candidate.y, { steps: 8 });
+    await page.waitForTimeout(30);
+    if ((await status.textContent())?.includes("荷室外の作業スペース")) {
+      outside = candidate;
+      break;
+    }
+  }
+  if (outside === undefined) {
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+    throw new Error("Could not find an outside preview for partial-boundary search");
+  }
+
+  let boundaryInside = inside;
+  let boundaryOutside = outside;
+  for (let iteration = 0; iteration < 12; iteration += 1) {
+    const midpoint: { x: number; y: number } = {
+      x: (boundaryInside.x + boundaryOutside.x) / 2,
+      y: (boundaryInside.y + boundaryOutside.y) / 2,
+    };
+    await page.mouse.move(midpoint.x, midpoint.y);
+    await page.waitForTimeout(20);
+    if ((await status.textContent())?.includes("荷室外の作業スペース")) {
+      boundaryOutside = midpoint;
+    } else {
+      boundaryInside = midpoint;
+    }
+  }
+  await page.mouse.move(boundaryInside.x, boundaryInside.y);
+  await page.waitForTimeout(30);
+  await page.mouse.up();
 }
 
 function paethPredictor(left: number, up: number, upperLeft: number): number {
@@ -161,66 +298,6 @@ function decodePng(image: Buffer) {
   return { channels, height, pixels, stride, width };
 }
 
-function measureStagedCargo(image: Buffer) {
-  const { channels, height, pixels, stride, width } = decodePng(image);
-  const measuredHeight = Math.floor(height * 0.9);
-  const mask = new Uint8Array(width * measuredHeight);
-  for (let y = 0; y < measuredHeight; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const pixelOffset = y * stride + x * channels;
-      const red = pixels[pixelOffset]!;
-      const green = pixels[pixelOffset + 1]!;
-      const blue = pixels[pixelOffset + 2]!;
-      const warmCargo = red >= 30 && red >= green + 8 && green >= blue + 5;
-      if (warmCargo) mask[y * width + x] = 1;
-    }
-  }
-  const candidates: Array<{ count: number; minX: number; minY: number; maxX: number; maxY: number }> = [];
-  const queue: number[] = [];
-  for (let start = 0; start < mask.length; start += 1) {
-    if (mask[start] !== 1) continue;
-    mask[start] = 2;
-    queue.length = 0;
-    queue.push(start);
-    let cursor = 0;
-    let count = 0;
-    let minX = width;
-    let minY = height;
-    let maxX = -1;
-    let maxY = -1;
-    while (cursor < queue.length) {
-      const pixelIndex = queue[cursor++]!;
-      const x = pixelIndex % width;
-      const y = Math.floor(pixelIndex / width);
-      count += 1;
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-      for (const neighbor of [pixelIndex - 1, pixelIndex + 1, pixelIndex - width, pixelIndex + width]) {
-        if (
-          neighbor < 0 ||
-          neighbor >= mask.length ||
-          (neighbor === pixelIndex - 1 && x === 0) ||
-          (neighbor === pixelIndex + 1 && x === width - 1) ||
-          mask[neighbor] !== 1
-        ) continue;
-        mask[neighbor] = 2;
-        queue.push(neighbor);
-      }
-    }
-    const area = (maxX - minX + 1) * (maxY - minY + 1);
-    if (count > 20 && count / area >= 0.12) candidates.push({ count, minX, minY, maxX, maxY });
-  }
-  return candidates
-    .sort((left, right) => right.count - left.count)
-    .map((candidate) => ({
-      centerXRatio: (candidate.minX + candidate.maxX + 1) / 2 / width,
-      centerYRatio: (candidate.minY + candidate.maxY + 1) / 2 / height,
-      count: candidate.count,
-    }));
-}
-
 function measureContainerFrame(image: Buffer) {
   const { channels, height, pixels, stride, width } = decodePng(image);
   let count = 0;
@@ -282,15 +359,46 @@ test("renders the selected container and keeps the viewport controls after reloa
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeVisible();
 });
 
+test("shares camera framing across resized candidates and restores the same candidate view", async ({ page }) => {
+  await page.goto("/");
+  await addContainer(page, "camera候補A");
+  await addContainer(page, "camera候補B", {
+    length: "3000",
+    width: "1200",
+    height: "1300",
+  });
+  await activateContainer(page, "container-1");
+  const canvas = page.getByRole("img", { name: previewName });
+  await page.getByRole("button", { name: "拡大" }).click();
+  await page.getByRole("button", { name: "拡大" }).click();
+  await page.waitForTimeout(100);
+  const candidateAFrame = measureContainerFrame(await canvas.screenshot());
+
+  await activateContainer(page, "container-2");
+  await page.waitForTimeout(100);
+  const candidateBFrame = measureContainerFrame(await canvas.screenshot());
+  expect(
+    Math.abs(candidateBFrame.width - candidateAFrame.width),
+    `proportional A/B camera widths diverged: A=${JSON.stringify(candidateAFrame)}, B=${JSON.stringify(candidateBFrame)}`,
+  ).toBeLessThanOrEqual(4);
+  expect(Math.abs(candidateBFrame.height - candidateAFrame.height)).toBeLessThanOrEqual(4);
+
+  await activateContainer(page, "container-1");
+  await page.waitForTimeout(100);
+  const restoredCandidateAFrame = measureContainerFrame(await canvas.screenshot());
+  expect(Math.abs(restoredCandidateAFrame.width - candidateAFrame.width)).toBeLessThanOrEqual(4);
+  expect(Math.abs(restoredCandidateAFrame.height - candidateAFrame.height)).toBeLessThanOrEqual(4);
+});
+
 test("keeps all-cargo selection and oriented dimensions available with no candidate", async ({ page }) => {
   await page.goto("/");
   await addCargo(page, "候補なし積荷");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
   await expect(page.locator("#scene-workspace-action-status")).not.toContainText("操作対象として選択しました");
   await expect(page.getByText("3D描画と判定は、積載可能性や物理的安全性を保証しません。", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "物理判定" })).toContainText("実積載の安全性を保証しません");
-  const card = page.locator(".scene-selection-card");
-  await expect(card).toContainText("奥行方向 500 × 横幅方向 400 × 高さ方向 300 mm");
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "neutral");
+  const card = page.locator(".viewport-context-actions");
+  await expect(card).toContainText("X奥行 500 mm、Y横幅 400 mm、Z高さ 300 mm");
   await expect(card.getByRole("button", { name: "座標を入力して配置" })).toHaveAttribute("aria-disabled", "true");
 });
 
@@ -301,12 +409,12 @@ test("searches all Project cargoes and identifies unplaced, current, and other-c
   await addContainer(page, "候補A");
   await addContainer(page, "候補B");
   await place(page, "cargo-1");
-  await page.getByLabel("表示する候補").selectOption("container-2");
+  await activateContainer(page, "container-2");
   await page.getByLabel("積荷を検索").fill("積荷A");
   await expect(page.getByLabel("操作する積荷").locator("option")).toHaveCount(2);
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
-  const card = page.locator(".scene-selection-card");
-  await expect(card).toContainText("候補Aに配置済み");
+  const card = page.locator(".viewport-context-actions");
+  await expect(card).toContainText("候補Aに配置");
   await expect(card.getByRole("button", { name: "候補Aを表示" })).toBeVisible();
 });
 
@@ -316,56 +424,42 @@ test("saves a partial coordinate as an invalid repair-in-progress placement", as
   await addContainer(page, "partial候補");
   await place(page, "cargo-1", "-499", "0");
   await expect(page.locator("#scene-workspace-status")).toContainText("配置1件");
-  await expect(page.locator(".physical-validation__summary")).toContainText("不適合");
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "invalid");
 });
 
 test("commits a staged fine-pointer partial drop once and cancels its preview safely", async ({ page }) => {
   await page.goto("/");
-  await addCargo(page, "staged-partial積荷");
+  await addCargo(page, "staged-partial積荷", false, {
+    length: "2000",
+    width: "1500",
+    height: "300",
+  });
   await addContainer(page, "staged-partial候補");
   const canvas = page.getByRole("img", { name: previewName });
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   const history = page.locator(".project-history__summary");
   const historyBefore = await history.textContent();
 
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
-  let staged = await locateStagedCargoOnCanvas(page, canvas, card);
+  let staged = await locateStagedCargoOnCanvas(page, canvas);
   await page.mouse.move(staged.point.x, staged.point.y);
   await page.mouse.down();
   await page.mouse.move(staged.bounds.x + staged.bounds.width * 0.52, staged.bounds.y + staged.bounds.height * 0.58, { steps: 8 });
   await page.keyboard.press("Escape");
   await page.mouse.up();
+  await expect(page.locator("#scene-workspace-action-status")).toContainText("Escapeキー");
   await expect(card).toContainText("荷室外（未配置）");
   expect(await history.textContent()).toBe(historyBefore);
 
-  let partialCommitted = false;
-  for (const [targetXRatio, targetYRatio] of [
-    [0.34, 0.52], [0.38, 0.52], [0.42, 0.52], [0.46, 0.52],
-    [0.34, 0.58], [0.38, 0.58], [0.42, 0.58], [0.46, 0.58], [0.5, 0.58],
-    [0.34, 0.64], [0.38, 0.64], [0.42, 0.64], [0.46, 0.64],
-  ] as const) {
-    staged = await locateStagedCargoOnCanvas(page, canvas, card);
-    await page.mouse.move(staged.point.x, staged.point.y);
-    await page.mouse.down();
-    await page.mouse.move(staged.bounds.x + staged.bounds.width * targetXRatio, staged.bounds.y + staged.bounds.height * targetYRatio, { steps: 10 });
-    await page.mouse.up();
-    if ((await card.textContent())?.includes("現在の候補に配置済み") !== true) continue;
-    await page.waitForTimeout(150);
-    if ((await page.locator(".physical-validation__summary").textContent())?.includes("不適合")) {
-      partialCommitted = true;
-      break;
-    }
-    await page.getByRole("button", { name: "元に戻す" }).click();
-    await expect(card).toContainText("荷室外（未配置）");
-  }
-  expect(partialCommitted).toBe(true);
-  await expect(card).toContainText("現在の候補に配置済み");
-  await expect(page.locator(".physical-validation__summary")).toContainText("不適合");
+  staged = await locateStagedCargoOnCanvas(page, canvas);
+  await dragCargoToPartialFloorBoundary(page, staged.point, staged.bounds);
+  await expect(card).toContainText("現在の候補 —");
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "invalid");
   await expect(history).toContainText("配置の追加");
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(card).toContainText("荷室外（未配置）");
   await page.getByRole("button", { name: "やり直す" }).click();
-  await expect(card).toContainText("現在の候補に配置済み");
+  await expect(card).toContainText("現在の候補 —");
 });
 
 test("returns a fully dragged-out placement to staging as one undoable deletion", async ({ page }) => {
@@ -374,7 +468,7 @@ test("returns a fully dragged-out placement to staging as one undoable deletion"
   await addContainer(page, "drag-out候補");
   await place(page, "cargo-1", "2100", "500");
   const canvas = page.getByRole("img", { name: previewName });
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   await page.getByLabel("操作する積荷").selectOption("");
   const cargoPoint = await selectCargoOnCanvas(page, canvas, card);
   await page.mouse.move(cargoPoint.x, cargoPoint.y);
@@ -382,10 +476,10 @@ test("returns a fully dragged-out placement to staging as one undoable deletion"
   await page.mouse.move(1, cargoPoint.y, { steps: 12 });
   await page.mouse.up();
   await expect(card).toContainText("荷室外（未配置）");
-  await expect(page.locator(".viewport__staging-label")).toContainText("荷室外の作業スペース");
+  await expect(page.locator(".viewport__staging-label")).toHaveCount(0);
   await expect(page.locator(".project-history__summary")).toContainText("配置の削除");
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(card).toContainText("現在の候補に配置済み");
+  await expect(card).toContainText("現在の候補 —");
   await page.getByRole("button", { name: "やり直す" }).click();
   await expect(card).toContainText("荷室外（未配置）");
 });
@@ -409,7 +503,7 @@ test("snaps a staged cargo onto a containing support surface and keeps the drop 
   await page.getByLabel("操作する積荷").selectOption("cargo-2");
 
   const canvas = page.getByRole("img", { name: previewName });
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   const status = page.locator("#scene-workspace-action-status");
   const targets = [
     [0.4, 0.45], [0.5, 0.45], [0.6, 0.45],
@@ -419,7 +513,7 @@ test("snaps a staged cargo onto a containing support surface and keeps the drop 
   ] as const;
   let snapped = false;
   for (const [xRatio, yRatio] of targets) {
-    const staged = await locateStagedCargoOnCanvas(page, canvas, card);
+    const staged = await locateStagedCargoOnCanvas(page, canvas);
     await page.mouse.move(staged.point.x, staged.point.y);
     await page.mouse.down();
     await page.mouse.move(
@@ -438,11 +532,9 @@ test("snaps a staged cargo onto a containing support surface and keeps the drop 
   }
 
   expect(snapped).toBe(true);
-  await expect(card).toContainText("現在の候補に配置済み");
-  await expect(card).toContainText("500 mm");
-  await expect(page.locator(".physical-validation")).toContainText(
-    "単一積荷の上面による幾何学的な支持は成立しています",
-  );
+  await expect(card).toContainText("現在の候補 —");
+  await expect(card).toContainText("Z 500 mm");
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "valid");
   await expect(page.locator(".project-history__summary")).toContainText("配置の追加");
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(card).toContainText("荷室外（未配置）");
@@ -453,6 +545,11 @@ test("snaps a staged cargo onto a containing support surface and keeps the drop 
 test("renders drag focus and restores normal cargo rendering after cancel", async ({
   page,
 }) => {
+  const runtimeErrors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") runtimeErrors.push(`console: ${message.text()}`);
+  });
+  page.on("pageerror", (error) => runtimeErrors.push(`pageerror: ${error.message}`));
   await page.goto("/");
   await addCargo(page, "集中表示の背景積荷");
   await addCargo(page, "集中表示の操作積荷");
@@ -461,8 +558,7 @@ test("renders drag focus and restores normal cargo rendering after cancel", asyn
   await page.getByLabel("操作する積荷").selectOption("cargo-2");
 
   const canvas = page.getByRole("img", { name: previewName });
-  const card = page.locator(".scene-selection-card");
-  const staged = await locateStagedCargoOnCanvas(page, canvas, card);
+  const staged = await locateStagedCargoOnCanvas(page, canvas);
   const before = countTurquoisePixels(await canvas.screenshot());
 
   await page.mouse.move(staged.point.x, staged.point.y);
@@ -473,23 +569,31 @@ test("renders drag focus and restores normal cargo rendering after cancel", asyn
 
   await page.keyboard.press("Escape");
   await page.mouse.up();
+  await expect(page.locator("#scene-workspace-action-status")).toContainText("Escapeキー");
+  await page.waitForTimeout(200);
   const restored = countTurquoisePixels(await canvas.screenshot());
-  expect(Math.abs(restored - before)).toBeLessThanOrEqual(
-    Math.max(10, Math.round(before * 0.03)),
-  );
+  expect(
+    Math.abs(restored - before),
+    `normal rendering did not recover: before=${before}, during=${during}, restored=${restored}`,
+  ).toBeLessThanOrEqual(Math.max(10, Math.round(before * 0.03)));
+  expect(runtimeErrors).toEqual([]);
 });
 
 test("keeps placed selection no-op and partial drag atomic while preserving camera and page", async ({ page }) => {
   await page.goto("/");
-  await addCargo(page, "placed-partial積荷");
+  await addCargo(page, "placed-partial積荷", false, {
+    length: "2000",
+    width: "1500",
+    height: "300",
+  });
   await addContainer(page, "placed-partial候補");
-  await place(page, "cargo-1", "2100", "500");
+  await place(page, "cargo-1", "2000", "400");
   const canvas = page.getByRole("img", { name: previewName });
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   const history = page.locator(".project-history__summary");
 
   await page.getByLabel("操作する積荷").selectOption("");
-  let cargoPoint = await selectCargoOnCanvas(page, canvas, card);
+  const cargoPoint = await selectCargoOnCanvas(page, canvas, card);
   const historyBeforeNoOp = await history.textContent();
   await page.mouse.move(cargoPoint.x, cargoPoint.y);
   await page.mouse.down();
@@ -498,34 +602,8 @@ test("keeps placed selection no-op and partial drag atomic while preserving came
 
   const bounds = await canvas.boundingBox();
   if (bounds === null) throw new Error("3D canvas has no bounding box");
-  let partialCommitted = false;
-  for (const [targetXRatio, targetYRatio] of [
-    [0.1, 0.52], [0.15, 0.52], [0.2, 0.52], [0.25, 0.52], [0.3, 0.52],
-    [0.34, 0.52], [0.38, 0.52], [0.42, 0.52], [0.46, 0.52],
-    [0.1, 0.58], [0.15, 0.58], [0.2, 0.58], [0.25, 0.58], [0.3, 0.58],
-    [0.34, 0.58], [0.38, 0.58], [0.42, 0.58], [0.46, 0.58], [0.5, 0.58],
-    [0.34, 0.64], [0.38, 0.64], [0.42, 0.64], [0.46, 0.64],
-  ] as const) {
-    await page.getByLabel("操作する積荷").selectOption("");
-    cargoPoint = await selectCargoOnCanvas(page, canvas, card);
-    const currentBounds = await canvas.boundingBox();
-    if (currentBounds === null) throw new Error("3D canvas has no current bounding box");
-    await page.mouse.move(cargoPoint.x, cargoPoint.y);
-    await page.mouse.down();
-    await page.mouse.move(currentBounds.x + currentBounds.width * targetXRatio, currentBounds.y + currentBounds.height * targetYRatio, { steps: 10 });
-    await page.mouse.up();
-    await page.waitForTimeout(150);
-    if (
-      (await card.textContent())?.includes("現在の候補に配置済み") === true &&
-      (await page.locator(".physical-validation__summary").textContent())?.includes("不適合") === true
-    ) {
-      partialCommitted = true;
-      break;
-    }
-    await page.getByRole("button", { name: "元に戻す" }).click();
-    await expect(card).toContainText("現在の候補に配置済み");
-  }
-  expect(partialCommitted).toBe(true);
+  await dragCargoToPartialFloorBoundary(page, cargoPoint, bounds);
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "invalid");
   await expect(history).toContainText("3Dでの配置移動");
   await page.getByRole("button", { name: "拡大" }).click();
   const cameraFrame = measureContainerFrame(await canvas.screenshot());
@@ -585,11 +663,12 @@ test("keeps axis rotation controls fixed, always visible, and distinguishable by
   expect(await x.locator("path").first().getAttribute("d")).toBe(await z.locator("path").first().getAttribute("d"));
   await expect(x.locator("svg")).toHaveCSS("transform", /matrix\(0, 1, -1, 0/);
   await expect(z.locator("svg")).toHaveCSS("transform", "none");
-  const before = await z.boundingBox();
-  await z.click();
-  await expect.poll(() => z.boundingBox()).toEqual(before);
-  await z.click();
-  await expect.poll(() => z.boundingBox()).toEqual(before);
+  await z.evaluate((element) => element.scrollIntoView({ block: "center" }));
+  const stableBefore = await z.boundingBox();
+  await z.click({ force: true });
+  await expect.poll(() => z.boundingBox()).toEqual(stableBefore);
+  await z.click({ force: true });
+  await expect.poll(() => z.boundingBox()).toEqual(stableBefore);
   await x.click({ force: true });
   await expect(page.locator("#scene-workspace-action-status")).toContainText("X軸回転は利用できません");
 });
@@ -599,12 +678,14 @@ test("rotates a tip-enabled cargo around X and keeps it undoable", async ({ page
   await addCargo(page, "X回転積荷", true);
   await addContainer(page, "X回転候補");
   await place(page);
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   await page.getByRole("button", { name: "X軸を中心に90°回転" }).click();
-  await card.getByText("保存上の詳細").click();
-  await expect(card).toContainText("保存上の向きコード: LHW");
+  await card.getByRole("button", { name: "座標を微調整" }).click();
+  await expect(page.getByLabel("向き")).toHaveValue("LHW");
+  await page.getByRole("button", { name: "キャンセル" }).click();
   await page.getByRole("button", { name: "元に戻す" }).click();
-  await expect(card).toContainText("保存上の向きコード: LWH");
+  await card.getByRole("button", { name: "座標を微調整" }).click();
+  await expect(page.getByLabel("向き")).toHaveValue("LWH");
 });
 
 test("wheel over the viewport scrolls the page without changing history", async ({ page }) => {
@@ -684,7 +765,7 @@ test("keeps the selection card compact as cargo count grows", async ({ page }) =
   await page.goto("/");
   await addContainer(page, "many候補");
   for (let index = 0; index < 6; index += 1) await addCargo(page, `many積荷${index}`);
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   const height = (await card.boundingBox())?.height ?? 0;
   await page.getByLabel("操作する積荷").selectOption("cargo-6");
   expect((await card.boundingBox())?.height ?? 0).toBeLessThanOrEqual(height + 220);

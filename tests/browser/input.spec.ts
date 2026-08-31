@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { openProjectSettings } from "./ui-helpers";
 
 async function fillCargo(page: Page, name: string) {
@@ -45,7 +45,7 @@ test("adds, edits, cancels, and explicitly deletes cargo through the compact car
   await addCargo(page, "合成積荷");
   const picker = page.getByLabel("操作する積荷");
   await picker.selectOption("cargo-1");
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   await expect(card).toContainText("合成積荷");
   await card.getByRole("button", { name: "積荷情報を編集" }).click();
   await page.getByLabel("積荷名").fill("未保存名");
@@ -66,13 +66,13 @@ test("separates placement removal from cargo deletion and restores fallback focu
   await addCargo(page, "非cascade積荷");
   await addContainer(page, "非cascade候補");
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
-  const card = page.locator(".scene-selection-card");
+  const card = page.locator(".viewport-context-actions");
   await card.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByRole("button", { name: "配置を保存" }).click();
   const historyBeforeBlockedDelete = await page.locator(".project-history__summary").textContent();
-  await card.getByRole("button", { name: "積荷自体を削除" }).click({ force: true });
-  await expect(page.locator("#scene-workspace-action-status")).toContainText("先に荷室から外してください");
-  await expect(card).toContainText("現在の候補に配置済み");
+  await expect(card.getByRole("button", { name: "積荷自体を削除" })).toHaveCount(0);
+  await expect(card.getByRole("button", { name: "荷室から外す" })).toBeVisible();
+  await expect(card).toContainText("現在の候補 — X 0 / Y 0 / Z 0 mm");
   expect(await page.locator(".project-history__summary").textContent()).toBe(historyBeforeBlockedDelete);
 
   await card.getByRole("button", { name: "荷室から外す" }).click();
@@ -92,7 +92,9 @@ test("keeps cargo input available with WebGL and exposes specific safety boundar
   await page.goto("/");
   await addCargo(page, "非対応積荷");
   await expect(page.getByRole("img", { name: /3Dプレビュー/ })).toBeVisible();
-  await expect(page.getByRole("region", { name: "物理判定" })).toContainText("実積載の安全性を保証しません");
+  await page.getByRole("button", { name: "ナビゲーションメニューを開く" }).click();
+  await page.getByRole("button", { name: "使用上の重要事項" }).click();
+  await expect(page.getByRole("dialog", { name: "使用上の重要事項" })).toContainText("実積載の安全性");
 });
 
 test("uses 天地無用 as the only cargo orientation setting", async ({ page }) => {
@@ -106,7 +108,7 @@ test("uses 天地無用 as the only cargo orientation setting", async ({ page })
   await expect(page.getByText("床面上のZ軸回転は常に利用できます。")).toBeVisible();
   await page.getByRole("button", { name: "積荷を保存" }).click();
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
-  await expect(page.locator(".scene-selection-card")).toContainText("天地無用合成積荷");
+  await expect(page.locator(".viewport-context-actions")).toContainText("天地無用合成積荷");
 });
 
 test("container CRUD remains transactional", async ({ page }) => {

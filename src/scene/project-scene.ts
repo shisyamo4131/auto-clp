@@ -76,6 +76,7 @@ interface SceneCargoProjectionBase {
   readonly name: string;
   readonly center: SceneVector3;
   readonly dimensions: SceneVector3;
+  readonly dimensionsMm: OrientedDimensionsMm;
   readonly orientation: Orientation;
   readonly positionMm: PositionMm;
 }
@@ -88,9 +89,157 @@ export interface SceneStagedCargoProjection extends SceneCargoProjectionBase {
   readonly kind: "staged";
 }
 
+export type SceneStagingAnchorSide = "x-min" | "x-max" | "y-min" | "y-max";
+
 export interface SceneStagingOverride {
   readonly orientation: Orientation;
-  readonly positionMm: PositionMm;
+  readonly side: SceneStagingAnchorSide;
+  readonly gapMm: number;
+  readonly tangentCenterDelta2Mm: number;
+  readonly zMm: number;
+}
+
+const STAGING_SIDE_ORDER: readonly SceneStagingAnchorSide[] = [
+  "x-min",
+  "x-max",
+  "y-min",
+  "y-max",
+];
+
+function safeInteger(value: number): boolean {
+  return Number.isSafeInteger(value);
+}
+
+function safeSum(...values: readonly number[]): number | undefined {
+  let result = 0;
+  for (const value of values) {
+    if (!safeInteger(value)) return undefined;
+    result += value;
+    if (!safeInteger(result)) return undefined;
+  }
+  return result;
+}
+
+/**
+ * Encodes one fully-outside staging pose against a container without retaining
+ * container-specific absolute coordinates. At corners, the previous side wins
+ * when it is still eligible; otherwise the smallest gap and fixed side order win.
+ */
+export function encodeSceneStagingAnchor(
+  cargo: Cargo,
+  container: Container,
+  orientation: Orientation,
+  positionMm: PositionMm,
+  preferredSide?: SceneStagingAnchorSide,
+): SceneStagingOverride | undefined {
+  if (!cargo.allowedOrientations.includes(orientation)) return undefined;
+  const dimensions = orientedDimensions(cargo, orientation);
+  const length = container.internalDimensionsMm.lengthMm;
+  const width = container.internalDimensionsMm.widthMm;
+  const xMax = safeSum(positionMm.xMm, dimensions.xMm);
+  const yMax = safeSum(positionMm.yMm, dimensions.yMm);
+  if (
+    xMax === undefined ||
+    yMax === undefined ||
+    !safeInteger(positionMm.zMm) ||
+    !safeInteger(length) ||
+    !safeInteger(width)
+  ) {
+    return undefined;
+  }
+
+  const candidates: Array<{ readonly side: SceneStagingAnchorSide; readonly gapMm: number }> = [];
+  if (xMax <= 0) candidates.push({ side: "x-min", gapMm: -xMax });
+  if (positionMm.xMm >= length) {
+    const gapMm = positionMm.xMm - length;
+    if (safeInteger(gapMm)) candidates.push({ side: "x-max", gapMm });
+  }
+  if (yMax <= 0) candidates.push({ side: "y-min", gapMm: -yMax });
+  if (positionMm.yMm >= width) {
+    const gapMm = positionMm.yMm - width;
+    if (safeInteger(gapMm)) candidates.push({ side: "y-max", gapMm });
+  }
+  if (candidates.length === 0) return undefined;
+
+  const preferred = candidates.find((candidate) => candidate.side === preferredSide);
+  const chosen = preferred ?? [...candidates].sort((first, second) => {
+    const gapDifference = first.gapMm - second.gapMm;
+    return gapDifference !== 0
+      ? gapDifference
+      : STAGING_SIDE_ORDER.indexOf(first.side) - STAGING_SIDE_ORDER.indexOf(second.side);
+  })[0]!;
+  const tangentCenterDelta2Mm = chosen.side.startsWith("x-")
+    ? safeSum(positionMm.yMm, positionMm.yMm, dimensions.yMm, -width)
+    : safeSum(positionMm.xMm, positionMm.xMm, dimensions.xMm, -length);
+  if (
+    tangentCenterDelta2Mm === undefined ||
+    !safeInteger(chosen.gapMm) ||
+    chosen.gapMm < 0
+  ) {
+    return undefined;
+  }
+  return {
+    orientation,
+    side: chosen.side,
+    gapMm: chosen.gapMm,
+    tangentCenterDelta2Mm,
+    zMm: positionMm.zMm,
+  };
+}
+
+/** Reprojects a cargo-global staging anchor to one candidate container. */
+export function projectSceneStagingAnchor(
+  cargo: Cargo,
+  container: Container,
+  anchor: SceneStagingOverride,
+): PositionMm | undefined {
+  if (
+    !cargo.allowedOrientations.includes(anchor.orientation) ||
+    !safeInteger(anchor.gapMm) ||
+    anchor.gapMm < 0 ||
+    !safeInteger(anchor.tangentCenterDelta2Mm) ||
+    !safeInteger(anchor.zMm)
+  ) {
+    return undefined;
+  }
+  const dimensions = orientedDimensions(cargo, anchor.orientation);
+  const length = container.internalDimensionsMm.lengthMm;
+  const width = container.internalDimensionsMm.widthMm;
+  const tangentNumerator = anchor.side.startsWith("x-")
+    ? safeSum(width, anchor.tangentCenterDelta2Mm, -dimensions.yMm)
+    : safeSum(length, anchor.tangentCenterDelta2Mm, -dimensions.xMm);
+  if (tangentNumerator === undefined) return undefined;
+  const tangent = roundHalfAwayFromZero(tangentNumerator / 2);
+  let xMm: number | undefined;
+  let yMm: number | undefined;
+  switch (anchor.side) {
+    case "x-min":
+      xMm = safeSum(-anchor.gapMm, -dimensions.xMm);
+      yMm = tangent;
+      break;
+    case "x-max":
+      xMm = safeSum(length, anchor.gapMm);
+      yMm = tangent;
+      break;
+    case "y-min":
+      xMm = tangent;
+      yMm = safeSum(-anchor.gapMm, -dimensions.yMm);
+      break;
+    case "y-max":
+      xMm = tangent;
+      yMm = safeSum(width, anchor.gapMm);
+      break;
+  }
+  if (xMm === undefined || yMm === undefined) return undefined;
+  const positionMm = { xMm, yMm, zMm: anchor.zMm };
+  return stagedCargoOverlapsContainerFloor(
+    cargo,
+    positionMm,
+    anchor.orientation,
+    container,
+  )
+    ? undefined
+    : positionMm;
 }
 
 export function stagedCargoOverlapsContainerFloor(
@@ -593,16 +742,11 @@ function stagedCargoesToScene(
         gridStartY + column * (maxFootprintY + STAGING_GAP_MM),
       zMm: 0,
     };
-    const positionMm =
-      override !== undefined &&
-      !stagedCargoOverlapsContainerFloor(
-        cargo,
-        override.positionMm,
-        orientation,
-        container,
-      )
-        ? override.positionMm
-        : defaultPositionMm;
+    const anchoredPosition =
+      override === undefined
+        ? undefined
+        : projectSceneStagingAnchor(cargo, container, override);
+    const positionMm = anchoredPosition ?? defaultPositionMm;
     return {
       kind: "staged",
       cargoId: cargo.id,
@@ -611,6 +755,7 @@ function stagedCargoesToScene(
       positionMm,
       center: centerFromBounds(positionMm, dimensions),
       dimensions: domainDimensionsToScene(dimensions),
+      dimensionsMm: dimensions,
     };
   });
 }
@@ -661,6 +806,7 @@ export function projectContainerToScene(
       positionMm: placement.positionMm,
       center: centerFromBounds(bounds.min, bounds.dimensions),
       dimensions: domainDimensionsToScene(bounds.dimensions),
+      dimensionsMm: bounds.dimensions,
     });
   }
 

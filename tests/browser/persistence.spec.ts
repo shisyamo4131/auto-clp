@@ -1,4 +1,4 @@
-import { expect, test, type Download, type Page } from "@playwright/test";
+import { expect, test, type Download, type Page } from "./fixtures";
 import { openProjectSettings, saveProjectName } from "./ui-helpers";
 
 const exportFilename = "auto-clp-project-0.1.0.json";
@@ -541,7 +541,7 @@ test("downloads the fixed JSON contract and reimports it without history or deri
   await page.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByLabel("X最小角").fill("-1");
   await page.getByRole("button", { name: "配置を保存" }).click();
-  await expect(page.locator(".physical-validation__summary")).toContainText("不適合：");
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "invalid");
   const historyBeforeExport = await page.locator(".project-history__summary").textContent();
 
   await openPersistenceDrawer(page);
@@ -578,7 +578,7 @@ test("downloads the fixed JSON contract and reimports it without history or deri
   await expect(page.getByTestId("canonical-project-settings")).toContainText(
     "匿名downloadCLP",
   );
-  await expect(page.locator(".physical-validation__summary")).toContainText("不適合：");
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "invalid");
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeDisabled();
 });
 
@@ -991,5 +991,5 @@ test("keeps 1000-cargo search and selection usable without narrow horizontal ove
   await expect(page.getByText("1/1000件")).toBeVisible();
   await expect(select.locator("option")).toHaveCount(2);
   await select.selectOption("cargo-1000");
-  await expect(page.locator(".scene-selection-card")).toContainText("積荷1000");
+  await expect(page.locator(".viewport-context-actions")).toContainText("積荷1000");
 });

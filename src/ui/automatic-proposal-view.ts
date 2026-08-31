@@ -37,9 +37,7 @@ export interface AutomaticProposalPlacementViewRow {
 }
 
 export interface AutomaticProposalUnverifiedViewRow {
-  readonly code:
-    | "structure-stability-unverified"
-    | "support-conditions-unverified";
+  readonly code: "support-conditions-unverified";
   readonly message: string;
   readonly targetCargoId: string;
   readonly targetCargoName: string;
@@ -420,10 +418,7 @@ function unverifiedRows(
     const target = cargoById.get(reason.target.id) as Cargo;
     return {
       code: reason.code,
-      message:
-        reason.code === "structure-stability-unverified"
-          ? "支持後の構造・安定性は未確認です。"
-          : "複数支持、隙間、張り出し等の支持条件は未確認です。",
+      message: "複数支持、隙間、張り出し等の支持条件は未確認です。",
       targetCargoId: target.id,
       targetCargoName: target.name,
       relatedCargoLabels: reason.relatedCargoIds

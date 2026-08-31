@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { openPersistenceDrawer, openProjectSettings, saveProjectName } from "./ui-helpers";
 
 const proposalWorkerFragment = "automatic-proposal.worker";
@@ -141,7 +141,7 @@ async function installControlledProposalWorker(page: Page) {
 
     const resultFor = (request: ProposalRequest) => {
       const base = {
-        algorithmVersion: "automatic-proposal-v1",
+        algorithmVersion: "automatic-proposal-v2",
         effectiveLimits: {
           candidateAttemptLimit: 10_000,
           requestAttemptLimit: 1_000_000,
@@ -211,7 +211,7 @@ async function installControlledProposalWorker(page: Page) {
             request.project.cargoes.length > 25
               ? request.project.cargoes.map((cargo, index, cargoes) => ({
                   status: "unverified",
-                  code: "structure-stability-unverified",
+                  code: "support-conditions-unverified",
                   target: { kind: "cargo", id: cargo.id },
                   relatedCargoIds: [cargoes[(index + 1) % cargoes.length]!.id],
                 }))
@@ -368,7 +368,7 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
   await expect(panel).toContainText("案あり・未適用");
   await expect(panel).toContainText("現在の配置1件");
   await expect(panel).toContainText("配置案2件");
-  await expect(panel).toContainText("automatic-proposal-v1");
+  await expect(panel).toContainText("automatic-proposal-v2");
   await expect(panel).toContainText("匿名AP02候補 (container-1)");
   await expect(panel).toContainText("匿名積荷A (cargo-1)");
   await expect(panel).toContainText("匿名積荷B (cargo-2)");
@@ -377,7 +377,7 @@ test("applies the real AP-02 plan as one confirmed history action and restores i
   expect(await canonical.textContent()).toBe(projectBefore);
   const sceneStatus = page.locator("#scene-workspace-status");
   await expect(sceneStatus).toContainText("配置1件");
-  await expect(page.locator(".scene-selection-card")).toContainText("50 mm");
+  await expect(page.locator(".viewport-context-actions")).toContainText("X 50 / Y 0 / Z 0 mm");
 
   const applyButton = panel.getByRole("button", { name: "配置案を適用", exact: true });
   await applyButton.click();
@@ -457,7 +457,7 @@ test("confirms a zero-current add, commits rapid double confirmation once, and k
   await expect(sceneStatus).toContainText("配置1件");
 });
 
-test("preserves the AP-03 structure warning through real preview, confirmation, apply, and physical validation", async ({
+test("keeps AP-03 exact single support free of per-cargo unverified reasons", async ({
   page,
 }) => {
   await page.goto("/");
@@ -476,23 +476,15 @@ test("preserves the AP-03 structure warning through real preview, confirmation, 
 
   await panel.getByRole("button", { name: "自動提案を開始" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "ready");
-  await expect(panel.getByRole("heading", { name: "未確認事項（1件）" })).toBeVisible();
-  await expect(panel.getByText("支持後の構造・安定性は未確認です。")).toHaveCount(1);
+  await expect(panel.getByRole("heading", { name: "未確認事項", exact: false })).toHaveCount(0);
   await panel.getByRole("button", { name: "配置案を適用", exact: true }).click();
   const confirmation = panel.getByRole("alert");
-  await expect(confirmation).toContainText("未確認事項が1件あります");
+  await expect(confirmation).not.toContainText("未確認事項が1件あります");
   await confirmation.getByRole("button", { name: "配置案を適用" }).click();
 
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "applied");
-  await expect(panel).toContainText("未確認事項1件を保持しています");
-  const physical = page.locator(".physical-validation");
-  await expect(physical.locator(".physical-validation__summary")).toContainText(
-    "確認が必要な理由が1件あります",
-  );
-  await expect(physical.getByRole("heading", { name: "未確認理由（1件）" })).toBeVisible();
-  await expect(physical).toContainText(
-    "幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
-  );
+  await expect(panel.getByText(/未確認事項/)).toHaveCount(0);
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "valid");
 });
 
 test("keeps a controlled complete-with-cutoff warning applicable in preview and confirmation", async ({

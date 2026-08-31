@@ -611,14 +611,8 @@ describe("validatePlacementSet", () => {
     expect(validatePlacementSet(project, "container-1")).toEqual({
       kind: "evaluated",
       containerId: "container-1",
-      status: "unverified",
-      reasons: [
-        unverifiedCargoReason(
-          "structure-stability-unverified",
-          "cargo-b",
-          ["cargo-a"],
-        ),
-      ],
+      status: "valid",
+      reasons: [],
     });
   });
 
@@ -783,11 +777,7 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-a"),
-        unverifiedCargoReason(
-          "structure-stability-unverified",
-          "cargo-b",
-          ["cargo-a"],
-        ),
+        invalidCargoReason("support-contact-invalid", "cargo-b", ["cargo-a"]),
       ],
     });
   });
@@ -875,9 +865,7 @@ describe("validatePlacementSet", () => {
       expect(result.reasons).toContainEqual(
         invalidCargoReason("support-contact-invalid", "cargo-b"),
       );
-      expect(result.reasons).not.toContainEqual(
-        unverifiedCargoReason("structure-stability-unverified", "cargo-b"),
-      );
+      expect(result.reasons.some((reason) => reason.status === "unverified")).toBe(false);
     }
   });
 
@@ -977,7 +965,7 @@ describe("validatePlacementSet", () => {
     });
   });
 
-  it("keeps the actual-support structure warning with an unrelated floor candidate", () => {
+  it("does not add a per-cargo warning for exact support with an unrelated floor candidate", () => {
     const actualSupport = physicalCargo("cargo-a", {
       dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
     });
@@ -1001,18 +989,11 @@ describe("validatePlacementSet", () => {
       kind: "evaluated",
       containerId: "container-1",
       status: "invalid",
-      reasons: [
-        invalidCargoReason("floor-penetration", "cargo-b"),
-        unverifiedCargoReason(
-          "structure-stability-unverified",
-          "cargo-u",
-          ["cargo-a"],
-        ),
-      ],
+      reasons: [invalidCargoReason("floor-penetration", "cargo-b")],
     });
   });
 
-  it("retains structure warning for a raw-outside elevated target that is fully supported", () => {
+  it("does not add a per-cargo warning for a raw-outside elevated target that is fully supported", () => {
     const cargoUpper = physicalCargo("cargo-u", {
       dimensionsMm: { lengthMm: 10, widthMm: 10, heightMm: 91 },
     });
@@ -1030,14 +1011,7 @@ describe("validatePlacementSet", () => {
       kind: "evaluated",
       containerId: "container-1",
       status: "invalid",
-      reasons: [
-        invalidCargoReason("outside-container", "cargo-u"),
-        unverifiedCargoReason(
-          "structure-stability-unverified",
-          "cargo-u",
-          ["cargo-a"],
-        ),
-      ],
+      reasons: [invalidCargoReason("outside-container", "cargo-u")],
     });
   });
 
@@ -1202,11 +1176,7 @@ describe("validatePlacementSet", () => {
       reasons: [
         invalidCargoReason("floor-penetration", "cargo-a"),
         invalidCargoReason("opening-no-fitting-orientation", "cargo-a"),
-        unverifiedCargoReason(
-          "structure-stability-unverified",
-          "cargo-b",
-          ["cargo-a"],
-        ),
+        invalidCargoReason("support-contact-invalid", "cargo-b", ["cargo-a"]),
         payloadExceededReason("container-1", ["cargo-a", "cargo-b"]),
       ],
     });

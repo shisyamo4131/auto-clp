@@ -105,10 +105,6 @@ const invalidCopies = [
 
 const unverifiedCopies = [
   [
-    "structure-stability-unverified",
-    "単一積荷の上面による幾何学的な支持は成立していますが、構造強度と安定性は未確認です。",
-  ],
-  [
     "support-conditions-unverified",
     "複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含みます。構造剛性、支持位置、重心、許容支持間隔を確認してください。",
   ],
@@ -233,7 +229,7 @@ describe("toPhysicalValidationView", () => {
     };
     const unverifiedReason: PhysicalValidationReason = {
       status: "unverified",
-      code: "structure-stability-unverified",
+      code: "support-conditions-unverified",
       target: { kind: "cargo", id: "cargo-known" },
       relatedCargoIds: ["cargo-related-a"],
     };
@@ -245,14 +241,14 @@ describe("toPhysicalValidationView", () => {
     });
     expect(toPhysicalValidationView(projectFixture(), evaluated("valid"))).toMatchObject({
       status: "valid",
-      statusLabel: "適合",
-      summary: "適合：この候補には配置済みの積荷がありません。",
+      statusLabel: "問題なし",
+      summary: "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。",
     });
     expect(
       toPhysicalValidationView(projectFixture([placement]), evaluated("valid")),
     ).toMatchObject({
       status: "valid",
-      summary: "適合：現在の保存済み配置は、実装済みの物理制約に適合しています。",
+      summary: "実装済み確認項目内で問題なし：現在の保存済み配置に不適合・未確認はありません。",
     });
     expect(
       toPhysicalValidationView(
@@ -349,7 +345,7 @@ describe("toPhysicalValidationView", () => {
       },
       {
         status: "unverified",
-        code: "structure-stability-unverified",
+        code: "support-conditions-unverified",
         target: { kind: "cargo", id: "cargo-related-b" },
         relatedCargoIds: ["cargo-related-a"],
       },
@@ -520,11 +516,11 @@ describe("worker physical validation view adapters", () => {
   it.each([
     [
       { kind: "evaluated", status: "valid", invalidCount: 0, unverifiedCount: 0, placementCount: 0 },
-      "適合：この候補には配置済みの積荷がありません。",
+      "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。",
     ],
     [
       { kind: "evaluated", status: "valid", invalidCount: 0, unverifiedCount: 0, placementCount: 1 },
-      "適合：現在の保存済み配置は、実装済みの物理制約に適合しています。",
+      "実装済み確認項目内で問題なし：現在の保存済み配置に不適合・未確認はありません。",
     ],
     [
       { kind: "evaluated", status: "invalid", invalidCount: 26, unverifiedCount: 2, placementCount: 4 },

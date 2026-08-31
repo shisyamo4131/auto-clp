@@ -38,20 +38,6 @@ export function ApplicationBar({
   return (
     <header className="application-bar">
       <div className="application-bar__primary">
-        <button
-          id="app-navigation-button"
-          className="application-bar__icon-button"
-          type="button"
-          aria-label="ナビゲーションメニューを開く（CLPデータを開く）"
-          aria-controls="project-persistence-drawer"
-          aria-expanded={drawerOpen}
-          disabled={!operational || navigationDisabled}
-          onClick={onOpenNavigation}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z" />
-          </svg>
-        </button>
         <h1>Auto CLP</h1>
       </div>
       <div className="application-bar__actions">
@@ -76,6 +62,20 @@ export function ApplicationBar({
           <span aria-hidden="true" />
           {chipCopy[capabilityState]}
         </span>
+        <button
+          id="app-navigation-button"
+          className="application-bar__icon-button"
+          type="button"
+          aria-label="ナビゲーションメニューを開く（CLPデータを開く）"
+          aria-controls="project-persistence-drawer"
+          aria-expanded={drawerOpen}
+          disabled={!operational || navigationDisabled}
+          onClick={onOpenNavigation}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z" />
+          </svg>
+        </button>
       </div>
     </header>
   );

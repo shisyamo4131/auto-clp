@@ -48,6 +48,7 @@ interface ProjectPersistencePanelProps {
   readonly onSaveDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
   readonly onOpenChange: (open: boolean) => void;
   readonly onOpenProjectSettings: () => void;
+  readonly onOpenUsageRequirements: () => void;
   readonly open: boolean;
   readonly project: Project;
 }
@@ -138,6 +139,7 @@ export function ProjectPersistencePanel({
   onSaveDevice,
   onOpenChange,
   onOpenProjectSettings,
+  onOpenUsageRequirements,
   open: drawerOpen,
   project,
 }: ProjectPersistencePanelProps) {
@@ -475,6 +477,13 @@ export function ProjectPersistencePanel({
                   onClick={() => finishDrawerAction(onOpenProjectSettings)}
                 >
                   CLP設定
+                </button>
+                <button
+                  type="button"
+                  disabled={controlsDisabled}
+                  onClick={() => finishDrawerAction(onOpenUsageRequirements)}
+                >
+                  使用上の重要事項
                 </button>
               </div>
             </div>

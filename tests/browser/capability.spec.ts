@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("shows a deterministic unsupported WebGL 2 state", async ({ page }) => {
   await page.goto("/?forceWebgl2=unsupported");
@@ -178,7 +178,9 @@ test("shows the supported preview in the verification browser", async ({ page })
   await expect(
     page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" }),
   ).toBeVisible();
-  await expect(page.getByLabel("現在の制限")).toContainText("安全性");
+  await page.getByRole("button", { name: "ナビゲーションメニューを開く" }).click();
+  await page.getByRole("button", { name: "使用上の重要事項" }).click();
+  await expect(page.getByRole("dialog", { name: "使用上の重要事項" })).toContainText("実積載の安全性");
 });
 
 test("does not report supported when the initial render fails", async ({ page }) => {

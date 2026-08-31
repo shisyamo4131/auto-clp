@@ -12,10 +12,12 @@ import {
   classifyFloorFootprint,
   domainDimensionsToScene,
   domainPointToScene,
+  encodeSceneStagingAnchor,
   floorQuarterTurnOrientation,
   MM_TO_SCENE_UNIT,
   placedFloorDragDisposition,
   projectContainerToScene,
+  projectSceneStagingAnchor,
   resolveSupportSnapPosition,
   sceneBoundsReachRadius,
   sceneContainerBounds,
@@ -24,6 +26,8 @@ import {
   stagedCargoOverlapsContainerFloor,
   xAxisQuarterTurnOrientation,
   type ProjectSceneProjection,
+  type SceneStagingAnchorSide,
+  type SceneStagingOverride,
   type SceneVector3,
 } from "./project-scene";
 
@@ -31,6 +35,27 @@ function expectVectorClose(actual: SceneVector3, expected: SceneVector3): void {
   expect(actual.x).toBeCloseTo(expected.x, 12);
   expect(actual.y).toBeCloseTo(expected.y, 12);
   expect(actual.z).toBeCloseTo(expected.z, 12);
+}
+
+function encodeAnchor(
+  project: Project,
+  cargoId: string,
+  containerId: string,
+  orientation: Orientation,
+  positionMm: { readonly xMm: number; readonly yMm: number; readonly zMm: number },
+  preferredSide?: SceneStagingAnchorSide,
+): SceneStagingOverride {
+  const cargo = project.cargoes.find(({ id }) => id === cargoId)!;
+  const container = project.containers.find(({ id }) => id === containerId)!;
+  const anchor = encodeSceneStagingAnchor(
+    cargo,
+    container,
+    orientation,
+    positionMm,
+    preferredSide,
+  );
+  expect(anchor).toBeDefined();
+  return anchor!;
 }
 
 function projectFixture(): Project {
@@ -382,11 +407,15 @@ describe("project scene coordinate adapter", () => {
       (cargo) => cargo.cargoId === "cargo-f",
     )!;
 
+    const cargoFAnchor = encodeAnchor(
+      project,
+      "cargo-f",
+      "container-1",
+      "WLH",
+      cargoFBefore.positionMm,
+    );
     const after = projectContainerToScene(project, "container-1", {
-      "cargo-f": {
-        orientation: "WLH",
-        positionMm: cargoFBefore.positionMm,
-      },
+      "cargo-f": cargoFAnchor,
     });
 
     expect(after.ok).toBe(true);
@@ -429,11 +458,15 @@ describe("project scene coordinate adapter", () => {
     };
     const original = structuredClone(project);
 
+    const override = encodeAnchor(
+      project,
+      cargo.id,
+      "container-1",
+      "LHW",
+      { xMm: 250, yMm: -900, zMm: 0 },
+    );
     const result = projectContainerToScene(project, "container-1", {
-      [cargo.id]: {
-        orientation: "LHW",
-        positionMm: { xMm: 250, yMm: -900, zMm: 0 },
-      },
+      [cargo.id]: override,
     });
 
     expect(result.ok).toBe(true);
@@ -448,6 +481,117 @@ describe("project scene coordinate adapter", () => {
       );
     }
     expect(project).toEqual(original);
+  });
+
+  it.each([
+    ["x-min", { xMm: -151, yMm: 40, zMm: 7 }],
+    ["x-max", { xMm: 1_051, yMm: 40, zMm: 7 }],
+    ["y-min", { xMm: 40, yMm: -253, zMm: 7 }],
+    ["y-max", { xMm: 40, yMm: 1_050, zMm: 7 }],
+  ] as const)("round-trips a %s side-relative staging anchor", (side, positionMm) => {
+    const project = projectFixture();
+    const cargo = project.cargoes[0]!;
+    const container = project.containers[0]!;
+    const anchor = encodeSceneStagingAnchor(
+      cargo,
+      container,
+      "LWH",
+      positionMm,
+      side,
+    );
+
+    expect(anchor).toMatchObject({ side, orientation: "LWH", zMm: 7 });
+    expect(projectSceneStagingAnchor(cargo, container, anchor!)).toEqual(positionMm);
+  });
+
+  it("uses fixed corner tie order unless the previous eligible side is supplied", () => {
+    const project = projectFixture();
+    const cargo = project.cargoes[0]!;
+    const container = project.containers[0]!;
+    const corner = { xMm: -101, yMm: -203, zMm: 0 };
+
+    expect(encodeSceneStagingAnchor(cargo, container, "LWH", corner)?.side).toBe(
+      "x-min",
+    );
+    expect(
+      encodeSceneStagingAnchor(cargo, container, "LWH", corner, "y-min")?.side,
+    ).toBe("y-min");
+  });
+
+  it.each([
+    [-796, 1],
+    [-798, -1],
+  ])("rounds half millimetres away from zero for tangent delta %i", (delta, expectedY) => {
+    const project = projectFixture();
+    const cargo = project.cargoes[0]!;
+    const container = project.containers[0]!;
+    expect(
+      projectSceneStagingAnchor(cargo, container, {
+        orientation: "LWH",
+        side: "x-min",
+        gapMm: 0,
+        tangentCenterDelta2Mm: delta,
+        zMm: 0,
+      }),
+    ).toEqual({ xMm: -101, yMm: expectedY, zMm: 0 });
+  });
+
+  it("rejects unsafe, disallowed, and non-outside staging anchors", () => {
+    const project = projectFixture();
+    const cargo = project.cargoes[0]!;
+    const container = project.containers[0]!;
+    expect(
+      encodeSceneStagingAnchor(cargo, container, "WLH", { xMm: -101, yMm: 0, zMm: 0 }),
+    ).toBeUndefined();
+    expect(
+      encodeSceneStagingAnchor(cargo, container, "LWH", {
+        xMm: Number.MAX_SAFE_INTEGER,
+        yMm: 0,
+        zMm: 0,
+      }),
+    ).toBeUndefined();
+    expect(
+      projectSceneStagingAnchor(cargo, container, {
+        orientation: "LWH",
+        side: "x-max",
+        gapMm: Number.MAX_SAFE_INTEGER,
+        tangentCenterDelta2Mm: 0,
+        zMm: 0,
+      }),
+    ).toBeUndefined();
+    expect(
+      projectSceneStagingAnchor(cargo, container, {
+        orientation: "LWH",
+        side: "x-min",
+        gapMm: -1,
+        tangentCenterDelta2Mm: 0,
+        zMm: 0,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("preserves side, gap, tangent relation, Z and orientation across resized A-B-A", () => {
+    const project = projectFixture();
+    const cargo = { ...project.cargoes[0]!, allowedOrientations: ["LWH", "WLH"] as const };
+    const containerA = project.containers[0]!;
+    const containerB = {
+      ...project.containers[1]!,
+      internalDimensionsMm: { lengthMm: 4_000, widthMm: 2_001, heightMm: 2_400 },
+    };
+    const positionA = { xMm: 250, yMm: -253, zMm: 19 };
+    const anchor = encodeSceneStagingAnchor(
+      cargo,
+      containerA,
+      "LWH",
+      positionA,
+      "y-min",
+    )!;
+    const positionB = projectSceneStagingAnchor(cargo, containerB, anchor)!;
+
+    expect(anchor).toMatchObject({ side: "y-min", gapMm: 50, zMm: 19, orientation: "LWH" });
+    expect(positionB.yMm).toBe(-253);
+    expect(projectSceneStagingAnchor(cargo, containerA, anchor)).toEqual(positionA);
+    expect(stagedCargoOverlapsContainerFloor(cargo, positionB, "LWH", containerB)).toBe(false);
   });
 
   it.each([
@@ -516,7 +660,7 @@ describe("project scene coordinate adapter", () => {
     ).toBe(true);
   });
 
-  it("falls back to a deterministic fully outside grid after a staged override becomes overlapping", () => {
+  it("falls back to a deterministic fully outside grid for an invalid staged anchor", () => {
     const base = projectFixture();
     const cargo = {
       ...base.cargoes[0]!,
@@ -533,7 +677,10 @@ describe("project scene coordinate adapter", () => {
     const result = projectContainerToScene(project, "container-1", {
       [cargo.id]: {
         orientation: "WLH",
-        positionMm: { xMm: -600, yMm: 0, zMm: 0 },
+        side: "x-min",
+        gapMm: -1,
+        tangentCenterDelta2Mm: 0,
+        zMm: 0,
       },
     });
 
@@ -566,18 +713,21 @@ describe("project scene coordinate adapter", () => {
       placements: [],
     };
 
+    const oldAnchor = encodeSceneStagingAnchor(
+      base.cargoes[0]!,
+      base.containers[0]!,
+      "LWH",
+      { xMm: -600, yMm: 0, zMm: 0 },
+    )!;
     const result = projectContainerToScene(project, "container-1", {
-      [cargo.id]: {
-        orientation: "LWH",
-        positionMm: { xMm: -600, yMm: 0, zMm: 0 },
-      },
+      [cargo.id]: oldAnchor,
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.projection.cargoes[0]?.positionMm).toEqual({
-        xMm: -900,
-        yMm: 400,
+        xMm: -1_299,
+        yMm: 2,
         zMm: 0,
       });
     }
@@ -595,7 +745,10 @@ describe("project scene coordinate adapter", () => {
     const result = projectContainerToScene(project, "container-1", {
       "cargo-1": {
         orientation: "LHW",
-        positionMm: { xMm: -500, yMm: 250, zMm: 0 },
+        side: "x-min",
+        gapMm: 399,
+        tangentCenterDelta2Mm: -297,
+        zMm: 0,
       },
     });
 
@@ -603,7 +756,7 @@ describe("project scene coordinate adapter", () => {
     if (result.ok) {
       expect(result.projection.cargoes[0]).toMatchObject({
         orientation: "LWH",
-        positionMm: { xMm: -500, yMm: 250, zMm: 0 },
+        positionMm: { xMm: -201, yMm: 398, zMm: 0 },
       });
     }
   });

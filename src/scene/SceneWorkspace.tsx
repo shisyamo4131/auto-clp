@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 
 import {
   addPlacement,
@@ -8,7 +15,11 @@ import {
 import type { ProjectHistoryCommitHandler } from "../application/project-history";
 import type { Project } from "../domain/model";
 import { isUprightOnlyOrientationPolicy } from "../domain/orientation-policy";
-import { PhysicalValidationPanel } from "../ui/PhysicalValidationPanel";
+import {
+  PhysicalValidationLamp,
+  PhysicalValidationPanel,
+} from "../ui/PhysicalValidationPanel";
+import { usePhysicalValidationWorker } from "../ui/usePhysicalValidationWorker";
 import type { CargoEditorIntent } from "../ui/CargoEditorDialog";
 import {
   PlacementEditorDialog,
@@ -18,19 +29,17 @@ import {
   ProjectHistoryControls,
   type ProjectHistoryControlsProps,
 } from "../ui/ProjectHistoryControls";
-import {
-  placementPositionCopy,
-  presentOrientedPlacement,
-} from "../ui/placement-presentation";
+import { presentOrientedPlacement } from "../ui/placement-presentation";
 import {
   classifyFloorFootprint,
   domainPositionDeltaToScene,
+  encodeSceneStagingAnchor,
   floorQuarterTurnOrientation,
   placedFloorDragDisposition,
+  projectSceneStagingAnchor,
   projectContainerToScene,
   resolveSupportSnapPosition,
   sceneFloorDragPositionMm,
-  stagedCargoOverlapsContainerFloor,
   xAxisQuarterTurnOrientation,
   type SceneStagingOverride,
   type SceneVector3,
@@ -48,6 +57,7 @@ interface SceneWorkspaceProps {
   readonly historyRevision: number;
   readonly onBusyChange: (busy: boolean) => void;
   readonly onOpenCargoEditor: (intent: CargoEditorIntent) => void;
+  readonly onOpenUsageRequirements: () => void;
   readonly onProjectCommit: ProjectHistoryCommitHandler;
   readonly onRendererError: () => void;
   readonly onRendererReady: () => void;
@@ -62,6 +72,179 @@ function projectionErrorMessage(code: "scene.container-not-found" | "scene.cargo
   return "配置が参照する積荷がCLP内に見つからないため、3D表示を更新できません。";
 }
 
+interface CandidateTabsProps {
+  readonly activeId?: string;
+  readonly disabled: boolean;
+  readonly onActivate: (containerId: string) => void;
+  readonly project: Project;
+}
+
+function CandidateTabs({ activeId, disabled, onActivate, project }: CandidateTabsProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
+  const [scrollState, setScrollState] = useState({
+    hasOverflow: false,
+    atStart: true,
+    atEnd: true,
+  });
+  const updateScrollState = useCallback(() => {
+    const root = rootRef.current;
+    const scroller = scrollerRef.current;
+    if (root === null || scroller === null) return;
+    const hasOverflow = scroller.scrollWidth > root.clientWidth + 1;
+    const maxScrollLeft = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    const next = {
+      hasOverflow,
+      atStart: !hasOverflow || scroller.scrollLeft <= 1,
+      atEnd: !hasOverflow || scroller.scrollLeft >= maxScrollLeft - 1,
+    };
+    setScrollState((current) =>
+      current.hasOverflow === next.hasOverflow &&
+      current.atStart === next.atStart &&
+      current.atEnd === next.atEnd
+        ? current
+        : next,
+    );
+  }, []);
+  const revealActiveTab = useCallback(() => {
+    if (activeId === undefined) return;
+    const scroller = scrollerRef.current;
+    const tab = tabRefs.current.get(activeId);
+    if (scroller === null || tab === undefined) return;
+    const scrollerBounds = scroller.getBoundingClientRect();
+    const tabBounds = tab.getBoundingClientRect();
+    if (tabBounds.left < scrollerBounds.left) {
+      scroller.scrollTo({
+        left: scroller.scrollLeft - (scrollerBounds.left - tabBounds.left),
+        behavior: "auto",
+      });
+    } else if (tabBounds.right > scrollerBounds.right) {
+      scroller.scrollTo({
+        left: scroller.scrollLeft + (tabBounds.right - scrollerBounds.right),
+        behavior: "auto",
+      });
+    }
+  }, [activeId]);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (scroller === null) return;
+    const syncLayout = () => {
+      revealActiveTab();
+      updateScrollState();
+    };
+    const resizeObserver = new ResizeObserver(syncLayout);
+    const root = rootRef.current;
+    if (root !== null) resizeObserver.observe(root);
+    resizeObserver.observe(scroller);
+    for (const tab of tabRefs.current.values()) {
+      resizeObserver.observe(tab);
+    }
+    scroller.addEventListener("scroll", updateScrollState, { passive: true });
+    syncLayout();
+    return () => {
+      resizeObserver.disconnect();
+      scroller.removeEventListener("scroll", updateScrollState);
+    };
+  }, [project.containers, revealActiveTab, updateScrollState]);
+
+  const moveFocus = (nextIndex: number) => {
+    const normalized = Math.max(0, Math.min(project.containers.length - 1, nextIndex));
+    const next = project.containers[normalized];
+    if (next !== undefined) {
+      onActivate(next.id);
+      tabRefs.current.get(next.id)?.focus({ preventScroll: true });
+    }
+  };
+  const handleKeyDown = (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    containerId: string,
+    index: number,
+  ) => {
+    if (disabled) return;
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      moveFocus(index - 1);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      moveFocus(index + 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      moveFocus(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      moveFocus(project.containers.length - 1);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onActivate(containerId);
+    }
+  };
+
+  if (project.containers.length === 0) {
+    return <span className="viewport-control__empty">表示する候補がありません</span>;
+  }
+  return (
+    <div
+      ref={rootRef}
+      className="candidate-tabs"
+      data-overflow={scrollState.hasOverflow ? "true" : "false"}
+    >
+      {scrollState.hasOverflow ? (
+        <button
+          className="candidate-tabs__scroll"
+          type="button"
+          aria-label="候補タブを左へスクロール"
+          disabled={disabled || scrollState.atStart}
+          onClick={() => scrollerRef.current?.scrollBy({ left: -220, behavior: "smooth" })}
+        >
+          ‹
+        </button>
+      ) : null}
+      <div
+        ref={scrollerRef}
+        className="candidate-tabs__list"
+        role="tablist"
+        aria-label="表示する荷室"
+      >
+        {project.containers.map((container, index) => (
+          <button
+            key={container.id}
+            ref={(element) => {
+              if (element === null) tabRefs.current.delete(container.id);
+              else tabRefs.current.set(container.id, element);
+            }}
+            id={`scene-container-tab-${index}`}
+            role="tab"
+            type="button"
+            aria-controls="scene-viewport-canvas"
+            aria-selected={container.id === activeId}
+            aria-label={`${container.name}（ID: ${container.id}）`}
+            title={`${container.name} — ${container.id}`}
+            disabled={disabled}
+            tabIndex={container.id === activeId ? 0 : -1}
+            onClick={() => onActivate(container.id)}
+            onKeyDown={(event) => handleKeyDown(event, container.id, index)}
+          >
+            {container.name}
+          </button>
+        ))}
+      </div>
+      {scrollState.hasOverflow ? (
+        <button
+          className="candidate-tabs__scroll"
+          type="button"
+          aria-label="候補タブを右へスクロール"
+          disabled={disabled || scrollState.atEnd}
+          onClick={() => scrollerRef.current?.scrollBy({ left: 220, behavior: "smooth" })}
+        >
+          ›
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export function SceneWorkspace({
   externalInteractionActive,
   forceInitialRenderError = false,
@@ -69,6 +252,7 @@ export function SceneWorkspace({
   historyRevision,
   onBusyChange,
   onOpenCargoEditor,
+  onOpenUsageRequirements,
   onProjectCommit,
   onRendererError,
   onRendererReady,
@@ -78,6 +262,7 @@ export function SceneWorkspace({
   const [selectedContainerId, setSelectedContainerId] = useState<string>();
   const [placementInteractionActive, setPlacementInteractionActive] = useState(false);
   const [canvasDragActive, setCanvasDragActive] = useState(false);
+  const [physicalDialogOpen, setPhysicalDialogOpen] = useState(false);
   const [selectedCargoId, setSelectedCargoId] = useState<string>();
   const [cargoQuery, setCargoQuery] = useState("");
   const [canvasStatus, setCanvasStatus] = useState("");
@@ -90,6 +275,25 @@ export function SceneWorkspace({
     (container) => container.id === selectedContainerId,
   );
   const effectiveContainerId = selectedContainer?.id ?? project.containers[0]?.id;
+  const previousEffectiveContainerIdRef = useRef(effectiveContainerId);
+  const physicalValidationController = usePhysicalValidationWorker(
+    project,
+    effectiveContainerId,
+  );
+
+  useEffect(() => {
+    if (previousEffectiveContainerIdRef.current === effectiveContainerId) return;
+    previousEffectiveContainerIdRef.current = effectiveContainerId;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setSelectedCargoId(undefined);
+      setCanvasStatus("");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveContainerId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,6 +344,63 @@ export function SceneWorkspace({
     [effectiveContainerId, project, stagingOverrides],
   );
   const projection = projectionResult?.ok === true ? projectionResult.projection : null;
+
+  useEffect(() => {
+    if (projection === null || effectiveContainerId === undefined) return;
+    const container = project.containers.find(
+      (candidate) => candidate.id === effectiveContainerId,
+    );
+    if (container === undefined) return;
+    const projectedStaged = projection.cargoes.filter(
+      (candidate) => candidate.kind === "staged",
+    );
+    if (projectedStaged.length === 0) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setStagingOverrides((current) => {
+        let changed = false;
+        const next = { ...current };
+        for (const projected of projectedStaged) {
+          const cargo = project.cargoes.find(
+            (candidate) => candidate.id === projected.cargoId,
+          );
+          if (cargo === undefined) continue;
+          const existing = current[cargo.id];
+          if (
+            existing !== undefined &&
+            projectSceneStagingAnchor(cargo, container, existing) !== undefined
+          ) {
+            continue;
+          }
+          const anchor = encodeSceneStagingAnchor(
+            cargo,
+            container,
+            projected.orientation,
+            projected.positionMm,
+            existing?.side,
+          );
+          if (anchor === undefined) continue;
+          const previous = existing;
+          if (
+            previous === undefined ||
+            previous.orientation !== anchor.orientation ||
+            previous.side !== anchor.side ||
+            previous.gapMm !== anchor.gapMm ||
+            previous.tangentCenterDelta2Mm !== anchor.tangentCenterDelta2Mm ||
+            previous.zMm !== anchor.zMm
+          ) {
+            next[cargo.id] = anchor;
+            changed = true;
+          }
+        }
+        return changed ? next : current;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [effectiveContainerId, project.cargoes, project.containers, projection]);
   const placementCount =
     effectiveContainerId === undefined
       ? 0
@@ -184,7 +445,8 @@ export function SceneWorkspace({
     nextXOrientation !== undefined &&
     selectedCargo !== undefined &&
     !isUprightOnlyOrientationPolicy(selectedCargo.allowedOrientations);
-  const interactionActive = placementInteractionActive || canvasDragActive;
+  const interactionActive =
+    placementInteractionActive || canvasDragActive || physicalDialogOpen;
   const coordinateActionDisabled =
     externalInteractionActive ||
     interactionActive ||
@@ -253,6 +515,16 @@ export function SceneWorkspace({
     setSelectedCargoId(cargoId);
     setCanvasStatus("");
   }, []);
+
+  const handleContainerActivation = useCallback((containerId: string) => {
+    if (interactionActive || externalInteractionActive) {
+      setCanvasStatus("開いている操作を完了すると候補を切り替えられます。");
+      return;
+    }
+    if (containerId === effectiveContainerId) return;
+    setSelectedContainerId(containerId);
+    setCanvasStatus("");
+  }, [effectiveContainerId, externalInteractionActive, interactionActive]);
 
   const handleCargoDragStateChange = useCallback((active: boolean) => {
     setCanvasDragActive(active);
@@ -394,13 +666,18 @@ export function SceneWorkspace({
           nextPosition,
         );
         if (footprintDisposition === "outside") {
-          setStagingOverrides((current) => ({
-            ...current,
-            [cargoId]: {
-              orientation: projectedCargo.orientation,
-              positionMm: nextPosition,
-            },
-          }));
+          setStagingOverrides((current) => {
+            const anchor = encodeSceneStagingAnchor(
+              cargo,
+              container,
+              projectedCargo.orientation,
+              nextPosition,
+              current[cargoId]?.side,
+            );
+            return anchor === undefined
+              ? current
+              : { ...current, [cargoId]: anchor };
+          });
           setCanvasStatus(
             `${cargo.name}を荷室外の作業スペースへ移動しました。この位置は現在の作業中だけ保持されます。`,
           );
@@ -441,7 +718,7 @@ export function SceneWorkspace({
           footprintDisposition === "partial"
             ? `${cargo.name}を境界外の修正途中配置として保存しました。物理判定を再計算しています。`
             : preview.state === "single-support"
-              ? `${cargo.name}を単独支持としてX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ配置しました。構造強度と安定性は未確認です。`
+              ? `${cargo.name}を単独支持としてX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ配置しました。物理判定を再計算しています。`
               : preview.state === "support-conditions-unverified"
                 ? `${cargo.name}をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ配置しました。支持条件は未確認として保存されます。`
             : `${cargo.name}を荷室内のX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ配置しました。物理判定の再計算を開始しました。`,
@@ -502,13 +779,18 @@ export function SceneWorkspace({
               "CLPが更新されたため配置を削除できませんでした。元の配置を確認してやり直してください。",
           };
         }
-        setStagingOverrides((current) => ({
-          ...current,
-          [cargoId]: {
-            orientation: placement.orientation,
-            positionMm: nextPosition,
-          },
-        }));
+        setStagingOverrides((current) => {
+          const anchor = encodeSceneStagingAnchor(
+            cargo,
+            container,
+            placement.orientation,
+            nextPosition,
+            current[cargoId]?.side,
+          );
+          return anchor === undefined
+            ? current
+            : { ...current, [cargoId]: anchor };
+        });
         setCanvasStatus(
           `${cargo.name}を荷室の床面から完全に外へ移動したため、配置を削除して荷室外の作業スペースへ移しました。`,
         );
@@ -544,7 +826,7 @@ export function SceneWorkspace({
       }
       setCanvasStatus(
         preview.state === "single-support"
-          ? `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動し、単独支持として保存しました。構造強度と安定性は未確認です。`
+          ? `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動し、単独支持として保存しました。物理判定を再計算しています。`
           : preview.state === "support-conditions-unverified"
             ? `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動しました。支持条件は未確認として保存されます。`
             : `配置をX ${nextPosition.xMm}・Y ${nextPosition.yMm}・Z ${nextPosition.zMm} mmへ移動しました。物理判定の再計算を開始しました。`,
@@ -602,26 +884,22 @@ export function SceneWorkspace({
         );
         return;
       }
-      if (
-        stagedCargoOverlapsContainerFloor(
+      setStagingOverrides((current) => {
+        const currentAnchor = current[selectedCargoId] ?? encodeSceneStagingAnchor(
           cargo,
-          rotationProjection.positionMm,
-          nextOrientation,
           container,
-        )
-      ) {
-        setCanvasStatus(
-          `${cargo.name}はこの位置で${axis}軸回転すると荷室と一部重なるため、回転しませんでした。荷室から離して再度操作してください。`,
+          rotationProjection.orientation,
+          rotationProjection.positionMm,
         );
-        return;
-      }
-      setStagingOverrides((current) => ({
-        ...current,
-        [selectedCargoId]: {
+        if (currentAnchor === undefined) return current;
+        const anchor: SceneStagingOverride = {
+          ...currentAnchor,
           orientation: nextOrientation,
-          positionMm: rotationProjection.positionMm,
-        },
-      }));
+        };
+        return projectSceneStagingAnchor(cargo, container, anchor) === undefined
+          ? current
+          : { ...current, [selectedCargoId]: anchor };
+      });
       setCanvasStatus(
         `${cargo.name}を荷室外の作業スペースで${axis}軸中心に90°回転しました。この向きは現在の作業中だけ保持されます。`,
       );
@@ -676,37 +954,20 @@ export function SceneWorkspace({
 
       {rendererMounted ? (
         <ThreeViewport
-          topOverlay={project.containers.length === 0 ? (
-            <span className="viewport-control__empty">表示する候補がありません</span>
-          ) : (
-            <label className="viewport-control" htmlFor="scene-container-select">
-              <span>候補</span>
-              <select
-                id="scene-container-select"
-                aria-label="表示する候補"
-                value={effectiveContainerId}
-                disabled={interactionActive || externalInteractionActive}
-                aria-describedby="scene-container-select-lock"
-                onChange={(event) => {
-                  if (!interactionActive) {
-                    setSelectedContainerId(event.target.value);
-                    setCanvasStatus("");
-                  }
-                }}
-              >
-                {project.containers.map((container) => (
-                  <option key={container.id} value={container.id}>{container.name}</option>
-                ))}
-              </select>
-              <span className="visually-hidden" id="scene-container-select-lock">
-                配置の編集・削除確認・3D移動中、または別のCLP操作中は候補を切り替えられません。
-              </span>
-            </label>
+          topOverlay={(
+            <CandidateTabs
+              activeId={effectiveContainerId}
+              disabled={interactionActive || externalInteractionActive}
+              onActivate={handleContainerActivation}
+              project={project}
+            />
           )}
-          bottomOverlay={project.cargoes.length === 0 ? (
-            <span className="viewport-control__empty">積荷を登録すると、ここから操作対象を選べます</span>
-          ) : (
+          bottomOverlay={(
             <div className="viewport-control viewport-control--cargo">
+              {project.cargoes.length === 0 ? (
+                <span className="viewport-control__empty">積荷を登録すると、ここから操作対象を選べます</span>
+              ) : (
+                <>
               <label className="visually-hidden" htmlFor="scene-cargo-search">積荷を検索</label>
               <input
                 id="scene-cargo-search"
@@ -744,11 +1005,123 @@ export function SceneWorkspace({
               <span className="viewport-control__count" aria-live="polite">
                 {filteredCargoes.length}/{project.cargoes.length}件
               </span>
+                </>
+              )}
+              <div className="viewport-context-actions" aria-live="polite">
+                {selectedCargo === undefined ? (
+                  <p className="viewport-context-actions__empty">積荷を選択すると操作を表示します。</p>
+                ) : (
+                  <>
+                    <div className="viewport-context-actions__summary">
+                      <strong>{selectedCargo.name}</strong>
+                      <span>
+                        {selectedAnyPlacement === undefined
+                          ? "荷室外（未配置）"
+                          : selectedOtherContainer === undefined
+                            ? `現在の候補 — X ${selectedAnyPlacement.positionMm.xMm} / Y ${selectedAnyPlacement.positionMm.yMm} / Z ${selectedAnyPlacement.positionMm.zMm} mm`
+                            : `${selectedOtherContainer.name}に配置 — X ${selectedAnyPlacement.positionMm.xMm} / Y ${selectedAnyPlacement.positionMm.yMm} / Z ${selectedAnyPlacement.positionMm.zMm} mm`}
+                      </span>
+                      {selectedPresentation === undefined ? null : (
+                        <span className="visually-hidden">
+                          X奥行 {selectedPresentation.depthMm} mm、Y横幅 {selectedPresentation.widthMm} mm、Z高さ {selectedPresentation.heightMm} mm
+                        </span>
+                      )}
+                    </div>
+                    <div className="viewport-context-actions__buttons">
+                      {selectedOtherContainer !== undefined ? (
+                        <button
+                          id="scene-selection-show-container"
+                          type="button"
+                          aria-disabled={externalInteractionActive || interactionActive ? true : undefined}
+                          onClick={() => handleContainerActivation(selectedOtherContainer.id)}
+                        >
+                          {selectedOtherContainer.name}を表示
+                        </button>
+                      ) : (
+                        <button
+                          id="scene-selection-coordinate-action"
+                          type="button"
+                          aria-disabled={coordinateActionDisabled ? true : undefined}
+                          onClick={() => {
+                            if (selectedCargoId === undefined) return;
+                            if (coordinateActionDisabled) {
+                              setCanvasStatus(coordinateActionReason ?? "現在は配置を編集できません。");
+                              return;
+                            }
+                            placementPanelRef.current?.openCoordinatesForCargo(selectedCargoId);
+                          }}
+                        >
+                          {selectedAnyPlacement === undefined ? "座標を入力して配置" : "座標を微調整"}
+                        </button>
+                      )}
+                      <button
+                        id="scene-selection-edit-cargo"
+                        type="button"
+                        aria-disabled={externalInteractionActive || interactionActive ? true : undefined}
+                        onClick={() => {
+                          if (externalInteractionActive || interactionActive) {
+                            setCanvasStatus("開いている操作を完了すると積荷情報を編集できます。");
+                            return;
+                          }
+                          onOpenCargoEditor({ kind: "edit", cargoId: selectedCargo.id });
+                        }}
+                      >
+                        積荷情報を編集
+                      </button>
+                      {selectedPlacement !== undefined ? (
+                        <button
+                          id="scene-selection-remove-placement"
+                          type="button"
+                          aria-disabled={externalInteractionActive || interactionActive ? true : undefined}
+                          onClick={() => {
+                            if (externalInteractionActive || interactionActive) {
+                              setCanvasStatus("開いている操作を完了すると荷室から外せます。");
+                              return;
+                            }
+                            placementPanelRef.current?.openDeleteForCargo(selectedCargo.id);
+                          }}
+                        >
+                          荷室から外す
+                        </button>
+                      ) : null}
+                      {selectedAnyPlacement === undefined ? (
+                        <button
+                          id="scene-selection-delete-cargo"
+                          className="danger-button"
+                          type="button"
+                          aria-disabled={externalInteractionActive || interactionActive ? true : undefined}
+                          onClick={() => {
+                            if (externalInteractionActive || interactionActive) {
+                              setCanvasStatus("開いている操作を完了すると積荷を削除できます。");
+                              return;
+                            }
+                            onOpenCargoEditor({ kind: "delete", cargoId: selectedCargo.id });
+                          }}
+                        >
+                          積荷自体を削除
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
           forceInitialRenderError={forceInitialRenderError}
           historyControls={<ProjectHistoryControls {...historyControls} compact />}
-          interactionDisabled={externalInteractionActive || placementInteractionActive}
+          validationControl={(
+            <PhysicalValidationLamp
+              controller={physicalValidationController}
+              disabled={externalInteractionActive || interactionActive}
+              onOpen={() => setPhysicalDialogOpen(true)}
+              project={project}
+            />
+          )}
+          interactionDisabled={
+            externalInteractionActive ||
+            placementInteractionActive ||
+            physicalDialogOpen
+          }
           onCargoDragCancel={handleCargoDragCancel}
           onCargoDragCommit={handleCargoDragCommit}
           onCargoDragPreview={handleCargoDragPreview}
@@ -820,153 +1193,6 @@ export function SceneWorkspace({
         ) : null}
       </div>
 
-      <section
-        className="scene-selection-card"
-        aria-labelledby="placement-panel-title"
-        aria-current={selectedCargo === undefined ? undefined : true}
-      >
-          <h4 id="placement-panel-title" className="visually-hidden">配置</h4>
-          {selectedCargo === undefined ? (
-            <p className="scene-selection-card__empty">
-              3D表示または下部の検索・一覧から積荷を選ぶと、情報と編集操作を表示します。
-            </p>
-          ) : (
-            <div className="scene-selection-card__content">
-              <div className="scene-selection-card__heading">
-                <h4 className="scene-selection-card__cargo-name">
-                  {selectedCargo.name}
-                </h4>
-                <p className="scene-selection-card__state">
-                  {selectedAnyPlacement === undefined
-                    ? "荷室外（未配置）"
-                    : selectedOtherContainer === undefined
-                      ? "現在の候補に配置済み"
-                      : `${selectedOtherContainer.name}に配置済み`}
-                </p>
-              </div>
-              <div className="scene-selection-card__facts">
-                {selectedPresentation === undefined ? null : (
-                  <p className="scene-selection-card__size placement-list__size">
-                    {selectedPresentation.sizeCopy}
-                  </p>
-                )}
-                {selectedAnyPlacement !== undefined ? (
-                  <dl className="scene-selection-card__position placement-list__position">
-                    <div>
-                      <dt>X</dt>
-                      <dd>{selectedAnyPlacement.positionMm.xMm} mm</dd>
-                    </div>
-                    <div>
-                      <dt>Y</dt>
-                      <dd>{selectedAnyPlacement.positionMm.yMm} mm</dd>
-                    </div>
-                    <div>
-                      <dt>Z</dt>
-                      <dd>{selectedAnyPlacement.positionMm.zMm} mm</dd>
-                    </div>
-                  </dl>
-                ) : (
-                  <p className="scene-selection-card__position-note">
-                    位置と向きは現在の作業中だけ保持されます。
-                  </p>
-                )}
-              </div>
-              {selectedAnyPlacement !== undefined ? (
-                <>
-                  <details className="scene-selection-card__details">
-                    <summary>保存上の詳細</summary>
-                    <p>保存上の向きコード: {selectedAnyPlacement.orientation}</p>
-                    <p>保存位置: {placementPositionCopy(selectedAnyPlacement.positionMm)}</p>
-                  </details>
-                </>
-              ) : null}
-              <div className="scene-selection-card__actions">
-                {selectedOtherContainer === undefined ? null : (
-                  <button
-                    id="scene-selection-remove-placement"
-                    type="button"
-                    aria-disabled={externalInteractionActive || interactionActive ? true : undefined}
-                    onClick={() => {
-                      if (externalInteractionActive || interactionActive) {
-                        setCanvasStatus("別のCLP操作または保存処理の完了後に候補を切り替えられます。");
-                        return;
-                      }
-                      setSelectedContainerId(selectedOtherContainer.id);
-                      setCanvasStatus(`${selectedOtherContainer.name}へ切り替えました。`);
-                    }}
-                  >
-                    {selectedOtherContainer.name}を表示
-                  </button>
-                )}
-                <button
-                  id="scene-selection-coordinate-action"
-                  className="scene-selection-card__action"
-                  type="button"
-                  aria-disabled={coordinateActionDisabled ? true : undefined}
-                  aria-describedby={
-                    coordinateActionReason === undefined
-                      ? undefined
-                      : "scene-selection-coordinate-lock"
-                  }
-                  onClick={() => {
-                    if (selectedCargoId === undefined) return;
-                    if (coordinateActionDisabled) {
-                      setCanvasStatus(coordinateActionReason ?? "現在は配置を編集できません。");
-                      return;
-                    }
-                    placementPanelRef.current?.openCoordinatesForCargo(selectedCargoId);
-                  }}
-                >
-                  {selectedAnyPlacement === undefined
-                    ? "座標を入力して配置"
-                    : "座標を微調整"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onOpenCargoEditor({ kind: "edit", cargoId: selectedCargo.id })}
-                >
-                  積荷情報を編集
-                </button>
-                {selectedPlacement === undefined ? null : (
-                  <button
-                    type="button"
-                    onClick={() => placementPanelRef.current?.openDeleteForCargo(selectedCargo.id)}
-                  >
-                    荷室から外す
-                  </button>
-                )}
-                <button
-                  className={selectedAnyPlacement === undefined ? "danger-button" : undefined}
-                  type="button"
-                  aria-disabled={selectedAnyPlacement === undefined ? undefined : true}
-                  aria-describedby={selectedAnyPlacement === undefined ? undefined : "scene-selection-delete-lock"}
-                  onClick={() => {
-                    if (selectedAnyPlacement !== undefined) {
-                      setCanvasStatus("配置中の積荷です。先に荷室から外してください。");
-                      return;
-                    }
-                    onOpenCargoEditor({ kind: "delete", cargoId: selectedCargo.id });
-                  }}
-                >
-                  積荷自体を削除
-                </button>
-              </div>
-              <p
-                id="scene-selection-coordinate-lock"
-                className="scene-selection-card__reason"
-                data-active={coordinateActionReason === undefined ? "false" : "true"}
-              >
-                {coordinateActionReason ?? "配置操作は利用できます。"}
-              </p>
-              {selectedAnyPlacement === undefined ? null : (
-                <p id="scene-selection-delete-lock" className="scene-selection-card__reason">
-                  積荷自体を削除するには先に荷室から外してください。
-                </p>
-              )}
-            </div>
-          )}
-      </section>
-
       <div className="scene-workspace__secondary">
         <PlacementEditorDialog
           ref={placementPanelRef}
@@ -981,7 +1207,15 @@ export function SceneWorkspace({
         />
 
         <PhysicalValidationPanel
-          containerId={effectiveContainerId}
+          controller={physicalValidationController}
+          onClose={() => setPhysicalDialogOpen(false)}
+          onOpenUsageRequirements={() => {
+            setPhysicalDialogOpen(false);
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(onOpenUsageRequirements);
+            });
+          }}
+          open={physicalDialogOpen}
           project={project}
         />
       </div>
