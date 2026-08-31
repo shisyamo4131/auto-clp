@@ -44,7 +44,7 @@ $automaticProposalPanelPath = Join-Path $resolvedProject 'src/ui/AutomaticPropos
 $automaticProposalBrowserTestPath = Join-Path $resolvedProject 'tests/browser/automatic-proposal.spec.ts'
 $automaticProposalPerformanceTestPath = Join-Path $resolvedProject 'tests/browser/automatic-proposal-performance.spec.ts'
 $automaticProposalEvidenceIndexPath = Join-Path $resolvedProject 'docs/evidence/README.md'
-$automaticProposalEvidencePath = Join-Path $resolvedProject 'docs/evidence/automatic-proposal-ap08-1226b082.md'
+$automaticProposalEvidencePath = Join-Path $resolvedProject 'docs/evidence/automatic-proposal-ap08-733b250.md'
 $appPath = Join-Path $resolvedProject 'src/App.tsx'
 $geometryPath = Join-Path $resolvedProject 'src/domain/geometry.ts'
 $placementValidationPath = Join-Path $resolvedProject 'src/domain/validation.ts'
@@ -753,7 +753,7 @@ foreach ($contract in @(
 }
 
 foreach ($requiredText in @(
-    'automatic-proposal-ap08-1226b082.md',
+    'automatic-proposal-ap08-733b250.md',
     '一般端末SLA、実務受入、安全保証ではない'
 )) {
     if (-not $automaticProposalEvidenceIndex.Contains($requiredText)) {
@@ -763,11 +763,12 @@ foreach ($requiredText in @(
 
 foreach ($requiredText in @(
     'CP-AUTO-PROPOSAL-AP08-TEST-001',
-    '1226b082a7bd20bc1e7fcf07af7f793f64163148',
-    '59.7 ms',
-    '48.7 ms',
-    '50.9 ms',
-    '714e9806c35e5965de7a38850e86e950f5b94b4f9dc22aa72db203cb09f5f341',
+    '733b250b188245e510183dca8e4930f0f8eafa87',
+    'automatic-proposal-v2',
+    '57.8 ms',
+    '46.7 ms',
+    '47.5 ms',
+    '386d66e1cd8da39a51d1699a1305a5ca1bcf972c74fd7b8abb0ffe16084f4f39',
     'candidateAttemptCount',
     'requestAttemptCount',
     '"pass":true',

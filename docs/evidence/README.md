@@ -7,7 +7,8 @@
 
 | Area | Record | Classification |
 | --- | --- | --- |
-| 自動提案 AP-08 | [20積荷の実Worker性能・取消記録](automatic-proposal-ap08-1226b082.md) | Windows/headless Chromiumの匿名合成技術証拠。一般端末SLA、実務受入、安全保証ではない |
+| 自動提案 AP-08 | [v2・20積荷の実Worker性能・取消記録](automatic-proposal-ap08-733b250.md) | Windows/headless Chromiumの匿名合成技術証拠。一般端末SLA、実務受入、安全保証ではない |
+| 自動提案 AP-08（履歴） | [v1記録](automatic-proposal-ap08-1226b082.md) | 単独支持reason廃止前のhistorical result hash。現行判定には使わない |
 | Phase 1 UI試用 | [Codex UI-assisted部分観察](phase1-development-ui-trial-8c8ece2.md) | AC-01〜03、通常JSON再読込、WebGL非対応時のZ編集・判定・履歴・端末保存、狭幅、主要focus、consoleの開発補助観察。向き・削除・JSON等はcontrolの有効状態だけを確認。人間・実務利用者受入ではない |
 | Phase 1 UI試用 | [案内付き人間評価](phase1-human-ui-trial-4e6c680.md) | Chrome上で人間が匿名派生ケースの移動・向き・削除・履歴・1 mm支持・床突き抜け・端末保存・JSON往復を完了し、床突き抜け由来の支持不足カスケード不具合を発見。評価者区分と正式fixture、狭幅・Tab・fallbackは未確認 |
 

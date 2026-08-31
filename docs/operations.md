@@ -2,7 +2,7 @@
 
 ## Current Availability
 
-- Approved, implementation pending: 仕様1.2.0・ADR 0026の一行tab候補切替、side-relative荷室外anchor、共有camera、選択積荷の3軸寸法annotation、selector直下の固定context action row、物理判定lamp/dialog、版付き「使用上の重要事項」。実装と回帰が完了するまでは利用可能として案内しない。
+- Implemented scene workspace 1.2.0: Application Bar右端menu、一行scroll tab、cargo-global side-relative荷室外anchor、候補間共有camera、選択積荷の3軸寸法annotation、selector直下の固定context action row、常時判定controllerのlamp/dialog、版付き「使用上の重要事項」を実装した。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
 
 - Implemented viewer-first shell: Application Barにmenu、現在CLP名、小さな3D能力Chipを置き、新規CLP・CLP設定・端末保存・JSONを単一Navigation Drawerへ集約する。CLP設定はdialog、候補selectorはviewport上部、全CLP積荷の名前/ID検索・状態付きselectorはviewport下部overlayとし、3Dの寸法と位置を動かさない。未保存変更付きの新規CLPは破棄確認後、UUID付きの新 `projectId` と空履歴を作るbarrierとし、CLP設定dialogを開く。
 
@@ -12,8 +12,8 @@
 - Implemented foundation: ADR 0004に基づく、一候補へ全積荷を配置する純粋な決定的DFS、目的関数順位、候補点・attempt上限、cutoff/no-complete-plan、未確認理由保持。
 - Implemented transport: 正本Schema・意味検証後だけ探索するone-shot module Worker、固定code、厳格な応答検証、同期fallbackなしのclient、即時terminate取消と遅延・二重応答mask、Appからの実Worker接続。
 - Implemented orchestration, preview, and apply: React非依存の探索session、Project参照・interaction generationのstale判定、取消・retry・遅延結果mask、React hook/panel、Appのbusy・generation開始gate、source相関付き固定copy、25件pageの非永続preview DOM、Schema・意味・物理再検証付きの確認、一括適用、一回のUndo/Redo。Auto CLPの操作はWebGL 2能力確認と初回描画成功後だけ利用できる。
-- Verified technical evidence: AP-08代表規模は、Windows/headless Chromiumの記録環境で実Workerのcold 1回・warm 3回、決定性、main timer/rAF進行、native取消を初期性能gate内で検証した。記録は `evidence/automatic-proposal-ap08-1226b082.md`。一般端末SLA、最低GPU、実務受入、安全保証ではない。
-- Unavailable: 端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上の自由な連続Z移動・取り外し、touch drag、仕様1.2.0の承認済みscene改善（実装完了まで）、積荷画像、デプロイ、クラウド保存、外部API、実運用サポート。
+- Verified technical evidence: AP-08代表規模は、Windows/headless Chromiumの記録環境で `automatic-proposal-v2` のcold 1回・warm 3回、決定性、main timer/rAF進行、native取消を初期性能gate内で検証した。記録は `evidence/automatic-proposal-ap08-733b250.md`。一般端末SLA、最低GPU、実務受入、安全保証ではない。
+- Unavailable: 端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上の自由な連続Z移動・取り外し、touch drag、積荷画像、デプロイ、クラウド保存、外部API、実運用サポート。
 
 未実装機能を利用可能として案内してはならない。
 

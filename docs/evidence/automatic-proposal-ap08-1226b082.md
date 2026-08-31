@@ -1,6 +1,6 @@
 # AP-08 Automatic Proposal Worker and Performance Evidence
 
-- Status: Verified technical evidence
+- Status: Superseded technical evidence — `automatic-proposal-v1` の履歴記録。現行v2は [733b250記録](automatic-proposal-ap08-733b250.md) を参照する。
 - Checkpoint: `CP-AUTO-PROPOSAL-AP08-TEST-001`
 - Product baseline commit: `1226b082a7bd20bc1e7fcf07af7f793f64163148`
 - Recorded: 2026-08-28
