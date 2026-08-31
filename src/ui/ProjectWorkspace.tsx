@@ -713,7 +713,7 @@ function CompactCargoManager({
         </button>
       </div>
       <p className="empty-state">
-        積荷の選択・編集・削除は3D表示内の「操作する積荷」と選択カードから行います。
+        積荷の選択・編集・削除は3D表示内の「操作する積荷」と固定操作欄から行います。
       </p>
     </section>
   );
