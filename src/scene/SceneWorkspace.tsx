@@ -953,17 +953,18 @@ export function SceneWorkspace({
       <h2 id="scene-workspace-title" className="visually-hidden">3D積載作業</h2>
 
       {rendererMounted ? (
-        <ThreeViewport
-          topOverlay={(
+        <>
+          <div className="scene-workspace__candidate-tabs">
             <CandidateTabs
               activeId={effectiveContainerId}
               disabled={interactionActive || externalInteractionActive}
               onActivate={handleContainerActivation}
               project={project}
             />
-          )}
-          bottomOverlay={(
-            <div className="viewport-control viewport-control--cargo">
+          </div>
+          <ThreeViewport
+            bottomOverlay={(
+              <div className="viewport-control viewport-control--cargo">
               {project.cargoes.length === 0 ? (
                 <span className="viewport-control__empty">積荷を登録すると、ここから操作対象を選べます</span>
               ) : (
@@ -1105,75 +1106,76 @@ export function SceneWorkspace({
                   </>
                 )}
               </div>
-            </div>
-          )}
-          forceInitialRenderError={forceInitialRenderError}
-          historyControls={<ProjectHistoryControls {...historyControls} compact />}
-          validationControl={(
-            <PhysicalValidationLamp
-              controller={physicalValidationController}
-              disabled={externalInteractionActive || interactionActive}
-              onOpen={() => setPhysicalDialogOpen(true)}
-              project={project}
-            />
-          )}
-          interactionDisabled={
-            externalInteractionActive ||
-            placementInteractionActive ||
-            physicalDialogOpen
-          }
-          onCargoDragCancel={handleCargoDragCancel}
-          onCargoDragCommit={handleCargoDragCommit}
-          onCargoDragPreview={handleCargoDragPreview}
-          onCargoDragStateChange={handleCargoDragStateChange}
-          onCargoXAxisRotation={() => handleCargoRotation("X")}
-          onCargoZAxisRotation={() => handleCargoRotation("Z")}
-          onRotationUnavailable={setCanvasStatus}
-          onCargoSelectionChange={handleCargoSelectionChange}
-          onRendererError={onRendererError}
-          onRendererReady={onRendererReady}
-          projection={projection}
-          xRotationDisabled={
-            externalInteractionActive ||
-            interactionActive ||
-            selectedProjection === undefined ||
-            !xRotationAllowed
-          }
-          xRotationExplanation={
-            externalInteractionActive
-              ? "別のCLP操作または保存処理の完了後にX軸回転できます。"
-              : canvasDragActive
-              ? "積荷の移動を完了するとX軸回転できます。"
-              : placementInteractionActive
-              ? "配置の編集または削除確認を完了するとX軸回転できます。"
-              : selectedProjection === undefined
-              ? "積荷を選択するとX軸回転できます。"
-              : xRotationAllowed
-                ? "X軸を中心に90°回転します。"
-                : "天地無用のため、X軸回転は利用できません。"
-          }
-          zRotationDisabled={
-            externalInteractionActive ||
-            interactionActive ||
-            selectedProjection === undefined ||
-            !zRotationAllowed
-          }
-          zRotationExplanation={
-            externalInteractionActive
-              ? "別のCLP操作または保存処理の完了後にZ軸回転できます。"
-              : canvasDragActive
-              ? "積荷の移動を完了するとZ軸回転できます。"
-              : placementInteractionActive
-              ? "配置の編集または削除確認を完了するとZ軸回転できます。"
-              : selectedProjection === undefined
-              ? "積荷を選択するとZ軸回転できます。"
-              : zRotationAllowed
-                ? "Z軸を中心に床面上で90°回転します。"
-                : "積荷を選択するとZ軸回転できます。"
-          }
-          selectedCargoId={selectedProjection === undefined ? undefined : selectedCargoId}
-          statusDescriptionId="scene-workspace-status scene-workspace-action-status scene-workspace-interaction-help"
-        />
+              </div>
+            )}
+            forceInitialRenderError={forceInitialRenderError}
+            historyControls={<ProjectHistoryControls {...historyControls} compact />}
+            validationControl={(
+              <PhysicalValidationLamp
+                controller={physicalValidationController}
+                disabled={externalInteractionActive || interactionActive}
+                onOpen={() => setPhysicalDialogOpen(true)}
+                project={project}
+              />
+            )}
+            interactionDisabled={
+              externalInteractionActive ||
+              placementInteractionActive ||
+              physicalDialogOpen
+            }
+            onCargoDragCancel={handleCargoDragCancel}
+            onCargoDragCommit={handleCargoDragCommit}
+            onCargoDragPreview={handleCargoDragPreview}
+            onCargoDragStateChange={handleCargoDragStateChange}
+            onCargoXAxisRotation={() => handleCargoRotation("X")}
+            onCargoZAxisRotation={() => handleCargoRotation("Z")}
+            onRotationUnavailable={setCanvasStatus}
+            onCargoSelectionChange={handleCargoSelectionChange}
+            onRendererError={onRendererError}
+            onRendererReady={onRendererReady}
+            projection={projection}
+            xRotationDisabled={
+              externalInteractionActive ||
+              interactionActive ||
+              selectedProjection === undefined ||
+              !xRotationAllowed
+            }
+            xRotationExplanation={
+              externalInteractionActive
+                ? "別のCLP操作または保存処理の完了後にX軸回転できます。"
+                : canvasDragActive
+                ? "積荷の移動を完了するとX軸回転できます。"
+                : placementInteractionActive
+                ? "配置の編集または削除確認を完了するとX軸回転できます。"
+                : selectedProjection === undefined
+                ? "積荷を選択するとX軸回転できます。"
+                : xRotationAllowed
+                  ? "X軸を中心に90°回転します。"
+                  : "天地無用のため、X軸回転は利用できません。"
+            }
+            zRotationDisabled={
+              externalInteractionActive ||
+              interactionActive ||
+              selectedProjection === undefined ||
+              !zRotationAllowed
+            }
+            zRotationExplanation={
+              externalInteractionActive
+                ? "別のCLP操作または保存処理の完了後にZ軸回転できます。"
+                : canvasDragActive
+                ? "積荷の移動を完了するとZ軸回転できます。"
+                : placementInteractionActive
+                ? "配置の編集または削除確認を完了するとZ軸回転できます。"
+                : selectedProjection === undefined
+                ? "積荷を選択するとZ軸回転できます。"
+                : zRotationAllowed
+                  ? "Z軸を中心に床面上で90°回転します。"
+                  : "積荷を選択するとZ軸回転できます。"
+            }
+            selectedCargoId={selectedProjection === undefined ? undefined : selectedCargoId}
+            statusDescriptionId="scene-workspace-status scene-workspace-action-status scene-workspace-interaction-help"
+          />
+        </>
       ) : null}
 
       <div className="scene-workspace__feedback">

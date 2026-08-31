@@ -124,7 +124,17 @@ async function expectDimensionLabelsInsideCanvas(page: Page) {
   }
 }
 
-test("places the menu at the app-bar right edge and provides 0, 1, and 100 candidate tabs", async ({
+async function canvasDocumentBox(page: Page) {
+  const canvas = page.getByRole("img", {
+    name: "積荷を選択・床面移動できる3Dプレビュー",
+  });
+  const box = await canvas.boundingBox();
+  if (box === null) throw new Error("3D canvas has no bounding box");
+  const scrollY = await page.evaluate<number>("scrollY");
+  return { documentY: box.y + scrollY, height: box.height, width: box.width };
+}
+
+test("places the menu at the app-bar right edge and provides zero and single candidate states", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 740 });
@@ -145,32 +155,77 @@ test("places the menu at the app-bar right edge and provides 0, 1, and 100 candi
   await addContainer(page, "単一候補");
   await expect(page.getByRole("tab")).toHaveCount(1);
   await expect(page.getByRole("tab")).toHaveAttribute("aria-selected", "true");
-
-  await page.locator("input[type='file']").setInputFiles({
-    name: "anonymous-tabs.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(hundredCandidateProject())),
-  });
-  const tabs = page.getByRole("tab");
-  await expect(tabs).toHaveCount(100);
-  await expect(page.locator(".candidate-tabs")).toHaveAttribute("data-overflow", "true");
-  const first = tabs.first();
-  const last = tabs.last();
-  await first.focus();
-  await page.keyboard.press("End");
-  await expect(last).toBeFocused();
-  await expect(last).toHaveAttribute("aria-selected", "true");
-  await page.keyboard.press("Enter");
-  await expect(last).toHaveAttribute("aria-selected", "true");
-  await page.getByRole("button", { name: "候補タブを左へスクロール" }).click();
-  await expect(last).toHaveAttribute("aria-selected", "true");
-  await last.press("Home");
-  await expect(first).toBeFocused();
-  await expect(first).toHaveAttribute("aria-selected", "true");
-  await first.press(" ");
-  await expect(first).toHaveAttribute("aria-selected", "true");
-  expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);
 });
+
+for (const width of [305, 320, 375] as const) {
+  test(`keeps 100 candidate tabs scrollable and outside the viewport at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 740 });
+    await page.goto("/");
+    await page.locator("input[type='file']").setInputFiles({
+      name: "anonymous-tabs.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(hundredCandidateProject())),
+    });
+    const tabs = page.getByRole("tab");
+    const first = tabs.first();
+    const last = tabs.last();
+    const tabShell = page.locator(".candidate-tabs");
+    const candidateTabs = page.locator(".scene-workspace__candidate-tabs");
+    const viewport = page.locator(".viewport");
+    const scrollLeft = page.getByRole("button", { name: "候補タブを左へスクロール" });
+    const scrollRight = page.getByRole("button", { name: "候補タブを右へスクロール" });
+
+    await expect(tabs).toHaveCount(100);
+    await expect(tabShell).toHaveAttribute("data-overflow", "true");
+    await expect(scrollLeft).toBeVisible();
+    await expect(scrollRight).toBeVisible();
+    expect(await viewport.evaluate((element) => element.previousElementSibling?.className)).toBe(
+      "scene-workspace__candidate-tabs",
+    );
+    const tabsBox = await candidateTabs.boundingBox();
+    const tablistBox = await page.getByRole("tablist", { name: "表示する荷室" }).boundingBox();
+    const viewportBox = await viewport.boundingBox();
+    expect(tabsBox).not.toBeNull();
+    expect(tablistBox).not.toBeNull();
+    expect(viewportBox).not.toBeNull();
+    expect(tabsBox!.x).toBeGreaterThanOrEqual(0);
+    expect(tabsBox!.x + tabsBox!.width).toBeLessThanOrEqual(width + 0.5);
+    expect(tablistBox!.x + tablistBox!.width).toBeLessThanOrEqual(width + 0.5);
+    expect(tabsBox!.y + tabsBox!.height).toBeLessThanOrEqual(viewportBox!.y + 0.5);
+
+    await expect(first).toHaveAttribute("aria-selected", "true");
+    const canvasBeforeTabScroll = await canvasDocumentBox(page);
+    await scrollRight.click();
+    await expect(first).toHaveAttribute("aria-selected", "true");
+    await expect.poll(() => canvasDocumentBox(page)).toEqual(canvasBeforeTabScroll);
+    expect(
+      await page.evaluate<boolean>(
+        "document.documentElement.scrollWidth > document.documentElement.clientWidth",
+      ),
+    ).toBe(false);
+
+    if (width === 375) {
+      const second = tabs.nth(1);
+      await second.focus();
+      await expect(second).toBeFocused();
+      await expect(first).toHaveAttribute("aria-selected", "true");
+      await expect(second).toHaveAttribute("aria-selected", "false");
+      await second.press("Enter");
+      await expect(second).toBeFocused();
+      await expect(second).toHaveAttribute("aria-selected", "true");
+      await page.keyboard.press("End");
+      await expect(last).toBeFocused();
+      await expect(last).toHaveAttribute("aria-selected", "true");
+      await last.press("Home");
+      await expect(first).toBeFocused();
+      await expect(first).toHaveAttribute("aria-selected", "true");
+      await first.press(" ");
+      await expect(first).toHaveAttribute("aria-selected", "true");
+    }
+  });
+}
 
 test("shows selected domain dimensions without pointer interception and exposes the fixed action matrix", async ({
   page,
@@ -191,10 +246,29 @@ test("shows selected domain dimensions without pointer interception and exposes 
   const annotation = page.locator(".viewport__dimension-annotations");
   await expect(annotation).toBeVisible();
   await expect(annotation.locator("g")).toHaveCount(3);
-  await expect(annotation).toContainText("X / 奥行 500 mm");
-  await expect(annotation).toContainText("Y / 横幅 400 mm");
-  await expect(annotation).toContainText("Z / 高さ 300 mm");
+  await expect(annotation.locator('g[data-axis="X"] text')).toHaveText("500 mm");
+  await expect(annotation.locator('g[data-axis="Y"] text')).toHaveText("400 mm");
+  await expect(annotation.locator('g[data-axis="Z"] text')).toHaveText("300 mm");
+  await expect(annotation).not.toContainText("奥行");
+  await expect(annotation).not.toContainText("横幅");
+  await expect(annotation).not.toContainText("高さ");
+  await expect(actions.locator(".visually-hidden")).toHaveText(
+    "X奥行 500 mm、Y横幅 400 mm、Z高さ 300 mm",
+  );
+  const startMarker = annotation.locator("#dimension-arrow-start");
+  const endMarker = annotation.locator("#dimension-arrow-end");
+  await expect(startMarker).toHaveAttribute("orient", "auto-start-reverse");
+  await expect(endMarker).toHaveAttribute("orient", "auto");
+  expect(await startMarker.locator("path").getAttribute("d")).toBe(
+    await endMarker.locator("path").getAttribute("d"),
+  );
+  for (const axis of ["X", "Y", "Z"] as const) {
+    const dimensionLine = annotation.locator(`g[data-axis="${axis}"] > line:not(.viewport__dimension-witness)`);
+    await expect(dimensionLine).toHaveAttribute("marker-start", "url(#dimension-arrow-start)");
+    await expect(dimensionLine).toHaveAttribute("marker-end", "url(#dimension-arrow-end)");
+  }
   await expect(annotation).toHaveCSS("pointer-events", "none");
+  await expectDimensionLabelsInsideCanvas(page);
   await expect(actions.getByRole("button", { name: "座標を微調整" })).toBeVisible();
   await expect(actions.getByRole("button", { name: "荷室から外す" })).toBeVisible();
   await expect(actions.getByRole("button", { name: "積荷自体を削除" })).toHaveCount(0);
@@ -235,6 +309,13 @@ test("keeps the physical controller fresh while its dialog is closed", async ({ 
   const lamp = page.locator("#physical-validation-lamp");
   await expect(lamp).toHaveAttribute("data-status", "valid");
   await expect(lamp).toHaveAttribute("aria-label", /不適合0件、未確認0件/);
+  await expect(lamp).toHaveAttribute(
+    "title",
+    /実装済み確認項目内で問題なし.*不適合0件.*未確認0件.*詳細を開く/,
+  );
+  await expect(lamp.locator(".physical-validation-lamp__icon")).toHaveText("✓");
+  expect((await lamp.textContent())?.trim()).toBe("✓");
+  await expect(lamp.getByText("実装済み確認項目内で問題なし", { exact: true })).toHaveCount(0);
   await openPhysicalValidation(page);
   await expect(page.getByRole("dialog", { name: "物理判定" })).toContainText(
     "実装済み確認項目内で問題なし",
@@ -245,6 +326,9 @@ test("keeps the physical controller fresh while its dialog is closed", async ({ 
   await placeCargo(page, "-499");
   await expect(lamp).toHaveAttribute("data-status", "invalid");
   await expect(lamp).toHaveAttribute("aria-label", /不適合1件、未確認0件/);
+  await expect(lamp).toHaveAttribute("title", /不適合.*不適合1件.*未確認0件.*詳細を開く/);
+  await expect(lamp.locator(".physical-validation-lamp__icon")).toHaveText("!");
+  expect((await lamp.textContent())?.trim()).toBe("!");
   await openPhysicalValidation(page);
   await expect(page.getByRole("dialog", { name: "物理判定" })).toContainText("不適合理由（1件）");
 });

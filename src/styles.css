@@ -887,11 +887,6 @@ h1 {
   pointer-events: auto;
 }
 
-.viewport__overlay--top {
-  flex: 1 1 15rem;
-  min-width: 0;
-}
-
 .viewport__overlay--bottom {
   position: absolute;
   right: 0.8rem;
@@ -960,7 +955,7 @@ h1 {
   pointer-events: none;
   gap: 0.6rem;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-end;
 }
 
 .viewport__top-controls > * {
@@ -1882,17 +1877,13 @@ legend {
   margin-left: auto;
 }
 
-.viewport__top-controls {
-  flex-direction: column;
-}
-
-.viewport__overlay--top,
 .viewport__camera-controls {
   width: 100%;
 }
 
-.viewport__overlay--top {
-  flex: 0 0 auto;
+.scene-workspace__candidate-tabs {
+  min-width: 0;
+  padding: 0.8rem 0.8rem 0;
 }
 
 .candidate-tabs {
@@ -2041,11 +2032,12 @@ legend {
 }
 
 .physical-validation-lamp {
-  display: inline-flex;
+  display: grid;
+  width: 2.75rem;
   min-height: 2.75rem;
+  padding: 0.45rem;
   border-color: #6f879c !important;
-  align-items: center;
-  gap: 0.35rem;
+  place-items: center;
 }
 
 .physical-validation-lamp[data-status="valid"] {
@@ -2072,12 +2064,6 @@ legend {
   place-items: center;
   font-weight: 900;
   line-height: 1;
-}
-
-.physical-validation-lamp__label {
-  max-width: 9rem;
-  font-size: 0.7rem;
-  line-height: 1.15;
 }
 
 .modal-shell .physical-validation {
@@ -2159,17 +2145,8 @@ legend {
     height: calc(clamp(380px, 68vh, 620px) + var(--viewport-bottom-safe-area));
   }
 
-  .viewport__top-controls {
-    flex-direction: column-reverse;
-  }
-
-  .viewport__overlay--top,
   .viewport__camera-controls {
     width: 100%;
-  }
-
-  .viewport__overlay--top {
-    flex: 0 0 auto;
   }
 
   .viewport-control {
@@ -2195,15 +2172,6 @@ legend {
 
   .viewport-context-actions__buttons button {
     flex: 1 1 8rem;
-  }
-
-  .physical-validation-lamp__label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
   }
 
   .viewport-control > span:first-child {

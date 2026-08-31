@@ -149,6 +149,87 @@ async function installControllableWorker(page: Page) {
   });
 }
 
+test("keeps none, loading, unverified, and unavailable lamp states icon-only and distinct", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    type LampWorkerMode = "pending" | "unavailable" | "unverified";
+    const browserGlobal = globalThis as unknown as {
+      Worker: unknown;
+      __lampWorkerMode: LampWorkerMode;
+    };
+    browserGlobal.__lampWorkerMode = "pending";
+    browserGlobal.Worker = class LampStateWorker {
+      onmessage: ((event: { readonly data: unknown }) => void) | null = null;
+      onerror: (() => void) | null = null;
+      onmessageerror: (() => void) | null = null;
+
+      postMessage(request: { readonly generation: number; readonly type: string }) {
+        if (request.type !== "evaluate") return;
+        const mode = browserGlobal.__lampWorkerMode;
+        if (mode === "pending") return;
+        queueMicrotask(() => {
+          this.onmessage?.({
+            data: mode === "unverified"
+              ? {
+                  type: "evaluation-ready",
+                  generation: request.generation,
+                  summary: {
+                    kind: "evaluated",
+                    status: "unverified",
+                    invalidCount: 0,
+                    unverifiedCount: 1,
+                    placementCount: 0,
+                  },
+                }
+              : {
+                  type: "worker-failed",
+                  generation: request.generation,
+                  code: "engine-failure",
+                },
+          });
+        });
+      }
+
+      terminate() {}
+    };
+  });
+  await page.goto("/");
+  const lamp = page.locator("#physical-validation-lamp");
+  const icon = lamp.locator(".physical-validation-lamp__icon");
+
+  await expect(lamp).toHaveAttribute("data-status", "neutral");
+  await expect(icon).toHaveText("○");
+  await expect(lamp).toHaveAttribute("title", /判定対象なし.*詳細を開く/);
+  expect((await lamp.textContent())?.trim()).toBe("○");
+
+  await addContainer(page, "lamp状態候補");
+  await expect(lamp).toHaveAttribute("data-status", "neutral");
+  await expect(icon).toHaveText("↻");
+  await expect(lamp).toHaveAttribute("title", /判定中.*詳細を開く/);
+  expect((await lamp.textContent())?.trim()).toBe("↻");
+
+  await page.evaluate(() => {
+    (globalThis as unknown as { __lampWorkerMode: string }).__lampWorkerMode = "unverified";
+  });
+  await addCargo(page, "lamp未確認積荷");
+  await expect(lamp).toHaveAttribute("data-status", "unverified");
+  await expect(icon).toHaveText("△");
+  await expect(lamp).toHaveAttribute("aria-label", /未確認.*不適合0件、未確認1件.*詳細を開く/);
+  await expect(lamp).toHaveAttribute("title", /未確認.*不適合0件.*未確認1件.*詳細を開く/);
+  expect((await lamp.textContent())?.trim()).toBe("△");
+
+  await page.evaluate(() => {
+    (globalThis as unknown as { __lampWorkerMode: string }).__lampWorkerMode = "unavailable";
+  });
+  await addCargo(page, "lamp判定不能積荷");
+  await expect(lamp).toHaveAttribute("data-status", "invalid");
+  await expect(icon).toHaveText("×");
+  await expect(lamp).toHaveAttribute("aria-label", /判定不能.*詳細を開く/);
+  await expect(lamp).toHaveAttribute("title", /判定不能.*詳細を開く/);
+  expect((await lamp.textContent())?.trim()).toBe("×");
+});
+
 test("masks old generations and ignores terminated workers and stale page requestIds", async ({
   page,
 }) => {

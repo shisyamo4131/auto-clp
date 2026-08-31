@@ -736,16 +736,15 @@ test("keeps touch selection form fallback and narrow modal layouts", async ({ pa
   await addContainer(page, "touch候補");
   for (const width of [305, 320, 375, 720]) {
     await page.setViewportSize({ width, height: 700 });
-    const toolbar = await page.locator(".viewport__camera-controls").boundingBox();
-    const candidate = await page.locator(".viewport__overlay--top").boundingBox();
-    if (toolbar === null || candidate === null) throw new Error("viewport top controls are missing");
+    const candidate = await page.locator(".scene-workspace__candidate-tabs").boundingBox();
+    const viewport = await page.locator(".viewport").boundingBox();
+    const canvas = await page.getByRole("img", { name: previewName }).boundingBox();
+    if (viewport === null || candidate === null || canvas === null) {
+      throw new Error("external candidate tabs or viewport are missing");
+    }
     expect(candidate.height).toBeLessThanOrEqual(64);
-    const separated =
-      toolbar.x + toolbar.width <= candidate.x ||
-      candidate.x + candidate.width <= toolbar.x ||
-      toolbar.y + toolbar.height <= candidate.y ||
-      candidate.y + candidate.height <= toolbar.y;
-    expect(separated).toBe(true);
+    expect(candidate.y + candidate.height).toBeLessThanOrEqual(viewport.y + 0.5);
+    expect(canvas.y).toBeGreaterThanOrEqual(viewport.y - 0.5);
     expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);
   }
   await page.setViewportSize({ width: 305, height: 700 });

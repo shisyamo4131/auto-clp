@@ -6,7 +6,7 @@
 - Related roadmap: [Auto CLP roadmap](../roadmaps/auto-clp.md)
 - Related specification: [Planned Scene Extensions](../specification.md#planned-scene-extensions)
 - Related decisions: [ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0017](../decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0025](../decisions/0025-viewer-first-application-shell.md)、[ADR 0026](../decisions/0026-tabbed-scene-annotations-and-validation-dialog.md)
-- Authority: 複数候補workspaceの確定要件は仕様1.2.0とADR 0026を優先する。積荷画像部分は引き続き設計提案であり、実装承認ではない。
+- Authority: 複数候補workspaceの確定要件は仕様1.2.1とADR 0026・0027を優先する。積荷画像部分は引き続き設計提案であり、実装承認ではない。
 
 ## Purpose and Boundaries
 
@@ -15,7 +15,7 @@
 1. 複数のコンテナ・車両候補を切り替えても、荷室外に避けた未配置積荷の関係を維持する作業面。
 2. 寸法が似た積荷を人が識別しやすくする、任意の写真・識別画像。
 
-複数候補workspaceは2026-08-31に仕様1.2.0・ADR 0026として採用され、tab、side-relative anchor、共有cameraへ確定した。積荷画像はアプリ、Schema、保存データ、進捗を変更しない未承認提案である。外部通信、実データ、画像URL、クラウド保存は対象外である。
+複数候補workspaceは2026-08-31に仕様1.2.0・ADR 0026として採用され、仕様1.2.1・ADR 0027でtabの欄外配置、簡略寸法、icon-only判定lampへ改良した。積荷画像はアプリ、Schema、保存データ、進捗を変更しない未承認提案である。外部通信、実データ、画像URL、クラウド保存は対象外である。
 
 ## Confirmed Repository Facts
 
@@ -184,7 +184,7 @@ session-only画像prototypeもSchema変更なしで撤去できる。永続画�
 
 ## Decisions Still Requiring Approval Before Implementation
 
-複数候補の4辺anchor、一行tablist、共有cameraは仕様1.2.0・ADR 0026で承認済みである。次の画像事項だけは未承認のまま残る。
+複数候補の4辺anchor、一行tablist、共有cameraは仕様1.2.0・ADR 0026で承認済みであり、tabの欄外配置、簡略寸法、icon-only判定lampは仕様1.2.1・ADR 0027で改良済みである。次の画像事項だけは未承認のまま残る。
 
 1. 積荷画像を選択中の識別補助とするか、物理面へ結び付けるか。全1,000積荷への画像を必須とするか。session画像でもCLP identity・cargo ID・generationによる所有権とbarrier cleanupを必須とするか。
 2. 永続画像を採用する場合のSchema形、対応形式、pixel/byte上限、追加・置換・削除のUndo/Redo、原子的annex cleanup、lossless救出・確認付きlossy downgradeをどうするか。

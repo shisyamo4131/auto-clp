@@ -59,7 +59,6 @@ interface ThreeViewportProps {
   readonly zRotationExplanation: string;
   readonly selectedCargoId?: string;
   readonly statusDescriptionId: string;
-  readonly topOverlay?: ReactNode;
 }
 
 interface CameraViewState {
@@ -349,7 +348,6 @@ export function ThreeViewport({
   zRotationExplanation,
   selectedCargoId,
   statusDescriptionId,
-  topOverlay,
 }: ThreeViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -598,17 +596,17 @@ export function ThreeViewport({
               {
                 axis: "X" as const,
                 adjacent: adjacent[0]!,
-                label: `X / 奥行 ${selected.dimensionsMm.xMm} mm`,
+                label: `${selected.dimensionsMm.xMm} mm`,
               },
               {
                 axis: "Y" as const,
                 adjacent: adjacent[1]!,
-                label: `Y / 横幅 ${selected.dimensionsMm.yMm} mm`,
+                label: `${selected.dimensionsMm.yMm} mm`,
               },
               {
                 axis: "Z" as const,
                 adjacent: adjacent[2]!,
-                label: `Z / 高さ ${selected.dimensionsMm.zMm} mm`,
+                label: `${selected.dimensionsMm.zMm} mm`,
               },
             ];
             const lineOffset = 18;
@@ -1115,9 +1113,6 @@ export function ThreeViewport({
   return (
     <div className="viewport" ref={containerRef}>
       <div className="viewport__top-controls">
-        {topOverlay === undefined ? null : (
-          <div className="viewport__overlay viewport__overlay--top">{topOverlay}</div>
-        )}
         <div
           className="viewport__camera-controls"
           role="group"
@@ -1177,7 +1172,7 @@ export function ThreeViewport({
         >
           <defs>
             <marker id="dimension-arrow-start" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto-start-reverse">
-              <path d="M8 0 0 4l8 4Z" />
+              <path d="M0 0 8 4 0 8Z" />
             </marker>
             <marker id="dimension-arrow-end" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
               <path d="M0 0 8 4 0 8Z" />

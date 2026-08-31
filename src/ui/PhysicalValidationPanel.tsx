@@ -108,15 +108,17 @@ export function PhysicalValidationLamp({
   const statusLabel = summary.status === "valid"
     ? "実装済み確認項目内で問題なし"
     : summary.statusLabel;
-  const icon = lampStatus === "valid"
-    ? "✓"
-    : lampStatus === "unverified"
-      ? "△"
-      : summary.status === "unavailable"
-        ? "×"
-        : lampStatus === "invalid"
-          ? "!"
-          : "○";
+  const icon = summary.status === "none"
+    ? "○"
+    : summary.status === "loading"
+      ? "↻"
+      : summary.status === "valid"
+        ? "✓"
+        : summary.status === "unverified"
+          ? "△"
+          : summary.status === "unavailable"
+            ? "×"
+            : "!";
   return (
     <button
       id="physical-validation-lamp"
@@ -126,13 +128,12 @@ export function PhysicalValidationLamp({
       aria-haspopup="dialog"
       aria-disabled={disabled ? true : undefined}
       aria-label={`物理判定: ${statusLabel}。不適合${invalidCount}件、未確認${unverifiedCount}件。詳細を開く`}
-      title={`${statusLabel} — 不適合${invalidCount}件・未確認${unverifiedCount}件`}
+      title={`${statusLabel} — 不適合${invalidCount}件・未確認${unverifiedCount}件。詳細を開く`}
       onClick={() => {
         if (!disabled) onOpen();
       }}
     >
       <span aria-hidden="true" className="physical-validation-lamp__icon">{icon}</span>
-      <span className="physical-validation-lamp__label">{statusLabel}</span>
     </button>
   );
 }

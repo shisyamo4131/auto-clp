@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-08-31
-- Specification version: 1.2.0
+- Specification version: 1.2.1
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -71,8 +71,8 @@
 
 - 3D viewportを通常画面の主作業面とし、最上部のApplication Barは左から `Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chip、Navigation Drawerを開くmenu buttonの順に置く。menu buttonはDOM上も視覚上も右端とし、現在のCLP名はCLP設定dialogの入口とする。
 - 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`は一つのNavigation Drawerへまとめる。常設の保存cardとCLP設定cardは置かない。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
-- 旧3D候補cardの外枠と見出しは置かない。viewport上端へ候補を一行のsemantic tablistとして置き、候補数または名前が幅を超える場合はExcelのsheet tab相当の左右buttonと横scrollで表示範囲だけを移動する。tabは折り返さず、active tabを表示範囲へ入れ、左右矢印・Home・End・Enter・Space、touch・trackpadを提供する。tabの選択だけが候補を切り替え、scroll buttonは候補を切り替えない。
-- Undo/Redo、物理判定lamp、X/Z回転、拡大・縮小、全体表示toolbarはtablistと別の固定rowへ置く。物理判定lampは判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とし、色以外に異なるicon、状態名、不適合・未確認件数を持つaccessible buttonとする。クリックすると現在候補の理由をmodal dialogで開き、閉じても判定を継続する。
+- 旧3D候補cardの外枠と見出しは置かない。候補tablistは3D viewportの直前、canvasおよびviewport overlayの外側上部へ一行で置き、候補数または名前が幅を超える場合はExcelのsheet tab相当の左右buttonと横scrollで表示範囲だけを移動する。tabは折り返さず、active tabを表示範囲へ入れ、左右矢印・Home・End・Enter・Space、touch・trackpadを提供する。tabの選択だけが候補を切り替え、scroll buttonは候補を切り替えない。tablistはcanvasを覆わず、その表示・scrollでcanvasの寸法またはpage位置を変えない。
+- Undo/Redo、物理判定lamp、X/Z回転、拡大・縮小、全体表示toolbarはviewport内上段の固定rowへ置く。物理判定lampの常設表示は、判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とする状態別のicon-only buttonとし、色だけに依存しない。accessible nameとtitleに状態名、不適合・未確認件数、詳細を開く操作を持たせる。クリックすると現在候補の理由をmodal dialogで開き、閉じても判定を継続する。
 - 全CLP積荷を名前またはIDで検索する入力、未配置・現在候補・他候補の状態付き積荷selector、件数、その下の固定context action rowをviewport下部へoverlayする。未選択でもrowの高さを予約し、選択積荷名、配置状態、配置済みなら正確な最小角X/Y/Zをcompactに示す。未配置では座標入力・積荷編集・積荷削除、現在候補へ配置済みでは座標微調整・積荷編集・荷室から外す、他候補へ配置済みでは配置先候補の表示・積荷編集を提供する。配置取り外しと積荷定義削除は別button、別確認、別履歴とする。
 - 305 / 320 / 375 pxではtablist、toolbar、検索・selector・action rowを必要な範囲で複数rowへし、水平overflowを起こさず、overlay外にcanvas操作領域を残す。可視の「荷室外の作業スペースN件」は置かないが、非視覚statusと積荷selectorの状態copyは維持する。overlayの出現、選択、検索結果、操作statusはcanvasの寸法またはページ上の位置を変えない。
 - compactな操作status、自動配置案の順で3D viewportの後へ置く。積荷を選択しただけの成功通知と一般的な非保証注意をviewport直下へ重複表示しない。drag、回転不可、失敗など次の判断に必要な操作statusは維持し、物理判定理由はlampから開くdialogへ集約する。積荷とコンテナ・車両候補の登録cardは維持する。
@@ -95,7 +95,7 @@
 - 配置済み・荷室外の積荷は、X軸またはZ軸を中心に90度回転できる。Z軸遷移は `LWH↔WLH`、`LHW↔HLW`、`WHL↔HWL` とし、床面回転を禁止する積荷設定は設けない。X軸遷移は `LWH↔LHW`、`WLH↔WHL`、`HLW↔HWL` とし、天地無用の積荷だけ無効にする。配置済み回転は最小角を保持した一回の配置更新、荷室外回転はsession状態だけの変更とする。荷室外回転後のX/Y占有範囲が荷室床面と正面積で重なる場合は回転を拒否して直前poseを保持する。積荷寸法または天地無用の編集で既存session poseが同条件を失った場合は、新しい向き適用後寸法で完全に荷室外となる決定的初期位置へ戻す。
 - 積荷編集画面の向き設定は「天地無用」checkboxだけとし、6種類の許可向きcheckboxを表示しない。天地無用ONは `LWH` / `WLH`、OFFは全6向きを `allowedOrientations` へ保存する。旧JSON・端末保存はSchema・意味・物理preflight合格後、`LWH` / `WLH` だけの非空部分集合をONの2向き、それ以外の有効な非空部分集合をOFFの全6向きへ正規化し、次回保存で永続化する。横倒し配置中に天地無用ONへ変更する保存は拒否する。Schema `0.1.0` は変更しない。
 - X/Z回転はUndo/Redo、`＋` / `－` と同じviewport固定toolbarへ常時表示する44 px以上のicon-only buttonとする。両軸とも一本の軸線へ矢印が回り込む同じSVGを使い、X軸iconだけをZ軸iconに対して90度回して軸を区別し、回転前後でbutton位置を変えない。積荷未選択、操作中、天地無用のX軸では該当操作をfocus可能な `aria-disabled` controlとし、axis別のaccessible name、説明参照、title、操作statusで理由を示す。使用可は `＋` / `－` と同じ青緑の強調枠と暗い背景、使用不可は暗い低彩度の枠・前景とし、紫色の塗り分けやopacity差だけに依存しない。
-- 選択積荷cardは廃止する。選択中のscene積荷だけに、現在向き適用後の正規整数寸法を `X / 奥行`、`Y / 横幅`、`Z / 高さ` の3軸寸法線・矢印・mm値としてviewport overlayへ表示し、選択解除、候補切替、積荷削除、projection error、WebGL障害で消す。寸法はmesh scaleから逆算せずdomain値を使い、線とlabelはpointer hitを奪わず、screen reader向けの同値は下段の選択説明へ一度だけ持つ。寸法annotationと固定action rowでは寸法prefix `大きさ:` を表示しない。
+- 選択積荷cardは廃止する。選択中のscene積荷だけに、現在向き適用後の正規整数寸法を3軸の寸法線・両端から外向きの矢印・`整数 mm` だけの可視labelとしてviewport overlayへ表示し、選択解除、候補切替、積荷削除、projection error、WebGL障害で消す。可視labelには `X` / `Y` / `Z`、奥行・横幅・高さを重ねて表示せず、screen reader向けの同値は下段の選択説明へ一度だけ持つ。寸法はmesh scaleから逆算せずdomain値を使い、線とlabelはpointer hitを奪わない。寸法annotationと固定action rowでは寸法prefix `大きさ:` を表示しない。
 - 多数積荷でページを縦へ伸ばす積荷・配置一覧と常設編集フォームは主作業面へ置かない。積荷追加入口、全積荷select、固定context action rowを維持し、積荷定義と配置座標は共有modal shell上の別dialog、別draft、別保存履歴として編集する。正確な座標と保存向き詳細は座標dialogへ移す。drag中もaction rowの位置を変えず該当操作を無効にする。
 - dialogはfocus trap、背景のinert化、内部scroll、305 / 320 / 375 px対応、scrollbar shift防止、`preventScroll`付きfocus復帰を備える。clean状態のEscapeは閉じ、dirty状態は破棄確認を要求する。dialog表示中は履歴、3D drag・回転、候補切替、永続化・JSON読込、自動提案をbusy gateで拒否する。
 - 配置取り外しと積荷定義削除は別確認、別履歴としcascadeしない。配置取り外し後も積荷を選択したまま、既知の有効な外側poseがあれば維持し、なければ決定的gridへ戻す。配置中の積荷定義削除は拒否する。積荷削除のUndo復元はgridかつ未選択とする。配置で使用中の向きを許可集合から外す編集は拒否し、寸法・重量・支持条件の編集は配置を保持して物理判定を再計算する。
