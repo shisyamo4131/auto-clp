@@ -21,7 +21,7 @@
 - キーボード操作と305、320、375 px幅で、主要操作、理由、確認、focusを失わない。
 - fine-pointer床面dragはno-opを先行し、両軸に正の共通長があるpartialを修正途中配置として保存し、面・辺・点接触を含むoutsideだけを荷室外作業状態にする。status出現でviewport位置を変えない。
 - 全積荷を検索・選択でき、他候補配置は所有候補へ切り替えてから扱う。積荷定義と配置は別dialog・別履歴で、配置取り外しと積荷削除をcascadeしない。
-- Application Barにmenu、現在CLP名、3D能力Chipがあり、保存・読込・JSON・新規CLP・CLP設定はNavigation Drawerに集約される。3D viewport欄外上部の候補tablistとviewport下部の積荷検索・selectorはcanvasの位置を動かさず、toolbarやdragと重ならない。
+- Application Barにmenu、現在CLP名、3D能力Chipがあり、保存・読込・JSON・新規CLP・CLP設定・積荷追加・候補追加・ヘルプはNavigation Drawerに集約される。追加buttonは通常画面に重複しない。Drawer外clickはDrawerだけを閉じ、背面操作を発火させずmenu focusとpage scrollを復元する。3D viewport欄外上部の候補tablistとviewport下部の積荷検索・selectorはcanvasの位置を動かさず、toolbarやdragと重ならない。
 - 未保存変更がある新規CLP作成は破棄確認を要求し、作成後は新しい `projectId` と空CLP設定dialogを提供する。新規作成はUndo対象ではなく、旧履歴を破棄するbarrierとする。
 - dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は固定toolbar上の同一glyphを90度差とaccessible nameで区別でき、積荷editorの向き設定は天地無用だけとする。Z軸床面回転は常に利用でき、天地無用はXだけを無効にする。
 
@@ -84,7 +84,7 @@
 1. AC-02のCLPで上段Xを501 mmへ変更し、取り消し、やり直し、取り消しを行う。最終CLPはX=500 mmとなる。
 2. 「端末へ保存」後にCLPを変更し、「端末保存を読込」する。保存時の正規CLPを復元し、履歴、未保存入力、選択、camera、旧判定結果をリセットして再判定する。
 3. `auto-clp-project-0.1.0.json` を書き出し、CLPを変更してから再読込する。Schema `0.1.0` の正規CLPだけを復元し、履歴、camera、判定結果をファイルへ含めない。
-4. WebGL 2非対応状態では、CLP編集、配置、物理判定、自動提案、履歴、端末保存・読込・削除、JSON読込を利用できず、通常作業面とcanvasを表示しない。「現在の作業データ」は障害直前まで画面が保持する内容、「端末に保存済みのデータ」は最後に「端末へ保存」した時点でその後の未保存作業を含まない内容として区別する。各固定出力名と復旧後のJSON読込を操作前に表示し、クリック後はダウンロード開始、対象ファイル名、ダウンロード一覧またはフォルダーの確認を持続表示する。読み取り専用ダウンロードはCLP・履歴・保存内容を変更しない。
+4. WebGL 2非対応状態では、CLP編集、配置、物理判定、履歴、端末保存・読込・削除、JSON読込を利用できず、通常作業面とcanvasを表示しない。「現在の作業データ」は障害直前まで画面が保持する内容、「端末に保存済みのデータ」は最後に「端末へ保存」した時点でその後の未保存作業を含まない内容として区別する。各固定出力名と復旧後のJSON読込を操作前に表示し、クリック後はダウンロード開始、対象ファイル名、ダウンロード一覧またはフォルダーの確認を持続表示する。読み取り専用ダウンロードはCLP・履歴・保存内容を変更しない。
 5. 初期Three.js描画失敗と描画後のWebGLコンテキスト喪失でも同じ全面停止へ移行し、現在CLPを保持する。WebGL 2が回復した状態で再読込した場合だけ通常操作へ戻る。
 
 ## AC-05 Tabbed Scene, Selection Annotation, and Validation Dialog
@@ -97,6 +97,7 @@
 6. 初回または内容版更新後は操作開始前に「使用上の重要事項」を確認し、Drawerと物理判定dialogから再表示できる。確認状態はCLP、JSON、端末保存、履歴へ入らず、法的な利用規約同意とは表示しない。
 7. 305 / 320 / 375 px、候補0 / 1 / 100件、積荷0 / 1 / 1,000件、keyboard、touch、WebGL context lossでoverlay重複、page横overflow、focus消失、stale判定、他候補配置の重複表示がない。
 8. Drawerの `操作方法` は独立dialogを開き、積荷選択、視点回転・平行移動、wheel、toolbar、積荷drag・回転、Undo/Redo、判定、座標・積荷編集とtouch境界を正しく案内する。dialogはCLP・履歴・保存・sceneを変更せず、背景inert、Tab trap、Escape・close、menu buttonへのfocusとpage scroll復帰、狭幅内部scrollを維持する。現在候補の配置は `現在の座標` と明記する。
+9. 通常画面とDrawerには自動配置提案panel、開始、取消、適用入口がなく、通常起動で自動提案Workerを開始しない。Drawerの `積荷を追加` と `候補を追加` は既存editorを開き、save/cancel/dirty/busy/history/limit/focusを維持する。Drawer外click、close button、Escapeは同じclose境界を使い、未実行の新規CLP・端末保存削除確認を取り消す。
 
 ## Evidence and Completion
 
@@ -104,6 +105,7 @@
 - 仕様1.2.0自動証拠: typecheck、lint、単体28ファイル952件、ブラウザ81件、buildに合格。AC-05の候補0/1/100、keyboard・overflow、4辺anchor・候補寸法差A→B→A、共有camera、3軸annotation、固定action行列、lamp/dialog、使用事項の保存成功・session-only失敗、下段safe areaとconsole error 0を回帰した。これは人間または実務利用者受入の証拠ではない。
 - 仕様1.2.1自動証拠: typecheck、lint、単体28ファイル952件、ブラウザ89件、buildに合格。tablistが3D viewport外の直前にありcanvasと非重複であること、狭幅・多数候補のscrollでcanvas文書位置と寸法を変えないこと、`整数 mm`だけの可視寸法と外向きmarker契約、icon-only lampの状態別icon・accessible name・件数・最新dialogを回帰した。camera平行移動はsource contractと実画面確認に分け、headless browserの自動証拠とは扱わない。これは人間または実務利用者受入の証拠ではない。
 - 仕様1.2.2自動証拠: typecheck、lint、単体28ファイル952件、ブラウザ93件、buildに合格。Drawerと独立操作方法dialog、案内copy、背景inert、focus trap、Escape・closeのfocus・scroll復帰、CLP・履歴・scene非変更、305 / 320 / 375 pxの内部scroll・水平overflowなし、`4 × 4` marker契約、`現在の座標` copyを回帰した。寸法矢印の見た目と案内文の理解は差分中心の人間確認を残す。
+- 仕様1.3.0自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ83件、buildに合格。通常画面からの自動配置提案panel・入口・Worker開始の除外、Drawer内だけの積荷・候補追加、既存editor、初期・保存・取消focus、busy・dirty・上限、Drawer外clickの背面操作遮断・scroll・menu focus、305 / 320 / 375 pxを回帰した。将来技術資産の自動提案browser 10件は通常suiteから非実行snapshotとして明示分離し、再公開時にpanelとWorker lifecycleを再接続するまで実行可能または現行製品受入済みとは扱わない。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
 - canvas追加操作の判断: AC-01で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。
@@ -133,9 +135,9 @@
 - Keyboard/touch/narrow-width observations:
 - Defect IDs and final pass/fail:
 
-## Automatic Proposal Synthetic Cases
+## Future Automatic Proposal Retained Technical Cases
 
-自動提案は、以下を実務利用者受入とは分けた技術受入として段階的に検証する。純粋探索、未適用preview、確認付き一括適用と一回のUndo/Redoを実装済みで、AP-08代表規模の実時間測定も記録環境で完了した。
+自動提案はPhase 1の通常画面では未提供である。以下は将来再公開時の再qualificationに使う、実務利用者受入とは分けた保持済み技術資産のケースである。純粋探索、未適用preview、確認付き一括適用と一回のUndo/Redoの試作、およびAP-08代表規模の記録環境測定を保存するが、現行機能または製品受入として扱わない。
 
 - AP-01 Candidate objective: 共通して隙間0、積荷1個 `50×50×50 mm`、1,000 g、`LWH` のみを使う。容積比較は `small=200×100×100` が `large=300×100×100` に勝つ。同容積比較は `floor-small=100×100×200` が `floor-large=200×100×100` に勝つ。同容積・床面積比較は `length-small=100×200×100` が `length-large=200×100×100` に勝つ。同寸法比較は入力配列と表示名を入れ替えても `container-a` が `container-b` に勝つ。各候補の開口と耐荷重は積荷を許容する値とする。
 - AP-02 Complete plan only: 隙間0、候補 `200×100×100 mm`、開口 `100×100 mm`、耐荷重2,000 g、積荷 `cargo-a` と `cargo-b` を各 `100×100×100 mm`、1,000 g、`LWH` のみとする。期待案は `(0,0,0)` と `(100,0,0)` に各積荷を一度ずつ置く。同じ出力から一方欠落、重複、未知ID、候補混在を作り、適用境界ですべて拒否する。候補長さを199 mmにした派生fixtureでは部分案を適用不可とする。
@@ -148,11 +150,11 @@
 
 空入力fixtureは、積荷0・候補ありと両方0を `no-cargo`、積荷あり・候補0を `no-candidates` とし、attempt 0、previewなし、適用不可、履歴変更なしを期待する。
 
-### Automatic Proposal Automated Mapping
+### Future Automatic Proposal Automated Mapping
 
 - AP-01、AP-02、AP-03、AP-04、AP-05、AP-07: domain、Worker protocol/client、session/viewの単体試験が目的順位、完全案、単独支持時の未確認0件、cutoff、完全案なし、決定性と入力順非依存を検証する。
-- AP-06: `src/application/automatic-proposal-apply.test.ts` と `tests/browser/automatic-proposal.spec.ts` が、実Workerの完全案、未適用表示、Project・履歴の非変更、適用直前の再検証、常時確認、配置だけの一括置換、同一案no-op、一回のUndo/Redo、通常編集・未保存入力・保存・JSON置換によるstale、遅延結果破棄を検証する。
-- AP-08: `tests/browser/automatic-proposal-performance.spec.ts` が、WebGL 2利用可能状態でproduction module Workerを使う20積荷fixtureのcold 1回・warm 3回、各210 attempts、同一result hash、main timer/rAF進行、別fresh UI pageでのnative `terminate()` と取消表示、250 ms late-response mask、consoleを検証する。`automatic-proposal-v2` の記録は [AP-08技術証拠](evidence/automatic-proposal-ap08-733b250.md) に保存する。既存browser試験のcontrolled Worker取消、keyboard、305/320/375 px回帰は独立して維持する。
-- 空入力: 同browser試験が実Workerの `no-cargo` と `no-candidates`、attempt 0相当の固定表示、Project・履歴の非変更を検証する。
+- AP-06: `src/application/automatic-proposal-apply.test.ts` は現行単体回帰を維持する。future-only browserファイルは非実行snapshotであり、実Workerの完全案、未適用表示、Project・履歴の非変更、適用直前の再検証、常時確認、配置だけの一括置換、同一案no-op、一回のUndo/Redo、通常編集・未保存入力・保存・JSON置換によるstale、遅延結果破棄を再公開時に再接続して検証する。
+- AP-08: future-only performanceファイルは非実行snapshot、[AP-08技術証拠](evidence/automatic-proposal-ap08-733b250.md) は過去の記録である。production module Workerを使う20積荷fixtureのcold 1回・warm 3回、各210 attempts、同一result hash、main timer/rAF進行、native取消、250 ms late-response mask、consoleの契約を保持するが、再公開checkpointで専用収集設定とharnessを用意するまで再実行可能とは扱わない。記録環境以外の性能や現行UIの受入へ転用しない。
+- 空入力: domain、Worker、session/viewの単体試験で `no-cargo` と `no-candidates`、attempt 0相当、Project・履歴の非変更を維持する。
 
 AP-04の上限試験は、`1..N` の順序付きattempt記述子を生成して指定ordinalだけを成功させられる純粋なtest infrastructureを使う。これはProjectの設定や利用者入力へ公開しない。AP-08の記録にはcommit SHA、algorithm・Schema版、browser/Playwright/OS、CPU、logical processor数、RAM、電源状態、cold/warmと反復番号、viewport、WebGL状態、積荷・候補数、選択候補、候補別・要求attempt数、結果・cutoff源、配置・不適合・未確認件数、結果hash、開始・完了・経過、取消・Worker終了・取消遅延、timer/rAF回数と最大遅延、console warning/error、合否、備考を含める。記録環境以外の性能、headed実行、最低GPU、実務受入は未検証である。

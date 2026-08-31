@@ -1,40 +1,22 @@
 import { expect, test, type Page } from "./fixtures";
-import { openPhysicalValidation, openProjectSettings } from "./ui-helpers";
+import {
+  addCargoFromDrawer,
+  addContainerFromDrawer,
+  openPhysicalValidation,
+  openProjectSettings,
+  type CargoInput,
+  type ContainerInput,
+} from "./ui-helpers";
 
-interface CargoInput {
-  readonly lengthMm?: string;
-  readonly widthMm?: string;
-  readonly heightMm?: string;
-  readonly massKg?: string;
-  readonly canSupportCargo?: boolean;
+interface AcceptanceCargoInput extends CargoInput {
   readonly onlyLwh?: boolean;
 }
 
-interface ContainerInput {
-  readonly lengthMm?: string;
-  readonly widthMm?: string;
-  readonly heightMm?: string;
-  readonly openingWidthMm?: string;
-  readonly openingHeightMm?: string;
-  readonly payloadKg?: string;
-}
-
-async function addCargo(page: Page, name: string, input: CargoInput = {}) {
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await page.getByLabel("積荷名").fill(name);
-  await page.getByLabel("長さ", { exact: true }).fill(input.lengthMm ?? "100");
-  await page.getByLabel("幅", { exact: true }).fill(input.widthMm ?? "100");
-  await page.getByLabel("高さ", { exact: true }).fill(input.heightMm ?? "100");
-  await page.getByLabel("重量").fill(input.massKg ?? "1");
-  if (input.canSupportCargo === true) {
-    await page
-      .getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる")
-      .check();
-  }
-  if (input.onlyLwh === true) {
-    await page.getByLabel(/天地無用/).check();
-  }
-  await page.getByRole("button", { name: "積荷を保存" }).click();
+async function addCargo(page: Page, name: string, input: AcceptanceCargoInput = {}) {
+  await addCargoFromDrawer(page, name, {
+    ...input,
+    uprightOnly: input.onlyLwh,
+  });
 }
 
 async function addContainer(
@@ -42,15 +24,7 @@ async function addContainer(
   name: string,
   input: ContainerInput = {},
 ) {
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill(input.lengthMm ?? "500");
-  await page.getByLabel("内部幅").fill(input.widthMm ?? "500");
-  await page.getByLabel("内部高さ").fill(input.heightMm ?? "500");
-  await page.getByLabel("開口幅").fill(input.openingWidthMm ?? "500");
-  await page.getByLabel("開口高さ").fill(input.openingHeightMm ?? "500");
-  await page.getByLabel("総耐荷重").fill(input.payloadKg ?? "100");
-  await page.getByRole("button", { name: "候補を保存" }).click();
+  await addContainerFromDrawer(page, name, input);
 }
 
 async function placeCargo(

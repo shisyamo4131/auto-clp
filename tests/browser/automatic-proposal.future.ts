@@ -1,3 +1,4 @@
+// Future-only non-executable snapshot. Reconnect the proposal panel/Worker and add an opt-in testMatch before reuse.
 import { expect, test, type Page } from "./fixtures";
 import { openPersistenceDrawer, openProjectSettings, saveProjectName } from "./ui-helpers";
 

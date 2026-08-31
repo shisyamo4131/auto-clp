@@ -1,26 +1,17 @@
 import { expect, test, type Page } from "./fixtures";
-import { activateContainer, saveProjectName } from "./ui-helpers";
+import {
+  activateContainer,
+  addCargoFromDrawer,
+  addContainerFromDrawer,
+  saveProjectName,
+} from "./ui-helpers";
 
 async function addCargo(page: Page, name: string) {
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await page.getByLabel("積荷名").fill(name);
-  await page.getByLabel("長さ", { exact: true }).fill("100");
-  await page.getByLabel("幅", { exact: true }).fill("100");
-  await page.getByLabel("高さ", { exact: true }).fill("100");
-  await page.getByLabel("重量").fill("1");
-  await page.getByRole("button", { name: "積荷を保存" }).click();
+  await addCargoFromDrawer(page, name);
 }
 
 async function addContainer(page: Page, name: string) {
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill("500");
-  await page.getByLabel("内部幅").fill("500");
-  await page.getByLabel("内部高さ").fill("500");
-  await page.getByLabel("開口幅").fill("500");
-  await page.getByLabel("開口高さ").fill("500");
-  await page.getByLabel("総耐荷重").fill("100");
-  await page.getByRole("button", { name: "候補を保存" }).click();
+  await addContainerFromDrawer(page, name);
 }
 
 test("undoes and redoes project, cargo, container, placement, and removal", async ({ page }) => {

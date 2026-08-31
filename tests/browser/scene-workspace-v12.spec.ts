@@ -1,26 +1,28 @@
 import { expect, test, type Page } from "./fixtures";
-import { openPersistenceDrawer, openPhysicalValidation } from "./ui-helpers";
+import {
+  addCargoFromDrawer,
+  addContainerFromDrawer,
+  openPersistenceDrawer,
+  openPhysicalValidation,
+} from "./ui-helpers";
 
 async function addCargo(page: Page, name = "仕様12積荷") {
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await page.getByLabel("積荷名").fill(name);
-  await page.getByLabel("長さ", { exact: true }).fill("500");
-  await page.getByLabel("幅", { exact: true }).fill("400");
-  await page.getByLabel("高さ", { exact: true }).fill("300");
-  await page.getByLabel("重量").fill("1");
-  await page.getByRole("button", { name: "積荷を保存" }).click();
+  await addCargoFromDrawer(page, name, {
+    lengthMm: "500",
+    widthMm: "400",
+    heightMm: "300",
+  });
 }
 
 async function addContainer(page: Page, name: string) {
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill("6000");
-  await page.getByLabel("内部幅").fill("2400");
-  await page.getByLabel("内部高さ").fill("2600");
-  await page.getByLabel("開口幅").fill("2400");
-  await page.getByLabel("開口高さ").fill("2500");
-  await page.getByLabel("総耐荷重").fill("100000");
-  await page.getByRole("button", { name: "候補を保存" }).click();
+  await addContainerFromDrawer(page, name, {
+    lengthMm: "6000",
+    widthMm: "2400",
+    heightMm: "2600",
+    openingWidthMm: "2400",
+    openingHeightMm: "2500",
+    payloadKg: "100000",
+  });
 }
 
 async function placeCargo(page: Page, xMm = "100") {
@@ -384,7 +386,8 @@ test("allows session-only continuation when usage preference storage fails", asy
   await expect(dialog).toContainText("このセッションでは続行できますが、次回は再確認します");
   await dialog.getByRole("button", { name: "このセッションだけ続ける" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "積荷を追加" })).toBeEnabled();
+  await expect(page.locator("#app-navigation-button")).toBeEnabled();
+  await expect(page.getByRole("button", { name: "積荷を追加", exact: true })).toHaveCount(0);
   await page.reload();
   await expect(dialog).toBeVisible();
 });

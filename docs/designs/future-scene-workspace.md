@@ -6,7 +6,7 @@
 - Related roadmap: [Auto CLP roadmap](../roadmaps/auto-clp.md)
 - Related specification: [Planned Scene Extensions](../specification.md#planned-scene-extensions)
 - Related decisions: [ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0017](../decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0025](../decisions/0025-viewer-first-application-shell.md)、[ADR 0026](../decisions/0026-tabbed-scene-annotations-and-validation-dialog.md)
-- Authority: 複数候補workspaceの確定要件は仕様1.2.2とADR 0026〜0028を優先する。積荷画像部分は引き続き設計提案であり、実装承認ではない。
+- Authority: 複数候補workspaceの確定要件は仕様1.3.0とADR 0026〜0029を優先する。自動配置提案はPhase 1の通常UIから延期された将来技術資産、積荷画像部分は引き続き設計提案であり、いずれも本書だけでは実装承認にならない。
 
 ## Purpose and Boundaries
 

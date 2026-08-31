@@ -4,6 +4,7 @@
 
 ### Changed
 
+- 仕様1.3.0・ADR 0029で、積荷追加と候補追加の入口をNavigation Drawerへ集約し、Drawer背景のクリックで背面操作を発火させず閉じるようにした。自動配置提案は実装時期が後になるためPhase 1の通常ページと通常起動経路から外し、domain・Worker・session/view・panel・tests・AP-08証拠は将来技術資産として保持する。単体28ファイル952件と現行browser83件を回帰し、将来自動提案browser 10件は再公開時に再接続する非実行snapshotとして通常suiteから明示分離した。Schema 0.1.0と進捗98%は変更しない。
 - 仕様1.2.2・ADR 0028で、Navigation Drawerから開く独立した `操作方法` dialogを追加し、3Dの積荷選択、視点回転・平行移動、移動・回転、履歴、判定、下段操作を案内する。寸法矢印を `4 × 4` へ縮小し、現在候補の配置copyを `現在の座標` へ改める。`使用上の重要事項`、CLP、履歴、Schema 0.1.0、進捗98%は変更しない。
 - 仕様1.2.1・ADR 0027で、荷室tabを3D viewportの欄外上部へ移し、選択積荷の可視寸法を`整数 mm`と両端外向き矢印へ簡略化し、物理判定lampを状態別icon-only表示へ変更した。状態名・件数・理由・非保証説明はaccessible name、title、dialogへ維持する。camera平行移動、Schema 0.1.0、進捗98%は変更しない。
 - 仕様1.2.0・ADR 0026の右端menu、一行scroll tab、side-relative荷室外anchor、候補間共有camera、選択積荷の3軸寸法annotation、selector直下の固定context action row、物理判定lamp/dialog、版付き「使用上の重要事項」を実装した。単独支持共通の積荷別 `structure-stability-unverified` はdomain・Worker・自動提案から廃止し、複数支持・隙間・張り出し等の `support-conditions-unverified` は維持する。`automatic-proposal-v2` のAP-08証拠を再記録し、Schema 0.1.0と進捗98%は不変。
@@ -145,6 +146,7 @@
 
 ### Removed
 
+- Phase 1の通常ページに表示していた自動配置提案panel・開始・適用入口、およびメインページ上の積荷追加・候補追加入口。将来自動配置の技術資産と各追加機能自体は削除しない。
 - WebGL 2非対応時にフォーム、物理判定、履歴、保存・再読込、自動提案を利用できた通常操作fallback。
 - 寸法上矩形開口に収まる積荷ごとに生成していた `opening-path-unverified` 理由と重複メッセージ。
 

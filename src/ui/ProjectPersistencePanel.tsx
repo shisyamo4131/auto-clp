@@ -47,9 +47,11 @@ interface ProjectPersistencePanelProps {
   readonly onInteractionChange: (active: boolean) => void;
   readonly onLoadDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
   readonly onSaveDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
+  readonly onOpenCargoEditor: () => void;
   readonly onOpenChange: (open: boolean) => void;
   readonly onOpenProjectSettings: () => void;
   readonly onOpenUsageRequirements: () => void;
+  readonly onRequestContainerAdd: () => void;
   readonly open: boolean;
   readonly project: Project;
 }
@@ -138,9 +140,11 @@ export function ProjectPersistencePanel({
   onInteractionChange,
   onLoadDevice,
   onSaveDevice,
+  onOpenCargoEditor,
   onOpenChange,
   onOpenProjectSettings,
   onOpenUsageRequirements,
+  onRequestContainerAdd,
   open: drawerOpen,
   project,
 }: ProjectPersistencePanelProps) {
@@ -164,6 +168,7 @@ export function ProjectPersistencePanel({
   const restoreEntryFocusRef = useRef(false);
   const restoreDeleteFocusRef = useRef(false);
   const restoreNewProjectFocusRef = useRef(false);
+  const returnScrollPositionRef = useRef({ left: 0, top: 0 });
   const interactionActive =
     drawerOpen ||
     deleteConfirmation ||
@@ -188,14 +193,26 @@ export function ProjectPersistencePanel({
   useEffect(() => {
     drawerOpenRef.current = drawerOpen;
     if (drawerOpen) {
-      closeButtonRef.current?.focus();
+      returnScrollPositionRef.current = { left: window.scrollX, top: window.scrollY };
+      closeButtonRef.current?.focus({ preventScroll: true });
+      window.scrollTo(
+        returnScrollPositionRef.current.left,
+        returnScrollPositionRef.current.top,
+      );
       return;
     }
     if (!restoreEntryFocusRef.current) {
       return;
     }
     restoreEntryFocusRef.current = false;
-    document.getElementById("app-navigation-button")?.focus();
+    const returnScrollPosition = returnScrollPositionRef.current;
+    document.getElementById("app-navigation-button")?.focus({ preventScroll: true });
+    window.scrollTo(returnScrollPosition.left, returnScrollPosition.top);
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById("app-navigation-button")?.focus({ preventScroll: true });
+      window.scrollTo(returnScrollPosition.left, returnScrollPosition.top);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [drawerOpen]);
 
   useEffect(() => {
@@ -261,6 +278,7 @@ export function ProjectPersistencePanel({
     if (deleteConfirmationRef.current && !operationRef.current) {
       cancelDeleteConfirmation(false);
     }
+    restoreNewProjectFocusRef.current = false;
     setNewProjectConfirmation(false);
     drawerOpenRef.current = false;
     restoreEntryFocusRef.current = true;
@@ -423,8 +441,14 @@ export function ProjectPersistencePanel({
         <div
           className="project-persistence__backdrop"
           aria-hidden="true"
-          onClick={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            closeDrawer();
+          }}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
         />
         <aside
           id="project-persistence-drawer"
@@ -484,6 +508,24 @@ export function ProjectPersistencePanel({
                   onClick={() => finishDrawerAction(onOpenProjectSettings)}
                 >
                   CLP設定
+                </button>
+                <button
+                  id="cargo-add-button"
+                  className="secondary-button"
+                  type="button"
+                  disabled={controlsDisabled || project.cargoes.length >= 1000}
+                  onClick={() => finishDrawerAction(onOpenCargoEditor)}
+                >
+                  積荷を追加
+                </button>
+                <button
+                  id="container-add-button"
+                  className="secondary-button"
+                  type="button"
+                  disabled={controlsDisabled || project.containers.length >= 100}
+                  onClick={() => finishDrawerAction(onRequestContainerAdd)}
+                >
+                  候補を追加
                 </button>
               </div>
             </div>

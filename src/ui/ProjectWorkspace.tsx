@@ -32,9 +32,11 @@ import type { CargoEditorIntent } from "./CargoEditorDialog";
 import { ModalShell } from "./ModalShell";
 
 interface ProjectWorkspaceProps {
+  readonly containerAddRequestRevision?: number;
   readonly externalInteractionActive?: boolean;
   readonly historyRevision: number;
   readonly onBusyChange: (busy: boolean) => void;
+  readonly onContainerAddInteractionEnd?: () => void;
   readonly onOpenCargoEditor?: (intent: CargoEditorIntent) => void;
   readonly onProjectCommit: ProjectHistoryCommitHandler;
   readonly project: Project;
@@ -230,8 +232,20 @@ function focusFirstInvalid(form: HTMLFormElement | null): void {
   });
 }
 
-function focusElement(id: string): void {
-  queueMicrotask(() => document.getElementById(id)?.focus());
+function focusElement(id: string, preventScroll = false): void {
+  queueMicrotask(() => {
+    let retries = 0;
+    const focus = () => {
+      const target = document.getElementById(id);
+      target?.focus(preventScroll ? { preventScroll: true } : undefined);
+      if (document.activeElement === target || retries >= 2) {
+        return;
+      }
+      retries += 1;
+      window.requestAnimationFrame(focus);
+    };
+    focus();
+  });
 }
 
 function projectSettingsDraftFrom(project: Project): ProjectSettingsDraft {
@@ -683,8 +697,6 @@ export function LegacyCargoManager({
 }
 
 function CompactCargoManager({
-  externalInteractionActive = false,
-  onOpenCargoEditor,
   project,
 }: ProjectWorkspaceProps) {
   return (
@@ -694,23 +706,6 @@ function CompactCargoManager({
           <h2 id="cargo-title">積荷</h2>
           <p>{project.cargoes.length} / 1,000件</p>
         </div>
-        <button
-          id="cargo-add-button"
-          type="button"
-          className="secondary-button"
-          aria-disabled={
-            externalInteractionActive || project.cargoes.length >= 1000
-              ? true
-              : undefined
-          }
-          onClick={() => {
-            if (!externalInteractionActive && project.cargoes.length < 1000) {
-              onOpenCargoEditor?.({ kind: "add" });
-            }
-          }}
-        >
-          積荷を追加
-        </button>
       </div>
       <p className="empty-state">
         積荷の選択・編集・削除は3D表示内の「操作する積荷」と固定操作欄から行います。
@@ -720,8 +715,10 @@ function CompactCargoManager({
 }
 
 function ContainerManager({
+  containerAddRequestRevision = 0,
   historyRevision,
   onBusyChange,
+  onContainerAddInteractionEnd,
   onProjectCommit,
   project,
 }: ProjectWorkspaceProps) {
@@ -734,6 +731,7 @@ function ContainerManager({
   const [status, setStatus] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
   const appliedHistoryRevision = useRef(historyRevision);
+  const consumedAddRequestRevision = useRef(containerAddRequestRevision);
   const dirty = JSON.stringify(draft) !== JSON.stringify(originalDraft);
   const selectedId = mode.kind === "edit" ? mode.id : undefined;
   const busy =
@@ -766,7 +764,7 @@ function ContainerManager({
     };
   }, [historyRevision]);
 
-  const activate = (nextMode: EditorMode) => {
+  const activate = useCallback((nextMode: EditorMode) => {
     const target =
       nextMode.kind === "edit"
         ? project.containers.find((container) => container.id === nextMode.id)
@@ -779,7 +777,7 @@ function ContainerManager({
       setDeleteId(undefined);
       setIssues([{ code: "command.container-not-found", path: "/containers" }]);
       setStatus("候補の編集対象が見つからなかったため、編集を閉じました。");
-      focusElement("container-add-button");
+      focusElement("app-navigation-button", true);
       return;
     }
     const nextDraft = target === undefined ? EMPTY_CONTAINER_DRAFT : containerDraftFrom(target);
@@ -791,8 +789,8 @@ function ContainerManager({
     setDeleteId(undefined);
     setStatus(nextMode.kind === "add" ? "候補の追加フォームを開きました。" : "候補の編集フォームを開きました。");
     focusElement("container-name");
-  };
-  const requestMode = (nextMode: EditorMode) => {
+  }, [project.containers]);
+  const requestMode = useCallback((nextMode: EditorMode) => {
     if (mode.kind !== "none" && dirty) {
       setPendingMode(nextMode);
       setStatus("未保存の候補入力を破棄するか確認してください。");
@@ -800,7 +798,15 @@ function ContainerManager({
       return;
     }
     activate(nextMode);
-  };
+  }, [activate, dirty, mode.kind]);
+
+  useEffect(() => {
+    if (containerAddRequestRevision === consumedAddRequestRevision.current) {
+      return;
+    }
+    consumedAddRequestRevision.current = containerAddRequestRevision;
+    requestMode({ kind: "add" });
+  }, [containerAddRequestRevision, requestMode]);
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const result = saveContainer(project, draft, selectedId);
@@ -812,7 +818,7 @@ function ContainerManager({
       setDeleteId(undefined);
       setIssues(result.issues);
       setStatus("候補の編集対象が見つからなかったため、編集を閉じました。");
-      focusElement("container-add-button");
+      focusElement("app-navigation-button", true);
       return;
     }
     const applied = applyResult(
@@ -831,8 +837,6 @@ function ContainerManager({
       focusFirstInvalid(formRef.current);
       return;
     }
-    const returnFocusId =
-      selectedId === undefined ? "container-add-button" : `container-edit-${selectedId}`;
     setStatus(
       result.ok && result.project === project
         ? "候補に変更はありません。"
@@ -845,7 +849,11 @@ function ContainerManager({
     setOriginalDraft(EMPTY_CONTAINER_DRAFT);
     setPendingMode(undefined);
     setDeleteId(undefined);
-    focusElement(returnFocusId);
+    if (selectedId === undefined) {
+      onContainerAddInteractionEnd?.();
+    } else {
+      focusElement(`container-edit-${selectedId}`);
+    }
   };
   const confirmDelete = (id: string) => {
     const result = deleteContainer(project, id);
@@ -865,7 +873,7 @@ function ContainerManager({
         setDraft(EMPTY_CONTAINER_DRAFT);
         setOriginalDraft(EMPTY_CONTAINER_DRAFT);
       }
-      focusElement("container-add-button");
+      focusElement("app-navigation-button", true);
       return;
     }
     setStatus(
@@ -879,15 +887,17 @@ function ContainerManager({
   };
 
   const cancelEditor = () => {
-    const returnFocusId =
-      selectedId === undefined ? "container-add-button" : `container-edit-${selectedId}`;
     setMode({ kind: "none" });
     setDraft(EMPTY_CONTAINER_DRAFT);
     setOriginalDraft(EMPTY_CONTAINER_DRAFT);
     setIssues([]);
     setPendingMode(undefined);
     setStatus("候補の編集をキャンセルしました。");
-    focusElement(returnFocusId);
+    if (selectedId === undefined) {
+      onContainerAddInteractionEnd?.();
+    } else {
+      focusElement(`container-edit-${selectedId}`);
+    }
   };
 
   const openDelete = (id: string) => {
@@ -906,7 +916,6 @@ function ContainerManager({
     <section className="editor-card" aria-labelledby="container-title">
       <div className="section-heading">
         <div><h2 id="container-title">コンテナ・車両候補</h2><p>{project.containers.length} / 100件</p></div>
-        <button id="container-add-button" type="button" className="secondary-button" disabled={project.containers.length >= 100} onClick={() => requestMode({ kind: "add" })}>候補を追加</button>
       </div>
       <p className="action-status" aria-live="polite" aria-atomic="true">{status}</p>
       <ErrorSummary id="container-errors" issues={issues} />
@@ -974,10 +983,11 @@ function ContainerManager({
 }
 
 export function ProjectWorkspace({
+  containerAddRequestRevision,
   externalInteractionActive,
   historyRevision,
   onBusyChange,
-  onOpenCargoEditor,
+  onContainerAddInteractionEnd,
   onProjectCommit,
   project,
 }: ProjectWorkspaceProps) {
@@ -1029,13 +1039,14 @@ export function ProjectWorkspace({
           externalInteractionActive={externalInteractionActive}
           historyRevision={historyRevision}
           onBusyChange={reportCargoBusy}
-          onOpenCargoEditor={onOpenCargoEditor}
           onProjectCommit={onProjectCommit}
           project={project}
         />
         <ContainerManager
+          containerAddRequestRevision={containerAddRequestRevision}
           historyRevision={historyRevision}
           onBusyChange={reportContainerBusy}
+          onContainerAddInteractionEnd={onContainerAddInteractionEnd}
           onProjectCommit={onProjectCommit}
           project={project}
         />

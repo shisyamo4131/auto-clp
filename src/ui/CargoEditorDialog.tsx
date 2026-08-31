@@ -212,7 +212,7 @@ export function CargoEditorDialog({
 
   if (request.kind !== "add" && target === undefined) {
     return (
-      <ModalShell fallbackFocusIds={["scene-cargo-select", "cargo-add-button"]} title="積荷情報" onRequestClose={onClose}>
+      <ModalShell fallbackFocusIds={["app-navigation-button", "scene-cargo-select"]} title="積荷情報" onRequestClose={onClose}>
         <p role="alert">対象の積荷が見つかりません。CLPを確認してください。</p>
         <button type="button" onClick={onClose}>閉じる</button>
       </ModalShell>
@@ -222,7 +222,7 @@ export function CargoEditorDialog({
   if (request.kind === "delete" && target !== undefined) {
     return (
       <ModalShell
-        fallbackFocusIds={["scene-cargo-select", "cargo-add-button"]}
+        fallbackFocusIds={["app-navigation-button", "scene-cargo-select"]}
         initialFocusId={`cargo-delete-confirm-${target.id}`}
         returnScrollPosition={request.returnScrollPosition}
         title={`${target.name}を削除`}
@@ -240,7 +240,7 @@ export function CargoEditorDialog({
   }
 
   return (
-    <ModalShell fallbackFocusIds={["scene-cargo-select", "cargo-add-button"]} returnScrollPosition={request.returnScrollPosition} title={title} initialFocusId="cargo-name" onRequestClose={requestClose}>
+    <ModalShell fallbackFocusIds={["app-navigation-button", "scene-cargo-select"]} returnScrollPosition={request.returnScrollPosition} title={title} initialFocusId="cargo-name" onRequestClose={requestClose}>
       <p className="action-status" aria-live="polite">{status}</p>
       {issues.length === 0 ? null : (
         <div id="cargo-dialog-errors" className="error-summary" role="alert" tabIndex={-1}>

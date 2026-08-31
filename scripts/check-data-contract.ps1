@@ -27,6 +27,7 @@ $webglRequiredDecisionPath = Join-Path $resolvedProject 'docs/decisions/0023-web
 $clpTerminologyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0024-user-facing-clp-terminology.md'
 $viewerFirstShellDecisionPath = Join-Path $resolvedProject 'docs/decisions/0025-viewer-first-application-shell.md'
 $tabbedSceneDecisionPath = Join-Path $resolvedProject 'docs/decisions/0026-tabbed-scene-annotations-and-validation-dialog.md'
+$drawerDeferralDecisionPath = Join-Path $resolvedProject 'docs/decisions/0029-phase1-drawer-entry-and-automatic-proposal-deferral.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -41,8 +42,8 @@ $automaticProposalSessionPath = Join-Path $resolvedProject 'src/ui/automatic-pro
 $automaticProposalViewPath = Join-Path $resolvedProject 'src/ui/automatic-proposal-view.ts'
 $automaticProposalHookPath = Join-Path $resolvedProject 'src/ui/useAutomaticProposalSession.ts'
 $automaticProposalPanelPath = Join-Path $resolvedProject 'src/ui/AutomaticProposalPanel.tsx'
-$automaticProposalBrowserTestPath = Join-Path $resolvedProject 'tests/browser/automatic-proposal.spec.ts'
-$automaticProposalPerformanceTestPath = Join-Path $resolvedProject 'tests/browser/automatic-proposal-performance.spec.ts'
+$automaticProposalBrowserTestPath = Join-Path $resolvedProject 'tests/browser/automatic-proposal.future.ts'
+$automaticProposalPerformanceTestPath = Join-Path $resolvedProject 'tests/browser/automatic-proposal-performance.future.ts'
 $automaticProposalEvidenceIndexPath = Join-Path $resolvedProject 'docs/evidence/README.md'
 $automaticProposalEvidencePath = Join-Path $resolvedProject 'docs/evidence/automatic-proposal-ap08-733b250.md'
 $appPath = Join-Path $resolvedProject 'src/App.tsx'
@@ -84,6 +85,7 @@ foreach ($path in @(
     $clpTerminologyDecisionPath,
     $viewerFirstShellDecisionPath,
     $tabbedSceneDecisionPath,
+    $drawerDeferralDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -197,11 +199,12 @@ if (-not $specificationVersionMatch.Success) {
 }
 
 foreach ($requiredText in @(
-    'AP-08代表規模の実Worker性能記録はWindows/headless Chromiumの記録環境で完了',
-    '一般端末SLA、最低GPU、実務受入、安全保証ではありません'
+    'Phase 1の通常画面では自動配置提案を提供しません',
+    '将来再開用の技術資産',
+    '一般端末SLA、実務受入または安全保証ではありません'
 )) {
     if (-not $readme.Contains($requiredText)) {
-        throw "Root README does not contain the current AP-08 status marker: $requiredText"
+        throw "Root README does not contain the current automatic-proposal deferral marker: $requiredText"
     }
 }
 $productionSourceFiles = Get-ChildItem -LiteralPath (Join-Path $resolvedProject 'src') -Recurse -File |
@@ -220,7 +223,7 @@ $automaticProposalPanel = [IO.File]::ReadAllText($automaticProposalPanelPath)
 foreach ($contract in @(
     @{ Name = 'CLP settings'; Text = $projectWorkspace; Required = @('CLP INPUT', 'CLP設定', 'CLP名', 'CLPを保存') },
     @{ Name = 'CLP history'; Text = $projectHistoryControls; Required = @('CLP-WIDE HISTORY', 'CLP全体の操作') },
-    @{ Name = 'CLP persistence'; Text = $projectPersistencePanel; Required = @('CLPメニュー', '新規CLP', 'CLP設定') },
+    @{ Name = 'CLP persistence'; Text = $projectPersistencePanel; Required = @('CLPメニュー', '新規CLP', 'CLP設定', '積荷を追加', '候補を追加', 'project-persistence__backdrop') },
     @{ Name = 'CLP scene'; Text = $sceneWorkspace; Required = @('3D積載作業', '操作する積荷', '積荷を検索') },
     @{ Name = 'Placement proposal'; Text = $automaticProposalPanel; Required = @('配置案を適用', '配置案（未適用）') }
 )) {
@@ -274,7 +277,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.2.2' 'Approved specification version'
+Assert-Equal $specificationVersion '1.3.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -307,6 +310,20 @@ if ($viewerFirstShellDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
 $tabbedSceneDecision = [IO.File]::ReadAllText($tabbedSceneDecisionPath)
 if ($tabbedSceneDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0026 does not have Accepted status.'
+}
+$drawerDeferralDecision = [IO.File]::ReadAllText($drawerDeferralDecisionPath)
+if ($drawerDeferralDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0029 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '通常起動で自動提案Workerを開始しない',
+    '`積荷を追加` と `候補を追加`',
+    '背面のcontrol、scene、履歴は同じクリックで作動させない',
+    'Schema `0.1.0`'
+)) {
+    if (-not $drawerDeferralDecision.Contains($requiredText)) {
+        throw "ADR 0029 does not contain the approved Drawer/deferral marker: $requiredText"
+    }
 }
 foreach ($requiredText in @(
     'semantic tablist',
@@ -715,12 +732,13 @@ foreach ($requiredText in @(
 
 
 foreach ($requiredText in @(
-    '自動提案の純粋domain探索、Worker transport、session/view、利用者向けReact panel',
-    '確認付き一括適用と一回のUndo/Redoは実装済み',
-    '完全案をSchema・意味・正本物理判定で再検証',
-    '同じ配置集合なら履歴を増やさず',
+    '将来再開用の検証済み技術資産として保持',
+    'Phase 1の通常UIからは接続を外し',
+    '通常起動でWorkerを開始しない',
+    '非実行snapshotとして保持',
+    '再実行できるとは扱わない',
     'preview、取消、cutoff、完全案なし、失敗、stale、積荷なし、候補なしでは現在CLPと履歴を保持',
-    '目的関数上の最良として案内してはならない'
+    '実積載不能または安全性の証明として案内してはならない'
 )) {
     if (-not $operations.Contains($requiredText)) {
         throw "Operations does not contain the approved automatic-proposal boundary text: $requiredText"
@@ -736,14 +754,18 @@ $automaticProposalEvidence = [IO.File]::ReadAllText($automaticProposalEvidencePa
 $automaticProposalApply = [IO.File]::ReadAllText($automaticProposalApplyPath)
 $automaticProposalApplyTest = [IO.File]::ReadAllText($automaticProposalApplyTestPath)
 $app = [IO.File]::ReadAllText($appPath)
+if (-not $app.Contains('const automaticProposalAvailable = false;') -or
+    -not $app.Contains('{automaticProposalAvailable ? (')) {
+    throw 'App does not keep the retained automatic-proposal panel behind the approved unavailable gate.'
+}
 foreach ($contract in @(
     @{ Name = 'Application apply'; Text = $automaticProposalApply; Required = @('prepareAutomaticProposalApply', 'validatePlacementSet', 'support-conditions-unverified', 'automatic-proposal.apply-unverified-mismatch') },
     @{ Name = 'Application apply test'; Text = $automaticProposalApplyTest; Required = @('expectFailurePreserves', 'toBe(frozenCurrent)', 'complete-with-cutoff') },
     @{ Name = 'React hook'; Text = $automaticProposalHook; Required = @('useSyncExternalStore', 'visibleSnapshot', 'interactionGeneration') },
     @{ Name = 'React panel'; Text = $automaticProposalPanel; Required = @('aria-live="polite"', '配置案を適用', '配置が変わる場合は、1回の取り消しで元へ戻せます。') },
     @{ Name = 'App integration'; Text = $app; Required = @('handleAutomaticProposalApply', 'automatic-proposal.apply', 'persistenceOperationRef.current') },
-    @{ Name = 'Browser integration'; Text = $automaticProposalBrowserTest; Required = @('__cancelProposalFromBrowser', '自動提案の一括適用', '3D 利用可') }
-    @{ Name = 'AP-08 performance test'; Text = $automaticProposalPerformanceTest; Required = @('automatic-proposal.worker.ts', 'cold-1', 'warm-${iteration - 1}', 'expectedAttemptCount = 210', 'AP08_EVIDENCE_JSON=', 'terminateLatencyMs', '/^[0-9a-f]{40}$/') }
+    @{ Name = 'Browser snapshot'; Text = $automaticProposalBrowserTest; Required = @('Future-only non-executable snapshot', '__cancelProposalFromBrowser', '自動提案の一括適用', '3D 利用可') }
+    @{ Name = 'AP-08 performance snapshot'; Text = $automaticProposalPerformanceTest; Required = @('Future-only non-executable snapshot', 'automatic-proposal.worker.ts', 'cold-1', 'warm-${iteration - 1}', 'expectedAttemptCount = 210', 'AP08_EVIDENCE_JSON=', 'terminateLatencyMs', '/^[0-9a-f]{40}$/') }
 )) {
     foreach ($requiredText in $contract.Required) {
         if (-not $contract.Text.Contains($requiredText)) {
@@ -839,10 +861,12 @@ foreach ($requiredText in @(
     automatic_proposal_domain_implemented = $true
     automatic_proposal_worker_transport_implemented = $true
     automatic_proposal_session_view_implemented = $true
-    automatic_proposal_react_preview_implemented = $true
-    automatic_proposal_browser_integration_tested = $true
+    automatic_proposal_react_preview_retained_as_future_asset = $true
+    automatic_proposal_future_browser_snapshot_retained = $true
     automatic_proposal_apply_implemented = $true
     automatic_proposal_apply_undo_tested = $true
     automatic_proposal_ap08_performance_tested = $true
     automatic_proposal_ap08_evidence_recorded = $true
+    automatic_proposal_current_ui_available = $false
+    drawer_deferral_decision_0029_accepted = $true
 }

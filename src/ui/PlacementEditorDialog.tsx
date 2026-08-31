@@ -268,7 +268,7 @@ export const PlacementEditorDialog = forwardRef<
     const orientationIssue = issues.find((issue) => issue.path.endsWith("/orientation"));
     return (
       <ModalShell
-        fallbackFocusIds={["scene-selection-coordinate-action", "scene-cargo-select", "cargo-add-button"]}
+        fallbackFocusIds={["scene-selection-coordinate-action", "scene-cargo-select", "app-navigation-button"]}
         title={cargo?.name ?? "配置を編集"}
         initialFocusId="placement-xMm"
         returnScrollPosition={editor.returnScrollPosition}
@@ -331,7 +331,7 @@ export const PlacementEditorDialog = forwardRef<
     const container = project.containers.find((candidate) => candidate.id === deleteTarget.containerId);
     return (
       <ModalShell
-        fallbackFocusIds={["scene-selection-coordinate-action", "scene-cargo-select", "cargo-add-button"]}
+        fallbackFocusIds={["scene-selection-coordinate-action", "scene-cargo-select", "app-navigation-button"]}
         returnScrollPosition={deleteTarget.returnScrollPosition}
         title="荷室から外す"
         onRequestClose={close}

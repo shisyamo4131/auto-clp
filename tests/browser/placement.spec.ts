@@ -1,26 +1,28 @@
 import { expect, test, type Page } from "./fixtures";
-import { activateContainer } from "./ui-helpers";
+import {
+  activateContainer,
+  addCargoFromDrawer,
+  addContainerFromDrawer,
+} from "./ui-helpers";
 
 async function addCargo(page: Page, name: string) {
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await page.getByLabel("積荷名").fill(name);
-  await page.getByLabel("長さ", { exact: true }).fill("1200");
-  await page.getByLabel("幅", { exact: true }).fill("800");
-  await page.getByLabel("高さ", { exact: true }).fill("900");
-  await page.getByLabel("重量").fill("1.005");
-  await page.getByRole("button", { name: "積荷を保存" }).click();
+  await addCargoFromDrawer(page, name, {
+    lengthMm: "1200",
+    widthMm: "800",
+    heightMm: "900",
+    massKg: "1.005",
+  });
 }
 
 async function addContainer(page: Page, name: string) {
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill("6000");
-  await page.getByLabel("内部幅").fill("2400");
-  await page.getByLabel("内部高さ").fill("2600");
-  await page.getByLabel("開口幅").fill("2400");
-  await page.getByLabel("開口高さ").fill("2500");
-  await page.getByLabel("総耐荷重").fill("100000");
-  await page.getByRole("button", { name: "候補を保存" }).click();
+  await addContainerFromDrawer(page, name, {
+    lengthMm: "6000",
+    widthMm: "2400",
+    heightMm: "2600",
+    openingWidthMm: "2400",
+    openingHeightMm: "2500",
+    payloadKg: "100000",
+  });
 }
 
 async function fixture(page: Page) {
@@ -93,7 +95,9 @@ test("confirms dirty close and restores the opener without scrolling", async ({ 
   await opener.scrollIntoViewIfNeeded();
   const openerBox = await opener.boundingBox();
   if (openerBox === null) throw new Error("Placement dialog opener has no bounding box");
-  await page.mouse.click(openerBox.x + openerBox.width / 2, openerBox.y + openerBox.height / 2);
+  const scrollBeforeOpen = await page.evaluate<number>("window.scrollY");
+  await opener.focus();
+  await opener.dispatchEvent("click");
   await expect(page.locator(".app-shell")).toHaveAttribute("inert", "");
   await page.getByLabel("X最小角").fill("12");
   await page.keyboard.press("Escape");
@@ -102,6 +106,7 @@ test("confirms dirty close and restores the opener without scrolling", async ({ 
   await expect(opener).toBeFocused();
   await expect(page.locator(".app-shell")).not.toHaveAttribute("inert", "");
   await page.waitForTimeout(50);
+  expect(await page.evaluate<number>("window.scrollY")).toBe(scrollBeforeOpen);
   expect((await opener.boundingBox())?.y).toBe(openerBox.y);
 });
 

@@ -1,3 +1,4 @@
+// Future-only non-executable snapshot. Reconnect the proposal panel/Worker and add an opt-in testMatch before reuse.
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import os from "node:os";

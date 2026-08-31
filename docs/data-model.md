@@ -8,9 +8,9 @@
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定、Projectを変更しない自動提案探索とpreview UI、再検証付きの配置一括適用と一履歴操作のUndo/Redoは実装済みである。操作履歴、UI状態、Three.jsオブジェクト、物理判定と自動提案の結果は本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・候補の入力編集UI、候補選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全候補の置換前Worker判定は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定と自動提案の結果は本契約へ保存しない。
 
-仕様版 `1.2.2` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、Application Shell、WebGL必須運用、session-onlyの候補tab・共有camera・荷室外anchor・表示annotation・操作方法dialogの変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `1.3.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、Application Shell、Drawer入口、自動提案UIの公開状態、WebGL必須運用、session-onlyの候補tab・共有camera・荷室外anchor・表示annotation・操作方法dialogの変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -136,8 +136,8 @@ JSON読込は次の順序で行い、すべて成功するまで現在CLPを変�
 | `persistence/project-import-preflight-client`、`workers/project-import-preflight` | 実装済み: one-shot module Workerで全候補を置換前に判定し、応答検証後に必ずWorkerを終了 | DOM、IndexedDB、同期fallback、理由の保存 |
 | `scene` | 実装済み: WebGL能力確認と初回描画の必須ゲート、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointer dragのno-op先行と純粋な `xy-contained` / `partial` / `outside` 分類、床・支持面snap、単一支持面内clamp、支持候補preview、完全drag-out作業位置、X/Z軸別90度回転、同一候補のcamera保持。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持。非対応・描画障害時は通常操作を全面停止し、Projectを変更しないJSON救出だけを許可 | 判定規則の再実装、永続データ型の変更 |
 | `ui` | 実装済み: raw draft、gからkgへの表示変換、CLP・隙間・候補フォーム、全Project積荷の検索・選択、compact選択card、積荷定義と配置の別modal editor、非cascadeの配置取り外し・積荷削除、アクセシブルなfocus trap・dirty破棄確認・busy gate、canvas直接操作と正確な移動・向きのキーボードfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、CLP履歴ボタン・ショートカット・状態通知、手動端末保存・読込・削除、JSON入出力 | 幾何・制約計算と正規入力変換の再実装 |
-| `ui/automatic-proposal-session`、`ui/automatic-proposal-view`、`ui/useAutomaticProposalSession`、`ui/AutomaticProposalPanel` | 実装済み: Project参照とinteraction generationを捕捉するセッション、取消・stale・retry・遅延結果mask、source ProjectとのID再相関、React hook、固定安全copy、25件単位のpreview、identityを一度だけ取得する確認付き適用、適用済み・変更なし表示。AppはProject/scene/persistenceのbusy、変更、一履歴commitを接続する | 探索だけでのProject/history変更、永続化、Scene選択の変更 |
-| `workers` | 実装済み: 物理判定のローカルmodule Worker。自動提案は正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答mask、Appからの実Worker接続まで実装 | DOM、React状態の直接操作、外部通信 |
+| `ui/automatic-proposal-session`、`ui/automatic-proposal-view`、`ui/useAutomaticProposalSession`、`ui/AutomaticProposalPanel` | 将来技術資産として保持: Project参照とinteraction generationを捕捉するセッション、取消・stale・retry・遅延結果mask、source ProjectとのID再相関、React hook、固定安全copy、25件単位のpreview、identityを一度だけ取得する確認付き適用、適用済み・変更なし表示。Phase 1の通常画面ではpanelをmountしない | 探索だけでのProject/history変更、永続化、Scene選択の変更 |
+| `workers` | 実装済み: 物理判定のローカルmodule Worker。将来自動提案用に、正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答maskを保持する。Phase 1の通常起動では自動提案Workerを開始しない | DOM、React状態の直接操作、外部通信 |
 
 実装済みの依存は、UIからapplicationとdomainの型へ、applicationからdomainとpersistenceの検証境界へ、persistenceからdomainへ向かう。scene adapterはdomainの整数mmからThree非依存の表示値を一方向に導出し、rendererはその表示値だけを受け取る。sceneのmesh transform、camera、候補・積荷選択をProjectへ戻さず、canvas dragは正規開始位置とpointer差分から純粋adapterで整数mm入力を作り、application commandを通す。読込ユースケースではapplicationがpersistence境界を呼び、入力編集ではapplication commandがraw draftを正規mm・gへ変換してSchema・意味検証を呼ぶ。domain関数は入力から新しい値または理由を返す純粋関数とし、引数を変更しない。
 

@@ -1,5 +1,10 @@
 import { expect, test, type Locator, type Page } from "./fixtures";
-import { activateContainer, openProjectSettings } from "./ui-helpers";
+import {
+  activateContainer,
+  addCargoFromDrawer,
+  addContainerFromDrawer,
+  openProjectSettings,
+} from "./ui-helpers";
 import { inflateSync } from "node:zlib";
 
 const previewName = "積荷を選択・床面移動できる3Dプレビュー";
@@ -11,19 +16,13 @@ async function addCargo(
   dimensions: { readonly height?: string; readonly length?: string; readonly width?: string } = {},
   canSupportCargo = false,
 ) {
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await page.getByLabel("積荷名").fill(name);
-  await page.getByLabel("長さ", { exact: true }).fill(dimensions.length ?? "500");
-  await page.getByLabel("幅", { exact: true }).fill(dimensions.width ?? "400");
-  await page.getByLabel("高さ", { exact: true }).fill(dimensions.height ?? "300");
-  await page.getByLabel("重量").fill("1");
-  if (tipping) await page.getByLabel(/天地無用/).uncheck();
-  if (canSupportCargo) {
-    await page
-      .getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる")
-      .check();
-  }
-  await page.getByRole("button", { name: "積荷を保存" }).click();
+  await addCargoFromDrawer(page, name, {
+    lengthMm: dimensions.length ?? "500",
+    widthMm: dimensions.width ?? "400",
+    heightMm: dimensions.height ?? "300",
+    uprightOnly: !tipping,
+    canSupportCargo,
+  });
 }
 
 async function addContainer(
@@ -31,15 +30,14 @@ async function addContainer(
   name: string,
   dimensions: { readonly height?: string; readonly length?: string; readonly width?: string } = {},
 ) {
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill(dimensions.length ?? "6000");
-  await page.getByLabel("内部幅").fill(dimensions.width ?? "2400");
-  await page.getByLabel("内部高さ").fill(dimensions.height ?? "2600");
-  await page.getByLabel("開口幅").fill(dimensions.width ?? "2400");
-  await page.getByLabel("開口高さ").fill(dimensions.height ?? "2500");
-  await page.getByLabel("総耐荷重").fill("100000");
-  await page.getByRole("button", { name: "候補を保存" }).click();
+  await addContainerFromDrawer(page, name, {
+    lengthMm: dimensions.length ?? "6000",
+    widthMm: dimensions.width ?? "2400",
+    heightMm: dimensions.height ?? "2600",
+    openingWidthMm: dimensions.width ?? "2400",
+    openingHeightMm: dimensions.height ?? "2500",
+    payloadKg: "100000",
+  });
 }
 
 async function place(page: Page, cargoId = "cargo-1", x = "100", y = "100") {

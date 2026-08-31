@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "./fixtures";
-import { openProjectSettings } from "./ui-helpers";
+import {
+  addCargoFromDrawer,
+  addContainerFromDrawer,
+  openCargoAddEditor,
+  openContainerAddEditor,
+  openProjectSettings,
+} from "./ui-helpers";
 
 async function fillCargo(page: Page, name: string) {
   await page.getByLabel("積荷名").fill(name);
@@ -10,21 +16,23 @@ async function fillCargo(page: Page, name: string) {
 }
 
 async function addCargo(page: Page, name: string) {
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await fillCargo(page, name);
-  await page.getByRole("button", { name: "積荷を保存" }).click();
+  await addCargoFromDrawer(page, name, {
+    lengthMm: "1200",
+    widthMm: "800",
+    heightMm: "900",
+    massKg: "1.005",
+  });
 }
 
 async function addContainer(page: Page, name: string) {
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill("6000");
-  await page.getByLabel("内部幅").fill("2400");
-  await page.getByLabel("内部高さ").fill("2600");
-  await page.getByLabel("開口幅").fill("2400");
-  await page.getByLabel("開口高さ").fill("2500");
-  await page.getByLabel("総耐荷重").fill("100000");
-  await page.getByRole("button", { name: "候補を保存" }).click();
+  await addContainerFromDrawer(page, name, {
+    lengthMm: "6000",
+    widthMm: "2400",
+    heightMm: "2600",
+    openingWidthMm: "2400",
+    openingHeightMm: "2500",
+    payloadKg: "100000",
+  });
 }
 
 test("edits project settings transactionally and focuses invalid input", async ({ page }) => {
@@ -84,7 +92,7 @@ test("separates placement removal from cargo deletion and restores fallback focu
   const deleteDialog = page.getByRole("dialog", { name: "非cascade積荷を削除" });
   await expect(deleteDialog.getByLabel("積荷名")).toHaveCount(0);
   await deleteDialog.getByRole("button", { name: "削除を確定: 非cascade積荷" }).click();
-  await expect(page.getByRole("button", { name: "積荷を追加" })).toBeFocused();
+  await expect(page.locator("#app-navigation-button")).toBeFocused();
   await expect(page.getByText("積荷 0件、候補 1件、配置 0件")).toBeVisible();
 });
 
@@ -99,7 +107,7 @@ test("keeps cargo input available with WebGL and exposes specific safety boundar
 
 test("uses 天地無用 as the only cargo orientation setting", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "積荷を追加" }).click();
+  await openCargoAddEditor(page);
   await fillCargo(page, "天地無用合成積荷");
   await expect(page.getByLabel(/天地無用/)).toBeChecked();
   await expect(page.getByLabel(/^LWH/)).toHaveCount(0);
@@ -122,11 +130,52 @@ test("container CRUD remains transactional", async ({ page }) => {
   await expect(list).toContainText("合成候補更新");
 });
 
+test("opens Drawer additions through the existing cargo modal and container inline editor", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const menu = page.locator("#app-navigation-button");
+
+  await openCargoAddEditor(page);
+  const cargoDialog = page.getByRole("dialog", { name: "積荷を追加" });
+  await expect(cargoDialog).toBeVisible();
+  await expect(page.getByLabel("積荷名")).toBeFocused();
+  await page.getByLabel("積荷名").fill("破棄する積荷draft");
+  await cargoDialog.getByRole("button", { name: "キャンセル" }).click();
+  await expect(cargoDialog.getByText("未保存の積荷入力を破棄して閉じますか。")).toBeVisible();
+  await cargoDialog.getByRole("button", { name: "入力を破棄して閉じる" }).click();
+  await expect(cargoDialog).toHaveCount(0);
+  await expect(menu).toBeFocused();
+
+  await openContainerAddEditor(page);
+  await expect(page.getByRole("dialog", { name: "候補を追加" })).toHaveCount(0);
+  await expect(page.getByLabel("候補名")).toBeFocused();
+  await page.getByLabel("候補名").fill("破棄する候補draft");
+  await page.getByRole("button", { name: "候補編集をキャンセル" }).click();
+  await expect(page.getByLabel("候補名")).toHaveCount(0);
+  await expect(menu).toBeFocused();
+
+  await addCargo(page, "Drawer追加積荷");
+  await expect(menu).toBeFocused();
+  await addContainer(page, "Drawer追加候補");
+  await expect(menu).toBeFocused();
+  await expect(page.getByText("積荷 1件、候補 1件、配置 0件")).toBeVisible();
+});
+
 test("modal editors have no horizontal overflow at narrow widths", async ({ page }) => {
   await page.setViewportSize({ width: 305, height: 640 });
   await page.goto("/");
-  await page.getByRole("button", { name: "積荷を追加" }).click();
+  await openCargoAddEditor(page);
   await fillCargo(page, "C".repeat(120));
+  for (const width of [305, 320, 375]) {
+    await page.setViewportSize({ width, height: 640 });
+    expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);
+  }
+  await page.getByRole("button", { name: "キャンセル" }).click();
+  await page.getByRole("button", { name: "入力を破棄して閉じる" }).click();
+
+  await openContainerAddEditor(page);
+  await page.getByLabel("候補名").fill("候補".repeat(60));
   for (const width of [305, 320, 375]) {
     await page.setViewportSize({ width, height: 640 });
     expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);

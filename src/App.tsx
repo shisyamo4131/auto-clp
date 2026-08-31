@@ -69,6 +69,7 @@ type RescueResult =
   | { readonly ok: false; readonly message: string };
 
 const persistenceTextEncoder = new TextEncoder();
+const automaticProposalAvailable = false;
 
 function storeFailure(code: ProjectStoreFailureCode): ProjectPersistenceActionResult {
   const mapped = {
@@ -140,9 +141,11 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     useState(0);
   const projectInteractionGenerationRef = useRef(0);
   const busyRef = useRef(false);
+  const restoreNavigationFocusOnProjectIdleRef = useRef(false);
   const cargoEditorSequence = useRef(0);
   const [cargoEditorRequest, setCargoEditorRequest] =
     useState<CargoEditorRequest>();
+  const [containerAddRequestRevision, setContainerAddRequestRevision] = useState(0);
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
   const [usageRequirementsConfirmed, setUsageRequirementsConfirmed] = useState(false);
@@ -222,6 +225,20 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     (busy: boolean) => handleBusyChange("project", busy),
     [handleBusyChange],
   );
+  const handleContainerAddInteractionEnd = useCallback(() => {
+    restoreNavigationFocusOnProjectIdleRef.current = true;
+    if (!busySourcesRef.current.project) {
+      restoreNavigationFocusOnProjectIdleRef.current = false;
+      document.getElementById("app-navigation-button")?.focus({ preventScroll: true });
+    }
+  }, []);
+  useEffect(() => {
+    if (busySources.project || !restoreNavigationFocusOnProjectIdleRef.current) {
+      return;
+    }
+    restoreNavigationFocusOnProjectIdleRef.current = false;
+    document.getElementById("app-navigation-button")?.focus({ preventScroll: true });
+  }, [busySources.project]);
   const handleOpenCargoEditor = useCallback(
     (intent: CargoEditorIntent) => {
       if (busyRef.current) return;
@@ -239,6 +256,9 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     setCargoEditorRequest(undefined);
     handleBusyChange("cargoDialog", false);
   }, [handleBusyChange]);
+  const handleRequestContainerAdd = useCallback(() => {
+    setContainerAddRequestRevision((current) => current + 1);
+  }, []);
   const handlePersistenceInteractionChange = useCallback(
     (active: boolean) => {
       if (persistenceInteractionRef.current === active) {
@@ -789,9 +809,11 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         onImportFile={handleImportFile}
         onInteractionChange={handlePersistenceInteractionChange}
         onLoadDevice={handleLoadDevice}
+        onOpenCargoEditor={() => handleOpenCargoEditor({ kind: "add" })}
         onOpenChange={setNavigationOpen}
         onOpenProjectSettings={handleOpenProjectSettings}
         onOpenUsageRequirements={handleOpenUsageRequirements}
+        onRequestContainerAdd={handleRequestContainerAdd}
         onSaveDevice={handleSaveDevice}
         open={navigationOpen}
         project={project}
@@ -799,15 +821,18 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
 
       {sceneWorkspace}
 
-      <AutomaticProposalPanel
-        applyProposal={handleAutomaticProposalApply}
-        interactionGeneration={projectInteractionGeneration}
-        project={project}
-        readContext={readAutomaticProposalContext}
-        startBlocked={historyBusy}
-      />
+      {automaticProposalAvailable ? (
+        <AutomaticProposalPanel
+          applyProposal={handleAutomaticProposalApply}
+          interactionGeneration={projectInteractionGeneration}
+          project={project}
+          readContext={readAutomaticProposalContext}
+          startBlocked={historyBusy}
+        />
+      ) : null}
 
       <ProjectWorkspace
+        containerAddRequestRevision={containerAddRequestRevision}
         externalInteractionActive={
           busySources.cargoDialog ||
           busySources.scene ||
@@ -818,7 +843,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         key={`project-${projectBarrierRevision}`}
         historyRevision={historyRevision}
         onBusyChange={handleProjectBusyChange}
-        onOpenCargoEditor={handleOpenCargoEditor}
+        onContainerAddInteractionEnd={handleContainerAddInteractionEnd}
         onProjectCommit={handleProjectCommit}
         project={project}
       />

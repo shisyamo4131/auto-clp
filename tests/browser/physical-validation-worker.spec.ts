@@ -1,26 +1,24 @@
 import { expect, test, type Page } from "./fixtures";
-import { activateContainer, openPhysicalValidation } from "./ui-helpers";
+import {
+  activateContainer,
+  addCargoFromDrawer,
+  addContainerFromDrawer,
+  openPhysicalValidation,
+} from "./ui-helpers";
 
 async function addContainer(page: Page, name: string) {
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill("6000");
-  await page.getByLabel("内部幅").fill("2400");
-  await page.getByLabel("内部高さ").fill("2600");
-  await page.getByLabel("開口幅").fill("2400");
-  await page.getByLabel("開口高さ").fill("2500");
-  await page.getByLabel("総耐荷重").fill("100000");
-  await page.getByRole("button", { name: "候補を保存" }).click();
+  await addContainerFromDrawer(page, name, {
+    lengthMm: "6000",
+    widthMm: "2400",
+    heightMm: "2600",
+    openingWidthMm: "2400",
+    openingHeightMm: "2500",
+    payloadKg: "100000",
+  });
 }
 
 async function addCargo(page: Page, name: string) {
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await page.getByLabel("積荷名").fill(name);
-  await page.getByLabel("長さ", { exact: true }).fill("100");
-  await page.getByLabel("幅", { exact: true }).fill("100");
-  await page.getByLabel("高さ", { exact: true }).fill("100");
-  await page.getByLabel("重量").fill("1");
-  await page.getByRole("button", { name: "積荷を保存" }).click();
+  await addCargoFromDrawer(page, name);
 }
 
 async function installControllableWorker(page: Page) {

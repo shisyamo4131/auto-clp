@@ -1,5 +1,12 @@
 import { expect, test, type Download, type Page } from "./fixtures";
-import { openProjectSettings, saveProjectName } from "./ui-helpers";
+import {
+  addCargoFromDrawer,
+  addContainerFromDrawer,
+  openCargoAddEditor,
+  openPersistenceDrawer as openDrawerFromMenu,
+  openProjectSettings,
+  saveProjectName,
+} from "./ui-helpers";
 
 const exportFilename = "auto-clp-project-0.1.0.json";
 const runtimeBaseUrlEnvironmentVariable = "AUTO_CLP_BROWSER_BASE_URL";
@@ -153,6 +160,19 @@ async function pageScrollTop(page: Page) {
   });
 }
 
+async function maxPageScrollTop(page: Page) {
+  return page.evaluate(() => {
+    const browserGlobal = globalThis as unknown as {
+      readonly innerHeight: number;
+      readonly document: { readonly documentElement: { readonly scrollHeight: number } };
+    };
+    return Math.max(
+      0,
+      browserGlobal.document.documentElement.scrollHeight - browserGlobal.innerHeight,
+    );
+  });
+}
+
 async function readDeviceSavedJson(page: Page) {
   return page.evaluate<string>(`
     new Promise((resolve, reject) => {
@@ -223,9 +243,7 @@ function expectSameAnnotationGeometry(
 
 async function openPersistenceDrawer(page: Page) {
   const entry = page.getByRole("button", { name: "CLPデータを開く" });
-  if ((await entry.getAttribute("aria-expanded")) !== "true") {
-    await entry.click();
-  }
+  await openDrawerFromMenu(page);
   await expect(entry).toHaveAttribute("aria-expanded", "true");
   await expect(page.getByRole("button", { name: "CLPデータを閉じる" })).toBeFocused();
 }
@@ -252,25 +270,16 @@ async function expectModalFocusCycle(page: Page) {
 }
 
 async function addCargo(page: Page, name: string) {
-  await page.getByRole("button", { name: "積荷を追加" }).click();
-  await page.getByLabel("積荷名").fill(name);
-  await page.getByLabel("長さ", { exact: true }).fill("100");
-  await page.getByLabel("幅", { exact: true }).fill("100");
-  await page.getByLabel("高さ", { exact: true }).fill("100");
-  await page.getByLabel("重量").fill("1");
-  await page.getByRole("button", { name: "積荷を保存" }).click();
+  await addCargoFromDrawer(page, name);
 }
 
 async function addContainer(page: Page, name: string) {
-  await page.getByRole("button", { name: "候補を追加" }).click();
-  await page.getByLabel("候補名").fill(name);
-  await page.getByLabel("内部長さ").fill("1000");
-  await page.getByLabel("内部幅").fill("1000");
-  await page.getByLabel("内部高さ").fill("1000");
-  await page.getByLabel("開口幅").fill("1000");
-  await page.getByLabel("開口高さ").fill("1000");
-  await page.getByLabel("総耐荷重").fill("1000");
-  await page.getByRole("button", { name: "候補を保存" }).click();
+  await addContainerFromDrawer(page, name, {
+    lengthMm: "1000",
+    widthMm: "1000",
+    heightMm: "1000",
+    payloadKg: "1000",
+  });
 }
 
 test("keeps the navigation drawer initially closed and restores focus while safely cancelling deletion", async ({
@@ -289,6 +298,12 @@ test("keeps the navigation drawer initially closed and restores focus while safe
 
   await saveProjectName(page, "Drawer非ロックCLP");
   await expect(undo).toBeEnabled();
+  await scrollPageTo(page, 300);
+  await undo.scrollIntoViewIfNeeded();
+  const scrollBeforeBackdrop = await pageScrollTop(page);
+  const historyBeforeBackdrop = await historySummary.textContent();
+  const undoBounds = await undo.boundingBox();
+  if (undoBounds === null) throw new Error("Undo button has no bounding box");
   await openPersistenceDrawer(page);
   await expect(drawer).toBeVisible();
   await expectModalFocusCycle(page);
@@ -296,18 +311,46 @@ test("keeps the navigation drawer initially closed and restores focus while safe
   const historyBeforeModalInput = await historySummary.textContent();
   await page.keyboard.press("Control+z");
   expect(await historySummary.textContent()).toBe(historyBeforeModalInput);
-  await page.locator(".project-persistence__backdrop").click({ position: { x: 8, y: 8 } });
-  await expect(drawer).toBeVisible();
-  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
+  expect(
+    await page.evaluate(({ x, y }) => {
+      const browserGlobal = globalThis as unknown as {
+        document: {
+          elementFromPoint(clientX: number, clientY: number): {
+            classList: { contains(value: string): boolean };
+          } | null;
+        };
+      };
+      return browserGlobal.document
+        .elementFromPoint(x, y)
+        ?.classList.contains("project-persistence__backdrop");
+    }, {
+        x: undoBounds.x + undoBounds.width / 2,
+        y: undoBounds.y + undoBounds.height / 2,
+      }),
+  ).toBe(true);
+  await page.mouse.click(
+    undoBounds.x + undoBounds.width / 2,
+    undoBounds.y + undoBounds.height / 2,
+  );
+  await expect(drawer).toHaveCount(0);
   await expect(undo).toBeEnabled();
   await expect(entry).toBeFocused();
   await expect(entry).toHaveAttribute("aria-expanded", "false");
+  await expect(historySummary).toHaveText(historyBeforeBackdrop ?? "");
+  await expect.poll(() => pageScrollTop(page)).toBe(scrollBeforeBackdrop);
+
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "新規CLP", exact: true }).click();
+  await expect(page.getByRole("button", { name: "破棄して新規CLPを作成" })).toBeFocused();
+  await page.locator(".project-persistence__backdrop").click({ position: { x: 8, y: 8 } });
   await expect(drawer).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "CLP設定" })).toHaveCount(0);
+  await expect(entry).toBeFocused();
 
   await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末保存を削除" }).click();
   await expect(page.getByRole("button", { name: "端末保存の削除を確定" })).toBeFocused();
-  await page.keyboard.press("Escape");
+  await page.locator(".project-persistence__backdrop").click({ position: { x: 8, y: 8 } });
   await expect(entry).toBeFocused();
   await expect(drawer).toHaveCount(0);
   await expect(page.getByRole("alert")).toHaveCount(0);
@@ -318,10 +361,50 @@ test("keeps the navigation drawer initially closed and restores focus while safe
 
   await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "端末保存を削除" }).click();
-  await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
+  await page.keyboard.press("Escape");
   await expect(entry).toBeFocused();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(undo).toBeEnabled();
+});
+
+test("keeps future automatic proposal UI and worker out of the current product suite", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const browserGlobal = globalThis as unknown as {
+      Worker: new (scriptURL: unknown, options?: unknown) => object;
+      __automaticProposalWorkerCount: () => number;
+    };
+    const NativeWorker = browserGlobal.Worker;
+    let automaticProposalWorkerCount = 0;
+    browserGlobal.Worker = class TrackingWorker extends NativeWorker {
+      constructor(scriptURL: unknown, options?: unknown) {
+        if (String(scriptURL).includes("automatic-proposal.worker")) {
+          automaticProposalWorkerCount += 1;
+        }
+        super(scriptURL, options);
+      }
+    };
+    browserGlobal.__automaticProposalWorkerCount = () => automaticProposalWorkerCount;
+  });
+  await page.goto("/");
+
+  await expect(page.locator(".automatic-proposal")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "自動配置提案" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "自動提案を開始" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "配置案を適用" })).toHaveCount(0);
+  expect(await page.evaluate(() =>
+    (globalThis as unknown as { __automaticProposalWorkerCount: () => number })
+      .__automaticProposalWorkerCount(),
+  )).toBe(0);
+
+  await expect(page.getByRole("button", { name: "積荷を追加", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "候補を追加", exact: true })).toHaveCount(0);
+  await openPersistenceDrawer(page);
+  const drawer = page.locator("#project-persistence-drawer");
+  await expect(drawer.getByRole("button", { name: "積荷を追加", exact: true })).toHaveCount(1);
+  await expect(drawer.getByRole("button", { name: "候補を追加", exact: true })).toHaveCount(1);
+  await expect(drawer.locator(".automatic-proposal")).toHaveCount(0);
 });
 
 test("opens the operation guide without changing CLP, history, or scene and restores focus and scroll", async ({
@@ -370,8 +453,10 @@ test("opens the operation guide without changing CLP, history, or scene and rest
     .textContent();
   await page.getByRole("button", { name: "物理判定を閉じる" }).click();
 
-  await scrollPageTo(page, 600);
-  await expect.poll(() => pageScrollTop(page)).toBe(600);
+  const operationGuideScrollTarget = Math.min(600, await maxPageScrollTop(page));
+  expect(operationGuideScrollTarget).toBeGreaterThan(0);
+  await scrollPageTo(page, operationGuideScrollTarget);
+  await expect.poll(() => pageScrollTop(page)).toBe(operationGuideScrollTarget);
 
   const menu = page.locator("#app-navigation-button");
   const canonical = page.getByTestId("canonical-project-settings");
@@ -730,7 +815,7 @@ test("round-trips the single IndexedDB slot across reload, resets history, and d
   await expect(page.getByRole("button", { name: "やり直す" })).toBeDisabled();
 
   await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
-  await page.getByRole("button", { name: "積荷を追加" }).click();
+  await openCargoAddEditor(page);
   await page.getByLabel("積荷名").fill("再読込で破棄するdraft");
   await expect(page.locator(".app-shell")).toHaveAttribute("inert", "");
   await page.reload();
@@ -988,7 +1073,10 @@ test("blocks editor transitions while a delayed device replacement completes", a
   await expect(status).toContainText("処理中です");
   await expectControlledPreflightPending(page);
   await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
-  await expect(page.getByRole("button", { name: "積荷を追加" })).toHaveAttribute("aria-disabled", "true");
+  await openPersistenceDrawer(page);
+  const pendingDrawer = page.locator("#project-persistence-drawer");
+  await expect(pendingDrawer.getByRole("button", { name: "積荷を追加", exact: true })).toBeDisabled();
+  await expect(pendingDrawer.getByRole("button", { name: "候補を追加", exact: true })).toBeDisabled();
 
   await releaseControlledPreflight(page);
   await expect(status).toContainText("端末内保存を読み込みました");
@@ -1236,10 +1324,20 @@ test("keeps 1000-cargo search and selection usable without narrow horizontal ove
       canSupportCargo: false,
       allowedOrientations: ["LWH", "WLH"],
     })),
+    containers: Array.from({ length: 100 }, (_, index) => ({
+      id: `container-${index + 1}`,
+      name: `候補${index + 1}`,
+      internalDimensionsMm: { lengthMm: 1000, widthMm: 1000, heightMm: 1000 },
+      openingMm: { widthMm: 1000, heightMm: 1000 },
+      payloadCapacityGrams: 1000,
+    })),
   });
   await openPersistenceDrawer(page);
   await importJson(page, largeCargoOnly);
   await expect(page.locator(".project-persistence__status")).toContainText("CLP JSONを読み込みました");
+  const drawer = page.locator("#project-persistence-drawer");
+  await expect(drawer.getByRole("button", { name: "積荷を追加", exact: true })).toBeDisabled();
+  await expect(drawer.getByRole("button", { name: "候補を追加", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
 
   const viewport = await page.locator(".viewport").boundingBox();
