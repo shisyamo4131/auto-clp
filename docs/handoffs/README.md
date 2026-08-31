@@ -6,5 +6,5 @@
 
 | Record | State | Date |
 | --- | --- | --- |
-| [AUTOCLP-PM03-01](AUTOCLP-PM03-01.md) | Replacement approved; PM（AutoCLP）-02 active pending PM-03 verification | 2026-08-31 |
+| [AUTOCLP-PM03-01](AUTOCLP-PM03-01.md) | Turnover complete; PM（AutoCLP）-03 active | 2026-08-31 |
 | [GOV14-AUTOCLP-01](GOV14-AUTOCLP-01.md) | Turnover complete; PM（AutoCLP）-02 active | 2026-08-28 |
