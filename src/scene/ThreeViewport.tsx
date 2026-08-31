@@ -613,6 +613,37 @@ export function ThreeViewport({
             ];
             const lineOffset = 18;
             const labelOffset = 12;
+            const canvasScreenBounds = {
+              left: canvasBounds.left - containerBounds.left,
+              top: canvasBounds.top - containerBounds.top,
+              right: canvasBounds.right - containerBounds.left,
+              bottom: canvasBounds.bottom - containerBounds.top,
+            };
+            const clampLabelPosition = (
+              label: string,
+              proposed: readonly [number, number],
+            ): readonly [number, number] => {
+              const estimatedGlyphWidth = Array.from(label).reduce(
+                (width, character) =>
+                  width + ((character.codePointAt(0) ?? 0) <= 0x7f ? 7 : 12),
+                0,
+              );
+              const estimatedHalfWidth = (estimatedGlyphWidth + 10) / 2;
+              const estimatedHalfHeight = 11;
+              const inset = 6;
+              const minX = canvasScreenBounds.left + estimatedHalfWidth + inset;
+              const maxX = canvasScreenBounds.right - estimatedHalfWidth - inset;
+              const minY = canvasScreenBounds.top + estimatedHalfHeight + inset;
+              const maxY = canvasScreenBounds.bottom - estimatedHalfHeight - inset;
+              const clampAxis = (value: number, minimum: number, maximum: number) =>
+                minimum <= maximum
+                  ? Math.min(maximum, Math.max(minimum, value))
+                  : (minimum + maximum) / 2;
+              return [
+                clampAxis(proposed[0], minX, maxX),
+                clampAxis(proposed[1], minY, maxY),
+              ];
+            };
             return definitions.map(({ adjacent: edgeEnd, axis, label }) => {
               const edgeStart = baseCorner.screen;
               const edgeEndScreen = edgeEnd.screen;
@@ -652,12 +683,16 @@ export function ThreeViewport({
                 point[0] + outwardX * distance,
                 point[1] + outwardY * distance,
               ];
+              const proposedLabelPosition = offsetPoint(
+                midpoint,
+                lineOffset + labelOffset,
+              );
               return {
                 axis,
                 start: offsetPoint(edgeStart, lineOffset),
                 end: offsetPoint(edgeEndScreen, lineOffset),
                 label,
-                labelPosition: offsetPoint(midpoint, lineOffset + labelOffset),
+                labelPosition: clampLabelPosition(label, proposedLabelPosition),
                 witnesses: [
                   { start: edgeStart, end: offsetPoint(edgeStart, lineOffset - 4) },
                   { start: edgeEndScreen, end: offsetPoint(edgeEndScreen, lineOffset - 4) },

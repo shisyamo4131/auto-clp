@@ -49,6 +49,81 @@ function hundredCandidateProject() {
   };
 }
 
+async function expectDimensionLabelsInsideCanvas(page: Page) {
+  const canvas = page.getByRole("img", {
+    name: "積荷を選択・床面移動できる3Dプレビュー",
+  });
+  const annotation = page.locator(".viewport__dimension-annotations");
+  const bottomControls = page.locator(".viewport__overlay--bottom");
+  const axes = ["X", "Y", "Z"] as const;
+  await expect(annotation).toBeVisible();
+  await expect(annotation.locator("g")).toHaveCount(axes.length);
+  await expect.poll(async () => {
+    const canvasBox = await canvas.boundingBox();
+    const svgBox = await annotation.boundingBox();
+    const controlsBox = await bottomControls.boundingBox();
+    if (canvasBox === null || svgBox === null || controlsBox === null) return false;
+    const labelBoxes = await Promise.all(
+      axes.map((axis) => annotation.locator(`g[data-axis="${axis}"] text`).boundingBox()),
+    );
+    return labelBoxes.every((labelBox) => {
+      if (labelBox === null) return false;
+      const labelRight = labelBox.x + labelBox.width;
+      const labelBottom = labelBox.y + labelBox.height;
+      const insideCanvas =
+        labelBox.x >= canvasBox.x - 0.5 &&
+        labelBox.y >= canvasBox.y - 0.5 &&
+        labelRight <= canvasBox.x + canvasBox.width + 0.5 &&
+        labelBottom <= canvasBox.y + canvasBox.height + 0.5;
+      const insideSvg =
+        labelBox.x >= svgBox.x - 0.5 &&
+        labelBox.y >= svgBox.y - 0.5 &&
+        labelRight <= svgBox.x + svgBox.width + 0.5 &&
+        labelBottom <= svgBox.y + svgBox.height + 0.5;
+      const overlapsBottomControls =
+        labelBox.x < controlsBox.x + controlsBox.width &&
+        labelRight > controlsBox.x &&
+        labelBox.y < controlsBox.y + controlsBox.height &&
+        labelBottom > controlsBox.y;
+      return insideCanvas && insideSvg && !overlapsBottomControls;
+    });
+  }).toBe(true);
+
+  const canvasBox = await canvas.boundingBox();
+  const svgBox = await annotation.boundingBox();
+  const controlsBox = await bottomControls.boundingBox();
+  expect(canvasBox).not.toBeNull();
+  expect(svgBox).not.toBeNull();
+  expect(controlsBox).not.toBeNull();
+  for (const axis of axes) {
+    const label = annotation.locator(`g[data-axis="${axis}"] text`);
+    await expect(label).toBeVisible();
+    const labelBox = await label.boundingBox();
+    expect(labelBox, `${axis} label must have a rendered bounding box`).not.toBeNull();
+    expect(
+      labelBox!.x,
+      `${axis} label left=${labelBox!.x}, canvas left=${canvasBox!.x}`,
+    ).toBeGreaterThanOrEqual(canvasBox!.x - 0.5);
+    expect(
+      labelBox!.x + labelBox!.width,
+      `${axis} label right must stay inside canvas and SVG`,
+    ).toBeLessThanOrEqual(Math.min(
+      canvasBox!.x + canvasBox!.width,
+      svgBox!.x + svgBox!.width,
+    ) + 0.5);
+    expect(labelBox!.y, `${axis} label top must stay inside canvas`).toBeGreaterThanOrEqual(
+      canvasBox!.y - 0.5,
+    );
+    expect(
+      labelBox!.y + labelBox!.height,
+      `${axis} label bottom must stay above the fixed bottom controls`,
+    ).toBeLessThanOrEqual(Math.min(
+      canvasBox!.y + canvasBox!.height,
+      controlsBox!.y,
+    ) + 0.5);
+  }
+}
+
 test("places the menu at the app-bar right edge and provides 0, 1, and 100 candidate tabs", async ({
   page,
 }) => {
@@ -133,6 +208,26 @@ test("shows selected domain dimensions without pointer interception and exposes 
   await expect(actions.getByRole("button", { name: "座標を微調整" })).toHaveCount(0);
   await expect(actions.getByRole("button", { name: "積荷情報を編集" })).toBeVisible();
 });
+
+for (const width of [1280, 375, 320, 305] as const) {
+  test(`keeps staged X/Y/Z dimension labels inside the ${width}x720 canvas`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 720 });
+    await page.goto("/");
+    await addCargo(page, `境界確認積荷${width}`);
+    await addContainer(page, `境界確認候補${width}`);
+    const selector = page.getByLabel("操作する積荷");
+    await selector.selectOption("cargo-1");
+    await expect(page.locator(".viewport-context-actions")).toContainText(
+      "荷室外（未配置）",
+    );
+    await expectDimensionLabelsInsideCanvas(page);
+
+    await selector.selectOption("");
+    await expect(page.locator(".viewport__dimension-annotations")).toHaveCount(0);
+  });
+}
 
 test("keeps the physical controller fresh while its dialog is closed", async ({ page }) => {
   await page.goto("/");
