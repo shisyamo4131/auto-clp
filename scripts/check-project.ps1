@@ -140,6 +140,21 @@ foreach ($requiredToken in @(
     }
 }
 
+$governanceLock = [IO.File]::ReadAllText((Join-Path $resolvedProject 'governance/governance.lock.toml'))
+$commonVersionMatch = [regex]::Match($governanceLock, '(?m)^common_governance_version\s*=\s*"([^"]+)"\s*$')
+if (-not $commonVersionMatch.Success) {
+    throw 'Governance lock does not declare common_governance_version.'
+}
+$managedCommonVersion = $commonVersionMatch.Groups[1].Value
+foreach ($requiredToken in @(
+    "- Managed common-governance version: $managedCommonVersion",
+    "$managedCommonVersion移行のinventory"
+)) {
+    if (-not $operations.Contains($requiredToken)) {
+        throw "Operations governance version does not match governance lock: $requiredToken"
+    }
+}
+
 $projectRules = [IO.File]::ReadAllText((Join-Path $resolvedProject 'governance/project-rules.md'))
 $initialPrompt = [IO.File]::ReadAllText((Join-Path $resolvedProject 'INITIAL_PROMPT.md'))
 foreach ($requiredToken in @('governance/verification-policy.json', 'comprehensive fallback', '省略gate', '失効')) {
@@ -342,6 +357,8 @@ foreach ($relativePath in $datedFiles) {
     indexed_documents_valid = $true
     verification_policy_valid = $true
     verification_routing_valid = $true
+    operations_common_governance_version = $managedCommonVersion
+    operations_governance_version_current = $true
     adr_count = @($decisionFiles).Count
     adr_statuses_valid = $true
     roadmap_weight = $weightTotal

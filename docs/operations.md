@@ -173,9 +173,9 @@ comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`b
 
 ## Governance Updates and Task Turnover
 
-- Managed common-governance version: 1.4.0
+- Managed common-governance version: 1.5.0
 - 管理対象はプロジェクト内で直接編集せず、承認後にスキルの `sync-project-governance.ps1 -Apply` で同期する。
-- 既存プロジェクト移行時は全規則を棚卸しし、未対応項目ゼロを要求する。1.4.0移行のinventoryは最新handoff recordへ記録する。
+- 既存プロジェクト移行時は全規則を棚卸しし、未対応項目ゼロを要求する。1.5.0移行のinventoryは最新handoff recordへ記録する。
 - 共通契約、ルート `AGENTS.md`、全体権限・承認方針、調整責任、委任・Git統合、コールバック・引き継ぎ、安全境界の変更は全アクティブタスクの交代を要する。
 - 役割固有設定の変更は、その役割とコーディネーターの確認を要する。
 - 交代前に安全なチェックポイントを作り、担当作業を検証・コミットし、作業ツリーをクリーンにする。例外はファイル、目的、検証、理由、所有者、再開手順を記録する。
