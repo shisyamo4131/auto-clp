@@ -59,6 +59,7 @@ interface SceneWorkspaceProps {
   readonly onOpenCargoEditor: (intent: CargoEditorIntent) => void;
   readonly onOpenUsageRequirements: () => void;
   readonly onProjectCommit: ProjectHistoryCommitHandler;
+  readonly onSelectedContainerChange: (containerId?: string) => void;
   readonly onRendererError: () => void;
   readonly onRendererReady: () => void;
   readonly project: Project;
@@ -67,7 +68,7 @@ interface SceneWorkspaceProps {
 
 function projectionErrorMessage(code: "scene.container-not-found" | "scene.cargo-not-found"): string {
   if (code === "scene.container-not-found") {
-    return "選択した候補がCLP内に見つからないため、3D表示を更新できません。";
+    return "選択したコンテナがCLP内に見つからないため、3D表示を更新できません。";
   }
   return "配置が参照する積荷がCLP内に見つからないため、3D表示を更新できません。";
 }
@@ -182,7 +183,7 @@ function CandidateTabs({ activeId, disabled, onActivate, project }: CandidateTab
   };
 
   if (project.containers.length === 0) {
-    return <span className="viewport-control__empty">表示する候補がありません</span>;
+    return <span className="viewport-control__empty">表示するコンテナがありません</span>;
   }
   return (
     <div
@@ -194,7 +195,7 @@ function CandidateTabs({ activeId, disabled, onActivate, project }: CandidateTab
         <button
           className="candidate-tabs__scroll"
           type="button"
-          aria-label="候補タブを左へスクロール"
+          aria-label="コンテナタブを左へスクロール"
           disabled={disabled || scrollState.atStart}
           onClick={() => scrollerRef.current?.scrollBy({ left: -220, behavior: "smooth" })}
         >
@@ -234,7 +235,7 @@ function CandidateTabs({ activeId, disabled, onActivate, project }: CandidateTab
         <button
           className="candidate-tabs__scroll"
           type="button"
-          aria-label="候補タブを右へスクロール"
+          aria-label="コンテナタブを右へスクロール"
           disabled={disabled || scrollState.atEnd}
           onClick={() => scrollerRef.current?.scrollBy({ left: 220, behavior: "smooth" })}
         >
@@ -254,6 +255,7 @@ export function SceneWorkspace({
   onOpenCargoEditor,
   onOpenUsageRequirements,
   onProjectCommit,
+  onSelectedContainerChange,
   onRendererError,
   onRendererReady,
   project,
@@ -280,6 +282,10 @@ export function SceneWorkspace({
     project,
     effectiveContainerId,
   );
+
+  useEffect(() => {
+    onSelectedContainerChange(effectiveContainerId);
+  }, [effectiveContainerId, onSelectedContainerChange]);
 
   useEffect(() => {
     if (previousEffectiveContainerIdRef.current === effectiveContainerId) return;
@@ -518,7 +524,7 @@ export function SceneWorkspace({
 
   const handleContainerActivation = useCallback((containerId: string) => {
     if (interactionActive || externalInteractionActive) {
-      setCanvasStatus("開いている操作を完了すると候補を切り替えられます。");
+      setCanvasStatus("開いている操作を完了するとコンテナを切り替えられます。");
       return;
     }
     if (containerId === effectiveContainerId) return;
@@ -629,7 +635,7 @@ export function SceneWorkspace({
         if (effectiveContainerId === undefined) {
           return {
             ok: false,
-            message: "配置先の候補が見つからないため、積荷を荷室外の作業スペースへ戻しました。",
+            message: "配置先のコンテナが見つからないため、積荷を荷室外の作業スペースへ戻しました。",
           };
         }
         if (project.placements.some((placement) => placement.cargoId === cargoId)) {
@@ -647,7 +653,7 @@ export function SceneWorkspace({
           return {
             ok: false,
             message:
-              "対象の積荷または候補が最新のCLPに見つからないため、荷室外の作業スペースへ戻しました。",
+              "対象の積荷またはコンテナが最新のCLPに見つからないため、荷室外の作業スペースへ戻しました。",
           };
         }
         const nextPosition = preview.positionMm;
@@ -745,7 +751,7 @@ export function SceneWorkspace({
         return {
           ok: false,
           message:
-            "対象の積荷または候補が最新のCLPに見つからないため、移動を保存せず元に戻しました。",
+            "対象の積荷またはコンテナが最新のCLPに見つからないため、移動を保存せず元に戻しました。",
         };
       }
       const dragDisposition = placedFloorDragDisposition(
@@ -880,7 +886,7 @@ export function SceneWorkspace({
       );
       if (container === undefined) {
         setCanvasStatus(
-          "対象の候補が最新のCLPに見つからないため、回転しませんでした。",
+          "対象のコンテナが最新のCLPに見つからないため、回転しませんでした。",
         );
         return;
       }
@@ -995,7 +1001,7 @@ export function SceneWorkspace({
                     ? "荷室外"
                     : placement.containerId === effectiveContainerId
                       ? "配置済み"
-                      : `${placementContainer?.name ?? "別候補"}に配置`;
+                      : `${placementContainer?.name ?? "別のコンテナ"}に配置`;
                   return (
                     <option key={cargo.id} value={cargo.id}>
                       {cargo.name} — {cargo.dimensionsMm.lengthMm}×{cargo.dimensionsMm.widthMm}×{cargo.dimensionsMm.heightMm} mm — {placementState}
@@ -1181,8 +1187,8 @@ export function SceneWorkspace({
       <div className="scene-workspace__feedback">
         <p id="scene-workspace-status" className="visually-hidden">
           {effectiveContainerId === undefined
-            ? `候補0件、積荷${project.cargoes.length}件。`
-            : `選択候補の配置${placementCount}件、荷室外${stagedCount}件。物理判定は保存済み配置だけから更新されます。`}
+            ? `コンテナ0件、積荷${project.cargoes.length}件。`
+            : `選択中のコンテナの配置${placementCount}件、荷室外${stagedCount}件。物理判定は保存済み配置だけから更新されます。`}
         </p>
         <p id="scene-workspace-action-status" className="scene-workspace__action-status" aria-live="polite" aria-atomic="true">
           {canvasStatus === "" ? "3D上の積荷または下部の一覧から操作対象を選べます。" : canvasStatus}

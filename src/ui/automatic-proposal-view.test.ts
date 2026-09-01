@@ -244,14 +244,14 @@ describe("automaticProposalView ready statuses", () => {
     ],
     [
       "no-candidates",
-      "候補なし",
-      "配置案の作成先となる候補コンテナがありません。CLPは変更していません。",
-      "候補コンテナを登録してから探索してください。",
+      "コンテナなし",
+      "配置案の作成先となるコンテナがありません。CLPは変更していません。",
+      "コンテナを登録してから探索してください。",
     ],
     [
       "no-complete-plan",
       "完全案なし",
-      "登録済み候補と今回の探索モデルでは、全積荷を配置できる案がありませんでした。",
+      "登録済みコンテナと今回の探索モデルでは、全積荷を配置できる案がありませんでした。",
       "これは実積載不能の証明ではありません。CLPは変更していません。",
     ],
     [
@@ -320,7 +320,7 @@ describe("automaticProposalView ready statuses", () => {
     [
       "complete-with-cutoff",
       "案あり・最良未確認・未適用",
-      "完全案は見つかりましたが、より優先される候補の探索が上限に達したため、目的関数上の最良とは確認できません。",
+      "完全案は見つかりましたが、より優先されるコンテナの探索が上限に達したため、目的関数上の最良とは確認できません。",
       "warning",
     ],
   ] as const)("maps %s preview counts, attempts, algorithm and safety", (status, badge, summary, tone) => {
@@ -643,7 +643,7 @@ describe("automaticProposalView apply phases", () => {
     [
       "applied",
       "適用済み",
-      "候補anonymous-container-b (container-b)へ2件適用、1回の取り消しで元へ戻せます。",
+      "コンテナanonymous-container-b (container-b)へ2件適用、1回の取り消しで元へ戻せます。",
       "success",
     ],
     [

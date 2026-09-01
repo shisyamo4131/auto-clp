@@ -63,7 +63,7 @@ function issueMessage(issue: ValidationIssue): string {
     "semantic.disallowed-orientation": "この積荷で許可されている向きを選択してください。",
     "command.cargo-already-placed": "この積荷はすでに配置されています。",
     "command.cargo-not-found": "対象の積荷が見つかりません。",
-    "command.container-not-found": "選択した候補が見つかりません。",
+    "command.container-not-found": "選択したコンテナが見つかりません。",
     "command.placement-not-found": "対象の配置が見つかりません。",
   };
   return messages[issue.code] ?? "配置内容を確認してください。";
@@ -337,7 +337,7 @@ export const PlacementEditorDialog = forwardRef<
         onRequestClose={close}
       >
         <div className="confirm-panel" role="alert">
-          <p>{cargo?.name ?? "積荷"}を{container?.name ?? "現在の候補"}の荷室から外します。積荷情報は残ります。</p>
+          <p>{cargo?.name ?? "積荷"}を{container?.name ?? "現在のコンテナ"}の荷室から外します。積荷情報は残ります。</p>
           <div className="button-row">
             <button className="primary-button" type="button" onClick={removePlacement}>荷室から外す</button>
             <button type="button" onClick={close}>キャンセル</button>

@@ -758,7 +758,7 @@ test("keeps touch selection form fallback and narrow modal layouts", async ({ pa
   expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);
 });
 
-test("keeps the selection card compact as cargo count grows", async ({ page }) => {
+test("keeps the 3D action row compact as cargo count grows", async ({ page }) => {
   await page.goto("/");
   await addContainer(page, "many候補");
   for (let index = 0; index < 6; index += 1) await addCargo(page, `many積荷${index}`);
@@ -766,5 +766,5 @@ test("keeps the selection card compact as cargo count grows", async ({ page }) =
   const height = (await card.boundingBox())?.height ?? 0;
   await page.getByLabel("操作する積荷").selectOption("cargo-6");
   expect((await card.boundingBox())?.height ?? 0).toBeLessThanOrEqual(height + 220);
-  await expect(page.getByText("6 / 1,000件")).toBeVisible();
+  await expect(page.getByText("6/6件")).toBeVisible();
 });

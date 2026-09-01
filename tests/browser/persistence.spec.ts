@@ -399,18 +399,20 @@ test("keeps future automatic proposal UI and worker out of the current product s
   )).toBe(0);
 
   await expect(page.getByRole("button", { name: "積荷を追加", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "候補を追加", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "コンテナを追加", exact: true })).toHaveCount(0);
   await openPersistenceDrawer(page);
   const drawer = page.locator("#project-persistence-drawer");
   await expect(drawer.getByRole("button", { name: "積荷を追加", exact: true })).toHaveCount(1);
-  await expect(drawer.getByRole("button", { name: "候補を追加", exact: true })).toHaveCount(1);
+  await expect(drawer.getByRole("button", { name: "コンテナを追加", exact: true })).toHaveCount(1);
+  await expect(drawer.getByRole("button", { name: "選択中のコンテナを編集" })).toHaveCount(1);
+  await expect(drawer.getByRole("button", { name: "選択中のコンテナを削除" })).toHaveCount(1);
   await expect(drawer.locator(".automatic-proposal")).toHaveCount(0);
 });
 
 test("opens the operation guide without changing CLP, history, or scene and restores focus and scroll", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 900, height: 620 });
+  await page.setViewportSize({ width: 900, height: 420 });
   await page.goto("/");
   await saveProjectName(page, "操作ガイド状態保持CLP");
   await addCargo(page, "操作ガイド状態保持積荷");
@@ -437,8 +439,6 @@ test("opens the operation guide without changing CLP, history, or scene and rest
   await expect
     .poll(() => selectedAnnotationGeometry(page))
     .not.toEqual(defaultAnnotationGeometry);
-  const zoomedAnnotationGeometry = await selectedAnnotationGeometry(page);
-
   const lamp = page.locator("#physical-validation-lamp");
   await expect(lamp).toHaveAttribute("data-status", "valid");
   const physicalBefore = {
@@ -452,11 +452,14 @@ test("opens the operation guide without changing CLP, history, or scene and rest
     .locator(".physical-validation__summary")
     .textContent();
   await page.getByRole("button", { name: "物理判定を閉じる" }).click();
+  await expect(physicalDialog).toHaveCount(0);
+  await expect(page.locator("html")).not.toHaveClass(/modal-active/);
 
   const operationGuideScrollTarget = Math.min(600, await maxPageScrollTop(page));
   expect(operationGuideScrollTarget).toBeGreaterThan(0);
   await scrollPageTo(page, operationGuideScrollTarget);
   await expect.poll(() => pageScrollTop(page)).toBe(operationGuideScrollTarget);
+  const scrolledAnnotationGeometry = await selectedAnnotationGeometry(page);
 
   const menu = page.locator("#app-navigation-button");
   const canonical = page.getByTestId("canonical-project-settings");
@@ -482,7 +485,7 @@ test("opens the operation guide without changing CLP, history, or scene and rest
   await expect(redo).toBeDisabled();
   expectSameAnnotationGeometry(
     await selectedAnnotationGeometry(page),
-    zoomedAnnotationGeometry,
+    scrolledAnnotationGeometry,
   );
   const close = dialog.getByRole("button", { name: "操作方法を閉じる" });
   await expect(close).toBeFocused();
@@ -522,7 +525,7 @@ test("opens the operation guide without changing CLP, history, or scene and rest
   await expect.poll(() => pageScrollTop(page)).toBe(stateBefore.scrollY);
   expectSameAnnotationGeometry(
     await selectedAnnotationGeometry(page),
-    zoomedAnnotationGeometry,
+    scrolledAnnotationGeometry,
   );
   await expect(lamp).toHaveAttribute("data-status", physicalBefore.status ?? "");
   await expect(lamp).toHaveAttribute("aria-label", physicalBefore.ariaLabel ?? "");
@@ -544,7 +547,7 @@ test("opens the operation guide without changing CLP, history, or scene and rest
   await expect.poll(() => pageScrollTop(page)).toBe(stateBefore.scrollY);
   expectSameAnnotationGeometry(
     await selectedAnnotationGeometry(page),
-    zoomedAnnotationGeometry,
+    scrolledAnnotationGeometry,
   );
 
   await lamp.click();
@@ -1076,7 +1079,7 @@ test("blocks editor transitions while a delayed device replacement completes", a
   await openPersistenceDrawer(page);
   const pendingDrawer = page.locator("#project-persistence-drawer");
   await expect(pendingDrawer.getByRole("button", { name: "積荷を追加", exact: true })).toBeDisabled();
-  await expect(pendingDrawer.getByRole("button", { name: "候補を追加", exact: true })).toBeDisabled();
+  await expect(pendingDrawer.getByRole("button", { name: "コンテナを追加", exact: true })).toBeDisabled();
 
   await releaseControlledPreflight(page);
   await expect(status).toContainText("端末内保存を読み込みました");
@@ -1337,7 +1340,7 @@ test("keeps 1000-cargo search and selection usable without narrow horizontal ove
   await expect(page.locator(".project-persistence__status")).toContainText("CLP JSONを読み込みました");
   const drawer = page.locator("#project-persistence-drawer");
   await expect(drawer.getByRole("button", { name: "積荷を追加", exact: true })).toBeDisabled();
-  await expect(drawer.getByRole("button", { name: "候補を追加", exact: true })).toBeDisabled();
+  await expect(drawer.getByRole("button", { name: "コンテナを追加", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
 
   const viewport = await page.locator(".viewport").boundingBox();

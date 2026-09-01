@@ -142,7 +142,7 @@ test("places the menu at the app-bar right edge and provides zero and single can
   await page.setViewportSize({ width: 375, height: 740 });
   await page.goto("/");
   await expect(page.getByRole("tablist", { name: "表示する荷室" })).toHaveCount(0);
-  await expect(page.getByText("表示する候補がありません")).toBeVisible();
+  await expect(page.getByText("表示するコンテナがありません")).toBeVisible();
 
   const menu = page.locator("#app-navigation-button");
   const menuBox = await menu.boundingBox();
@@ -176,8 +176,8 @@ for (const width of [305, 320, 375] as const) {
     const tabShell = page.locator(".candidate-tabs");
     const candidateTabs = page.locator(".scene-workspace__candidate-tabs");
     const viewport = page.locator(".viewport");
-    const scrollLeft = page.getByRole("button", { name: "候補タブを左へスクロール" });
-    const scrollRight = page.getByRole("button", { name: "候補タブを右へスクロール" });
+    const scrollLeft = page.getByRole("button", { name: "コンテナタブを左へスクロール" });
+    const scrollRight = page.getByRole("button", { name: "コンテナタブを右へスクロール" });
 
     await expect(tabs).toHaveCount(100);
     await expect(tabShell).toHaveAttribute("data-overflow", "true");

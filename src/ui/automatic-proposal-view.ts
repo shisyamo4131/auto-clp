@@ -113,15 +113,15 @@ const READY_COPY = {
   },
   "no-candidates": {
     tone: "neutral",
-    badge: "候補なし",
-    summary: "配置案の作成先となる候補コンテナがありません。CLPは変更していません。",
-    detail: "候補コンテナを登録してから探索してください。",
+    badge: "コンテナなし",
+    summary: "配置案の作成先となるコンテナがありません。CLPは変更していません。",
+    detail: "コンテナを登録してから探索してください。",
   },
   "no-complete-plan": {
     tone: "warning",
     badge: "完全案なし",
     summary:
-      "登録済み候補と今回の探索モデルでは、全積荷を配置できる案がありませんでした。",
+      "登録済みコンテナと今回の探索モデルでは、全積荷を配置できる案がありませんでした。",
     detail: "これは実積載不能の証明ではありません。CLPは変更していません。",
   },
   cutoff: {
@@ -141,7 +141,7 @@ const READY_COPY = {
     tone: "warning",
     badge: "案あり・最良未確認・未適用",
     summary:
-      "完全案は見つかりましたが、より優先される候補の探索が上限に達したため、目的関数上の最良とは確認できません。",
+      "完全案は見つかりましたが、より優先されるコンテナの探索が上限に達したため、目的関数上の最良とは確認できません。",
     detail:
       "配置案はまだCLPへ適用していません。未確認事項と安全上の制限を確認してください。",
   },
@@ -154,9 +154,9 @@ const CANDIDATE_OUTCOME_LABELS = {
 } as const;
 
 const CUTOFF_LABELS = {
-  candidate: "候補ごとの上限",
+  candidate: "コンテナごとの上限",
   request: "依頼全体の上限",
-  both: "候補と依頼全体の上限",
+  both: "コンテナと依頼全体の上限",
 } satisfies Record<AutomaticProposalCutoffSource, string>;
 
 function normalizedOffset(value: number | undefined, total: number): number {
@@ -272,7 +272,7 @@ function completedApplyView(
       tone: applied ? "success" : "neutral",
       badge: applied ? "適用済み" : "変更なし",
       summary: applied
-        ? `候補${container.name} (${container.id})へ${snapshot.summary.placementCount}件適用、1回の取り消しで元へ戻せます。`
+        ? `コンテナ${container.name} (${container.id})へ${snapshot.summary.placementCount}件適用、1回の取り消しで元へ戻せます。`
         : "配置案は現在の配置と同じため、CLPと操作履歴は変更していません。",
       detail:
         snapshot.summary.unverifiedReasonCount > 0

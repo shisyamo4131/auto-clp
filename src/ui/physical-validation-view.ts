@@ -67,7 +67,7 @@ const UNAVAILABLE_REASON_COPY = {
   "physical.semantic-input-invalid":
     "CLPデータの参照または意味整合性に問題があるため、物理判定を実行できません。",
   "physical.container-not-found":
-    "選択した候補がCLP内に見つからないため、物理判定を実行できません。",
+    "選択したコンテナがCLP内に見つからないため、物理判定を実行できません。",
   "physical.payload-calculation-unavailable":
     "重量または耐荷重を安全に計算できないため、物理判定を実行できません。",
   "physical.geometry-calculation-unavailable":
@@ -91,7 +91,7 @@ export function createPhysicalValidationLabelMaps(
 
 function targetLabel(labels: PhysicalValidationLabelMaps, target: PhysicalTarget): string {
   if (target.kind === "container") {
-    return `${labels.containerNames.get(target.id) ?? "不明な候補"}（ID: ${visibleId(target.id)}）`;
+    return `${labels.containerNames.get(target.id) ?? "不明なコンテナ"}（ID: ${visibleId(target.id)}）`;
   }
 
   return `${labels.cargoNames.get(target.id) ?? "不明な積荷"}（ID: ${visibleId(target.id)}）`;
@@ -177,7 +177,7 @@ export function toPhysicalValidationSummaryView(
       statusLabel: "問題なし",
       summary:
         summary.placementCount === 0
-          ? "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。"
+          ? "実装済み確認項目内で問題なし：このコンテナには配置済みの積荷がありません。"
           : "実装済み確認項目内で問題なし：現在の保存済み配置に不適合・未確認はありません。",
     };
   }
@@ -206,7 +206,7 @@ export function toPhysicalValidationView(
     return {
       status: "none",
       statusLabel: "判定対象なし",
-      summary: "判定対象なし：候補コンテナを追加してください。",
+      summary: "判定対象なし：コンテナを追加してください。",
       invalidReasons: [],
       unverifiedReasons: [],
     };
@@ -238,7 +238,7 @@ export function toPhysicalValidationView(
       statusLabel: "問題なし",
       summary:
         placementCount === 0
-          ? "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。"
+          ? "実装済み確認項目内で問題なし：このコンテナには配置済みの積荷がありません。"
           : "実装済み確認項目内で問題なし：現在の保存済み配置に不適合・未確認はありません。",
       invalidReasons,
       unverifiedReasons,

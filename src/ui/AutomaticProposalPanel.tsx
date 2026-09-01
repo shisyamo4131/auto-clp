@@ -254,13 +254,13 @@ export function AutomaticProposalPanel({
           <strong>配置案をCLPへ一括適用しますか？</strong>
           <p>
             {project.placements.length > 0
-              ? `現在の配置${project.placements.length}件を、${view.selectedContainerLabel ?? "配置先候補"}への配置案${view.metrics.proposalPlacementCount}件で一括置換します。`
-              : `${view.selectedContainerLabel ?? "配置先候補"}への配置案${view.metrics.proposalPlacementCount}件を追加します。`}
+              ? `現在の配置${project.placements.length}件を、${view.selectedContainerLabel ?? "配置先コンテナ"}への配置案${view.metrics.proposalPlacementCount}件で一括置換します。`
+              : `${view.selectedContainerLabel ?? "配置先コンテナ"}への配置案${view.metrics.proposalPlacementCount}件を追加します。`}
             配置が変わる場合は、1回の取り消しで元へ戻せます。
           </p>
           {snapshot.result.status === "complete-with-cutoff" ? (
             <p className="warning-copy">
-              より優先される候補の探索が上限に達したため、この案が目的関数上の最良とは確認できません。
+              より優先されるコンテナの探索が上限に達したため、この案が目的関数上の最良とは確認できません。
             </p>
           ) : null}
           {(view.metrics.unverifiedCount ?? 0) > 0 ? (
@@ -310,7 +310,7 @@ export function AutomaticProposalPanel({
             <dd>{view.metrics.requestAttemptCount}回</dd>
           </div>
           <div>
-            <dt>探索候補</dt>
+            <dt>探索試行</dt>
             <dd>{view.metrics.candidateCount}件</dd>
           </div>
           <div>
@@ -320,7 +320,7 @@ export function AutomaticProposalPanel({
           <div>
             <dt>固定上限</dt>
             <dd>
-              候補{view.metrics.effectiveLimits?.candidateAttemptLimit}回・要求
+              コンテナ{view.metrics.effectiveLimits?.candidateAttemptLimit}回・要求
               {view.metrics.effectiveLimits?.requestAttemptLimit}回・候補点
               {view.metrics.effectiveLimits?.candidatePointLimit}点
             </dd>
@@ -330,13 +330,13 @@ export function AutomaticProposalPanel({
 
       {view.selectedContainerLabel === undefined ? null : (
         <p className="automatic-proposal__selected">
-          配置先候補: {view.selectedContainerLabel}
+          配置先コンテナ: {view.selectedContainerLabel}
         </p>
       )}
 
       {view.candidates.total === 0 ? null : (
         <section className="automatic-proposal__group" aria-labelledby="automatic-proposal-candidates">
-          <h3 id="automatic-proposal-candidates">候補別の探索結果</h3>
+          <h3 id="automatic-proposal-candidates">コンテナ別の探索結果</h3>
           <ol className="automatic-proposal__cards" start={view.candidates.offset + 1}>
             {view.candidates.rows.map((row) => (
               <li key={row.containerId}>
@@ -348,7 +348,7 @@ export function AutomaticProposalPanel({
             ))}
           </ol>
           <PageControls
-            label="候補"
+            label="コンテナ"
             page={view.candidates}
             onOffsetChange={(offset) => updateOffset("candidateOffset", offset)}
           />

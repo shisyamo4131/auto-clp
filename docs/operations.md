@@ -2,9 +2,9 @@
 
 ## Current Availability
 
-- Implemented scene workspace 1.3.0: Application Bar右端menu、3D欄外上部の一行scroll tab、cargo-global side-relative荷室外anchor、候補間共有camera、`整数 mm` だけをcompactな外向き矢印で示す選択積荷の3軸寸法annotation、selector直下の固定context action rowと `現在の座標` copy、icon-only判定lampとdialog、Drawerから開く独立 `操作方法` dialog、版付き「使用上の重要事項」を実装した。操作方法dialogはCLP・履歴・保存・camera・判定を変更せず、左drag回転、Shift付き左drag・右drag平行移動などの現行操作を案内する。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
+- Implemented scene workspace 1.4.0: Application Bar右端menu、3D欄外上部の一行scroll tab、cargo-global side-relative荷室外anchor、コンテナ間共有camera、`整数 mm` だけをcompactな外向き矢印で示す選択積荷の3軸寸法annotation、selector直下の固定context action rowと `現在の座標` copy、icon-only判定lampとdialog、Drawerから開く独立 `操作方法` dialog、版付き「使用上の重要事項」を実装した。操作方法dialogはCLP・履歴・保存・camera・判定を変更せず、左drag回転、Shift付き左drag・右drag平行移動などの現行操作を案内する。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
 
-- Implemented viewer-first shell: Application Barにmenu、現在CLP名、小さな3D能力Chipを置き、新規CLP・CLP設定・積荷追加・候補追加・端末保存・JSON・ヘルプを単一Navigation Drawerへ集約する。積荷と候補の追加buttonは通常画面に置かず、既存editor、履歴、busy/dirty gate、件数上限を再利用する。Drawer外の背景相当領域、close button、EscapeはDrawerだけを閉じ、背面操作を発火させずpage scrollを維持してmenuへfocusを戻す。CLP設定はdialog、候補tablistは3D viewport欄外上部、全CLP積荷の名前/ID検索・状態付きselectorはviewport下部overlayとし、3Dの寸法と位置を動かさない。未保存変更付きの新規CLPは破棄確認後、UUID付きの新 `projectId` と空履歴を作るbarrierとし、CLP設定dialogを開く。
+- Implemented viewer-first shell: Application Barにmenu、現在CLP名、小さな3D能力Chipを置き、新規CLP・CLP設定・積荷追加・コンテナ追加・選択中コンテナの編集と削除・端末保存・JSON・ヘルプを単一Navigation Drawerへ集約する。積荷cardとコンテナcardは通常画面に置かず、既存editor、履歴、busy/dirty gate、件数上限、非cascade削除を再利用する。Drawer外の背景相当領域、close button、EscapeはDrawerだけを閉じ、背面操作を発火させずpage scrollを維持してmenuへfocusを戻す。CLP設定はdialog、コンテナtablistは3D viewport欄外上部、全CLP積荷の名前/ID検索・状態付きselectorはviewport下部overlayとし、3Dの寸法と位置を動かさない。未保存変更付きの新規CLPは破棄確認後、UUID付きの新 `projectId` と空履歴を作るbarrierとし、CLP設定dialogを開く。
 
 - Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、CLP JSON Schema `0.1.0`、完全なreadonly CLP型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、保存Navigation Drawerと操作単位のSnackbar、全候補の置換前Worker判定、CLP・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、viewport内のcompactな単一CLP履歴、全積荷pickerと固定context action row、成功したCLP変更を最大100件保持する非永続undo/redo、コンテナ包含・XY正面積重なり・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補tab、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置と荷室外作業スペースのThree.js描画、canvas積荷選択、fine pointerによる未配置積荷の自由な荷室外移動・初回配置と配置済み床面方向drag・完全drag-out削除、許可済みX/Z軸90°回転、天地無用入力補助、viewport wheelのpage scroll、明示的な `＋` / `－` による拡大縮小、共有camera、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
 - Implemented support refinement: fine pointer dragの床・支持可能上面へのZ snap、単一支持面内のX/Y clamp、条件未確認・不適合preview、操作対象以外のほぼ透明な中立面と灰色点線、緑・黄点線による支持候補強調、単独支持・複数支持・隙間・張り出し・支持可否混在・接触不成立の派生判定。旧XY和集合100% helperは回帰用に保持するが、現行の支持区分には使用しない。
@@ -14,7 +14,7 @@
 
 未実装機能を利用可能として案内してはならない。
 
-包含・重なり・隙間込み境界・非支持ペア軸別隙間・単独支持・支持条件未確認・支持接触不成立の低レベルgeometry基盤と、同一コンテナの対象抽出、参照解決、支持隙間例外、対象ID、理由コード、集約状態を返す純粋判定は実装済みである。床を下へ越える配置は専用 `floor-penetration` を先頭理由とし、他面だけの境界外 `outside-container` と区別する。判定はローカルmodule Workerでメインスレッド外に実行し、集約状態と件数を先に、理由を不適合・未確認ごとに25件ずつ表示する。候補やCLPが変わった場合は旧Workerを終了して旧結果を表示せず、Worker障害時は物理的不適合と混同せず判定不能と再試行を表示する。
+包含・重なり・隙間込み境界・非支持ペア軸別隙間・単独支持・支持条件未確認・支持接触不成立の低レベルgeometry基盤と、同一コンテナの対象抽出、参照解決、支持隙間例外、対象ID、理由コード、集約状態を返す純粋判定は実装済みである。床を下へ越える配置は専用 `floor-penetration` を先頭理由とし、他面だけの境界外 `outside-container` と区別する。判定はローカルmodule Workerでメインスレッド外に実行し、集約状態と件数を先に、理由を不適合・未確認ごとに25件ずつ表示する。コンテナやCLPが変わった場合は旧Workerを終了して旧結果を表示せず、Worker障害時は物理的不適合と混同せず判定不能と再試行を表示する。
 
 矩形開口のY・Z断面判定、許可向き抽出、どの許可向きでも寸法上通らない場合の不適合理由・対象ID・集約とUI表示は実装済みである。寸法上通る場合は積荷ごとの理由を生成せず、完全な搬入経路を保証しない範囲を恒常的な注意で示す。
 
@@ -83,11 +83,11 @@ corepack pnpm run dev:ui-trial
 
 このscriptは `http://127.0.0.1:4174/` を `strictPort` で使用する。port使用中なら別serverへ接続または別portへ迂回せず、起動を失敗させる。
 
-CLP名、軸別隙間、積荷、コンテナ・車両候補は入力・編集できる。入力途中の文字列は明示的な保存操作まで正規CLPへ反映せず、不正入力時は直前の正規CLPを保持する。入力成功は積載可能性や物理的安全性の確認を意味しない。
+CLP名、軸別隙間、積荷、コンテナは入力・編集できる。車両はPhase 1の対象外である。入力途中の文字列は明示的な保存操作まで正規CLPへ反映せず、不正入力時は直前の正規CLPを保持する。入力成功は積載可能性や物理的安全性の確認を意味しない。
 
 「端末へ保存」は現在の検証済みCLPをIndexedDBの単一枠へ手動保存し、transaction完了後だけ成功を表示する。「端末保存を読込」は全候補のWorker事前判定後にCLPを一括置換し、旧履歴・draft・選択・camera・判定結果をリセットする。「端末保存を削除」は確認後に保存コピーだけを削除し、画面のCLPとJSONファイルは削除しない。自動保存・自動読込はない。保存中のCLPcommit・履歴操作、読込中に入力状態が変化したCLP置換は拒否する。
 
-CLP作成・設定、積荷・候補追加、保存・JSON、ヘルプは右側Navigation Drawerへまとめる。Drawerはモーダルとして背景のpointer、Tab移動、CLPUndo/Redo shortcutを遮断し、close button、Escape、Drawer外の背景相当領域clickでDrawerだけを閉じて入口へfocusを戻す。同じclickで背面controlを作動させず、page scrollを変えない。積荷追加は既存modal、候補追加は既存transactional formを開き、通常画面の追加buttonは表示しない。処理中にDrawerを閉じても永続化処理は継続する。処理中と完了はDrawerを閉じた画面でもSnackbarへ操作単位で表示し、成功と取消は6秒後に消去、失敗は明示的に閉じるまで保持する。Drawer内の直近結果はlive regionにせず、同じ文の連続操作でも新しい通知として扱う。
+CLP作成・設定、積荷追加、コンテナの追加・編集・削除、保存・JSON、ヘルプは右側Navigation Drawerへまとめる。Drawerはモーダルとして背景のpointer、Tab移動、CLPUndo/Redo shortcutを遮断し、close button、Escape、Drawer外の背景相当領域clickでDrawerだけを閉じて入口へfocusを戻す。同じclickで背面controlを作動させず、page scrollを変えない。積荷追加とコンテナ管理はDrawerを閉じて既存のmodal editorを開く。編集・削除は3Dで選択中のコンテナを対象とし、配置参照中の削除は先に積荷を外すよう理由付きで拒否する。処理中にDrawerを閉じても永続化処理は継続する。処理中と完了はDrawerを閉じた画面でもSnackbarへ操作単位で表示し、成功と取消は6秒後に消去、失敗は明示的に閉じるまで保持する。Drawer内の直近結果はlive regionにせず、同じ文の連続操作でも新しい通知として扱う。
 
 「JSONを書き出す」は検証済み `auto-clp-project-0.1.0.json` をdownloadし、「JSONを読み込む」は標準file inputから同じ取引的読込を行う。端末保存はブラウザのサイトデータ削除・容量管理で失われ得るためバックアップではない。必要な時はJSONも書き出す。操作履歴、未保存入力、選択、camera、判定結果はどちらにも保存しない。
 

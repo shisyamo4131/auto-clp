@@ -28,6 +28,7 @@ $clpTerminologyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0024-us
 $viewerFirstShellDecisionPath = Join-Path $resolvedProject 'docs/decisions/0025-viewer-first-application-shell.md'
 $tabbedSceneDecisionPath = Join-Path $resolvedProject 'docs/decisions/0026-tabbed-scene-annotations-and-validation-dialog.md'
 $drawerDeferralDecisionPath = Join-Path $resolvedProject 'docs/decisions/0029-phase1-drawer-entry-and-automatic-proposal-deferral.md'
+$containerOnlyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0030-container-only-drawer-management.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -57,7 +58,8 @@ $sceneBrowserTestPath = Join-Path $resolvedProject 'tests/browser/scene.spec.ts'
 $stylesPath = Join-Path $resolvedProject 'src/styles.css'
 $orientationPolicyPath = Join-Path $resolvedProject 'src/domain/orientation-policy.ts'
 $cargoEditorPath = Join-Path $resolvedProject 'src/ui/CargoEditorDialog.tsx'
-$projectWorkspacePath = Join-Path $resolvedProject 'src/ui/ProjectWorkspace.tsx'
+$projectSettingsDialogPath = Join-Path $resolvedProject 'src/ui/ProjectSettingsDialog.tsx'
+$containerEditorPath = Join-Path $resolvedProject 'src/ui/ContainerEditorDialog.tsx'
 $projectHistoryControlsPath = Join-Path $resolvedProject 'src/ui/ProjectHistoryControls.tsx'
 $projectPersistencePanelPath = Join-Path $resolvedProject 'src/ui/ProjectPersistencePanel.tsx'
 $projectPersistencePath = Join-Path $resolvedProject 'src/application/project-persistence.ts'
@@ -86,6 +88,7 @@ foreach ($path in @(
     $viewerFirstShellDecisionPath,
     $tabbedSceneDecisionPath,
     $drawerDeferralDecisionPath,
+    $containerOnlyDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -115,7 +118,8 @@ foreach ($path in @(
     $stylesPath,
     $orientationPolicyPath,
     $cargoEditorPath,
-    $projectWorkspacePath,
+    $projectSettingsDialogPath,
+    $containerEditorPath,
     $projectHistoryControlsPath,
     $projectPersistencePanelPath,
     $projectPersistencePath
@@ -214,16 +218,32 @@ foreach ($sourceFile in $productionSourceFiles) {
     if ($sourceText.Contains('案件')) {
         throw "Production source still contains the retired user-facing term: $($sourceFile.FullName)"
     }
+    foreach ($retiredContainerText in @(
+        'コンテナ・車両',
+        '候補を追加',
+        '候補名',
+        '候補一覧',
+        '候補タブ',
+        '現在の候補',
+        '別候補',
+        '他候補'
+    )) {
+        if ($sourceText.Contains($retiredContainerText)) {
+            throw "Production source still contains a retired container term '$retiredContainerText': $($sourceFile.FullName)"
+        }
+    }
 }
-$projectWorkspace = [IO.File]::ReadAllText($projectWorkspacePath)
+$projectSettingsDialog = [IO.File]::ReadAllText($projectSettingsDialogPath)
+$containerEditor = [IO.File]::ReadAllText($containerEditorPath)
 $projectHistoryControls = [IO.File]::ReadAllText($projectHistoryControlsPath)
 $projectPersistencePanel = [IO.File]::ReadAllText($projectPersistencePanelPath)
 $sceneWorkspace = [IO.File]::ReadAllText($sceneWorkspacePath)
 $automaticProposalPanel = [IO.File]::ReadAllText($automaticProposalPanelPath)
 foreach ($contract in @(
-    @{ Name = 'CLP settings'; Text = $projectWorkspace; Required = @('CLP INPUT', 'CLP設定', 'CLP名', 'CLPを保存') },
+    @{ Name = 'CLP settings'; Text = $projectSettingsDialog; Required = @('CLP設定', 'CLP名', 'CLPを保存') },
     @{ Name = 'CLP history'; Text = $projectHistoryControls; Required = @('CLP-WIDE HISTORY', 'CLP全体の操作') },
-    @{ Name = 'CLP persistence'; Text = $projectPersistencePanel; Required = @('CLPメニュー', '新規CLP', 'CLP設定', '積荷を追加', '候補を追加', 'project-persistence__backdrop') },
+    @{ Name = 'CLP persistence'; Text = $projectPersistencePanel; Required = @('CLPメニュー', '新規CLP', 'CLP設定', '積荷を追加', 'コンテナを追加', '選択中のコンテナを編集', '選択中のコンテナを削除', 'project-persistence__backdrop') },
+    @{ Name = 'Container editor'; Text = $containerEditor; Required = @('コンテナ名', 'コンテナを保存', 'command.container-referenced') },
     @{ Name = 'CLP scene'; Text = $sceneWorkspace; Required = @('3D積載作業', '操作する積荷', '積荷を検索') },
     @{ Name = 'Placement proposal'; Text = $automaticProposalPanel; Required = @('配置案を適用', '配置案（未適用）') }
 )) {
@@ -243,7 +263,7 @@ foreach ($requiredText in @(
     '非永続の作業スペース',
     'X軸またはZ軸を中心に90度回転',
     '寸法prefix `大きさ:` を表示しない',
-    '同一候補のProject更新ではcamera位置と注視点を保持',
+    '同一コンテナのProject更新ではcamera位置と注視点を保持',
     'CLPの全積荷を対象',
     '共有modal shell上の別dialog',
     'drag中の操作通知は固定高またはoverlay領域'
@@ -277,7 +297,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.3.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.4.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -314,6 +334,21 @@ if ($tabbedSceneDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
 $drawerDeferralDecision = [IO.File]::ReadAllText($drawerDeferralDecisionPath)
 if ($drawerDeferralDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0029 does not have Accepted status.'
+}
+$containerOnlyDecision = [IO.File]::ReadAllText($containerOnlyDecisionPath)
+if ($containerOnlyDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0030 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    'Phase 1で登録・選択・編集・判定する積載空間はコンテナだけ',
+    '積荷cardとコンテナcardを通常画面から撤去',
+    '`選択中のコンテナを編集`',
+    'cascade削除は行わず',
+    'Schema `0.1.0`'
+)) {
+    if (-not $containerOnlyDecision.Contains($requiredText)) {
+        throw "ADR 0030 does not contain the approved container-only marker: $requiredText"
+    }
 }
 foreach ($requiredText in @(
     '通常起動で自動提案Workerを開始しない',
@@ -365,8 +400,8 @@ foreach ($requiredText in @(
 }
 
 foreach ($requiredText in @(
-    '全積荷をちょうど一度ずつ、一つの登録済み候補コンテナへ配置',
-    '内部容積、内部床面積、内部長さ、内部幅、内部高さ、候補ID',
+    '全積荷をちょうど一度ずつ、一つの登録済みコンテナへ配置',
+    '内部容積、内部床面積、内部長さ、内部幅、内部高さ、コンテナID',
     '未探索の次attemptが上限を超える時だけcutoff',
     '目的関数上の最良とは未確認',
     'no-complete-plan',
@@ -383,7 +418,7 @@ foreach ($requiredText in @(
     'IndexedDBの単一手動枠 `current-project`',
     '自動保存と起動時自動読込を行わない',
     'auto-clp-project-0.1.0.json',
-    '全候補の物理判定をmodule Workerで再計算',
+    '全コンテナの物理判定をmodule Workerで再計算',
     '現在CLP、履歴、入力を保持'
 )) {
     if (-not $specification.Contains($requiredText)) {
@@ -869,4 +904,5 @@ foreach ($requiredText in @(
     automatic_proposal_ap08_evidence_recorded = $true
     automatic_proposal_current_ui_available = $false
     drawer_deferral_decision_0029_accepted = $true
+    container_only_decision_0030_accepted = $true
 }

@@ -175,7 +175,7 @@ describe("toPhysicalValidationView", () => {
         code: "physical.container-not-found",
         target: { kind: "container", id: "container-known" },
       },
-      "判定不能：選択した候補がCLP内に見つからないため、物理判定を実行できません。",
+      "判定不能：選択したコンテナがCLP内に見つからないため、物理判定を実行できません。",
       "既知候補（ID: container-known）",
     ],
     [
@@ -237,12 +237,12 @@ describe("toPhysicalValidationView", () => {
     expect(toPhysicalValidationView(projectFixture())).toMatchObject({
       status: "none",
       statusLabel: "判定対象なし",
-      summary: "判定対象なし：候補コンテナを追加してください。",
+      summary: "判定対象なし：コンテナを追加してください。",
     });
     expect(toPhysicalValidationView(projectFixture(), evaluated("valid"))).toMatchObject({
       status: "valid",
       statusLabel: "問題なし",
-      summary: "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。",
+      summary: "実装済み確認項目内で問題なし：このコンテナには配置済みの積荷がありません。",
     });
     expect(
       toPhysicalValidationView(projectFixture([placement]), evaluated("valid")),
@@ -276,9 +276,9 @@ describe("toPhysicalValidationView", () => {
     [{ kind: "cargo", id: "cargo-known" }, "既知積荷（ID: cargo-known）"],
     [{ kind: "container", id: "container-known" }, "既知候補（ID: container-known）"],
     [{ kind: "cargo", id: "cargo-missing" }, "不明な積荷（ID: cargo-missing）"],
-    [{ kind: "container", id: "container-missing" }, "不明な候補（ID: container-missing）"],
+    [{ kind: "container", id: "container-missing" }, "不明なコンテナ（ID: container-missing）"],
     [{ kind: "cargo", id: "" }, "不明な積荷（ID: （空文字））"],
-    [{ kind: "container", id: "" }, "不明な候補（ID: （空文字））"],
+    [{ kind: "container", id: "" }, "不明なコンテナ（ID: （空文字））"],
   ] as const)("renders target $0.kind/$0.id without hiding its ID", (target, targetLabel) => {
     const reason: PhysicalValidationReason = {
       status: "invalid",
@@ -471,20 +471,20 @@ describe("worker physical validation view adapters", () => {
     [
       "physical.container-not-found",
       { kind: "container", id: "container-known" },
-      "判定不能：選択した候補がCLP内に見つからないため、物理判定を実行できません。",
+      "判定不能：選択したコンテナがCLP内に見つからないため、物理判定を実行できません。",
       "既知候補（ID: container-known）",
     ],
     [
       "physical.payload-calculation-unavailable",
       { kind: "container", id: "container-missing" },
       "判定不能：重量または耐荷重を安全に計算できないため、物理判定を実行できません。",
-      "不明な候補（ID: container-missing）",
+      "不明なコンテナ（ID: container-missing）",
     ],
     [
       "physical.geometry-calculation-unavailable",
       { kind: "container", id: "" },
       "判定不能：寸法・座標・隙間を安全に計算できないため、物理判定を実行できません。",
-      "不明な候補（ID: （空文字））",
+      "不明なコンテナ（ID: （空文字））",
     ],
   ] as const)(
     "maps compact unavailable summary %s without domain details",
@@ -516,7 +516,7 @@ describe("worker physical validation view adapters", () => {
   it.each([
     [
       { kind: "evaluated", status: "valid", invalidCount: 0, unverifiedCount: 0, placementCount: 0 },
-      "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。",
+      "実装済み確認項目内で問題なし：このコンテナには配置済みの積荷がありません。",
     ],
     [
       { kind: "evaluated", status: "valid", invalidCount: 0, unverifiedCount: 0, placementCount: 1 },

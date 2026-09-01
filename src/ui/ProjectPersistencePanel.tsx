@@ -12,6 +12,7 @@ import type {
   ProjectPersistenceFailureCode,
 } from "../application/project-persistence";
 import type { Project } from "../domain/model";
+import type { ContainerEditorIntent } from "./ContainerEditorDialog";
 import {
   isProjectFileExportAvailable,
   isProjectFileImportAvailable,
@@ -51,9 +52,10 @@ interface ProjectPersistencePanelProps {
   readonly onOpenChange: (open: boolean) => void;
   readonly onOpenProjectSettings: () => void;
   readonly onOpenUsageRequirements: () => void;
-  readonly onRequestContainerAdd: () => void;
+  readonly onOpenContainerEditor: (intent: ContainerEditorIntent) => void;
   readonly open: boolean;
   readonly project: Project;
+  readonly selectedContainerId?: string;
 }
 
 const failureCopy = {
@@ -84,7 +86,7 @@ const failureCopy = {
   "persistence.import-semantic-invalid":
     "CLPデータのID、参照、向き、開口、または重量整合性を確認できないため拒否しました。",
   "persistence.import-preflight-failed":
-    "全候補の物理判定を安全に再計算できないため読込を拒否しました。",
+    "全コンテナの物理判定を安全に再計算できないため読込を拒否しました。",
   "persistence.device-unavailable":
     "このブラウザでは端末内保存を利用できません。JSON書き出しを利用してください。",
   "persistence.device-open-failed":
@@ -144,9 +146,10 @@ export function ProjectPersistencePanel({
   onOpenChange,
   onOpenProjectSettings,
   onOpenUsageRequirements,
-  onRequestContainerAdd,
+  onOpenContainerEditor,
   open: drawerOpen,
   project,
+  selectedContainerId,
 }: ProjectPersistencePanelProps) {
   const [deleteConfirmation, setDeleteConfirmation] = useState(false);
   const [newProjectConfirmation, setNewProjectConfirmation] = useState(false);
@@ -178,6 +181,9 @@ export function ProjectPersistencePanel({
   const deviceAvailable = isProjectStoreAvailable();
   const fileImportAvailable = isProjectFileImportAvailable();
   const fileExportAvailable = isProjectFileExportAvailable();
+  const selectedContainer = project.containers.find(
+    (container) => container.id === selectedContainerId,
+  ) ?? project.containers[0];
   const controlsDisabled = busy || operation !== undefined || deleteConfirmation || newProjectConfirmation;
 
   const publish = useCallback((message: string, kind: NotificationKind) => {
@@ -518,14 +524,51 @@ export function ProjectPersistencePanel({
                 >
                   積荷を追加
                 </button>
+              </div>
+            </div>
+            <div className="project-persistence__group">
+              <h3>コンテナ</h3>
+              <p className="project-persistence__availability">
+                {project.containers.length === 0
+                  ? "コンテナはまだありません。"
+                  : `選択中: ${selectedContainer?.name ?? "コンテナなし"} · ${project.containers.length} / 100件`}
+              </p>
+              <div className="button-row">
                 <button
                   id="container-add-button"
                   className="secondary-button"
                   type="button"
                   disabled={controlsDisabled || project.containers.length >= 100}
-                  onClick={() => finishDrawerAction(onRequestContainerAdd)}
+                  onClick={() => finishDrawerAction(() => onOpenContainerEditor({ kind: "add" }))}
                 >
-                  候補を追加
+                  コンテナを追加
+                </button>
+                <button
+                  id="container-edit-button"
+                  type="button"
+                  disabled={controlsDisabled || project.containers.length === 0}
+                  onClick={() => {
+                    const container = selectedContainer;
+                    if (container !== undefined) {
+                      finishDrawerAction(() => onOpenContainerEditor({ kind: "edit", containerId: container.id }));
+                    }
+                  }}
+                >
+                  選択中のコンテナを編集
+                </button>
+                <button
+                  id="container-delete-button"
+                  className="danger-button"
+                  type="button"
+                  disabled={controlsDisabled || project.containers.length === 0}
+                  onClick={() => {
+                    const container = selectedContainer;
+                    if (container !== undefined) {
+                      finishDrawerAction(() => onOpenContainerEditor({ kind: "delete", containerId: container.id }));
+                    }
+                  }}
+                >
+                  選択中のコンテナを削除
                 </button>
               </div>
             </div>

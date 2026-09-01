@@ -3,6 +3,7 @@ import {
   activateContainer,
   addCargoFromDrawer,
   addContainerFromDrawer,
+  openPersistenceDrawer,
   saveProjectName,
 } from "./ui-helpers";
 
@@ -60,17 +61,18 @@ test("keeps native input undo local and blocks project history while a dialog is
   await expect(undo).toBeEnabled();
 });
 
-test("falls back when a selected candidate disappears and does not auto-select it on undo", async ({ page }) => {
+test("falls back when a selected container disappears and does not auto-select it on undo", async ({ page }) => {
   await page.goto("/");
   await addContainer(page, "候補A");
   await addContainer(page, "候補B");
   await activateContainer(page, "container-2");
-  await page.getByRole("button", { name: "削除: 候補B" }).click();
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
   await page.getByRole("button", { name: "削除を確定: 候補B" }).click();
   await expect(page.getByRole("tab", { name: /ID: container-1/ })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "元に戻す" }).click();
   await expect(page.getByRole("tab", { name: /ID: container-1/ })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("list", { name: "候補一覧" })).toContainText("候補B");
+  await expect(page.getByRole("tab", { name: /候補B/ })).toBeVisible();
 });
 
 test("discards redo after a new branch", async ({ page }) => {

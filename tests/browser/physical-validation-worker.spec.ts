@@ -3,6 +3,7 @@ import {
   activateContainer,
   addCargoFromDrawer,
   addContainerFromDrawer,
+  openPersistenceDrawer,
   openPhysicalValidation,
 } from "./ui-helpers";
 
@@ -305,7 +306,7 @@ test("terminates the completed last-candidate worker, clears old reasons, and ev
   const panel = page.locator(".physical-validation");
   const summary = panel.locator(".physical-validation__summary");
   await expect(summary).toHaveText(
-    "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。",
+    "実装済み確認項目内で問題なし：このコンテナには配置済みの積荷がありません。",
   );
   const beforeDelete = await page.evaluate(() => {
     const browserGlobal = globalThis as unknown as {
@@ -315,9 +316,10 @@ test("terminates the completed last-candidate worker, clears old reasons, and ev
   });
 
   await page.getByRole("button", { name: "物理判定を閉じる" }).click();
-  await page.getByRole("button", { name: "削除: 削除前候補" }).click();
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
   await page.getByRole("button", { name: "削除を確定: 削除前候補" }).click();
-  await expect(page.getByText("候補0件、積荷0件。")).toBeVisible();
+  await expect(page.getByText("コンテナ0件、積荷0件。")).toBeVisible();
   await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "neutral");
   await page.waitForTimeout(460);
   await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "neutral");
@@ -334,7 +336,7 @@ test("terminates the completed last-candidate worker, clears old reasons, and ev
   await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "valid");
   await openPhysicalValidation(page);
   await expect(summary).toHaveText(
-    "実装済み確認項目内で問題なし：この候補には配置済みの積荷がありません。",
+    "実装済み確認項目内で問題なし：このコンテナには配置済みの積荷がありません。",
   );
   const afterReAdd = await page.evaluate(() => {
     const browserGlobal = globalThis as unknown as {

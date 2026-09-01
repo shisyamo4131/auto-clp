@@ -62,7 +62,7 @@ function panelSummary(
     return {
       status: "none",
       statusLabel: "判定対象なし",
-      summary: "判定対象なし：候補コンテナを追加してください。",
+      summary: "判定対象なし：コンテナを追加してください。",
     };
   }
   if (snapshot.phase === "loading") {

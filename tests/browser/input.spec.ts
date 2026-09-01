@@ -4,6 +4,7 @@ import {
   addContainerFromDrawer,
   openCargoAddEditor,
   openContainerAddEditor,
+  openPersistenceDrawer,
   openProjectSettings,
 } from "./ui-helpers";
 
@@ -48,7 +49,7 @@ test("edits project settings transactionally and focuses invalid input", async (
   await expect(page.getByTestId("canonical-project-settings")).toContainText("更新CLP");
 });
 
-test("adds, edits, cancels, and explicitly deletes cargo through the compact card", async ({ page }) => {
+test("adds, edits, cancels, and explicitly deletes cargo through the 3D action row", async ({ page }) => {
   await page.goto("/");
   await addCargo(page, "合成積荷");
   const picker = page.getByLabel("操作する積荷");
@@ -93,7 +94,7 @@ test("separates placement removal from cargo deletion and restores fallback focu
   await expect(deleteDialog.getByLabel("積荷名")).toHaveCount(0);
   await deleteDialog.getByRole("button", { name: "削除を確定: 非cascade積荷" }).click();
   await expect(page.locator("#app-navigation-button")).toBeFocused();
-  await expect(page.getByText("積荷 0件、候補 1件、配置 0件")).toBeVisible();
+  await expect(page.getByRole("tab", { name: /非cascade候補/ })).toBeVisible();
 });
 
 test("keeps cargo input available with WebGL and exposes specific safety boundaries", async ({ page }) => {
@@ -121,16 +122,45 @@ test("uses 天地無用 as the only cargo orientation setting", async ({ page })
 
 test("container CRUD remains transactional", async ({ page }) => {
   await page.goto("/");
-  await addContainer(page, "合成候補");
-  const list = page.getByRole("list", { name: "候補一覧" });
-  await expect(list).toContainText("合成候補");
-  await page.getByRole("button", { name: "編集: 合成候補" }).click();
-  await page.getByLabel("候補名").fill("合成候補更新");
-  await page.getByRole("button", { name: "候補の変更を保存: 合成候補" }).click();
-  await expect(list).toContainText("合成候補更新");
+  await addContainer(page, "合成コンテナ");
+  await expect(page.getByRole("tab", { name: /合成コンテナ/ })).toBeVisible();
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "選択中のコンテナを編集" }).click();
+  await page.getByLabel("コンテナ名").fill("合成コンテナ更新");
+  await page.getByRole("button", { name: "コンテナ情報を保存" }).click();
+  await expect(page.getByRole("tab", { name: /合成コンテナ更新/ })).toBeVisible();
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
+  await page.getByRole("button", { name: "削除を確定: 合成コンテナ更新" }).click();
+  await expect(page.getByRole("tab")).toHaveCount(0);
 });
 
-test("opens Drawer additions through the existing cargo modal and container inline editor", async ({
+test("rejects deleting a referenced container without cascading placements", async ({ page }) => {
+  await page.goto("/");
+  await addCargo(page, "参照中積荷");
+  await addContainer(page, "参照中コンテナ");
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  const actions = page.locator(".viewport-context-actions");
+  await actions.getByRole("button", { name: "座標を入力して配置" }).click();
+  await page.getByRole("button", { name: "配置を保存" }).click();
+
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
+  const deleteDialog = page.getByRole("dialog", { name: "参照中コンテナを削除" });
+  await deleteDialog.getByRole("button", { name: "削除を確定: 参照中コンテナ" }).click();
+  await expect(deleteDialog).toContainText("先にすべての積荷を荷室から外してください");
+  await expect(page.getByRole("tab", { name: /参照中コンテナ/ })).toBeVisible();
+  await deleteDialog.getByRole("button", { name: "削除をやめる: 参照中コンテナ" }).click();
+
+  await actions.getByRole("button", { name: "荷室から外す" }).click();
+  await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
+  await page.getByRole("button", { name: "削除を確定: 参照中コンテナ" }).click();
+  await expect(page.getByRole("tab")).toHaveCount(0);
+});
+
+test("opens Drawer additions through cargo and container modal editors", async ({
   page,
 }) => {
   await page.goto("/");
@@ -148,18 +178,22 @@ test("opens Drawer additions through the existing cargo modal and container inli
   await expect(menu).toBeFocused();
 
   await openContainerAddEditor(page);
-  await expect(page.getByRole("dialog", { name: "候補を追加" })).toHaveCount(0);
-  await expect(page.getByLabel("候補名")).toBeFocused();
-  await page.getByLabel("候補名").fill("破棄する候補draft");
-  await page.getByRole("button", { name: "候補編集をキャンセル" }).click();
-  await expect(page.getByLabel("候補名")).toHaveCount(0);
+  const containerDialog = page.getByRole("dialog", { name: "コンテナを追加" });
+  await expect(containerDialog).toBeVisible();
+  await expect(page.getByLabel("コンテナ名")).toBeFocused();
+  await page.getByLabel("コンテナ名").fill("破棄するコンテナdraft");
+  await containerDialog.getByRole("button", { name: "キャンセル" }).click();
+  await expect(containerDialog.getByText("未保存のコンテナ入力を破棄して閉じますか。")).toBeVisible();
+  await containerDialog.getByRole("button", { name: "入力を破棄して閉じる" }).click();
+  await expect(page.getByLabel("コンテナ名")).toHaveCount(0);
   await expect(menu).toBeFocused();
 
   await addCargo(page, "Drawer追加積荷");
   await expect(menu).toBeFocused();
-  await addContainer(page, "Drawer追加候補");
+  await addContainer(page, "Drawer追加コンテナ");
   await expect(menu).toBeFocused();
-  await expect(page.getByText("積荷 1件、候補 1件、配置 0件")).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Drawer追加コンテナ/ })).toBeVisible();
+  await expect(page.locator(".editor-card")).toHaveCount(0);
 });
 
 test("modal editors have no horizontal overflow at narrow widths", async ({ page }) => {
@@ -175,7 +209,7 @@ test("modal editors have no horizontal overflow at narrow widths", async ({ page
   await page.getByRole("button", { name: "入力を破棄して閉じる" }).click();
 
   await openContainerAddEditor(page);
-  await page.getByLabel("候補名").fill("候補".repeat(60));
+  await page.getByLabel("コンテナ名").fill("コンテナ".repeat(40));
   for (const width of [305, 320, 375]) {
     await page.setViewportSize({ width, height: 640 });
     expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);

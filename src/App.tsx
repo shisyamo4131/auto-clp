@@ -41,8 +41,13 @@ import {
   type CargoEditorIntent,
   type CargoEditorRequest,
 } from "./ui/CargoEditorDialog";
+import {
+  ContainerEditorDialog,
+  type ContainerEditorIntent,
+  type ContainerEditorRequest,
+} from "./ui/ContainerEditorDialog";
 import { ProjectPersistencePanel } from "./ui/ProjectPersistencePanel";
-import { ProjectSettingsDialog, ProjectWorkspace } from "./ui/ProjectWorkspace";
+import { ProjectSettingsDialog } from "./ui/ProjectSettingsDialog";
 import {
   UsageRequirementsDialog,
   hasConfirmedCurrentUsageRequirements,
@@ -141,11 +146,13 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     useState(0);
   const projectInteractionGenerationRef = useRef(0);
   const busyRef = useRef(false);
-  const restoreNavigationFocusOnProjectIdleRef = useRef(false);
   const cargoEditorSequence = useRef(0);
   const [cargoEditorRequest, setCargoEditorRequest] =
     useState<CargoEditorRequest>();
-  const [containerAddRequestRevision, setContainerAddRequestRevision] = useState(0);
+  const containerEditorSequence = useRef(0);
+  const [containerEditorRequest, setContainerEditorRequest] =
+    useState<ContainerEditorRequest>();
+  const [selectedContainerId, setSelectedContainerId] = useState<string>();
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
   const [usageRequirementsConfirmed, setUsageRequirementsConfirmed] = useState(false);
@@ -221,24 +228,6 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     (busy: boolean) => handleBusyChange("scene", busy),
     [handleBusyChange],
   );
-  const handleProjectBusyChange = useCallback(
-    (busy: boolean) => handleBusyChange("project", busy),
-    [handleBusyChange],
-  );
-  const handleContainerAddInteractionEnd = useCallback(() => {
-    restoreNavigationFocusOnProjectIdleRef.current = true;
-    if (!busySourcesRef.current.project) {
-      restoreNavigationFocusOnProjectIdleRef.current = false;
-      document.getElementById("app-navigation-button")?.focus({ preventScroll: true });
-    }
-  }, []);
-  useEffect(() => {
-    if (busySources.project || !restoreNavigationFocusOnProjectIdleRef.current) {
-      return;
-    }
-    restoreNavigationFocusOnProjectIdleRef.current = false;
-    document.getElementById("app-navigation-button")?.focus({ preventScroll: true });
-  }, [busySources.project]);
   const handleOpenCargoEditor = useCallback(
     (intent: CargoEditorIntent) => {
       if (busyRef.current) return;
@@ -256,9 +245,23 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     setCargoEditorRequest(undefined);
     handleBusyChange("cargoDialog", false);
   }, [handleBusyChange]);
-  const handleRequestContainerAdd = useCallback(() => {
-    setContainerAddRequestRevision((current) => current + 1);
-  }, []);
+  const handleOpenContainerEditor = useCallback(
+    (intent: ContainerEditorIntent) => {
+      if (busyRef.current) return;
+      handleBusyChange("project", true);
+      containerEditorSequence.current += 1;
+      setContainerEditorRequest({
+        ...intent,
+        key: containerEditorSequence.current,
+        returnScrollPosition: { left: window.scrollX, top: window.scrollY },
+      });
+    },
+    [handleBusyChange],
+  );
+  const handleCloseContainerEditor = useCallback(() => {
+    setContainerEditorRequest(undefined);
+    handleBusyChange("project", false);
+  }, [handleBusyChange]);
   const handlePersistenceInteractionChange = useCallback(
     (active: boolean) => {
       if (persistenceInteractionRef.current === active) {
@@ -736,6 +739,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       onOpenCargoEditor={handleOpenCargoEditor}
       onOpenUsageRequirements={handleOpenUsageRequirementsFromScene}
       onProjectCommit={handleProjectCommit}
+      onSelectedContainerChange={setSelectedContainerId}
       project={project}
       rendererMounted={rendererMounted}
     />
@@ -810,13 +814,14 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         onInteractionChange={handlePersistenceInteractionChange}
         onLoadDevice={handleLoadDevice}
         onOpenCargoEditor={() => handleOpenCargoEditor({ kind: "add" })}
+        onOpenContainerEditor={handleOpenContainerEditor}
         onOpenChange={setNavigationOpen}
         onOpenProjectSettings={handleOpenProjectSettings}
         onOpenUsageRequirements={handleOpenUsageRequirements}
-        onRequestContainerAdd={handleRequestContainerAdd}
         onSaveDevice={handleSaveDevice}
         open={navigationOpen}
         project={project}
+        selectedContainerId={selectedContainerId}
       />
 
       {sceneWorkspace}
@@ -831,22 +836,12 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         />
       ) : null}
 
-      <ProjectWorkspace
-        containerAddRequestRevision={containerAddRequestRevision}
-        externalInteractionActive={
-          busySources.cargoDialog ||
-          busySources.scene ||
-          persistenceInteractionActive ||
-          persistenceOperationActive ||
-          usageRequirementsOpen
-        }
-        key={`project-${projectBarrierRevision}`}
-        historyRevision={historyRevision}
-        onBusyChange={handleProjectBusyChange}
-        onContainerAddInteractionEnd={handleContainerAddInteractionEnd}
-        onProjectCommit={handleProjectCommit}
-        project={project}
-      />
+      <aside className="privacy-note" aria-label="入力データの注意">
+        実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しないでください。
+      </aside>
+      <p className="visually-hidden" data-testid="canonical-project-settings">
+        確定済み: {project.name} / 隙間 X {project.clearancesMm.xMm}・Y {project.clearancesMm.yMm}・Z {project.clearancesMm.zMm} mm
+      </p>
       {cargoEditorRequest === undefined ? null : (
         <CargoEditorDialog
           key={cargoEditorRequest.key}
@@ -854,6 +849,15 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           onProjectCommit={handleProjectCommit}
           project={project}
           request={cargoEditorRequest}
+        />
+      )}
+      {containerEditorRequest === undefined ? null : (
+        <ContainerEditorDialog
+          key={containerEditorRequest.key}
+          onClose={handleCloseContainerEditor}
+          onProjectCommit={handleProjectCommit}
+          project={project}
+          request={containerEditorRequest}
         />
       )}
       {projectSettingsOpen ? (

@@ -293,7 +293,7 @@ export function CargoEditorDialog({
           </label>
         </fieldset>
         {placement === undefined ? null : (
-          <p className="warning-copy">{project.containers.find((container) => container.id === placement.containerId)?.name ?? "候補"}に配置中です。横倒し配置中は天地無用へ変更できません。積荷自体を削除するには先に荷室から外してください。</p>
+          <p className="warning-copy">{project.containers.find((container) => container.id === placement.containerId)?.name ?? "コンテナ"}に配置中です。横倒し配置中は天地無用へ変更できません。積荷自体を削除するには先に荷室から外してください。</p>
         )}
         <div className="button-row modal-shell__actions">
           <button className="primary-button" type="submit">{target === undefined ? "積荷を保存" : "積荷情報を保存"}</button>
