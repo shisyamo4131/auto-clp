@@ -1,9 +1,10 @@
 # GOV15-AUTOCLP-01 Handoff Record
 
-- Status: Governance 1.5.0 worktree migrated; task turnover pending
+- Status: Governance 1.5.0 worktree migrated; active runbook correction recorded; task turnover pending
 - Date: 2026-09-01
 - Checkpoint: `GOV15-AUTOCLP-02-IMPLEMENT`
 - Correction checkpoint: `GOV15-AUTOCLP-04-CORRECT`
+- Runbook correction checkpoint: `GOV15-AUTOCLP-07-CORRECT-RUNBOOK`
 - Approved scope: AutoCLP-only common governance 1.5.0 adoption, impact-based verification policy, aligned project documentation and hybrid role instructions, comprehensive local validation, local commit, and later task turnover
 - Baseline commit: `005bf49cf46911361e1470efdb6f7604564a374d`
 - Primary directory: `C:\Users\seven\projects\auto-clp`
@@ -46,6 +47,7 @@ Results were recorded only after each command completed and its exit status was 
 - Final post-record `git diff --check`, governance, project, exact staged-file and `git diff --cached --check` results, local commit identifiers, and post-commit worktree evidence are returned in the terminal callback. This record is not edited after those checks.
 - The migration commit does not by itself complete task turnover.
 - PM（AutoCLP）-04の最初のno-change route checkは、`docs/operations.md` のmanaged common-governance版とmigration inventoryだけが1.4.0のままであることを検出してFAILEDとなり、所有権を取得せず停止した。補正checkpointはこの2箇所を1.5.0へ揃え、製品機能版1.4.0を保持した。補正後の独立検証とcommit識別子はterminal callbackへ記録する。
+- PM（AutoCLP）-04のself-routing preflightは、activeな`docs/runbooks/project-coordination.md`のcommon-governance版だけが1.4.0のままであることを検出してFAILEDとなり、変更せず停止した。`GOV15-AUTOCLP-07-CORRECT-RUNBOOK`はactive runbookを1.5.0へ揃え、`governance.lock.toml`から取得した版との一致を`check-project`で動的に検査する。歴史handoffの1.4.0記録は変更しない。補正後の独立検証とcommit識別子はterminal callbackへ記録する。
 
 ## Remaining Boundary and Next Checkpoint
 

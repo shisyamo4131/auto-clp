@@ -6,6 +6,6 @@
 
 | Record | State | Date |
 | --- | --- | --- |
-| [GOV15-AUTOCLP-01](GOV15-AUTOCLP-01.md) | Route-check correction recorded; turnover pending | 2026-09-01 |
+| [GOV15-AUTOCLP-01](GOV15-AUTOCLP-01.md) | Active runbook correction recorded; turnover pending | 2026-09-01 |
 | [AUTOCLP-PM03-01](AUTOCLP-PM03-01.md) | Turnover complete; PM（AutoCLP）-03 active | 2026-08-31 |
 | [GOV14-AUTOCLP-01](GOV14-AUTOCLP-01.md) | Turnover complete; PM（AutoCLP）-02 active | 2026-08-28 |

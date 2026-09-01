@@ -2,7 +2,7 @@
 
 - Status: Active
 - Owner: Project
-- Common governance: 1.4.0
+- Common governance: 1.5.0
 
 ## Session Capacity Routing
 

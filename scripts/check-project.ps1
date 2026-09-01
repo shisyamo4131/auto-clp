@@ -174,6 +174,10 @@ foreach ($requiredToken in @('PM（SPG）-05', '01a05be0-9996-7361-a6d6-e7062e4e
 }
 
 $coordinationRunbook = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/runbooks/project-coordination.md'))
+$coordinationCommonVersionToken = "- Common governance: $managedCommonVersion"
+if (-not $coordinationRunbook.Contains($coordinationCommonVersionToken)) {
+    throw "Coordination runbook governance version does not match governance lock: $coordinationCommonVersionToken"
+}
 $capacityScript = [IO.File]::ReadAllText((Join-Path $resolvedProject 'scripts/check-codex-session-size.ps1'))
 $capacityAliases = @(
     '容量チェック',
@@ -359,6 +363,8 @@ foreach ($relativePath in $datedFiles) {
     verification_routing_valid = $true
     operations_common_governance_version = $managedCommonVersion
     operations_governance_version_current = $true
+    coordination_common_governance_version = $managedCommonVersion
+    coordination_governance_version_current = $true
     adr_count = @($decisionFiles).Count
     adr_statuses_valid = $true
     roadmap_weight = $weightTotal
