@@ -83,10 +83,13 @@ select:focus-visible,
 }
 
 .app-shell {
+  display: flex;
   min-width: 0;
   width: min(1120px, calc(100% - 2rem));
+  height: 100dvh;
   margin: 0 auto;
   padding: 1rem 0 2rem;
+  flex-direction: column;
 }
 
 .application-bar {
@@ -106,6 +109,7 @@ select:focus-visible,
   gap: 0.75rem;
   align-items: center;
   justify-content: space-between;
+  flex: 0 0 auto;
 }
 
 .application-bar__primary,
@@ -885,7 +889,9 @@ h1 {
 .viewport {
   --viewport-bottom-safe-area: 0px;
   position: relative;
-  height: calc(clamp(360px, 46vw, 510px) + var(--viewport-bottom-safe-area));
+  min-height: calc(320px + var(--viewport-bottom-safe-area));
+  height: 0;
+  flex: 1 1 0;
   border-top: 1px solid rgba(132, 172, 195, 0.16);
   background: #07111f;
 }
@@ -1064,7 +1070,10 @@ h1 {
 }
 
 .scene-workspace {
+  display: flex;
   min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
   border: 1px solid rgba(132, 172, 195, 0.28);
   border-radius: 1rem;
   background: rgba(9, 24, 39, 0.82);
@@ -1072,26 +1081,29 @@ h1 {
   overflow-anchor: none;
 }
 
-.scene-workspace__feedback {
-  display: flex;
-  min-width: 0;
+.viewport-action-feedback {
+  position: absolute;
+  z-index: 4;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  width: min(48rem, 100%);
   padding: 0.65rem 0.85rem;
-  border-top: 1px solid rgba(132, 172, 195, 0.18);
-  gap: 0.6rem 1rem;
-  align-items: flex-start;
-  justify-content: space-between;
+  border: 1px solid rgba(237, 184, 82, 0.48);
+  border-radius: 0.6rem;
+  background: rgba(7, 17, 31, 0.94);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.32);
 }
 
-.scene-workspace__feedback .scene-workspace__action-status {
+.viewport-action-feedback .scene-workspace__action-status {
   min-height: 0;
-  max-height: none;
+  max-height: 3.1em;
   margin: 0;
   font-size: 0.82rem;
   line-height: 1.45;
 }
 
-.scene-workspace__feedback .scene-workspace__action-status {
-  flex: 1 1 auto;
+.viewport-action-feedback .scene-workspace__error {
+  margin: 0;
 }
 
 .scene-workspace__controls {
@@ -1182,7 +1194,7 @@ h1 {
   display: grid;
   min-width: 0;
   gap: 1rem;
-  padding: 0 clamp(1.25rem, 3vw, 2rem) clamp(1rem, 3vw, 1.5rem);
+  padding: 0;
 }
 
 .scene-workspace__fallback-history {
@@ -1888,6 +1900,7 @@ legend {
 .scene-workspace__candidate-tabs {
   min-width: 0;
   padding: 0.8rem 0.8rem 0;
+  flex: 0 0 auto;
 }
 
 .candidate-tabs {
@@ -2154,6 +2167,13 @@ legend {
   }
 }
 
+@media (max-height: 640px) {
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+  }
+}
+
 @media (max-width: 560px) {
   .safety-note {
     grid-template-columns: 1fr;
@@ -2181,7 +2201,8 @@ legend {
   }
 
   .viewport {
-    height: calc(clamp(380px, 68vh, 620px) + var(--viewport-bottom-safe-area));
+    min-height: calc(380px + var(--viewport-bottom-safe-area));
+    height: auto;
   }
 
   .viewport__camera-controls {
@@ -2221,17 +2242,12 @@ legend {
     width: 100%;
   }
 
-  .scene-workspace__feedback {
-    flex-direction: column;
-  }
-
   .capability__copy,
   .project-history,
   .project-persistence-entry,
   .automatic-proposal,
   .scene-workspace__controls,
   .scene-workspace__history,
-  .scene-workspace__secondary,
   .placement-panel,
   .physical-validation,
   .editor-card,

@@ -687,6 +687,7 @@ test("rotates a tip-enabled cargo around X and keeps it undoable", async ({ page
 });
 
 test("wheel over the viewport scrolls the page without changing history", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 540 });
   await page.goto("/");
   await addCargo(page, "wheel積荷");
   await addContainer(page, "wheel候補");

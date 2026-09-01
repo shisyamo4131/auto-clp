@@ -19,6 +19,7 @@ Phase 1の人間試用で、主操作は3D viewport上の選択、移動、回�
 - Undo/Redo、X/Z回転、拡大・縮小、全体表示、候補selectorは共通のviewport上部control領域で互いに重ならない。305 / 320 / 375 pxではtoolbarと候補selectorを積み、積荷検索・selector・件数は複数行にして水平overflowを起こさない。
 - 3D操作statusと非保証注意はcompactにviewer直下へ残し、物理判定をその次に置く。自動配置案は主3D作業面と物理判定の後へ置く。積荷、コンテナ・車両候補の登録cardはこの変更では維持する。
 - Refinement 2026-08-30: 積荷選択だけの成功通知と一般的な非保証一文は主作業面の情報密度を下げるため表示しない。drag・失敗・操作不可status、物理判定panelと現在の制限にある具体的説明は維持し、一般的な保証境界は将来の利用規約整備へ記録する。狭幅時の候補selectorはcolumn flexのbasisを解除して内容高に留め、荷室全体表示はaccessible name付きの `cube-outline` 相当icon-only buttonとする。
+- Refinement 2026-09-01: Application Shellをbrowser viewport高以上の縦flex containerとし、通常のデスクトップ高では上下padding、Application Barと余白を除いた残りを3D作業sectionへ、さらにコンテナtabを除いた残りをviewportへ割り当てる。短い画面は操作overlayを保つ最低高とpage scrollを優先する。通常時の一般案内帯を撤去し、drag・失敗・操作不可statusだけをcanvas寸法と位置を変えないviewport内浮動表示として維持する。
 - Drawerから設定dialogまたは新規CLPへ移る場合も、閉じたsurface内の要素ではなくApplication BarのCLP名またはmenu buttonへfocusを戻す。未保存確認は出現時に確定buttonへfocusし、取消時は `新規CLP` へ戻す。
 - WebGL 2非対応、初回描画失敗、context lossでは通常作業面を表示しない既存の必須ゲートを維持する。Application Barの能力Chipは利用不可を示し、許可済みの読み取り専用救出だけを残す。
 

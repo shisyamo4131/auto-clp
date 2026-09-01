@@ -457,6 +457,9 @@ test("opens the operation guide without changing CLP, history, or scene and rest
   await page.getByRole("button", { name: "物理判定を閉じる" }).click();
   await expect(physicalDialog).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveClass(/modal-active/);
+  await page.evaluate<void>(
+    "new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
+  );
 
   const operationGuideScrollTarget = Math.min(600, await maxPageScrollTop(page));
   expect(operationGuideScrollTarget).toBeGreaterThan(0);

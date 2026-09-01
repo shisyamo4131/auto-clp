@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-09-01
-- Specification version: 1.4.1
+- Specification version: 1.4.2
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -74,7 +74,7 @@
 
 ### Application Shell and Primary Workflow
 
-- 3D viewportを通常画面の主作業面とし、最上部のApplication Barは左から `Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chip、Navigation Drawerを開くmenu buttonの順に置く。menu buttonはDOM上も視覚上も右端とし、現在のCLP名はCLP設定dialogの入口とする。
+- 3D viewportを通常画面の主作業面とし、最上部のApplication Barは左から `Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chip、Navigation Drawerを開くmenu buttonの順に置く。menu buttonはDOM上も視覚上も右端とし、現在のCLP名はCLP設定dialogの入口とする。通常画面のApplication Shellはbrowser viewport高以上とし、通常のデスクトップ高では上下padding、Application Bar高とその下余白を除いた残りを3D作業sectionへ、さらにコンテナtab高を除いた残りをviewportへ割り当てる。短い画面ではtoolbarと下段操作を失わない最低viewport高を優先し、ページscrollで到達可能にする。
 - 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`、`積荷を追加`、`コンテナを追加`、選択中コンテナの編集・削除、`操作方法` は一つのNavigation Drawerへまとめる。Drawer最下部にはpackageのAuto CLPアプリ版とCLPデータ形式版を表示する。常設の保存card、CLP設定card、積荷card、コンテナcard、通常画面の追加buttonは置かない。コンテナの編集・削除対象は3Dの選択中コンテナとし、既存editor、Project command、履歴、busy/dirty gate、積荷1,000件・コンテナ100件の上限、非cascade削除を再利用する。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
 - Drawer外の背景相当領域をクリックするとDrawerだけを閉じ、同じclickで背面のbutton、履歴またはscene操作を発火させない。close buttonおよびEscapeと同様、未実行の端末保存削除確認と新規CLP確認を取り消し、page scrollを変えずApplication Barのmenu buttonへfocusを戻す。進行中の永続化処理はDrawerを閉じても中断しない。
 - `操作方法` はDrawerを閉じてから独立した読み取り専用dialogを開き、3Dの積荷選択、空いた領域の左dragによる視点回転、Shift付き左dragまたは右dragによる平行移動、wheelのpage scroll、zoom・全体表示、積荷移動・回転、履歴、判定、座標・積荷編集の入口を簡潔に示す。touchは積荷選択とpage scrollを主とし、正確な座標・情報編集は下段button/dialogを案内する。版確認の `使用上の重要事項` とは分離し、CLP、履歴、保存、camera、判定状態を変更しない。
@@ -82,7 +82,7 @@
 - Undo/Redo、物理判定lamp、X/Z回転、拡大・縮小、全体表示toolbarはviewport内上段の固定rowへ置く。物理判定lampの常設表示は、判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とする状態別のicon-only buttonとし、色だけに依存しない。accessible nameとtitleに状態名、不適合・未確認件数、詳細を開く操作を持たせる。クリックすると現在のコンテナの理由をmodal dialogで開き、閉じても判定を継続する。
 - 全CLP積荷を名前またはIDで検索する入力、未配置・現在のコンテナ・別のコンテナの状態付き積荷selector、件数、その下の固定context action rowをviewport下部へoverlayする。未選択でもrowの高さを予約し、選択積荷名、配置状態、配置済みなら正確な最小角X/Y/Zをcompactに示す。未配置では座標入力・積荷編集・積荷削除、現在のコンテナへ配置済みでは座標微調整・積荷編集・荷室から外す、別のコンテナへ配置済みでは配置先コンテナの表示・積荷編集を提供する。配置取り外しと積荷定義削除は別button、別確認、別履歴とする。
 - 305 / 320 / 375 pxではtablist、toolbar、検索・selector・action rowを必要な範囲で複数rowへし、水平overflowを起こさず、overlay外にcanvas操作領域を残す。可視の「荷室外の作業スペースN件」は置かないが、非視覚statusと積荷selectorの状態copyは維持する。overlayの出現、選択、検索結果、操作statusはcanvasの寸法またはページ上の位置を変えない。
-- compactな操作statusを3D viewportの後へ置く。積荷を選択しただけの成功通知、一般的な非保証注意、入力データに関する共通注意を主ページへ重複表示しない。drag、回転不可、失敗など次の判断に必要な操作statusは維持し、物理判定理由はlampから開くdialogへ、入力データの共通注意は版付きの「使用上の重要事項」へ集約する。積荷cardとコンテナcardは置かず、積荷の選択・編集・削除は3D内、コンテナの追加・編集・削除はDrawerから行う。Phase 1の通常画面には自動配置提案panel、開始、取消、適用入口を置かず、通常起動で自動提案Workerを開始しない。
+- 通常時の一般的な操作案内statusを主ページへ表示しない。drag、回転不可、失敗など次の判断に必要な操作statusだけをviewport内へ浮動表示し、出現または消去でcanvasの寸法・ページ上の位置を変えない。積荷を選択しただけの成功通知、一般的な非保証注意、入力データに関する共通注意も主ページへ重複表示しない。物理判定理由はlampから開くdialogへ、入力データの共通注意は版付きの「使用上の重要事項」へ集約する。積荷cardとコンテナcardは置かず、積荷の選択・編集・削除は3D内、コンテナの追加・編集・削除はDrawerから行う。Phase 1の通常画面には自動配置提案panel、開始、取消、適用入口を置かず、通常起動で自動提案Workerを開始しない。
 - `新規CLP` はSchema制約内の衝突しない新しい `projectId` を持つ空CLPを作成し、CLP設定dialogを開く。現在CLPに最後の端末保存またはJSON書出し以後の変更がある場合は、対象と結果を説明する破棄確認を必須とする。新規作成はUndo/Redoへ入れず、旧履歴、draft、選択、camera、drag preview、Worker結果を破棄するhistory barrierとする。作成直後の空CLPを新しい保存基準とする。
 
 ### Placement and Validation

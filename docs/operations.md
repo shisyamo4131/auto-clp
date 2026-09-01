@@ -89,6 +89,8 @@ CLP名、軸別隙間、積荷、コンテナは入力・編集できる。車�
 
 CLP作成・設定、積荷追加、コンテナの追加・編集・削除、保存・JSON、ヘルプは右側Navigation Drawerへまとめる。Drawer最下部ではpackageのAuto CLPアプリ版と、現在対応するCLPデータ形式版を確認できる。Drawerはモーダルとして背景のpointer、Tab移動、CLPUndo/Redo shortcutを遮断し、close button、Escape、Drawer外の背景相当領域clickでDrawerだけを閉じて入口へfocusを戻す。同じclickで背面controlを作動させず、page scrollを変えない。積荷追加とコンテナ管理はDrawerを閉じて既存のmodal editorを開く。編集・削除は3Dで選択中のコンテナを対象とし、配置参照中の削除は先に積荷を外すよう理由付きで拒否する。処理中にDrawerを閉じても永続化処理は継続する。処理中と完了はDrawerを閉じた画面でもSnackbarへ操作単位で表示し、成功と取消は6秒後に消去、失敗は明示的に閉じるまで保持する。Drawer内の直近結果はlive regionにせず、同じ文の連続操作でも新しい通知として扱う。
 
+通常のデスクトップ高では、Application Shellをbrowser viewport高に合わせ、上下padding、Application Barと余白、コンテナtabを除いた残りを3D viewportへ割り当てる。短い画面では操作overlayを失わない最低高を優先してpage scrollを許す。通常時の一般案内帯は表示せず、drag、回転不可、失敗などの操作statusだけをviewport内へ浮動表示し、canvasの寸法とpage位置を変更しない。
+
 「JSONを書き出す」は検証済み `auto-clp-project-0.1.0.json` をdownloadし、「JSONを読み込む」は標準file inputから同じ取引的読込を行う。端末保存はブラウザのサイトデータ削除・容量管理で失われ得るためバックアップではない。必要な時はJSONも書き出す。操作履歴、未保存入力、選択、camera、判定結果はどちらにも保存しない。
 
 以下は現在検証対象となる独立コマンドである。それぞれを別に実行し、結果と終了コードを記録する。

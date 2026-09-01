@@ -136,6 +136,71 @@ async function canvasDocumentBox(page: Page) {
   return { documentY: box.y + scrollY, height: box.height, width: box.width };
 }
 
+test("fills the browser height with the application shell and gives the remaining space to the 3D viewport", async ({
+  page,
+}) => {
+  for (const height of [720, 912]) {
+    await page.setViewportSize({ width: 1280, height });
+    await page.goto("/");
+    await expect(page.locator('.capability-chip[data-capability-state="supported"]')).toBeVisible();
+    const metrics = await page.evaluate(`(() => {
+      const box = (selector) => {
+        const element = document.querySelector(selector);
+        if (element === null) throw new Error(selector + " is missing");
+        const bounds = element.getBoundingClientRect();
+        const style = window.getComputedStyle(element);
+        return {
+          top: bounds.top,
+          bottom: bounds.bottom,
+          height: bounds.height,
+          paddingTop: Number.parseFloat(style.paddingTop),
+          paddingBottom: Number.parseFloat(style.paddingBottom),
+          marginBottom: Number.parseFloat(style.marginBottom),
+        };
+      };
+      return {
+        viewportHeight: window.innerHeight,
+        shell: box(".app-shell"),
+        appBar: box(".application-bar"),
+        workspace: box(".app-shell > .scene-workspace"),
+        tabs: box(".app-shell > .scene-workspace > .scene-workspace__candidate-tabs"),
+        viewport: box(".app-shell > .scene-workspace > .viewport"),
+      };
+    })()`) as {
+      viewportHeight: number;
+      shell: { height: number; paddingTop: number; paddingBottom: number };
+      appBar: { height: number; marginBottom: number };
+      workspace: { height: number };
+      tabs: { height: number };
+      viewport: { height: number };
+    };
+    const metricEvidence = JSON.stringify(metrics);
+    expect(
+      Math.abs(metrics.shell.height - metrics.viewportHeight),
+      metricEvidence,
+    ).toBeLessThanOrEqual(0.5);
+    const expectedWorkspaceHeight =
+      metrics.shell.height -
+      metrics.shell.paddingTop -
+      metrics.shell.paddingBottom -
+      metrics.appBar.height -
+      metrics.appBar.marginBottom;
+    expect(
+      Math.abs(metrics.workspace.height - expectedWorkspaceHeight),
+      metricEvidence,
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(metrics.viewport.height - (metrics.workspace.height - metrics.tabs.height - 2)),
+      metricEvidence,
+    ).toBeLessThanOrEqual(1);
+  }
+  await expect(
+    page.getByText("3D上の積荷または下部の一覧から操作対象を選べます。", {
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});
+
 test("places the menu at the app-bar right edge and provides zero and single candidate states", async ({
   page,
 }) => {

@@ -21,7 +21,7 @@
 - キーボード操作と305、320、375 px幅で、主要操作、理由、確認、focusを失わない。
 - fine-pointer床面dragはno-opを先行し、両軸に正の共通長があるpartialを修正途中配置として保存し、面・辺・点接触を含むoutsideだけを荷室外作業状態にする。status出現でviewport位置を変えない。
 - 全積荷を検索・選択でき、別のコンテナへの配置は所有コンテナへ切り替えてから扱う。積荷定義と配置は別dialog・別履歴で、配置取り外しと積荷削除をcascadeしない。
-- Application Barにmenu、現在CLP名、3D能力Chipがあり、保存・読込・JSON・新規CLP・CLP設定・積荷追加・コンテナの追加・編集・削除・ヘルプはNavigation Drawerに集約される。Drawer最下部でAuto CLPアプリ版とCLPデータ形式版を確認できる。積荷cardとコンテナcardは通常画面に置かない。Drawer外clickはDrawerだけを閉じ、背面操作を発火させずmenu focusとpage scrollを復元する。3D viewport欄外上部のコンテナtablistとviewport下部の積荷検索・selectorはcanvasの位置を動かさず、toolbarやdragと重ならない。
+- Application Barにmenu、現在CLP名、3D能力Chipがあり、保存・読込・JSON・新規CLP・CLP設定・積荷追加・コンテナの追加・編集・削除・ヘルプはNavigation Drawerに集約される。Drawer最下部でAuto CLPアプリ版とCLPデータ形式版を確認できる。積荷cardとコンテナcardは通常画面に置かない。Drawer外clickはDrawerだけを閉じ、背面操作を発火させずmenu focusとpage scrollを復元する。通常のデスクトップ高ではApplication Shellがbrowser viewport高に一致し、上下padding、Application Barと余白、コンテナtabを除いた残りを3D viewportが占める。通常時の操作案内帯は表示せず、必要な操作statusだけをviewport内へ浮動表示してcanvasの寸法・位置を変えない。
 - 未保存変更がある新規CLP作成は破棄確認を要求し、作成後は新しい `projectId` と空CLP設定dialogを提供する。新規作成はUndo対象ではなく、旧履歴を破棄するbarrierとする。
 - dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は固定toolbar上の同一glyphを90度差とaccessible nameで区別でき、積荷editorの向き設定は天地無用だけとする。Z軸床面回転は常に利用でき、天地無用はXだけを無効にする。
 
@@ -108,6 +108,7 @@
 - 仕様1.3.0自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ83件、buildに合格。通常画面からの自動配置提案panel・入口・Worker開始の除外、Drawer内だけの積荷・候補追加、既存editor、初期・保存・取消focus、busy・dirty・上限、Drawer外clickの背面操作遮断・scroll・menu focus、305 / 320 / 375 pxを回帰した。将来技術資産の自動提案browser 10件は通常suiteから非実行snapshotとして明示分離し、再公開時にpanelとWorker lifecycleを再接続するまで実行可能または現行製品受入済みとは扱わない。
 - 仕様1.4.0自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ84件、buildに合格。積荷card・コンテナcardの撤去、Drawerからのコンテナ追加・選択中コンテナの編集・削除、参照中削除の理由付き拒否、配置取り外し後の削除、Undo/Redo、focus、305 / 320 / 375 px、登録対象のコンテナ表記を回帰した。これは人間または実務利用者受入の証拠ではない。
 - 仕様1.4.1自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ84件、buildに合格。主ページの入力データ注意撤去、内容版1.1.0の「使用上の重要事項」への集約、確認版更新、Drawer最下部のアプリ版・CLPデータ形式版表示を回帰した。これは人間または実務利用者受入の証拠ではない。
+- 仕様1.4.2自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ85件、buildに合格。通常デスクトップ高でApplication Shellとbrowser viewport高が一致し、残り高を3D viewportが使用すること、通常時の操作案内帯を表示しないこと、必要な操作statusが浮動表示されてもcanvas寸法・位置を変えないことを回帰した。これは人間または実務利用者受入の証拠ではない。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
 - canvas追加操作の判断: AC-01で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。

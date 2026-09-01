@@ -971,6 +971,20 @@ export function SceneWorkspace({
           <ThreeViewport
             bottomOverlay={(
               <div className="viewport-control viewport-control--cargo">
+                {canvasStatus === "" && (projectionResult === undefined || projectionResult.ok) ? null : (
+                  <div className="viewport-action-feedback">
+                    {canvasStatus === "" ? null : (
+                      <p className="scene-workspace__action-status" aria-hidden="true">
+                        {canvasStatus}
+                      </p>
+                    )}
+                    {projectionResult !== undefined && !projectionResult.ok ? (
+                      <p className="scene-workspace__error" role="alert">
+                        {projectionErrorMessage(projectionResult.error.code)}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
               {project.cargoes.length === 0 ? (
                 <span className="viewport-control__empty">積荷を登録すると、ここから操作対象を選べます</span>
               ) : (
@@ -1184,22 +1198,22 @@ export function SceneWorkspace({
         </>
       ) : null}
 
-      <div className="scene-workspace__feedback">
-        <p id="scene-workspace-status" className="visually-hidden">
-          {effectiveContainerId === undefined
-            ? `コンテナ0件、積荷${project.cargoes.length}件。`
-            : `選択中のコンテナの配置${placementCount}件、荷室外${stagedCount}件。物理判定は保存済み配置だけから更新されます。`}
-        </p>
-        <p id="scene-workspace-action-status" className="scene-workspace__action-status" aria-live="polite" aria-atomic="true">
-          {canvasStatus === "" ? "3D上の積荷または下部の一覧から操作対象を選べます。" : canvasStatus}
-        </p>
-        <p id="scene-workspace-interaction-help" className="visually-hidden">
-          3Dでは積荷を直接選ぶか、下部で検索・選択できます。空白の左ドラッグで視点回転、右ドラッグで平行移動し、ボタンで拡大・縮小します。ホイールはページをスクロールします。
-        </p>
-        {projectionResult !== undefined && !projectionResult.ok ? (
-          <p className="scene-workspace__error" role="alert">{projectionErrorMessage(projectionResult.error.code)}</p>
-        ) : null}
-      </div>
+      <p id="scene-workspace-status" className="visually-hidden">
+        {effectiveContainerId === undefined
+          ? `コンテナ0件、積荷${project.cargoes.length}件。`
+          : `選択中のコンテナの配置${placementCount}件、荷室外${stagedCount}件。物理判定は保存済み配置だけから更新されます。`}
+      </p>
+      <p
+        id="scene-workspace-action-status"
+        className="visually-hidden"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {canvasStatus}
+      </p>
+      <p id="scene-workspace-interaction-help" className="visually-hidden">
+        3Dでは積荷を直接選ぶか、下部で検索・選択できます。空白の左ドラッグで視点回転、右ドラッグで平行移動し、ボタンで拡大・縮小します。ホイールはページをスクロールします。
+      </p>
 
       <div className="scene-workspace__secondary">
         <PlacementEditorDialog
