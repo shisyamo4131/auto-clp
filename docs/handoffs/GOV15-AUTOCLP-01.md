@@ -1,10 +1,12 @@
 # GOV15-AUTOCLP-01 Handoff Record
 
-- Status: Governance 1.5.0 worktree migrated; active runbook correction recorded; task turnover pending
+- Status: Governance 1.5.0 turnover routing complete; PM（AutoCLP）-03 acceptance pending
 - Date: 2026-09-01
 - Checkpoint: `GOV15-AUTOCLP-02-IMPLEMENT`
 - Correction checkpoint: `GOV15-AUTOCLP-04-CORRECT`
 - Runbook correction checkpoint: `GOV15-AUTOCLP-07-CORRECT-RUNBOOK`
+- Self-routing checkpoint: `GOV15-AUTOCLP-08-SELF-ROUTE-RETRY`
+- Self-routing baseline: `cb5d355eedd3848eff76335030c324fbf852249c`
 - Approved scope: AutoCLP-only common governance 1.5.0 adoption, impact-based verification policy, aligned project documentation and hybrid role instructions, comprehensive local validation, local commit, and later task turnover
 - Baseline commit: `005bf49cf46911361e1470efdb6f7604564a374d`
 - Primary directory: `C:\Users\seven\projects\auto-clp`
@@ -18,10 +20,12 @@
 
 ## Ownership and Routing
 
-- Current project coordinator: `PM（AutoCLP）-03` / `01a05798-e84c-78c0-8adf-7eacce8b8e1c` / `local`.
+- Current project coordinator route: `PM（AutoCLP）-04` / `01a05c1c-0d03-7ea3-82a0-b99b3954784d` / `local`.
+- Former project coordinator route: `PM（AutoCLP）-03` / `01a05798-e84c-78c0-8adf-7eacce8b8e1c` / `local`. The task remains unarchived and undeleted.
 - Current program coordinator and callback: `PM（SPG）-05` / `01a05be0-9996-7361-a6d6-e7062e4eee41` / `local`.
+- Common governance at the self-routing baseline is 1.5.0.
 - Historical handoff records retain the coordinator routing that was current when they were written.
-- The implementation checkpoint does not replace tasks. PM（AutoCLP）-03 retains ownership until a later approved turnover checkpoint creates and verifies a completely new task, no-change callback, and self-routing commit.
+- At the implementation checkpoint, PM（AutoCLP）-03 retained ownership until a completely new task, no-change callback, and first file-scoped self-routing commit were verified. `GOV15-AUTOCLP-08-SELF-ROUTE-RETRY` records that final routing, subject to the acceptance gate below.
 
 ## Migration Contract
 
@@ -48,9 +52,17 @@ Results were recorded only after each command completed and its exit status was 
 - The migration commit does not by itself complete task turnover.
 - PM（AutoCLP）-04の最初のno-change route checkは、`docs/operations.md` のmanaged common-governance版とmigration inventoryだけが1.4.0のままであることを検出してFAILEDとなり、所有権を取得せず停止した。補正checkpointはこの2箇所を1.5.0へ揃え、製品機能版1.4.0を保持した。補正後の独立検証とcommit識別子はterminal callbackへ記録する。
 - PM（AutoCLP）-04のself-routing preflightは、activeな`docs/runbooks/project-coordination.md`のcommon-governance版だけが1.4.0のままであることを検出してFAILEDとなり、変更せず停止した。`GOV15-AUTOCLP-07-CORRECT-RUNBOOK`はactive runbookを1.5.0へ揃え、`governance.lock.toml`から取得した版との一致を`check-project`で動的に検査する。歴史handoffの1.4.0記録は変更しない。補正後の独立検証とcommit識別子はterminal callbackへ記録する。
+- `GOV15-AUTOCLP-04-CORRECT`の補正commit `b7fdce8ff84a6baaa4965cd253830547e0dd828a`後、PM（AutoCLP）-04は`GOV15-AUTOCLP-05-ROUTE-RECHECK`を成功させ、task identity、route、common governance 1.5.0、cleanな単一Worktreeを確認した。
+- `GOV15-AUTOCLP-07-CORRECT-RUNBOOK`の補正commit `cb5d355eedd3848eff76335030c324fbf852249c`後、PM（AutoCLP）-04はself-routing再試行前にactive runbook 1.5.0、task identity、route、baseline、cleanな単一Worktreeを再確認した。
+
+## Turnover Acceptance Gate
+
+- この記録とindexはturnover completeの最終routingを示す。
+- PM（AutoCLP）-03がself-routing commitのexact files、validation、commit chain、cleanな単一Worktreeを独立検証してacceptance callbackを返すまで、PM（AutoCLP）-04は通常の製品作業を開始せず、PM（AutoCLP）-03の実効ownership retirementを宣言しない。
+- acceptance前に不一致または検証失敗が判明した場合、PM（AutoCLP）-03の実効ownershipを維持し、重複割当を行わない。
 
 ## Remaining Boundary and Next Checkpoint
 
-- After the local migration commit and callback are accepted, a separate checkpoint must inventory every active AutoCLP task, create a completely new coordinator task without fork or separate worktree, verify repository-based restart and a no-change callback, complete the first file-scoped self-routing commit, and only then retire PM（AutoCLP）-03 ownership.
+- PM（AutoCLP）-03の独立acceptance callback後にだけ、PM（AutoCLP）-04は通常の製品checkpointを受けられる。acceptance前は本self-routing commitの検証待ちとする。
 - Push, network, installed-skill update, another project sync, publication, deploy, external write, archive/delete, destructive action, history rewrite, and separate worktree remain unapproved.
 - On approved rollback, restore the 1.4.0 target baseline with a history-preserving reverse commit and perform another complete task turnover. Do not copy the installed 1.4.1 package or reactivate an old task by assumption.
