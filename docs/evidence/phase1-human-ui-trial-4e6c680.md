@@ -282,6 +282,20 @@ AをZ=0へ修正すると床貫通が消え、A上面Z=600とB下面Z=600の単�
 
 自動回帰は成功・端末保存なし・305 px overflow・初期描画失敗・context lossを含む能力試験6件、全browser 73件、全単体945件、typecheck、lint、buildに合格した。全browserの初回2回は、無関係なWorker試験が20 msだけの中間表示を操作完了後に直接読むtiming依存で各1件失敗し、同試験を最終結果とMutationObserverによるstale結果不在の検証へ修正した後、対象4件と全73件が合格した。Codexによる実画面確認では375 pxの二つの退避card、固定名、復旧手順に横overflowや表示欠落はなかった。buildは既知のlarge-chunk advisoryだけを保持する。新画面の評価者本人による再試用は未実施である。
 
+### Viewer-first Shell Differential Human Re-trials
+
+- Date: 2026-08-31
+- Evaluator: 同じ人間のプロジェクト評価者
+- Source: ロードマップの検証履歴と `AUTOCLP-PM03-01` 引継ぎ記録
+- Build: specification `1.3.0`、Schema `0.1.0`、product commit `2d359e5fee57f05cff1c278b68660d0f3ac60073`
+- Result: guided human differential trial pass
+
+評価者は仕様1.2.1の3D欄外候補tab、簡略寸法・外向き矢印、icon-only判定lampと、Shift付き左drag・右dragによるcamera平行移動を期待どおりと確認した。続く仕様1.2.2では、Drawer内の操作方法、compactな寸法矢印、`現在の座標` copyを期待どおりと確認した。
+
+最新引継ぎ記録では、同じ評価者が仕様1.3.0の差分動作を試用し、Drawer外clickによる背面操作なしのclose、Drawerだけに置く積荷・候補追加入口、Phase 1通常画面からの自動配置提案除外を含む試用結果を受入可能と報告した。試用途中に意図しないreload/reloadがあったが、評価者の最終判定には影響しなかった。
+
+この合格はviewer-first shellの変更差分に対する案内付き人間確認であり、正式fixtureによる実務利用者受入、仕様1.0.1のWebGL阻止・作業データ退避画面の再確認、対応ブラウザ・最低GPU、または実積載の安全性を確認したことを意味しない。旧PMタスクの詳細な操作逐語記録は現在取得できないため、永続化済みのロードマップと引継ぎ記録で確認できる範囲だけを記載する。進捗は98%を維持する。
+
 ## Remaining Follow-up
 
 - 正式fixture、評価者区分、仕様1.0.1のWebGL必須阻止・作業データ退避画面の人間再観察。
