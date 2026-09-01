@@ -11,7 +11,8 @@ import type {
   ProjectPersistenceActionResult,
   ProjectPersistenceFailureCode,
 } from "../application/project-persistence";
-import type { Project } from "../domain/model";
+import packageMetadata from "../../package.json";
+import { PROJECT_SCHEMA_VERSION, type Project } from "../domain/model";
 import type { ContainerEditorIntent } from "./ContainerEditorDialog";
 import {
   isProjectFileExportAvailable,
@@ -734,6 +735,10 @@ export function ProjectPersistencePanel({
           <aside className="project-persistence__notice">
             端末保存は1件だけです。明示的に削除するまで保持を試みますが、ブラウザのサイトデータ削除や容量管理で失われる場合があります。バックアップではありません。必要な時はJSONも書き出してください。操作履歴、未保存入力、選択、カメラ、判定結果は保存しません。
           </aside>
+          <footer className="project-persistence__version-info" aria-label="バージョン情報">
+            <span>Auto CLP v{packageMetadata.version}</span>
+            <span>CLPデータ形式 v{PROJECT_SCHEMA_VERSION}</span>
+          </footer>
         </aside>
       </div>
 

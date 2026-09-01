@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { ModalShell } from "./ModalShell";
 
-export const USAGE_REQUIREMENTS_VERSION = "1.0.0";
+export const USAGE_REQUIREMENTS_VERSION = "1.1.0";
 const STORAGE_KEY = "auto-clp.usage-requirements-version";
 
 export function hasConfirmedCurrentUsageRequirements(): boolean {
@@ -55,6 +55,9 @@ export function UsageRequirementsDialog({
         </ul>
         <p>
           青い判定表示は「実装済み確認項目内で問題なし」を意味し、積載可能または安全という判定ではありません。
+        </p>
+        <p className="usage-requirements__data-warning">
+          実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しないでください。
         </p>
         <p className="usage-requirements__version">
           内容版 {USAGE_REQUIREMENTS_VERSION}。これは法的な利用規約への同意ではありません。

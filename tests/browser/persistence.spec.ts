@@ -306,6 +306,9 @@ test("keeps the navigation drawer initially closed and restores focus while safe
   if (undoBounds === null) throw new Error("Undo button has no bounding box");
   await openPersistenceDrawer(page);
   await expect(drawer).toBeVisible();
+  await expect(drawer.getByLabel("バージョン情報")).toHaveText(
+    "Auto CLP v0.1.0CLPデータ形式 v0.1.0",
+  );
   await expectModalFocusCycle(page);
   await expect(undo).toBeDisabled();
   const historyBeforeModalInput = await historySummary.textContent();

@@ -21,7 +21,7 @@
 - キーボード操作と305、320、375 px幅で、主要操作、理由、確認、focusを失わない。
 - fine-pointer床面dragはno-opを先行し、両軸に正の共通長があるpartialを修正途中配置として保存し、面・辺・点接触を含むoutsideだけを荷室外作業状態にする。status出現でviewport位置を変えない。
 - 全積荷を検索・選択でき、別のコンテナへの配置は所有コンテナへ切り替えてから扱う。積荷定義と配置は別dialog・別履歴で、配置取り外しと積荷削除をcascadeしない。
-- Application Barにmenu、現在CLP名、3D能力Chipがあり、保存・読込・JSON・新規CLP・CLP設定・積荷追加・コンテナの追加・編集・削除・ヘルプはNavigation Drawerに集約される。積荷cardとコンテナcardは通常画面に置かない。Drawer外clickはDrawerだけを閉じ、背面操作を発火させずmenu focusとpage scrollを復元する。3D viewport欄外上部のコンテナtablistとviewport下部の積荷検索・selectorはcanvasの位置を動かさず、toolbarやdragと重ならない。
+- Application Barにmenu、現在CLP名、3D能力Chipがあり、保存・読込・JSON・新規CLP・CLP設定・積荷追加・コンテナの追加・編集・削除・ヘルプはNavigation Drawerに集約される。Drawer最下部でAuto CLPアプリ版とCLPデータ形式版を確認できる。積荷cardとコンテナcardは通常画面に置かない。Drawer外clickはDrawerだけを閉じ、背面操作を発火させずmenu focusとpage scrollを復元する。3D viewport欄外上部のコンテナtablistとviewport下部の積荷検索・selectorはcanvasの位置を動かさず、toolbarやdragと重ならない。
 - 未保存変更がある新規CLP作成は破棄確認を要求し、作成後は新しい `projectId` と空CLP設定dialogを提供する。新規作成はUndo対象ではなく、旧履歴を破棄するbarrierとする。
 - dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は固定toolbar上の同一glyphを90度差とaccessible nameで区別でき、積荷editorの向き設定は天地無用だけとする。Z軸床面回転は常に利用でき、天地無用はXだけを無効にする。
 
@@ -94,7 +94,7 @@
 3. scene積荷を選択した時だけ、現在向き適用後の3軸寸法線、両端から外向きのcompactな `4 × 4` 矢印、`整数 mm` だけの可視labelを表示し、選択解除・削除・候補切替・WebGL障害で消す。軸と奥行・横幅・高さの同値は下段の非視覚説明に一度だけ持ち、annotationはdrag・選択のpointer hitを奪わない。
 4. selector直下の固定action rowは、未選択でも高さを維持し、未配置・現在のコンテナ配置・別のコンテナ配置の各状態に対応する正しい操作だけを示す。積荷削除と荷室から外すは別確認・別履歴であり、drag中とdialog中は理由付きで無効となる。
 5. Undo/Redo横の判定lampは、灰・青・黄・赤と異なる可視iconだけを常設し、accessible nameとtitleで状態名・不適合件数・未確認件数を示す。dialogを閉じても判定を継続し、再度開くと最新結果を表示する。青は「実装済み確認項目内で問題なし」であり、安全保証とは表示しない。
-6. 初回または内容版更新後は操作開始前に「使用上の重要事項」を確認し、Drawerと物理判定dialogから再表示できる。確認状態はCLP、JSON、端末保存、履歴へ入らず、法的な利用規約同意とは表示しない。
+6. 初回または内容版更新後は操作開始前に「使用上の重要事項」を確認し、Drawerと物理判定dialogから再表示できる。実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しない注意は同dialogにあり、主ページへ重複表示しない。確認状態はCLP、JSON、端末保存、履歴へ入らず、法的な利用規約同意とは表示しない。
 7. 305 / 320 / 375 px、コンテナ0 / 1 / 100件、積荷0 / 1 / 1,000件、keyboard、touch、WebGL context lossでoverlay重複、page横overflow、focus消失、stale判定、別のコンテナ配置の重複表示がない。
 8. Drawerの `操作方法` は独立dialogを開き、積荷選択、視点回転・平行移動、wheel、toolbar、積荷drag・回転、Undo/Redo、判定、座標・積荷編集とtouch境界を正しく案内する。dialogはCLP・履歴・保存・sceneを変更せず、背景inert、Tab trap、Escape・close、menu buttonへのfocusとpage scroll復帰、狭幅内部scrollを維持する。現在のコンテナの配置は `現在の座標` と明記する。
 9. 通常画面とDrawerには自動配置提案panel、開始、取消、適用入口がなく、通常起動で自動提案Workerを開始しない。通常画面に積荷cardとコンテナcardはなく、Drawerの `積荷を追加`、`コンテナを追加`、選択中コンテナの編集・削除はmodal editorを開き、save/cancel/dirty/busy/history/limit/focusと非cascade削除を維持する。Drawer外click、close button、Escapeは同じclose境界を使い、未実行の新規CLP・端末保存削除確認を取り消す。
@@ -107,6 +107,7 @@
 - 仕様1.2.2自動証拠: typecheck、lint、単体28ファイル952件、ブラウザ93件、buildに合格。Drawerと独立操作方法dialog、案内copy、背景inert、focus trap、Escape・closeのfocus・scroll復帰、CLP・履歴・scene非変更、305 / 320 / 375 pxの内部scroll・水平overflowなし、`4 × 4` marker契約、`現在の座標` copyを回帰した。寸法矢印の見た目と案内文の理解は差分中心の人間確認を残す。
 - 仕様1.3.0自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ83件、buildに合格。通常画面からの自動配置提案panel・入口・Worker開始の除外、Drawer内だけの積荷・候補追加、既存editor、初期・保存・取消focus、busy・dirty・上限、Drawer外clickの背面操作遮断・scroll・menu focus、305 / 320 / 375 pxを回帰した。将来技術資産の自動提案browser 10件は通常suiteから非実行snapshotとして明示分離し、再公開時にpanelとWorker lifecycleを再接続するまで実行可能または現行製品受入済みとは扱わない。
 - 仕様1.4.0自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ84件、buildに合格。積荷card・コンテナcardの撤去、Drawerからのコンテナ追加・選択中コンテナの編集・削除、参照中削除の理由付き拒否、配置取り外し後の削除、Undo/Redo、focus、305 / 320 / 375 px、登録対象のコンテナ表記を回帰した。これは人間または実務利用者受入の証拠ではない。
+- 仕様1.4.1自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ84件、buildに合格。主ページの入力データ注意撤去、内容版1.1.0の「使用上の重要事項」への集約、確認版更新、Drawer最下部のアプリ版・CLPデータ形式版表示を回帰した。これは人間または実務利用者受入の証拠ではない。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
 - canvas追加操作の判断: AC-01で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。

@@ -597,7 +597,7 @@ test("records the AP-08 native Worker gate and cancellation evidence", async ({
 
   const uiContext = await browser.newContext();
   await uiContext.addInitScript(() => {
-    globalThis.localStorage.setItem("auto-clp.usage-requirements-version", "1.0.0");
+    globalThis.localStorage.setItem("auto-clp.usage-requirements-version", "1.1.0");
   });
   const uiPage = await uiContext.newPage();
   uiPage.on("console", (message) => {

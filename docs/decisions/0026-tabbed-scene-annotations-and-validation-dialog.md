@@ -23,6 +23,7 @@
 - 物理判定を常時mountする一つのcontrollerからlampとmodal dialogへ供給する。lampは灰・青・黄・赤にiconとtextを併用し、不適合優先でも未確認件数を失わない。dialogを閉じても判定を続け、開いている間は背後操作をbusy gateで止める。
 - `structure-stability-unverified` を積荷別reason、集約count、Worker protocol、自動提案payloadから除く。単独支持は実装済み幾何制約の適合とし、`support-conditions-unverified` と全不適合reasonを維持する。青は安全・積載可ではなく「実装済み確認項目内で問題なし」を意味する。
 - 版付き「使用上の重要事項」を初回と版更新後の操作開始前に確認し、Drawerと物理判定dialogから再表示できるようにする。法的同意とは呼ばず、確認状態をCLP dataから分離する。
+- Refinement 2026-09-01: 実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しない注意を内容版1.1.0へ加え、主ページの重複表示を撤去する。Drawer最下部にはpackageのアプリ版とCLPデータ形式版を表示する。
 
 ## Rationale
 

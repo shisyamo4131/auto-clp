@@ -357,15 +357,19 @@ test("gates a new usage-requirements version and persists successful confirmatio
   await page.reload();
   const dialog = page.getByRole("dialog", { name: "使用上の重要事項" });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("内容版 1.0.0");
+  await expect(dialog).toContainText("内容版 1.1.0");
   await expect(dialog).toContainText("法的な利用規約への同意ではありません");
+  await expect(dialog).toContainText(
+    "実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しないでください。",
+  );
   await page.keyboard.press("Escape");
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "内容を確認して続ける" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("auto-clp.usage-requirements-version"))).toBe("1.0.0");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("auto-clp.usage-requirements-version"))).toBe("1.1.0");
   await page.reload();
   await expect(dialog).toHaveCount(0);
+  await expect(page.getByLabel("入力データの注意")).toHaveCount(0);
   await openPersistenceDrawer(page);
   await page.getByRole("button", { name: "使用上の重要事項" }).click();
   await expect(dialog).toBeVisible();

@@ -441,6 +441,20 @@ h1 {
   line-height: 1.6;
 }
 
+.project-persistence__version-info {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(132, 172, 195, 0.2);
+  color: #8199ad;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .project-persistence__snackbar {
   position: fixed;
   z-index: 50;
@@ -1624,16 +1638,6 @@ h1 {
   color: #a8bdcf;
 }
 
-.privacy-note {
-  margin: 1.25rem 0;
-  padding: 1rem 1.25rem;
-  border: 1px solid #ae8550;
-  border-radius: 0.75rem;
-  color: #ffe2b3;
-  background: rgba(76, 48, 21, 0.48);
-  line-height: 1.6;
-}
-
 .editor-card {
   min-width: 0;
   margin-top: 1rem;
@@ -2095,6 +2099,12 @@ legend {
 .usage-requirements__storage-notice {
   color: #a8bdcf;
   font-size: 0.88rem;
+}
+
+.usage-requirements__data-warning {
+  padding-left: 0.75rem;
+  border-left: 3px solid #edb852;
+  color: #ffe2b3;
 }
 
 .operation-guide {

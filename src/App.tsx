@@ -836,9 +836,6 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         />
       ) : null}
 
-      <aside className="privacy-note" aria-label="入力データの注意">
-        実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しないでください。
-      </aside>
       <p className="visually-hidden" data-testid="canonical-project-settings">
         確定済み: {project.name} / 隙間 X {project.clearancesMm.xMm}・Y {project.clearancesMm.yMm}・Z {project.clearancesMm.zMm} mm
       </p>

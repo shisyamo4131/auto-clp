@@ -1,7 +1,7 @@
 import { expect, test as base } from "@playwright/test";
 
 const usageRequirementsStorageKey = "auto-clp.usage-requirements-version";
-const usageRequirementsVersion = "1.0.0";
+const usageRequirementsVersion = "1.1.0";
 
 /**
  * Product-flow tests start from an already-confirmed app preference. Dedicated
