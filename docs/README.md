@@ -22,10 +22,10 @@
 | 3D表示・操作 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0001](decisions/0001-local-first-web-architecture.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0015](decisions/0015-scene-wheel-drag-out-and-size-copy.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0023](decisions/0023-webgl-required-operation-and-read-only-rescue.md)、[ADR 0025](decisions/0025-viewer-first-application-shell.md)、[ADR 0026](decisions/0026-tabbed-scene-annotations-and-validation-dialog.md)、[ADR 0027](decisions/0027-external-tabs-compact-dimensions-and-icon-lamp.md)、[将来scene設計提案](designs/future-scene-workspace.md) | 実装後の3Dコード、能力ゲート、救出境界、座標adapter、単体テスト、ブラウザ証拠。scene提案の複数候補部分はADR 0026・0027で採用・修正済み、積荷画像部分だけを未承認として扱う |
 | 積載制約 | [仕様](specification.md)、[データ契約](data-model.md)、[ADR 0002](decisions/0002-cuboid-model.md)、[ADR 0003](decisions/0003-loading-constraints.md)、[ADR 0006](decisions/0006-rectangular-opening-model.md)、[ADR 0008](decisions/0008-stacking-support-and-load.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md) | 実装後の計算コード、境界・失敗系テスト |
 | 将来自動提案の技術資産 | [仕様](specification.md)、[ADR 0004](decisions/0004-optimization-objective.md)、[ADR 0029](decisions/0029-phase1-drawer-entry-and-automatic-proposal-deferral.md)、[ロードマップ](roadmaps/auto-clp.md) | 現在UIで未提供。再開時の決定性、性能、最適性評価に使う[証拠索引](evidence/README.md) |
-| テスト・レビュー | [仕様](specification.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 対象差分、独立した終了コード、UI証拠 |
+| テスト・レビュー | [検証選択policy](../governance/verification-policy.json)、[仕様](specification.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 変更class、stage別gate ID、包含、失効、独立した終了コード、UI証拠 |
 | 合成受入・実務試用 | [仕様](specification.md)、[Phase 1合成受入契約](acceptance.md)、[運用](operations.md)、[ロードマップ](roadmaps/auto-clp.md) | 匿名データ、自動証拠、観察記録、実務試用との区別 |
 | `容量チェック` / `タスク容量確認` / `セッション容量確認` / `session size / handoff threshold確認` | [プロジェクト調整runbook](runbooks/project-coordination.md)、[ADR 0016](decisions/0016-project-coordination-and-session-capacity-routing.md) | 現在task ID、`../scripts/check-codex-session-size.ps1`、独立した終了コード。最新sessionを推測しない |
-| ガバナンス・Git・引き継ぎ | [プロジェクト規則](../governance/project-rules.md)、[運用](operations.md)、[プロジェクト調整runbook](runbooks/project-coordination.md)、[handoff index](handoffs/README.md) | 管理ハッシュ、Git差分、タスク状態、最新handoff record |
+| ガバナンス・Git・引き継ぎ | [プロジェクト規則](../governance/project-rules.md)、[検証選択policy](../governance/verification-policy.json)、[運用](operations.md)、[プロジェクト調整runbook](runbooks/project-coordination.md)、[handoff index](handoffs/README.md) | 管理ハッシュ、検証classとcomprehensive fallback、Git差分、タスク状態、最新handoff record |
 
 ## Document Authority
 
@@ -33,6 +33,7 @@
 | --- | --- |
 | `../governance/common-governance.md` | 管理されたプロジェクト横断ガバナンス。直接編集禁止 |
 | `../governance/project-rules.md` | プロジェクト固有の指示、所有権、安全、承認境界 |
+| `../governance/verification-policy.json` | 変更class、stage別gate、包含、失効、省略、comprehensive fallbackの機械可読な正本 |
 | `specification.md` | 現在の確定要件と明確に分離した未決定事項 |
 | `data-model.md` | CLP JSONの意味契約、参照整合性、予定モジュール境界 |
 | `roadmaps/` | 目標、残作業、完了条件、検証済み進捗 |
@@ -52,4 +53,5 @@
 - 確定、提案、証拠、履歴が区別されている。
 - ADR索引の状態と本文が一致する。
 - 相対リンク、索引網羅性、ロードマップ計算、エージェントTOMLが `../scripts/check-project.ps1` に合格する。
+- 変更を検証policyのclassへ分類し、mixed changeはstage別gateの和集合、unknown impactはcomprehensive fallbackを使う。包含gateを重複実行せず、省略理由と後続変更によるevidence失効を記録する。
 - 必須検証は個別のコマンド、結果、終了コードを残す。まとめる場合は失敗を非ゼロで返す検証済みランナーだけを使い、診断バッチや状態を隠すコマンド連結を完了証拠にしない。

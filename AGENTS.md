@@ -1,10 +1,10 @@
 # AGENTS.md
 
 <!-- GENERATED FILE. DO NOT EDIT DIRECTLY. -->
-<!-- Common governance version: 1.4.0 -->
-<!-- Common governance SHA-256: d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47 -->
+<!-- Common governance version: 1.5.0 -->
+<!-- Common governance SHA-256: 0a13fc03273030594e4355dc3ec29b62ee1abb350311761de77154817fcaf6ac -->
 <!-- Edit project-specific rules in governance/project-rules.md, then validate. -->
-<!-- common-governance-version: 1.4.0 -->
+<!-- common-governance-version: 1.5.0 -->
 # Common Project Governance Contract
 
 This contract contains mandatory governance shared by every project created or migrated with `scaffold-project-governance`. A project may add stricter or more specific rules, but must not weaken, replace, or silently contradict this contract.
@@ -36,6 +36,15 @@ If any required item is missing, stale, contradictory, or unauthorized, remain r
 - Do not use chat history as the sole source of requirements, decisions, progress, operations, ownership, or restart state.
 - Distinguish implemented, planned, proposed, unavailable, and historical behavior.
 
+## Evidence-bound Critical Identifiers
+
+- Treat identifiers that can change scope, compatibility, or external effects as unconfirmed until they are obtained in the current turn from a task-routed authoritative source or the actual target. This includes package names, versions, digests or integrity values, repository paths, branches, commits, tags, environment, project, or database IDs, deploy targets, and data targets. Read-only discovery may investigate an explicitly unconfirmed value, but must not present or use it as confirmed.
+- Treat chat history, compaction summaries, memory, model inference, parent or coordinator prompts, and subagent reports as leads only. None of them can establish a critical identifier by itself, and repeated agreement between agents does not promote a claim to confirmed fact.
+- Before writing a critical identifier into a delegation prompt as confirmed, the coordinator must personally verify the exact source, location or command, and value. A delegated agent must independently compare prompt identifiers with the actual target or authoritative source before any file write, Git mutation, test, install, network call, or other state change.
+- Stop and report an identifier that is missing, stale, ambiguous, or inconsistent. Do not create owned application diffs while a material metadata conflict remains unresolved.
+- For published-artifact adoption, verify the applicable chain: source or tag manifest, recorded release evidence or registry metadata, and consumer manifest or lock data including name, version, resolved location, and integrity. When network access is unapproved, do not infer remote state; verify recorded evidence and local source only and leave the remote gate explicitly unverified.
+- A project may add a stricter deterministic preflight in project-owned rules, scripts, or runbooks, but may not weaken this gate.
+
 ## Session Capacity Routing
 
 - Treat `容量チェック`, `タスク容量確認`, `セッション容量確認`, and `session size / handoff threshold確認` as requests to measure the persisted Codex task/session file for the current task, not model token usage or context-window capacity.
@@ -48,7 +57,7 @@ If any required item is missing, stale, contradictory, or unauthorized, remain r
 - Do not convert brainstorming, questions, comparisons, research, or assumptions into confirmed requirements.
 - Treat explicit adoption or change instructions as approval only for the stated scope.
 - Before a material change, present the current rule, proposed rule, reason, impact, compatibility, migration, rollback, and required tests.
-- After approval, update the specification, affected roadmaps, relevant ADRs and index, changelog, implementation, tests, operations, and user documentation in the same task.
+- After approval, update only the specification, roadmaps, ADRs and index, changelog, implementation, tests, operations, data-contract documents, and user documentation that are actually affected. Do not create unrelated version changes, zero-progress history, or evidence-only churn.
 - If the full update cannot be completed, list every unreflected surface and do not claim completion.
 - Ask at most three confirmation or approval questions per round. State why each answer is needed and what changes with the answer.
 
@@ -100,13 +109,32 @@ If any required item is missing, stale, contradictory, or unauthorized, remain r
 - If scope growth or corrected completion judgment lowers progress, record the old value, new value, and reason.
 - Link milestones to principal design, implementation, test, review, deployment, or acceptance evidence.
 
+## Verification Selection and Staging
+
+- Before implementation, classify the change by every applicable class and impact surface. The minimum classes are documentation-only; UI, CSS, or layout; application logic; data contract, schema, or migration; governance, permissions, or agent configuration; and build, release, or deploy. Mixed changes use the union of required gates. Unknown or unbounded impact fails safe to the project's comprehensive suite.
+- Route the classification through project-owned `governance/verification-policy.json` and an aligned matrix in operations or testing documentation. The JSON is the machine-readable source; it must designate the comprehensive gate IDs, and the managed sync must refresh a generated policy summary that the validator compares exactly with the JSON. For each class, define path or surface triggers, fast iteration checks, targeted regression, completion gates, release-only gates, included gate IDs, invalidation triggers, omittable gates, and where omission reasons are recorded. Do not assume that type checking, lint, build, or any named test tier is fast or universally required; the project defines its measured commands.
+- During iteration, prefer the smallest fast static checks and directly affected tests. After they pass, run impact-area regression. Before completion, run the selected completion-gate set once against the final applicable worktree state. Run release-only gates only for release, publication, installation, migration execution, or deployment decisions that require them.
+- Preserve comprehensive validation for project scaffolding, governance migration, managed-governance synchronization, common-contract changes, permission or agent-policy changes, and release/deploy operations. This exception does not make the same full suite mandatory for unrelated daily application work.
+- If gate A includes gate B and A preserves B's named result, output, and exit status through a verified fail-fast or aggregate runner, selecting A satisfies B; do not also invoke B as an unconditional separate gate. Declare inclusion by stable gate ID, reject unknown IDs or cycles, and show the relationship in project operations.
+- After a failure or later edit, rerun first the failed gates and any prior evidence invalidated by the changed files, configuration, dependencies, generated artifacts, or environment. Successful evidence may be reused only when the project matrix establishes that the later change did not invalidate it. A final completion decision must contain every gate selected for the final impact set.
+- Record omitted gates and the matrix-based reason in the task callback, completion report, or durable release evidence selected by the project. Omission is never allowed merely to avoid a known failure.
+
+## Material Change and Documentation Scope
+
+- A material change alters a confirmed requirement or acceptance criterion, user-visible or external behavior, API or data compatibility, durable architecture or safety decision, operational or rollback procedure, approval boundary, roadmap scope, completion criterion, or earned progress. A bug fix that restores already-confirmed behavior is not automatically a specification change.
+- Update the specification only when confirmed requirements or acceptance criteria change; update a data contract only when data shape, meaning, lifecycle, compatibility, schema, or migration changes. Specification and data-contract versions are independent unless the project explicitly couples them.
+- Create or supersede an ADR only for a durable decision or change to one, not as a log for routine implementation adjustments. Update roadmap scope, completion criteria, evidence, or progress only when they actually change; do not require a progress-history entry solely to record `+0` for a minor fix.
+- Update operations, changelog, indexes, design, acceptance, and user documentation only when their governed behavior, evidence, or navigation is affected. A UI or CSS adjustment does not by itself require data-model, data-contract, migration, governance, ADR, or roadmap changes.
+
 ## Verification Evidence Integrity
 
+- Record passing counts, success statements, acceptance results, and completion evidence only after the corresponding command has actually completed with exit status 0. Before that point label the gate planned, running, failed, blocked, or not run as applicable.
 - Run every required validator, test, build, lint, migration check, or other completion gate so that its result and exit status are independently observable.
 - When combining required checks, use only a verified fail-fast wrapper that exits nonzero on the first failure or a verified aggregate runner that records every result and exits nonzero if any check fails.
 - Do not use command chaining such as `;` as completion evidence when a later successful command can replace an earlier failure in the overall process exit status.
 - Record each required check's command, result, and exit status separately in callbacks, completion reports, handoffs, commit or integration evidence, and release decisions.
 - Diagnostic command batches may use other grouping for investigation, but must be labeled diagnostic and must not be reused as completion evidence or a success decision.
+- Bind completion evidence to the applicable revision or worktree state and selected impact set. If a later change matches a gate's invalidation trigger, mark that evidence stale until the gate is rerun successfully.
 
 ## Safety and Sensitive Information
 
@@ -122,7 +150,7 @@ Before completion, verify and report:
 
 - changed behavior and exact changed files;
 - owned diff and worktree state;
-- specification, roadmap, ADR, changelog, operations, and index alignment;
+- alignment of only the affected specification, roadmap, ADR, changelog, operations, data-contract, user-documentation, and index surfaces, plus recorded reasons for intentionally unaffected surfaces when the project requires them;
 - each required validation and test command, its result, and its independently determined exit status;
 - unverified items, residual risks, unresolved decisions, and pending approvals;
 - governance/configuration changes and required task turnover;

@@ -17,7 +17,7 @@ Auto CLP は精密機器運送業者向けの3D積載シミュレーターです
 2. 要件、データ、制約、受入条件は `docs/specification.md` を読む。
 3. 作業順序と進捗は `docs/roadmaps/README.md` と `docs/roadmaps/auto-clp.md` を読む。
 4. 技術・製品判断は `docs/decisions/README.md` から関連ADRを読む。
-5. 検証と復旧は `docs/operations.md`、Git統合、長期タスク、容量確認、task交代は `docs/runbooks/project-coordination.md`、現在の引き継ぎ状態は `docs/handoffs/README.md` から最新記録を読む。
+5. 検証選択は `governance/verification-policy.json` と `docs/operations.md`、復旧は `docs/operations.md`、Git統合、長期タスク、容量確認、task交代は `docs/runbooks/project-coordination.md`、現在の引き継ぎ状態は `docs/handoffs/README.md` から最新記録を読む。
 6. 文書を追加・移動・改名・廃止する場合は `docs/README.md` と関連索引を同じ変更で更新する。
 
 ## Product and Domain Boundaries
@@ -50,7 +50,9 @@ Auto CLP は精密機器運送業者向けの3D積載シミュレーターです
 - 自動提案は、同じ入力と設定から再現可能な結果を返すか、乱数シードを記録する。
 - 必須検証はそれぞれ独立したコマンド、結果、終了コードとして記録する。まとめる場合は、どれか一つでも失敗すれば非ゼロで終了する検証済みランナーだけを使う。
 - `;` など後続成功が先行失敗を隠せる連結や、診断用バッチを完了証拠にしない。
-- 現在検証済みのコマンドは `docs/operations.md` に記載する。未実装のアプリコマンドを推測して記載しない。
+- 状態変更前に `governance/verification-policy.json` の該当変更classをすべて選び、iteration、targeted regression、completion、release-onlyの順にgate IDを決める。mixed changeは和集合を取り、影響が不明または限定不能ならcomprehensive fallbackを使う。
+- aggregate inclusionを展開して同じgateを重複実行しない。省略gateと理由、後続変更で失効したevidence、再実行結果をcompletion reportまたはhandoffへ記録する。
+- 現在検証済みのコマンド、人向けmatrix、evidence失効規則は `docs/operations.md` に記載する。未実装のアプリ、release、deployコマンドを推測して記載しない。
 
 ## Project-specific Progress and Reporting
 

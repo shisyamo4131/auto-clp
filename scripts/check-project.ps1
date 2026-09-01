@@ -13,6 +13,7 @@ $requiredFiles = @(
     'INITIAL_PROMPT.md',
     'governance/common-governance.md',
     'governance/project-rules.md',
+    'governance/verification-policy.json',
     'governance/governance.lock.toml',
     'docs/README.md',
     'docs/specification.md',
@@ -20,6 +21,7 @@ $requiredFiles = @(
     'docs/operations.md',
     'docs/runbooks/project-coordination.md',
     'docs/handoffs/README.md',
+    'docs/handoffs/GOV15-AUTOCLP-01.md',
     'docs/handoffs/GOV14-AUTOCLP-01.md',
     'docs/roadmaps/README.md',
     'docs/roadmaps/auto-clp.md',
@@ -93,6 +95,66 @@ $indexedDocuments = @(
 foreach ($document in $indexedDocuments) {
     if (-not $docsIndex.Contains($document)) {
         throw "docs/README.md does not index: $document"
+    }
+}
+if (-not $docsIndex.Contains('../governance/verification-policy.json')) {
+    throw 'docs/README.md does not route the verification policy.'
+}
+
+$verificationPolicyPath = Join-Path $resolvedProject 'governance/verification-policy.json'
+try {
+    $verificationPolicy = [IO.File]::ReadAllText($verificationPolicyPath) | ConvertFrom-Json -ErrorAction Stop
+} catch {
+    throw "Verification policy JSON is invalid: $($_.Exception.Message)"
+}
+$requiredVerificationClassIds = @(
+    'documentation-only',
+    'ui-css-layout',
+    'application-logic',
+    'data-contract-schema-migration',
+    'governance-permissions-agents',
+    'build-release-deploy'
+)
+$actualVerificationClassIds = @($verificationPolicy.classes | ForEach-Object { [string]$_.id })
+foreach ($classId in $requiredVerificationClassIds) {
+    if ($actualVerificationClassIds -notcontains $classId) {
+        throw "Verification policy is missing required class: $classId"
+    }
+}
+if (@($actualVerificationClassIds | Select-Object -Unique).Count -ne $requiredVerificationClassIds.Count -or
+    $actualVerificationClassIds.Count -ne $requiredVerificationClassIds.Count) {
+    throw 'Verification policy must contain exactly the six approved change classes.'
+}
+
+$operations = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/operations.md'))
+foreach ($requiredToken in @(
+    '## Verification Matrix',
+    'Gate Catalog and Inclusion',
+    'Evidence Validity',
+    'governance/verification-policy.json',
+    '<!-- BEGIN GENERATED VERIFICATION POLICY SUMMARY -->',
+    '<!-- END GENERATED VERIFICATION POLICY SUMMARY -->'
+)) {
+    if (-not $operations.Contains($requiredToken)) {
+        throw "Operations documentation is missing verification contract: $requiredToken"
+    }
+}
+
+$projectRules = [IO.File]::ReadAllText((Join-Path $resolvedProject 'governance/project-rules.md'))
+$initialPrompt = [IO.File]::ReadAllText((Join-Path $resolvedProject 'INITIAL_PROMPT.md'))
+foreach ($requiredToken in @('governance/verification-policy.json', 'comprehensive fallback', '省略gate', '失効')) {
+    if (-not $projectRules.Contains($requiredToken)) {
+        throw "Project rules are missing verification-selection contract: $requiredToken"
+    }
+    if (-not $initialPrompt.Contains($requiredToken)) {
+        throw "Initial prompt is missing verification-selection contract: $requiredToken"
+    }
+}
+
+$governanceHandoff = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/handoffs/GOV15-AUTOCLP-01.md'))
+foreach ($requiredToken in @('PM（SPG）-05', '01a05be0-9996-7361-a6d6-e7062e4eee41', '1.5.0', 'task turnover')) {
+    if (-not $governanceHandoff.Contains($requiredToken)) {
+        throw "GOV15 handoff is missing current routing or migration contract: $requiredToken"
     }
 }
 
@@ -250,6 +312,15 @@ if (@($agentNames | Select-Object -Unique).Count -ne $agentNames.Count) {
     throw 'Agent names must be unique.'
 }
 
+foreach ($agentFile in @('developer.toml', 'tester.toml', 'reviewer.toml')) {
+    $agent = [IO.File]::ReadAllText((Join-Path $resolvedProject ".codex/agents/$agentFile"))
+    foreach ($requiredToken in @('governance/verification-policy.json', '失効')) {
+        if (-not $agent.Contains($requiredToken)) {
+            throw "Agent TOML is missing verification-selection contract: $agentFile ($requiredToken)"
+        }
+    }
+}
+
 $datedFiles = @(
     'docs/README.md',
     'docs/specification.md',
@@ -269,6 +340,8 @@ foreach ($relativePath in $datedFiles) {
     markdown_files = @($markdownFiles).Count
     relative_links_valid = $true
     indexed_documents_valid = $true
+    verification_policy_valid = $true
+    verification_routing_valid = $true
     adr_count = @($decisionFiles).Count
     adr_statuses_valid = $true
     roadmap_weight = $weightTotal

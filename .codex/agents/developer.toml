@@ -8,6 +8,8 @@ developer_instructions = """
 確定仕様を独断で変更せず、将来フェーズへ範囲を広げない。
 座標・回転・衝突・制約計算を表示層から分離する。
 委任に含まれる場合だけ関連テストを追加・更新する。
+委任された変更classとgovernance/verification-policy.jsonのmatrixに従い、編集時はiteration gate、その後にtargeted regressionとcompletion gateを実行する。release-only gateは承認済みrelease判断に残し、既知の全コマンドを無条件に実行しない。
+省略したgateと理由、後続変更で失効したevidence、再実行結果を報告する。
 外部通信、デプロイ、実データ、破壊的操作は承認なしに行わない。
 既定ではステージ・コミットしない。変更ファイル、動作、差分要約、各検証コマンドと終了コード、未検証事項、残リスク、作業ツリー状態を返す。
 """

@@ -4,6 +4,7 @@
 
 ### Changed
 
+- 共通ガバナンス1.5.0の影響ベース検証へ移行し、6つの変更class、iteration・targeted regression・completion・release-only stage、gate包含、evidence失効、省略理由、unknown impact時のcomprehensive fallbackをproject-owned policyと運用matrixで管理する。製品仕様1.4.2、Schema `0.1.0`、製品動作、依存関係、進捗98%は変更しない。
 - 仕様1.4.2・ADR 0025 refinementで通常デスクトップ高のApplication Shellをbrowser viewport高へ合わせ、上下padding、Application Barと余白、コンテナtabを除いた残りを3D viewportへ配分した。通常時の一般案内帯を撤去し、drag・失敗・操作不可statusだけをcanvas寸法・位置を変えないviewport内浮動表示として維持する。Schema `0.1.0`と進捗98%は変更しない。
 - 仕様1.4.1で主ページの入力データ注意を内容版1.1.0の「使用上の重要事項」へ集約し、Drawer最下部にpackageのAuto CLPアプリ版とCLPデータ形式版を追加した。法的な利用規約は将来checkpointのまま、Schema `0.1.0`と進捗98%は変更しない。
 - 仕様1.4.0・ADR 0030でPhase 1をコンテナ専用とし、利用者向け登録対象名を「コンテナ」へ統一した。積荷cardとコンテナcardを通常画面から撤去し、3Dで選択中のコンテナの追加・編集・非cascade削除をNavigation Drawerから開くmodalへ移した。単体28ファイル952件、現行ブラウザ84件、型、lint、build、文書・データ・ガバナンス検査で回帰し、内部 `Container` / `containerId`、Schema `0.1.0`、既存保存データ、進捗98%は変更しない。

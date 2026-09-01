@@ -93,53 +93,69 @@ CLP作成・設定、積荷追加、コンテナの追加・編集・削除、�
 
 「JSONを書き出す」は検証済み `auto-clp-project-0.1.0.json` をdownloadし、「JSONを読み込む」は標準file inputから同じ取引的読込を行う。端末保存はブラウザのサイトデータ削除・容量管理で失われ得るためバックアップではない。必要な時はJSONも書き出す。操作履歴、未保存入力、選択、camera、判定結果はどちらにも保存しない。
 
-以下は現在検証対象となる独立コマンドである。それぞれを別に実行し、結果と終了コードを記録する。
+## Verification Matrix
 
-```powershell
-corepack pnpm run typecheck
-```
+機械可読な正本は [`governance/verification-policy.json`](../governance/verification-policy.json) である。変更前に該当するclassをすべて選び、mixed changeではstageごとのgate IDの和集合を取る。影響範囲を限定できない場合は `unknownImpactGateIds` のcomprehensive fallbackを使う。既知の全コマンドを無条件に毎回実行しない。
 
-```powershell
-corepack pnpm run lint
-```
+| Change class | Trigger | Iteration | Targeted regression | Completion | Release-only | Completionで省略できるgate |
+| --- | --- | --- | --- | --- | --- | --- |
+| `documentation-only` | 製品・データ・ガバナンス・コマンドの意味を変えないproject-owned文書、索引、link、記録 | `diff-check` | `project-check` | `diff-check`, `project-check` | なし | type/lint/unit/browser/build/data/renderer/governance |
+| `ui-css-layout` | CSS、layout、accessibility、利用者copy、非domain JSX、browser UI test | `diff-check`, `typecheck`, `lint` | unit, browser, data-contract | diff, type, lint, unit, browser, build, data-contract | なし | renderer, governance, project |
+| `application-logic` | Schema・migrationを変えないdomain/application/persistence/worker/runtime logic | diff, type, lint, unit | unit, browser, data-contract | diff, type, lint, unit, browser, build, data-contract | なし | renderer, governance, project |
+| `data-contract-schema-migration` | Schema、serializer、import/export、data-model意味、version、migration、compatibility | diff, type, unit, data-contract | lint, unit, browser, data-contract, governance, project | comprehensive | なし | なし |
+| `governance-permissions-agents` | common/project governance、policy/matrix、AGENTS、managed scripts、権限、agent、approval、task lifecycle | diff, governance, project | governance, project | comprehensive | なし | なし |
+| `build-release-deploy` | package/lock、Vite/Playwright/build設定、release evidence、publish/deploy手順 | type, lint | type, lint, unit, browser, build | comprehensive | 現在なし | なし |
 
-```powershell
-corepack pnpm run test:unit
-```
+製品仕様またはデータ意味を変える文書は `documentation-only` だけに分類せず、該当classとの和集合を使う。UI/applicationのcompletionは、現行仕様が要求するtypecheck、lint、unit、browser、buildを維持する。data、governance、build/release/deployおよびunknown impactのcompletionはcomprehensiveとする。公開・deploy機能は現在利用不可であり、release-only gateが空であることは公開可能性を意味しない。
 
-```powershell
-corepack pnpm run test:browser
-```
+省略したgateは、completion reportまたはhandoffへgate IDと影響がない理由を記録する。release判断が将来承認された場合は、release evidenceへ追加gateと結果を記録する。
 
-```powershell
-corepack pnpm run build
-```
+<!-- BEGIN GENERATED VERIFICATION POLICY SUMMARY -->
+- Root: schemaVersion=1.0; comprehensiveGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]; unknownImpactGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]
+- Class: id=documentation-only; triggers=[Project-owned prose\, index\, link\, or record changes without product\, data\, governance\, command\, or release semantics\; use the union with another class when meaning changes]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[project-check]; completionGateIds=[diff-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[typecheck,lint,unit-tests,browser-tests,build,data-contract-check,renderer-check,governance-check]; omissionRecord=Completion report or handoff with each omitted gate ID and no-impact reason
+- Class: id=ui-css-layout; triggers=[CSS\, layout\, accessibility\, user copy\, non-domain JSX\, or browser UI tests\; use the union with application or data classes when behavior or data meaning changes]; iterationGateIds=[diff-check,typecheck,lint]; targetedRegressionGateIds=[unit-tests,browser-tests,data-contract-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check]; releaseOnlyGateIds=[]; omittableGateIds=[renderer-check,governance-check,project-check]; omissionRecord=Completion report or handoff with each omitted gate ID and no-impact reason
+- Class: id=application-logic; triggers=[TypeScript or TSX domain\, application\, persistence\, worker\, or runtime logic without Schema or migration semantics]; iterationGateIds=[diff-check,typecheck,lint,unit-tests]; targetedRegressionGateIds=[unit-tests,browser-tests,data-contract-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check]; releaseOnlyGateIds=[]; omittableGateIds=[renderer-check,governance-check,project-check]; omissionRecord=Completion report or handoff with each omitted gate ID and no-impact reason
+- Class: id=data-contract-schema-migration; triggers=[Schema\, serialization\, import or export\, data-model meaning\, version\, migration\, or compatibility semantics]; iterationGateIds=[diff-check,typecheck,unit-tests,data-contract-check]; targetedRegressionGateIds=[lint,unit-tests,browser-tests,data-contract-check,governance-check,project-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[]; omissionRecord=Completion report and data or migration evidence
+- Class: id=governance-permissions-agents; triggers=[Common or project governance\, verification policy or matrix\, AGENTS\, managed lock or scripts\, permissions\, agents\, approvals\, or task lifecycle]; iterationGateIds=[diff-check,governance-check,project-check]; targetedRegressionGateIds=[governance-check,project-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[]; omissionRecord=Completion report and governance handoff
+- Class: id=build-release-deploy; triggers=[Package or lock files\, Vite or Playwright build configuration\, release evidence\, publication\, or deploy procedure]; iterationGateIds=[typecheck,lint]; targetedRegressionGateIds=[typecheck,lint,unit-tests,browser-tests,build]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[]; omissionRecord=Completion report or authorized release evidence
+- Gate: id=diff-check; command=git diff --check; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Any later worktree edit]; evidenceDestination=Completion callback or commit evidence
+- Gate: id=typecheck; command=corepack pnpm run typecheck; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[TypeScript\, TSX\, declarations\, tsconfig\, package\, lock\, dependency\, or toolchain change]; evidenceDestination=Completion callback or commit evidence
+- Gate: id=lint; command=corepack pnpm run lint; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Source\, test\, ESLint configuration\, package\, lock\, dependency\, or toolchain change]; evidenceDestination=Completion callback or commit evidence
+- Gate: id=unit-tests; command=corepack pnpm run test:unit; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Domain\, application\, persistence\, worker\, test\, fixture\, configuration\, dependency\, or toolchain change]; evidenceDestination=Completion callback or commit evidence
+- Gate: id=browser-tests; command=corepack pnpm run test:browser; stages=[targeted,completion]; includes=[]; invalidatedBy=[UI\, browser test\, runner\, Vite\, Playwright\, configuration\, dependency\, or fixture change]; evidenceDestination=Completion callback or commit evidence\; retained temporary diagnostics path on failure
+- Gate: id=build; command=corepack pnpm run build; stages=[targeted,completion]; includes=[]; invalidatedBy=[Source\, static asset\, Vite\, TypeScript\, package\, lock\, dependency\, or toolchain change]; evidenceDestination=Completion callback or commit evidence
+- Gate: id=data-contract-check; command=& .\\scripts\\check-data-contract.ps1 -ProjectPath $PWD.Path; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Schema\, specification\, data model\, related ADR\, source or test contract marker\, or checker change]; evidenceDestination=Completion callback or commit evidence
+- Gate: id=renderer-check; command=& .\\scripts\\render-governance.ps1 -ProjectPath $PWD.Path -Check; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Managed common\, project rules\, lock\, renderer\, or generated AGENTS change]; evidenceDestination=Included governance result or standalone command report
+- Gate: id=governance-check; command=& .\\scripts\\check-governance.ps1 -ProjectPath $PWD.Path; stages=[iteration,targeted,completion]; includes=[renderer-check]; invalidatedBy=[Managed common\, project rules\, lock\, renderer\, validator\, generated AGENTS\, verification policy\, or operations summary change]; evidenceDestination=Completion callback\, governance handoff\, or commit evidence
+- Gate: id=project-check; command=& .\\scripts\\check-project.ps1 -ProjectPath $PWD.Path; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Documentation\, links\, indexes\, roadmap\, ADR\, TOML\, runbook\, capacity helper\, policy routing\, or checker change]; evidenceDestination=Completion callback or commit evidence
+<!-- END GENERATED VERIFICATION POLICY SUMMARY -->
 
-```powershell
-& .\scripts\check-data-contract.ps1 -ProjectPath $PWD.Path
-```
+### Gate Catalog and Inclusion
 
-CLP JSON Schemaが解析でき、スキーマ版、値域、個数上限、向き列挙、データ契約、ADRが承認値と一致することを検証する。
+| Gate ID | Command | Purpose and failure meaning | Inclusion / evidence |
+| --- | --- | --- | --- |
+| `diff-check` | `git diff --check` | worktree差分のwhitespace errorを検出する | callbackまたはcommit evidence。exact staging後は `git diff --cached --check` もGit integration evidenceとして独立実行する |
+| `typecheck` | `corepack pnpm run typecheck` | TypeScript projectと型契約の不整合を検出する | 独立exit status |
+| `lint` | `corepack pnpm run lint` | source/testの静的規則違反とwarningを検出する | 独立exit status |
+| `unit-tests` | `corepack pnpm run test:unit` | domain、application、persistence、Workerの決定的回帰を検出する | 独立exit status |
+| `browser-tests` | `corepack pnpm run test:browser` | UI、WebGL、Worker、永続化、狭幅の統合回帰を検出する | runnerがloopback Vite serverを所有し、失敗時だけ一時diagnostics pathを保持する |
+| `build` | `corepack pnpm run build` | production bundle生成失敗を検出する | `dist/` は証拠ではなくGit管理外。既知のlarge-chunk advisoryは現在の失敗gateではない |
+| `data-contract-check` | `& .\scripts\check-data-contract.ps1 -ProjectPath $PWD.Path` | Schema、仕様、data-model、ADR、source/test markerのdriftを検出する | 他の製品gateを包含しない |
+| `renderer-check` | `& .\scripts\render-governance.ps1 -ProjectPath $PWD.Path -Check` | 生成済み `AGENTS.md` のdriftを検出する | `governance-check` が包含する。standaloneで選ばない限り重複実行しない |
+| `governance-check` | `& .\scripts\check-governance.ps1 -ProjectPath $PWD.Path` | common/lock/hash/AGENTS/policy/operations summaryのdriftを検出する | includes `renderer-check`。包含childの結果とexit statusを保持する |
+| `project-check` | `& .\scripts\check-project.ps1 -ProjectPath $PWD.Path` | 必須文書、link/index、capacity routing、ADR、roadmap、TOML、policy routingのdriftを検出する | 他のgateを包含しない |
 
-```powershell
-& .\scripts\render-governance.ps1 -ProjectPath $PWD.Path -Check
-```
+comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`browser-tests`、`build`、`data-contract-check`、`governance-check`、`project-check` である。包含closureを展開して同じgateを一度だけ実行する。`governance-check` 選択時は `renderer-check` を別のcompletion commandとして重複させない。
 
-管理済み `AGENTS.md` が共通契約と一致することを検証する。
+### Evidence Validity
 
-```powershell
-& .\scripts\check-governance.ps1 -ProjectPath $PWD.Path
-```
-
-共通契約、レンダラー、検証スクリプトのハッシュ、生成済み `AGENTS.md`、サイズ、プロジェクト規則を検証する。
-
-```powershell
-& .\scripts\check-project.ps1 -ProjectPath $PWD.Path
-```
-
-必須文書、相対リンク、索引網羅性、ロードマップ計算、ADR状態、TOMLの必須構造、エージェント権限を検証する。
-
-まとめる場合は、どれか一つでも失敗すれば非ゼロで終了する検証済みランナーだけを使う。`;` など状態を隠す連結や診断バッチを、完了、引き継ぎ、コミット、統合、リリースの証拠として使わない。
+- 成功はコマンド完了と終了コード0を観測した後だけ記録する。診断run、中間出力、開始時点を完了証拠にしない。
+- worktree編集後は `diff-check`、関連するTS/設定変更後はtype/lint、関連する実装・test・fixture変更後はunit/browser、source・asset・build設定変更後はbuildを失効させる。
+- Schema、仕様、data-model、関連ADR、source/test契約markerの変更後は `data-contract-check` を失効させる。
+- common/project rules、lock、renderer、validator、AGENTS、verification policy、generated operations summaryの変更後はrenderer/governance evidenceを失効させる。
+- 文書、link、index、roadmap、ADR、TOML、runbook、capacity helper、policy routingの変更後は `project-check` を失効させる。
+- 内容を変えないstagingまたはcommitだけではproduct gateを失効させない。exact staging後の `git diff --cached --check`、commit後のHEAD、status、sole Worktree、handoff identifierは別に再確認する。
+- 各必須gateは別のコマンド、結果、終了コードとして記録する。まとめる場合は、どれか一つでも失敗すれば非ゼロで終了し、child結果を保持する検証済みrunnerだけを使う。`;` など状態を隠す連結や診断batchを完了、引き継ぎ、commit、統合、releaseの証拠にしない。
 
 ## Git Integration
 

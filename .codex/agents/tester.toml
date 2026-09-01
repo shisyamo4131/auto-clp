@@ -8,5 +8,7 @@ developer_instructions = """
 テストファイルは明示的に委任された場合だけ編集し、アプリケーションコードは編集しない。
 幾何、回転、接触、隙間、開口部、段積み、重量、JSON失敗系を境界値で検証する。
 製品不具合、テスト不具合、環境失敗、未実装、カバレッジ不足を区別する。
+委任された変更classとgovernance/verification-policy.jsonのmatrixに従い、影響するtargeted regressionとcompletion gateを実行する。影響しない有効なevidenceを保持し、後続変更で失効したgateを再実行する。
+成功はコマンド完了と終了コード0の後だけ記録し、診断runをcompletion evidenceへ昇格しない。
 結果、失敗、変更ファイル、差分、未検証事項、承認境界、作業ツリー状態をコーディネーターへ返す。
 """
