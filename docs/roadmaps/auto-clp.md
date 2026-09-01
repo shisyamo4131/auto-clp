@@ -14,7 +14,7 @@
 | 3D表示と手動配置 | 30 | 30 | Complete | 座標契約、全積荷検索select、Project→scene投影・描画、荷室外の非永続自由作業位置、未配置・配置済み共通のdrag三状態分類、床・支持可能上面へのZ snap、単一支持面内のX/Y制限、条件未確認preview、dialog配置編集、完全drag-out位置保持、許可済みX/Z軸90度回転と天地無用、wheel page scrollとbutton zoom、同一候補camera保持、viewport内Undo/Redo、compactな選択積荷カードとCRUD入口を実装 |
 | 物理制約の判定 | 25 | 25 | Complete | 低レベルgeometry・耐荷重評価、高位集約、単独支持・支持条件未確認・支持接触不成立、接触時の隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL 2利用可能時のUI、許可上限1,000配置の応答性を実装・検証。人間の派生床突き抜け観察で発見した境界違反由来の上段支持不足カスケード `HUT-01` は、診断上の床Z=0正規化、負例、複数支持、実Worker表示を追加して修正・回帰済み |
 | 保存・再読込・操作性 | 15 | 15 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、保存Navigation Drawer、操作単位Snackbar、modal focus・狭幅を実装・検証 |
-| 実務利用者による受入 | 5 | 3 | In progress | 4本の匿名合成ケース、合格基準、自動証拠に加え、案内付き人間評価で移動・向き・削除・履歴・物理理由・保存・JSON往復、305 / 320 / 375 px、Tab・dialog focusを観察し、床突き抜け由来の支持不足カスケード不具合を発見。WebGL fallback試用は評価者判断で中止し必須ゲートへ置換。新しい阻止・救出画面、正式fixture、評価者区分、実務利用者試用は未完了 |
+| 実務利用者による受入 | 5 | 3 | In progress | 4本の匿名合成ケース、合格基準、自動証拠に加え、案内付き人間評価で移動・向き・削除・履歴・物理理由・保存・JSON往復、305 / 320 / 375 px、Tab・dialog focusを観察し、床突き抜け由来の支持不足カスケード不具合を発見。WebGL 2非対応・初期描画失敗時の阻止・退避画面は人間確認済み。作業中context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
 | **Total** | **100** | **98** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
@@ -27,10 +27,9 @@
 
 ## Next Work
 
-1. WebGL 2非対応・初期描画失敗・context loss時の全面停止、復旧案内、現在CLP・端末保存の読み取り専用JSON救出と「作業データ」表現を人間が確認する。
-2. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
-3. 公開または実務運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
-4. [将来scene設計提案](../designs/future-scene-workspace.md)に残る積荷画像の段階・保存範囲・上限を別checkpointで承認または差し戻す。JSON名のCLP名利用は現仕様・ADRと衝突するため別承認まで変更しない。
+1. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
+2. 公開または実務運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
+3. [将来scene設計提案](../designs/future-scene-workspace.md)に残る積荷画像の段階・保存範囲・上限を別checkpointで承認または差し戻す。JSON名のCLP名利用は現仕様・ADRと衝突するため別承認まで変更しない。
 
 ## Deliverables and Verification Evidence
 
@@ -42,7 +41,7 @@
 | 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0019](../decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](../decisions/0020-actionable-opening-diagnostics-and-drag-focus.md) | 低レベルgeometry・耐荷重評価、単独支持・条件未確認・接触不成立、寸法不適合だけを通知する開口診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体・全ブラウザ、型・lint・build。単独包含の等値、1 mm張り出し、複数支持、隙間、支持可否混在、辺・点、Z不一致、重複、開口寸法合否、Worker表示、自動提案除外を検証 |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0023](../decisions/0023-webgl-required-operation-and-read-only-rescue.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、WebGL障害時の読み取り専用救出、固定code UI | 実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL 2利用可能時の通常操作、非対応・描画障害時の全面停止と2種類の救出、305/320/375px、1,000配置・100候補の実Worker応答性を回帰 |
 | 自動配置提案の将来技術資産（非加重点） | [ADR 0004](../decisions/0004-optimization-objective.md)、[ADR 0029](../decisions/0029-phase1-drawer-entry-and-automatic-proposal-deferral.md)、[将来合成ケースAP-01〜08](../acceptance.md#future-automatic-proposal-retained-technical-cases) | 純粋探索・Worker・session/view・React panel・適用境界を将来再利用候補として保持。Phase 1の通常UIには表示せずWorkerを開始しない | `automatic-proposal-v2` の単体資産、非実行browser snapshot、[AP-08技術証拠](../evidence/automatic-proposal-ap08-733b250.md)を履歴資産として保持。再公開には仕様再承認、現行shellまたは専用harnessへの再接続、収集設定、全回帰と実務受入が必要 |
-| 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | [Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)に加え、[案内付き人間評価](../evidence/phase1-human-ui-trial-4e6c680.md)で派生ケースの移動・向き・削除・履歴・理由理解・端末保存・JSON往復、狭幅・Tab・focus、viewer-first shell 1.3.0までの変更差分を確認し、`HUT-01` とUI改善根拠を記録。旧fallback観察は要件変更で中止した。仕様1.0.1のWebGL阻止・救出画面、正式fixture、評価者区分、実務利用者試用は未完了 |
+| 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | [Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)に加え、[案内付き人間評価](../evidence/phase1-human-ui-trial-4e6c680.md)で派生ケースの移動・向き・削除・履歴・理由理解・端末保存・JSON往復、狭幅・Tab・focus、viewer-first shell 1.3.0までの変更差分、WebGL非対応・初期描画失敗時の阻止・退避画面を確認し、`HUT-01` とUI改善根拠を記録。context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
 
 ## Unresolved Problems and Decisions
 
@@ -126,3 +125,4 @@
 | 2026-08-31 | 98% | +0 | 仕様1.2.2・ADR 0028を実装。typecheck、lint、単体28ファイル952件、browser93件、buildに合格し、Drawerの独立操作方法dialog、操作copy、busy/focus/scroll、305/320/375px、compact寸法marker、`現在の座標` copyを自動回帰した。寸法矢印の見た目と案内文の理解は差分中心の人間確認を残し、Schema 0.1.0と進捗98%は据え置き |
 | 2026-08-31 | 98% | +0 | 同じ人間の評価者が仕様1.2.2の操作方法、寸法矢印、`現在の座標` を期待どおりと確認した。仕様1.3.0・ADR 0029で、積荷・候補追加入口をDrawerへ集約し、外側clickで背面操作を発火させず閉じ、自動配置提案を現行UIから将来backlogへ移した。自動提案15点を非加重点へ分離し、3D 30点・物理25点・保存15点へ再配分して獲得98/100を維持。typecheck、lint、単体28ファイル952件、現行browser83件、build、文書・データ・ガバナンス検査に合格。将来自動提案browser 10件は通常suiteから分離し、人間による今回差分確認を残すため進捗98%は据え置き |
 | 2026-08-31 | 98% | +0 | 同じ人間の評価者が仕様1.3.0のDrawer背景close、Drawerだけの積荷・候補追加入口、現行UIからの自動配置提案除外を含む差分試用を受入可能と報告した。途中の意図しないreload/reloadは最終判定へ影響しなかった。正式fixture、評価者区分、仕様1.0.1のWebGL阻止・救出画面、実務利用者試用は未完了のため進捗98%を維持 |
+| 2026-09-01 | 98% | +0 | 同じ人間の評価者が仕様1.0.1のWebGL 2非対応・初期描画失敗画面で、操作停止、通常menuの無効化、現在作業と端末保存の違い、退避入口、復旧手順を理解できると判定した。作業中context loss遷移は人間試用で未再現だが、対象browser回帰6件・終了コード0で全面停止への遷移を再確認し、組み合わせ証拠として承認された。正式fixture、評価者区分、実務利用者試用は未完了のため進捗98%を維持 |

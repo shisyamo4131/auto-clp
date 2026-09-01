@@ -296,9 +296,24 @@ AをZ=0へ修正すると床貫通が消え、A上面Z=600とB下面Z=600の単�
 
 この合格はviewer-first shellの変更差分に対する案内付き人間確認であり、正式fixtureによる実務利用者受入、仕様1.0.1のWebGL阻止・作業データ退避画面の再確認、対応ブラウザ・最低GPU、または実積載の安全性を確認したことを意味しない。旧PMタスクの詳細な操作逐語記録は現在取得できないため、永続化済みのロードマップと引継ぎ記録で確認できる範囲だけを記載する。進捗は98%を維持する。
 
+### Required-WebGL Stop and Rescue Human Re-check
+
+- Date: 2026-09-01
+- Evaluator: 同じ人間のプロジェクト評価者
+- Environment: ローカルin-app Browser、`http://127.0.0.1:4174/`、repository baseline `eac385a8fa5a07022a7f63d070cdc639f9a074be`
+- Result: WebGL非対応・初期描画失敗の阻止・退避画面はpass。作業中context loss遷移は自動証拠と組み合わせて承認
+
+評価者は `?forceWebgl2=unsupported` で、`Auto CLPを利用できません` により操作停止が直ちに分かること、`現在の作業データ` と `端末に保存済みのデータ` の違い、各退避入口、ダウンロード後の復旧手順を理解できることを3点とも問題なしと判定した。通常のNavigation Drawerは無効で、二つの読み取り専用退避buttonと再読込buttonは表示・有効だった。
+
+続いて `?forceRenderer=initial-render-error` で、`Auto CLPの操作を停止しました` により異常と停止が明確であること、通常menuが無効で作業を続けられないこと、退避入口と復旧手順を引き続き理解できることを3点とも問題なしと判定した。
+
+作業中のWebGL context lossは、in-app Browserの安全境界内で障害eventを人工注入できず、人間試用では遷移自体を再現しなかった。迂回操作は行わず、`corepack pnpm run test:browser capability.spec.ts` の6件合格・終了コード0で、通常画面からcontext loss後の全面停止へ移る自動回帰を再確認した。評価者は、人間証拠を停止・退避画面の理解性、自動証拠をcontext loss遷移、制約を人間試用での遷移未再現として記録する組み合わせを明示承認した。
+
+この再確認ではdownload buttonをクリックしていない。download動作は2026-08-30の初回人間試用と対象自動回帰の証拠を維持し、今回の人間合格は操作前の意味、停止状態、退避入口、復旧手順の理解に限定する。正式fixture、評価者区分、実務利用者受入、対応ブラウザ・最低GPU、実積載の安全性は未確認であり、進捗は98%を維持する。
+
 ## Remaining Follow-up
 
-- 正式fixture、評価者区分、仕様1.0.1のWebGL必須阻止・作業データ退避画面の人間再観察。
+- 正式fixture、評価者区分、実務利用者試用の評価担当・日程・合否記録。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 
 ## Repository and Local Side Effects
