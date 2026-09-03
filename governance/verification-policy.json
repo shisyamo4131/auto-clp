@@ -28,9 +28,16 @@
       "triggers": [
         "Project-owned prose, index, link, or record changes without product, data, governance, command, or release semantics; use the union with another class when meaning changes"
       ],
-      "iterationGateIds": ["diff-check"],
-      "targetedRegressionGateIds": ["project-check"],
-      "completionGateIds": ["diff-check", "project-check"],
+      "iterationGateIds": [
+        "diff-check"
+      ],
+      "targetedRegressionGateIds": [
+        "project-check"
+      ],
+      "completionGateIds": [
+        "diff-check",
+        "project-check"
+      ],
       "releaseOnlyGateIds": [],
       "omittableGateIds": [
         "typecheck",
@@ -42,15 +49,23 @@
         "renderer-check",
         "governance-check"
       ],
-      "omissionRecord": "Completion report or handoff with each omitted gate ID and no-impact reason"
+      "omissionRecord": "Completion report with each omitted gate ID and no-impact reason"
     },
     {
       "id": "ui-css-layout",
       "triggers": [
         "CSS, layout, accessibility, user copy, non-domain JSX, or browser UI tests; use the union with application or data classes when behavior or data meaning changes"
       ],
-      "iterationGateIds": ["diff-check", "typecheck", "lint"],
-      "targetedRegressionGateIds": ["unit-tests", "browser-tests", "data-contract-check"],
+      "iterationGateIds": [
+        "diff-check",
+        "typecheck",
+        "lint"
+      ],
+      "targetedRegressionGateIds": [
+        "unit-tests",
+        "browser-tests",
+        "data-contract-check"
+      ],
       "completionGateIds": [
         "diff-check",
         "typecheck",
@@ -61,16 +76,29 @@
         "data-contract-check"
       ],
       "releaseOnlyGateIds": [],
-      "omittableGateIds": ["renderer-check", "governance-check", "project-check"],
-      "omissionRecord": "Completion report or handoff with each omitted gate ID and no-impact reason"
+      "omittableGateIds": [
+        "renderer-check",
+        "governance-check",
+        "project-check"
+      ],
+      "omissionRecord": "Completion report with each omitted gate ID and no-impact reason"
     },
     {
       "id": "application-logic",
       "triggers": [
         "TypeScript or TSX domain, application, persistence, worker, or runtime logic without Schema or migration semantics"
       ],
-      "iterationGateIds": ["diff-check", "typecheck", "lint", "unit-tests"],
-      "targetedRegressionGateIds": ["unit-tests", "browser-tests", "data-contract-check"],
+      "iterationGateIds": [
+        "diff-check",
+        "typecheck",
+        "lint",
+        "unit-tests"
+      ],
+      "targetedRegressionGateIds": [
+        "unit-tests",
+        "browser-tests",
+        "data-contract-check"
+      ],
       "completionGateIds": [
         "diff-check",
         "typecheck",
@@ -81,15 +109,24 @@
         "data-contract-check"
       ],
       "releaseOnlyGateIds": [],
-      "omittableGateIds": ["renderer-check", "governance-check", "project-check"],
-      "omissionRecord": "Completion report or handoff with each omitted gate ID and no-impact reason"
+      "omittableGateIds": [
+        "renderer-check",
+        "governance-check",
+        "project-check"
+      ],
+      "omissionRecord": "Completion report with each omitted gate ID and no-impact reason"
     },
     {
       "id": "data-contract-schema-migration",
       "triggers": [
         "Schema, serialization, import or export, data-model meaning, version, migration, or compatibility semantics"
       ],
-      "iterationGateIds": ["diff-check", "typecheck", "unit-tests", "data-contract-check"],
+      "iterationGateIds": [
+        "diff-check",
+        "typecheck",
+        "unit-tests",
+        "data-contract-check"
+      ],
       "targetedRegressionGateIds": [
         "lint",
         "unit-tests",
@@ -114,12 +151,48 @@
       "omissionRecord": "Completion report and data or migration evidence"
     },
     {
+      "id": "project-guidance-metadata",
+      "triggers": [
+        "Project-owned routing, command-location or environment guidance with no change to product, data, permissions, safety, approval or lifecycle meaning; changed governance or verification semantics also select governance-permissions-agents"
+      ],
+      "iterationGateIds": [
+        "diff-check",
+        "project-check"
+      ],
+      "targetedRegressionGateIds": [
+        "governance-check",
+        "project-check"
+      ],
+      "completionGateIds": [
+        "diff-check",
+        "governance-check",
+        "project-check"
+      ],
+      "releaseOnlyGateIds": [],
+      "omittableGateIds": [
+        "typecheck",
+        "lint",
+        "unit-tests",
+        "browser-tests",
+        "build",
+        "data-contract-check"
+      ],
+      "omissionRecord": "Completion report with each omitted gate ID and bounded no-product-impact reason"
+    },
+    {
       "id": "governance-permissions-agents",
       "triggers": [
         "Common or project governance, verification policy or matrix, AGENTS, managed lock or scripts, permissions, agents, approvals, or task lifecycle"
       ],
-      "iterationGateIds": ["diff-check", "governance-check", "project-check"],
-      "targetedRegressionGateIds": ["governance-check", "project-check"],
+      "iterationGateIds": [
+        "diff-check",
+        "governance-check",
+        "project-check"
+      ],
+      "targetedRegressionGateIds": [
+        "governance-check",
+        "project-check"
+      ],
       "completionGateIds": [
         "diff-check",
         "typecheck",
@@ -133,15 +206,24 @@
       ],
       "releaseOnlyGateIds": [],
       "omittableGateIds": [],
-      "omissionRecord": "Completion report and governance handoff"
+      "omissionRecord": "Completion report and affected operations"
     },
     {
       "id": "build-release-deploy",
       "triggers": [
         "Package or lock files, Vite or Playwright build configuration, release evidence, publication, or deploy procedure"
       ],
-      "iterationGateIds": ["typecheck", "lint"],
-      "targetedRegressionGateIds": ["typecheck", "lint", "unit-tests", "browser-tests", "build"],
+      "iterationGateIds": [
+        "typecheck",
+        "lint"
+      ],
+      "targetedRegressionGateIds": [
+        "typecheck",
+        "lint",
+        "unit-tests",
+        "browser-tests",
+        "build"
+      ],
       "completionGateIds": [
         "diff-check",
         "typecheck",
@@ -162,82 +244,179 @@
     {
       "id": "diff-check",
       "command": "git diff --check",
-      "stages": ["iteration", "targeted", "completion"],
+      "stages": [
+        "iteration",
+        "targeted",
+        "completion"
+      ],
       "includes": [],
-      "invalidatedBy": ["Any later worktree edit"],
+      "invalidatedBy": [
+        "Any later worktree edit"
+      ],
       "evidenceDestination": "Completion callback or commit evidence"
     },
     {
       "id": "typecheck",
       "command": "corepack pnpm run typecheck",
-      "stages": ["iteration", "targeted", "completion"],
+      "stages": [
+        "iteration",
+        "targeted",
+        "completion"
+      ],
       "includes": [],
-      "invalidatedBy": ["TypeScript, TSX, declarations, tsconfig, package, lock, dependency, or toolchain change"],
+      "invalidatedBy": [
+        "TypeScript, TSX, declarations, tsconfig, package, lock, dependency, or toolchain change"
+      ],
       "evidenceDestination": "Completion callback or commit evidence"
     },
     {
       "id": "lint",
       "command": "corepack pnpm run lint",
-      "stages": ["iteration", "targeted", "completion"],
+      "stages": [
+        "iteration",
+        "targeted",
+        "completion"
+      ],
       "includes": [],
-      "invalidatedBy": ["Source, test, ESLint configuration, package, lock, dependency, or toolchain change"],
+      "invalidatedBy": [
+        "Source, test, ESLint configuration, package, lock, dependency, or toolchain change"
+      ],
       "evidenceDestination": "Completion callback or commit evidence"
     },
     {
       "id": "unit-tests",
       "command": "corepack pnpm run test:unit",
-      "stages": ["iteration", "targeted", "completion"],
+      "stages": [
+        "iteration",
+        "targeted",
+        "completion"
+      ],
       "includes": [],
-      "invalidatedBy": ["Domain, application, persistence, worker, test, fixture, configuration, dependency, or toolchain change"],
+      "invalidatedBy": [
+        "Domain, application, persistence, worker, test, fixture, configuration, dependency, or toolchain change"
+      ],
       "evidenceDestination": "Completion callback or commit evidence"
     },
     {
       "id": "browser-tests",
       "command": "corepack pnpm run test:browser",
-      "stages": ["targeted", "completion"],
+      "stages": [
+        "targeted",
+        "completion"
+      ],
       "includes": [],
-      "invalidatedBy": ["UI, browser test, runner, Vite, Playwright, configuration, dependency, or fixture change"],
+      "invalidatedBy": [
+        "UI, browser test, runner, Vite, Playwright, configuration, dependency, or fixture change"
+      ],
       "evidenceDestination": "Completion callback or commit evidence; retained temporary diagnostics path on failure"
     },
     {
       "id": "build",
       "command": "corepack pnpm run build",
-      "stages": ["targeted", "completion"],
+      "stages": [
+        "targeted",
+        "completion"
+      ],
       "includes": [],
-      "invalidatedBy": ["Source, static asset, Vite, TypeScript, package, lock, dependency, or toolchain change"],
+      "invalidatedBy": [
+        "Source, static asset, Vite, TypeScript, package, lock, dependency, or toolchain change"
+      ],
       "evidenceDestination": "Completion callback or commit evidence"
     },
     {
       "id": "data-contract-check",
       "command": "& .\\scripts\\check-data-contract.ps1 -ProjectPath $PWD.Path",
-      "stages": ["iteration", "targeted", "completion"],
+      "stages": [
+        "iteration",
+        "targeted",
+        "completion"
+      ],
       "includes": [],
-      "invalidatedBy": ["Schema, specification, data model, related ADR, source or test contract marker, or checker change"],
+      "invalidatedBy": [
+        "Schema, specification, data model, related ADR, source or test contract marker, or checker change"
+      ],
       "evidenceDestination": "Completion callback or commit evidence"
     },
     {
       "id": "renderer-check",
       "command": "& .\\scripts\\render-governance.ps1 -ProjectPath $PWD.Path -Check",
-      "stages": ["iteration", "targeted", "completion"],
+      "stages": [
+        "iteration",
+        "targeted",
+        "completion"
+      ],
       "includes": [],
-      "invalidatedBy": ["Managed common, project rules, lock, renderer, or generated AGENTS change"],
+      "invalidatedBy": [
+        "Managed common, project rules, lock, renderer, or generated AGENTS change"
+      ],
       "evidenceDestination": "Included governance result or standalone command report"
     },
     {
       "id": "governance-check",
       "command": "& .\\scripts\\check-governance.ps1 -ProjectPath $PWD.Path",
-      "stages": ["iteration", "targeted", "completion"],
-      "includes": ["renderer-check"],
-      "invalidatedBy": ["Managed common, project rules, lock, renderer, validator, generated AGENTS, verification policy, or operations summary change"],
-      "evidenceDestination": "Completion callback, governance handoff, or commit evidence"
+      "stages": [
+        "iteration",
+        "targeted",
+        "completion"
+      ],
+      "includes": [
+        "renderer-check"
+      ],
+      "invalidatedBy": [
+        "Managed common, project rules, lock, renderer, validator, generated AGENTS, verification policy, or operations summary change"
+      ],
+      "evidenceDestination": "Completion callback, or commit evidence"
     },
     {
       "id": "project-check",
       "command": "& .\\scripts\\check-project.ps1 -ProjectPath $PWD.Path",
-      "stages": ["iteration", "targeted", "completion"],
-      "includes": [],
-      "invalidatedBy": ["Documentation, links, indexes, roadmap, ADR, TOML, runbook, capacity helper, policy routing, or checker change"],
+      "stages": [
+        "iteration",
+        "targeted",
+        "completion"
+      ],
+      "includes": [
+        "project-governance-regression"
+      ],
+      "invalidatedBy": [
+        "Documentation, links, indexes, roadmap, ADR, TOML, runbook, capacity helper, policy routing, or checker change",
+        "Project governance helper or regression script change"
+      ],
       "evidenceDestination": "Completion callback or commit evidence"
+    },
+    {
+      "id": "project-governance-regression",
+      "command": "& .\\scripts\\test-project-governance.ps1",
+      "stages": [
+        "iteration",
+        "targeted",
+        "completion"
+      ],
+      "includes": [],
+      "invalidatedBy": [
+        "Project checker, governance helper, regression script, verification policy or runtime change"
+      ],
+      "evidenceDestination": "Named child result and exit status from project-check, or standalone command report"
+    }
+  ],
+  "runtimeProfiles": [
+    {
+      "id": "windows-pwsh7",
+      "platform": "windows",
+      "edition": "Core",
+      "executable": "pwsh",
+      "versionRule": "minimum-major=7",
+      "required": true,
+      "supportStatus": "supported"
+    },
+    {
+      "id": "windows-powershell51",
+      "platform": "windows",
+      "edition": "Desktop",
+      "executable": "powershell",
+      "versionRule": "major-minor=5.1",
+      "required": false,
+      "supportStatus": "unverified"
     }
   ]
 }

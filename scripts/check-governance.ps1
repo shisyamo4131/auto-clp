@@ -81,6 +81,9 @@ function Get-VerificationPolicyDocumentationBlock {
     $lines = [Collections.Generic.List[string]]::new()
     $lines.Add('<!-- BEGIN GENERATED VERIFICATION POLICY SUMMARY -->')
     $lines.Add('- Root: schemaVersion=' + (Format-VerificationSummaryValue $Policy.schemaVersion) + '; comprehensiveGateIds=' + (Format-VerificationSummaryArray @($Policy.comprehensiveGateIds)) + '; unknownImpactGateIds=' + (Format-VerificationSummaryArray @($Policy.unknownImpactGateIds)))
+    foreach ($runtimeProfile in @($Policy.runtimeProfiles)) {
+        $lines.Add('- RuntimeProfile: id=' + (Format-VerificationSummaryValue $runtimeProfile.id) + '; platform=' + (Format-VerificationSummaryValue $runtimeProfile.platform) + '; edition=' + (Format-VerificationSummaryValue $runtimeProfile.edition) + '; executable=' + (Format-VerificationSummaryValue $runtimeProfile.executable) + '; versionRule=' + (Format-VerificationSummaryValue $runtimeProfile.versionRule) + '; required=' + (Format-VerificationSummaryValue $runtimeProfile.required) + '; supportStatus=' + (Format-VerificationSummaryValue $runtimeProfile.supportStatus))
+    }
     foreach ($changeClass in @($Policy.classes)) {
         $lines.Add('- Class: id=' + (Format-VerificationSummaryValue $changeClass.id) + '; triggers=' + (Format-VerificationSummaryArray @($changeClass.triggers)) + '; iterationGateIds=' + (Format-VerificationSummaryArray @($changeClass.iterationGateIds)) + '; targetedRegressionGateIds=' + (Format-VerificationSummaryArray @($changeClass.targetedRegressionGateIds)) + '; completionGateIds=' + (Format-VerificationSummaryArray @($changeClass.completionGateIds)) + '; releaseOnlyGateIds=' + (Format-VerificationSummaryArray @($changeClass.releaseOnlyGateIds)) + '; omittableGateIds=' + (Format-VerificationSummaryArray @($changeClass.omittableGateIds)) + '; omissionRecord=' + (Format-VerificationSummaryValue $changeClass.omissionRecord))
     }
@@ -120,6 +123,7 @@ $checks = [ordered]@{
     common_governance = @($commonPath, 'common_governance_sha256')
     renderer = @($rendererPath, 'renderer_sha256')
     validator = @($validatorPath, 'validator_sha256')
+    task_turnover_contract = @((Join-Path $resolvedProject 'references\task-turnover-contract.md'), 'task_turnover_contract_sha256')
 }
 
 foreach ($entry in $checks.GetEnumerator()) {
@@ -152,9 +156,32 @@ try {
 } catch {
     throw "Project verification policy JSON is invalid: $($_.Exception.Message)"
 }
-Assert-ObjectProperties -Object $verificationPolicy -Names @('schemaVersion', 'comprehensiveGateIds', 'unknownImpactGateIds', 'classes', 'gates') -Context 'Verification policy root'
+Assert-ObjectProperties -Object $verificationPolicy -Names @('schemaVersion', 'comprehensiveGateIds', 'unknownImpactGateIds', 'runtimeProfiles', 'classes', 'gates') -Context 'Verification policy root'
 if ($verificationPolicy.schemaVersion -ne '1.0') {
     throw "Unsupported verification policy schemaVersion: $($verificationPolicy.schemaVersion)"
+}
+$runtimeProfileIds = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$requiredRuntimeProfileCount = 0
+foreach ($runtimeProfile in @($verificationPolicy.runtimeProfiles)) {
+    Assert-ObjectProperties -Object $runtimeProfile -Names @('id', 'platform', 'edition', 'executable', 'versionRule', 'required', 'supportStatus') -Context 'Runtime profile'
+    $runtimeProfileId = [string]$runtimeProfile.id
+    if ([string]::IsNullOrWhiteSpace($runtimeProfileId) -or -not $runtimeProfileIds.Add($runtimeProfileId)) {
+        throw "Missing or duplicate runtime profile ID: $runtimeProfileId"
+    }
+    foreach ($property in @('platform', 'edition', 'executable', 'versionRule', 'supportStatus')) {
+        if ([string]::IsNullOrWhiteSpace([string]$runtimeProfile.$property)) {
+            throw "Runtime profile $runtimeProfileId has a blank property: $property"
+        }
+    }
+    if ([bool]$runtimeProfile.required) {
+        $requiredRuntimeProfileCount++
+        if ($runtimeProfile.platform -ne 'windows' -or $runtimeProfile.supportStatus -ne 'supported' -or $runtimeProfile.versionRule -notin @('major-minor=5.1', 'minimum-major=7')) {
+            throw "Required runtime profile is not a supported Windows compatibility target: $runtimeProfileId"
+        }
+    }
+}
+if ($runtimeProfileIds.Count -eq 0 -or $requiredRuntimeProfileCount -eq 0) {
+    throw 'Verification policy must declare at least one runtime profile and one required runtime profile.'
 }
 foreach ($requiredVerificationText in @('## Verification Matrix', 'Gate Catalog and Inclusion', 'Evidence Validity', 'governance/verification-policy.json')) {
     if (-not $operationsText.Contains($requiredVerificationText)) {
@@ -205,6 +232,7 @@ $requiredClassIds = @(
     'ui-css-layout',
     'application-logic',
     'data-contract-schema-migration',
+    'project-guidance-metadata',
     'governance-permissions-agents',
     'build-release-deploy'
 )
@@ -364,6 +392,8 @@ if ($agentsBytes -gt $MaxAgentsBytes) {
     verification_policy_present = $true
     verification_gate_count = $gateCatalog.Count
     verification_class_count = $classCatalog.Count
+    runtime_profile_count = $runtimeProfileIds.Count
+    required_runtime_profile_count = $requiredRuntimeProfileCount
     verification_inclusion_graph_valid = $true
     verification_documentation_aligned = $true
 }

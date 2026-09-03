@@ -17,7 +17,7 @@ Auto CLP は精密機器運送業者向けの3D積載シミュレーターです
 2. 要件、データ、制約、受入条件は `docs/specification.md` を読む。
 3. 作業順序と進捗は `docs/roadmaps/README.md` と `docs/roadmaps/auto-clp.md` を読む。
 4. 技術・製品判断は `docs/decisions/README.md` から関連ADRを読む。
-5. 検証選択は `governance/verification-policy.json` と `docs/operations.md`、復旧は `docs/operations.md`、Git統合、長期タスク、容量確認、task交代は `docs/runbooks/project-coordination.md`、現在の引き継ぎ状態は `docs/handoffs/README.md` から最新記録を読む。
+5. 検証選択は `governance/verification-policy.json` と `docs/operations.md`、復旧は `docs/operations.md`、Git統合、長期タスク、容量確認、ユーザー依頼のtask交代は `docs/runbooks/project-coordination.md` を読む。現在の製品状態と次作業は仕様・ロードマップ・運用を正とし、`docs/handoffs/README.md` は履歴参照に限る。
 6. 文書を追加・移動・改名・廃止する場合は `docs/README.md` と関連索引を同じ変更で更新する。
 
 ## Product and Domain Boundaries
@@ -66,8 +66,8 @@ Auto CLP は精密機器運送業者向けの3D積載シミュレーターです
 - 全タスクの主作業ディレクトリは `C:\Users\seven\projects\auto-clp` とする。
 - タスク固有Worktreeまたは別コピーは禁止する。必要時は理由、パス、ブランチ、担当、統合方法、存続期間、後片付けの事前承認を得る。
 - 長期調整はイベント通知方式を使い、セッション開始時にユーザーが終了条件を定義する。1件のレビュー可能なチェックポイントを完了・失敗・仕様質問・承認境界の通知まで待ってから次へ進む。
-- タスク作成、交代、アプリ再起動後は、実作業前に変更なしコールバックを1回検証する。通知失敗時は繰り返し送信せず、完全な結果を元タスクに残して復旧を待つ。
-- コーディネーターの引き継ぎ提案基準は1セッション300 MiB。交代にはユーザー承認が必要で、フォークせず同じ基本名に連番を付けた新規タスクを使う。
+- 通常の委任task作成・アプリ再起動後は、実作業前に変更なしコールバックを1回検証する。通知失敗時は繰り返し送信せず、完全な結果を元タスクに残して復旧を待つ。新規・交代コーディネーターは通常のrepository読込から開始し、旧taskの応答やactivation callbackを要求しない。
+- コーディネーターの引き継ぎ提案基準は1セッション300 MiB。交代はユーザー依頼時だけ行う。既存の正本文書に現在情報と次作業を反映し、関連変更を意味のある単位でcommitしてprimaryをcleanにした後、同じ基本名と次の連番で非forkの新規taskを作る。編集ごとの細切れcommitや交代だけの空commitは作らない。
 - 退任タスクは担当変更を検証後もCodexがアーカイブ・削除せず、ユーザーに手動削除可能と案内する。
-- 共通契約、`AGENTS.md`、全体権限・承認方針、調整責任、委任・Git統合、コールバック・引き継ぎ、安全境界の変更後は、影響するアクティブタスクを安全なチェックポイントで交代する。
+- ガバナンス変更はtaskの強制交代を起こさない。すべてのtaskは `AGENTS.md`、本規則、作業種別の正本を読む。旧taskが利用不能でも同じ開始経路を使い、交代専用台帳・履歴・cache・世代・handshake・validatorを追加しない。通常のプロジェクト作業ではインストール済みscaffold skillを読み込まない。
 - `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認` は `docs/runbooks/project-coordination.md` へ経路指定し、現在task IDと `scripts/check-codex-session-size.ps1` を使う。最新sessionを推測しない。

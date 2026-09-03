@@ -2,7 +2,7 @@
 
 - Status: Active
 - Owner: Project
-- Common governance: 1.5.0
+- Common governance: 3.0.0
 
 ## Session Capacity Routing
 
@@ -19,10 +19,10 @@
 
 現在のCodex task IDを信頼できるタスクmetadataから取得する。並行タスクがあり得るため、最新または最終更新のsessionを推測してはならない。
 
-Windowsでは、現在のtask IDを明示してプロジェクト内scriptを実行する。
+Windowsの必須PowerShell 7環境で、現在のtask IDを明示してプロジェクト内scriptを実行する。実行policyを変更せず、拒否時はBypassせず停止する。Windows PowerShell 5.1はRestrictedのため未検証であり、必須環境ではない。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/check-codex-session-size.ps1 -SessionId <current-task-id>
+& .\scripts\check-codex-session-size.ps1 -SessionId <current-task-id>
 ```
 
 コマンド結果と独立して観測した終了コードを記録する。scriptは指定IDに一致するsessionをちょうど1件だけ解決しなければならない。通常は24時間以内のCodex全体scan cacheを使用できる。全体容量の再計測が必要な場合だけ `-ForceTotalScan` を使う。
@@ -55,7 +55,7 @@ session本文を読まず、表示せず、次をすべて報告する。
 ## Event-driven Checkpoint Loop
 
 1. コーディネーターtask/host、委任task/host、正確な主作業ディレクトリ、現在checkpoint、callback先、ユーザー定義の終了条件を確認する。
-2. タスク作成、交代、アプリ再起動後は実作業前にno-change callbackを一度検証する。
+2. 通常の委任task作成・アプリ再起動後は実作業前にno-change callbackを一度検証する。交代・手動作成されたコーディネーターは通常のrepository読込から開始し、activation callbackを要求しない。
 3. 共通baseline、担当・禁止範囲、正本、承認境界、必要検証、完了契約を含むレビュー可能なcheckpointを一件だけ割り当てる。
 4. 完了、失敗、仕様質問、承認境界のいずれか一度のcallbackを待つ。通知後の委任taskは次の指示を待つ。
 5. コーディネーターが差分と個別の検証終了コードを確認し、受入対象だけをstage・commitする。終了条件未達の場合だけ次を割り当てる。
@@ -64,18 +64,18 @@ callback失敗時は繰り返し送信せず、完全な結果を送信側task�
 
 通常のtask間通信はユーザー向け進捗へ逐次表示せず、終了または停止時に統合報告する。承認、安全境界、失敗、仕様衝突、進捗低下、task/worktree/callback不整合は直ちにユーザーへ報告する。
 
-個別sessionが300 MiBへ到達した場合は、新規割当と自動reviewを停止する。baseline commit、進捗、active/waiting checkpoint、未統合作業、検証、承認待ち、安全境界、次の指示を最新handoff recordへ保存し、owner承認済みの交代手順だけを進める。
+個別sessionが300 MiBへ到達した場合は、新規割当と自動reviewを停止する。現在の製品情報と残作業を既存の仕様・ロードマップ・運用へ反映し、未統合作業・検証・承認待ちを報告する。交代専用記録を作らず、ユーザーが依頼した交代手順だけを進める。
 
-## Git, Worktree, and Turnover
+## Git, Worktree, and User-requested Replacement
 
-- 全Auto CLP taskは主作業ディレクトリ `C:\Users\seven\projects\auto-clp` を直接使う。別Worktreeまたは別repository copyは、理由、path、branch、担当、統合方法、存続期間、cleanupをユーザーが事前承認しない限り作成・利用しない。
+- 全Auto CLP taskは主作業ディレクトリ C:\Users\seven\projects\auto-clp を直接使う。別Worktreeまたは別repository copyは、理由、path、branch、担当、統合方法、存続期間、cleanupをユーザーが事前承認しない限り作成・利用しない。
 - コーディネーターが受入ファイルだけをstage・commitする。無関係な変更をstage、破棄、上書きしない。
-- 共通契約、生成 `AGENTS.md`、全体権限・承認方針、調整責任、委任・Git統合、callback・引き継ぎ、安全境界の変更後は、全アクティブtaskを安全なcheckpointで完全な新規taskへ交代する。forkしない。
-- 交代taskは同じ基本名と次の連番を使い、repositoryからの再開、正確なcwd、branch/HEAD、cleanな単一Worktree、ガバナンス版、権限・自動review、no-change callbackを実作業前に確認する。
-- 現行の期待値は、managed restricted `workspace-write`、restricted network、`approvals_reviewer=auto_review`、外部書込みと権限昇格をreview対象にするproject approval policyである。これらはrepository設定だけから推測せず、交代taskのruntime metadataでobservableな値としてcallbackへ記録する。値を観測できない、または不一致の場合は最初のstage/commitと所有権移転を停止する。
-- 交代コーディネーターは最初の実file限定stage/commitを自身で完了・検証する。失敗時は旧taskをactiveのまま保ち、所有権を二重化しない。
-- routeを新taskへ更新した後も旧taskはCodexがarchive/deleteせず、ユーザーへ手動削除可能なIDを案内する。
+- ガバナンス変更は強制交代を起こさない。ユーザーが交代を依頼した場合、既存正本の現在情報と次作業を更新し、関連変更を意味のある単位でcommitしてprimaryをcleanにする。その後、同じ基本名と次の連番で非forkの新規taskを作る。編集ごとの細切れcommitや交代だけの空commitは作らない。
+- すべてのtaskはAGENTS.md、governance/project-rules.md、docs/README.mdから選ぶ作業別正本を読む。新規・手動作成・旧task利用不能からの復旧も同じ開始経路を使う。旧task ID、旧ownerの協力、ACK、activation callback、最初の実file commit、所有権移転台帳を開始条件にしない。
+- 現行の安全境界はmanaged restricted `workspace-write`、restricted network、`approvals_reviewer=auto_review` である。runtimeで観測できない値を推測せず、権限変更・外部書込みは通常の承認境界に従う。交代用profileや専用validatorは作らない。
+- 通常委任callbackと結果レビューは継続する。交代専用の状態・履歴・cache・世代・handshakeは不要である。通常のプロジェクト作業はinstalled scaffold skillを読み込まない。
+- 旧taskはCodexがarchive/deleteせず、ユーザーに手動削除可能と案内する。
 
-## Current-state Records
+## Current Project Authorities
 
-一時的なtask ID、host、baseline、pending checkpoint、検証結果、引き継ぎ状態は[handoff index](../handoffs/README.md)配下の最新記録へ置く。製品仕様や本runbookへ一時IDを固定しない。
+現在の要件は[仕様](../specification.md)、進捗・残作業は[ロードマップ](../roadmaps/auto-clp.md)、実行・復旧は[運用](../operations.md)を正とする。[旧handoff索引](../handoffs/README.md)と配下の本文はHistoricalであり、現在owner・承認の証明や起動前提には使わない。通常の委任にはそのcheckpointの宛先・所有範囲・終了条件を明示するが、交代専用台帳へ恒久化しない。

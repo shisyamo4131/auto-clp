@@ -4,6 +4,8 @@
 
 ### Changed
 
+- 共通ガバナンス3.0.0、文書移行契約1.0.1、task交代契約2.0.0を採用する。ガバナンス変更による強制交代・旧ownerとの起動handshake・交代専用記録への依存を廃止し、ユーザー依頼時の通常repository再開へ統一する。検証は7分類と明示runtimeに対応し、既存総合9ゲートを維持する。仕様1.4.2、Schema 0.1.0、製品動作、依存、受入残条件、進捗98%は変更しない。
+
 - 共通ガバナンス1.5.0の影響ベース検証へ移行し、6つの変更class、iteration・targeted regression・completion・release-only stage、gate包含、evidence失効、省略理由、unknown impact時のcomprehensive fallbackをproject-owned policyと運用matrixで管理する。製品仕様1.4.2、Schema `0.1.0`、製品動作、依存関係、進捗98%は変更しない。
 - 仕様1.4.2・ADR 0025 refinementで通常デスクトップ高のApplication Shellをbrowser viewport高へ合わせ、上下padding、Application Barと余白、コンテナtabを除いた残りを3D viewportへ配分した。通常時の一般案内帯を撤去し、drag・失敗・操作不可statusだけをcanvas寸法・位置を変えないviewport内浮動表示として維持する。Schema `0.1.0`と進捗98%は変更しない。
 - 仕様1.4.1で主ページの入力データ注意を内容版1.1.0の「使用上の重要事項」へ集約し、Drawer最下部にpackageのAuto CLPアプリ版とCLPデータ形式版を追加した。法的な利用規約は将来checkpointのまま、Schema `0.1.0`と進捗98%は変更しない。

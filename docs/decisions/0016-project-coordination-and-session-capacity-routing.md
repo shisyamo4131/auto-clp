@@ -1,6 +1,7 @@
 # ADR 0016: プロジェクト調整とセッション容量経路
 
-- Status: Accepted
+- Status: Superseded
+- Superseded by: [ADR 0031](0031-user-requested-task-replacement.md)。容量・プライバシー・失敗条件は後継で維持し、交代・再開方式を更新する。
 - Date: 2026-08-28
 
 ## Context

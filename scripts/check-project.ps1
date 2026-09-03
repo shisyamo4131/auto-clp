@@ -5,6 +5,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
+if ($PSVersionTable.PSEdition -ne 'Core' -or $PSVersionTable.PSVersion.Major -lt 7) {
+    throw 'Project verification requires the declared PowerShell 7 environment; do not bypass execution policy.'
+}
+. (Join-Path $PSScriptRoot 'project-governance-functions.ps1')
 
 $requiredFiles = @(
     'AGENTS.md',
@@ -21,12 +25,17 @@ $requiredFiles = @(
     'docs/operations.md',
     'docs/runbooks/project-coordination.md',
     'docs/handoffs/README.md',
-    'docs/handoffs/GOV15-AUTOCLP-01.md',
-    'docs/handoffs/GOV14-AUTOCLP-01.md',
     'docs/roadmaps/README.md',
     'docs/roadmaps/auto-clp.md',
     'docs/decisions/README.md',
     'docs/decisions/0016-project-coordination-and-session-capacity-routing.md',
+    'docs/decisions/0031-user-requested-task-replacement.md',
+    'references/README.md',
+    'references/document-migration-contract.md',
+    'references/task-turnover-contract.md',
+    'docs/migrations/document-plan.json',
+    'scripts/project-governance-functions.ps1',
+    'scripts/test-project-governance.ps1',
     '.codex/config.toml',
     '.codex/agents/developer.toml',
     '.codex/agents/tester.toml',
@@ -107,24 +116,7 @@ try {
 } catch {
     throw "Verification policy JSON is invalid: $($_.Exception.Message)"
 }
-$requiredVerificationClassIds = @(
-    'documentation-only',
-    'ui-css-layout',
-    'application-logic',
-    'data-contract-schema-migration',
-    'governance-permissions-agents',
-    'build-release-deploy'
-)
-$actualVerificationClassIds = @($verificationPolicy.classes | ForEach-Object { [string]$_.id })
-foreach ($classId in $requiredVerificationClassIds) {
-    if ($actualVerificationClassIds -notcontains $classId) {
-        throw "Verification policy is missing required class: $classId"
-    }
-}
-if (@($actualVerificationClassIds | Select-Object -Unique).Count -ne $requiredVerificationClassIds.Count -or
-    $actualVerificationClassIds.Count -ne $requiredVerificationClassIds.Count) {
-    throw 'Verification policy must contain exactly the six approved change classes.'
-}
+Assert-ProjectVerificationPolicy -Policy $verificationPolicy
 
 $operations = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/operations.md'))
 foreach ($requiredToken in @(
@@ -166,13 +158,6 @@ foreach ($requiredToken in @('governance/verification-policy.json', 'comprehensi
     }
 }
 
-$governanceHandoff = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/handoffs/GOV15-AUTOCLP-01.md'))
-foreach ($requiredToken in @('PM（SPG）-05', '01a05be0-9996-7361-a6d6-e7062e4eee41', '1.5.0', 'task turnover')) {
-    if (-not $governanceHandoff.Contains($requiredToken)) {
-        throw "GOV15 handoff is missing current routing or migration contract: $requiredToken"
-    }
-}
-
 $coordinationRunbook = [IO.File]::ReadAllText((Join-Path $resolvedProject 'docs/runbooks/project-coordination.md'))
 $coordinationCommonVersionToken = "- Common governance: $managedCommonVersion"
 if (-not $coordinationRunbook.Contains($coordinationCommonVersionToken)) {
@@ -194,7 +179,7 @@ foreach ($alias in $capacityAliases) {
     }
 }
 foreach ($requiredToken in @(
-    'powershell -ExecutionPolicy Bypass -File scripts/check-codex-session-size.ps1 -SessionId <current-task-id>',
+    '& .\scripts\check-codex-session-size.ps1 -SessionId <current-task-id>',
     '300 MiB',
     '10 GiB',
     'codex_scan_complete',
@@ -353,6 +338,15 @@ foreach ($relativePath in $datedFiles) {
     }
 }
 
+$regressionScript = Join-Path $PSScriptRoot 'test-project-governance.ps1'
+$runtimeExecutable = (Get-Command pwsh -CommandType Application -ErrorAction Stop).Source
+& $runtimeExecutable -NoProfile -File $regressionScript -PolicyPath $verificationPolicyPath
+$regressionExit = $LASTEXITCODE
+[pscustomobject]@{ included_gate = 'project-governance-regression'; exit_status = $regressionExit } | Format-List
+if ($regressionExit -ne 0) {
+    throw "Included project-governance-regression failed with exit status $regressionExit."
+}
+
 [pscustomobject]@{
     project_path = $resolvedProject
     required_files = $requiredFiles.Count
@@ -371,4 +365,4 @@ foreach ($relativePath in $datedFiles) {
     roadmap_progress = $currentProgress
     agent_count = $agentNames.Count
     agent_permissions_valid = $true
-}
+} | Format-List

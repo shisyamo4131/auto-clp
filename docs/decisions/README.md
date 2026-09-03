@@ -26,7 +26,7 @@
 | [0013](0013-manual-local-persistence-and-json-files.md) | 手動の端末内保存とJSONファイル入出力 | Accepted | 2026-08-28 |
 | [0014](0014-dedicated-floor-penetration-diagnostic.md) | 床突き抜けの専用診断 | Accepted | 2026-08-28 |
 | [0015](0015-scene-wheel-drag-out-and-size-copy.md) | 3D viewportのscroll・drag-out・大きさ表記 | Accepted | 2026-08-28 |
-| [0016](0016-project-coordination-and-session-capacity-routing.md) | プロジェクト調整とセッション容量経路 | Accepted | 2026-08-28 |
+| [0016](0016-project-coordination-and-session-capacity-routing.md) | プロジェクト調整とセッション容量経路 | Superseded | 2026-08-28 |
 | [0017](0017-scene-workbench-rotation-and-compact-controls.md) | 3D作業面・軸別回転・compact操作 | Accepted | 2026-08-28 |
 | [0018](0018-scene-drag-classification-and-dialog-editors.md) | 3D drag三状態分類とdialog編集 | Accepted | 2026-08-29 |
 | [0019](0019-support-surface-snap-and-conditional-support.md) | 支持面snapと支持条件未確認 | Accepted | 2026-08-30 |
@@ -41,5 +41,6 @@
 | [0028](0028-operation-guide-and-compact-dimension-arrows.md) | 操作方法dialogとcompact寸法矢印 | Accepted | 2026-08-31 |
 | [0029](0029-phase1-drawer-entry-and-automatic-proposal-deferral.md) | Phase 1のDrawer入口と自動提案の公開延期 | Accepted | 2026-08-31 |
 | [0030](0030-container-only-drawer-management.md) | コンテナ専用化とDrawer内コンテナ管理 | Accepted | 2026-09-01 |
+| [0031](0031-user-requested-task-replacement.md) | ユーザー依頼のtask交代と通常再開 | Accepted | 2026-09-03 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

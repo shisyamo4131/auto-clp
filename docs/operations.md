@@ -103,20 +103,24 @@ CLP作成・設定、積荷追加、コンテナの追加・編集・削除、�
 | `ui-css-layout` | CSS、layout、accessibility、利用者copy、非domain JSX、browser UI test | `diff-check`, `typecheck`, `lint` | unit, browser, data-contract | diff, type, lint, unit, browser, build, data-contract | なし | renderer, governance, project |
 | `application-logic` | Schema・migrationを変えないdomain/application/persistence/worker/runtime logic | diff, type, lint, unit | unit, browser, data-contract | diff, type, lint, unit, browser, build, data-contract | なし | renderer, governance, project |
 | `data-contract-schema-migration` | Schema、serializer、import/export、data-model意味、version、migration、compatibility | diff, type, unit, data-contract | lint, unit, browser, data-contract, governance, project | comprehensive | なし | なし |
+| `project-guidance-metadata` | 権限・安全・承認・製品・データ・lifecycleの意味を変えない案内経路・command所在・環境metadata | diff, project | governance, project | diff, governance, project | なし | type, lint, unit, browser, build, data-contract |
 | `governance-permissions-agents` | common/project governance、policy/matrix、AGENTS、managed scripts、権限、agent、approval、task lifecycle | diff, governance, project | governance, project | comprehensive | なし | なし |
 | `build-release-deploy` | package/lock、Vite/Playwright/build設定、release evidence、publish/deploy手順 | type, lint | type, lint, unit, browser, build | comprehensive | 現在なし | なし |
 
 製品仕様またはデータ意味を変える文書は `documentation-only` だけに分類せず、該当classとの和集合を使う。UI/applicationのcompletionは、現行仕様が要求するtypecheck、lint、unit、browser、buildを維持する。data、governance、build/release/deployおよびunknown impactのcompletionはcomprehensiveとする。公開・deploy機能は現在利用不可であり、release-only gateが空であることは公開可能性を意味しない。
 
-省略したgateは、completion reportまたはhandoffへgate IDと影響がない理由を記録する。release判断が将来承認された場合は、release evidenceへ追加gateと結果を記録する。
+省略したgateは、completion reportへgate IDと影響がない理由を記録する。release判断が将来承認された場合は、release evidenceへ追加gateと結果を記録する。
 
 <!-- BEGIN GENERATED VERIFICATION POLICY SUMMARY -->
 - Root: schemaVersion=1.0; comprehensiveGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]; unknownImpactGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]
-- Class: id=documentation-only; triggers=[Project-owned prose\, index\, link\, or record changes without product\, data\, governance\, command\, or release semantics\; use the union with another class when meaning changes]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[project-check]; completionGateIds=[diff-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[typecheck,lint,unit-tests,browser-tests,build,data-contract-check,renderer-check,governance-check]; omissionRecord=Completion report or handoff with each omitted gate ID and no-impact reason
-- Class: id=ui-css-layout; triggers=[CSS\, layout\, accessibility\, user copy\, non-domain JSX\, or browser UI tests\; use the union with application or data classes when behavior or data meaning changes]; iterationGateIds=[diff-check,typecheck,lint]; targetedRegressionGateIds=[unit-tests,browser-tests,data-contract-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check]; releaseOnlyGateIds=[]; omittableGateIds=[renderer-check,governance-check,project-check]; omissionRecord=Completion report or handoff with each omitted gate ID and no-impact reason
-- Class: id=application-logic; triggers=[TypeScript or TSX domain\, application\, persistence\, worker\, or runtime logic without Schema or migration semantics]; iterationGateIds=[diff-check,typecheck,lint,unit-tests]; targetedRegressionGateIds=[unit-tests,browser-tests,data-contract-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check]; releaseOnlyGateIds=[]; omittableGateIds=[renderer-check,governance-check,project-check]; omissionRecord=Completion report or handoff with each omitted gate ID and no-impact reason
+- RuntimeProfile: id=windows-pwsh7; platform=windows; edition=Core; executable=pwsh; versionRule=minimum-major=7; required=True; supportStatus=supported
+- RuntimeProfile: id=windows-powershell51; platform=windows; edition=Desktop; executable=powershell; versionRule=major-minor=5.1; required=False; supportStatus=unverified
+- Class: id=documentation-only; triggers=[Project-owned prose\, index\, link\, or record changes without product\, data\, governance\, command\, or release semantics\; use the union with another class when meaning changes]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[project-check]; completionGateIds=[diff-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[typecheck,lint,unit-tests,browser-tests,build,data-contract-check,renderer-check,governance-check]; omissionRecord=Completion report with each omitted gate ID and no-impact reason
+- Class: id=ui-css-layout; triggers=[CSS\, layout\, accessibility\, user copy\, non-domain JSX\, or browser UI tests\; use the union with application or data classes when behavior or data meaning changes]; iterationGateIds=[diff-check,typecheck,lint]; targetedRegressionGateIds=[unit-tests,browser-tests,data-contract-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check]; releaseOnlyGateIds=[]; omittableGateIds=[renderer-check,governance-check,project-check]; omissionRecord=Completion report with each omitted gate ID and no-impact reason
+- Class: id=application-logic; triggers=[TypeScript or TSX domain\, application\, persistence\, worker\, or runtime logic without Schema or migration semantics]; iterationGateIds=[diff-check,typecheck,lint,unit-tests]; targetedRegressionGateIds=[unit-tests,browser-tests,data-contract-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check]; releaseOnlyGateIds=[]; omittableGateIds=[renderer-check,governance-check,project-check]; omissionRecord=Completion report with each omitted gate ID and no-impact reason
 - Class: id=data-contract-schema-migration; triggers=[Schema\, serialization\, import or export\, data-model meaning\, version\, migration\, or compatibility semantics]; iterationGateIds=[diff-check,typecheck,unit-tests,data-contract-check]; targetedRegressionGateIds=[lint,unit-tests,browser-tests,data-contract-check,governance-check,project-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[]; omissionRecord=Completion report and data or migration evidence
-- Class: id=governance-permissions-agents; triggers=[Common or project governance\, verification policy or matrix\, AGENTS\, managed lock or scripts\, permissions\, agents\, approvals\, or task lifecycle]; iterationGateIds=[diff-check,governance-check,project-check]; targetedRegressionGateIds=[governance-check,project-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[]; omissionRecord=Completion report and governance handoff
+- Class: id=project-guidance-metadata; triggers=[Project-owned routing\, command-location or environment guidance with no change to product\, data\, permissions\, safety\, approval or lifecycle meaning\; changed governance or verification semantics also select governance-permissions-agents]; iterationGateIds=[diff-check,project-check]; targetedRegressionGateIds=[governance-check,project-check]; completionGateIds=[diff-check,governance-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[typecheck,lint,unit-tests,browser-tests,build,data-contract-check]; omissionRecord=Completion report with each omitted gate ID and bounded no-product-impact reason
+- Class: id=governance-permissions-agents; triggers=[Common or project governance\, verification policy or matrix\, AGENTS\, managed lock or scripts\, permissions\, agents\, approvals\, or task lifecycle]; iterationGateIds=[diff-check,governance-check,project-check]; targetedRegressionGateIds=[governance-check,project-check]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[]; omissionRecord=Completion report and affected operations
 - Class: id=build-release-deploy; triggers=[Package or lock files\, Vite or Playwright build configuration\, release evidence\, publication\, or deploy procedure]; iterationGateIds=[typecheck,lint]; targetedRegressionGateIds=[typecheck,lint,unit-tests,browser-tests,build]; completionGateIds=[diff-check,typecheck,lint,unit-tests,browser-tests,build,data-contract-check,governance-check,project-check]; releaseOnlyGateIds=[]; omittableGateIds=[]; omissionRecord=Completion report or authorized release evidence
 - Gate: id=diff-check; command=git diff --check; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Any later worktree edit]; evidenceDestination=Completion callback or commit evidence
 - Gate: id=typecheck; command=corepack pnpm run typecheck; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[TypeScript\, TSX\, declarations\, tsconfig\, package\, lock\, dependency\, or toolchain change]; evidenceDestination=Completion callback or commit evidence
@@ -126,8 +130,9 @@ CLP作成・設定、積荷追加、コンテナの追加・編集・削除、�
 - Gate: id=build; command=corepack pnpm run build; stages=[targeted,completion]; includes=[]; invalidatedBy=[Source\, static asset\, Vite\, TypeScript\, package\, lock\, dependency\, or toolchain change]; evidenceDestination=Completion callback or commit evidence
 - Gate: id=data-contract-check; command=& .\\scripts\\check-data-contract.ps1 -ProjectPath $PWD.Path; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Schema\, specification\, data model\, related ADR\, source or test contract marker\, or checker change]; evidenceDestination=Completion callback or commit evidence
 - Gate: id=renderer-check; command=& .\\scripts\\render-governance.ps1 -ProjectPath $PWD.Path -Check; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Managed common\, project rules\, lock\, renderer\, or generated AGENTS change]; evidenceDestination=Included governance result or standalone command report
-- Gate: id=governance-check; command=& .\\scripts\\check-governance.ps1 -ProjectPath $PWD.Path; stages=[iteration,targeted,completion]; includes=[renderer-check]; invalidatedBy=[Managed common\, project rules\, lock\, renderer\, validator\, generated AGENTS\, verification policy\, or operations summary change]; evidenceDestination=Completion callback\, governance handoff\, or commit evidence
-- Gate: id=project-check; command=& .\\scripts\\check-project.ps1 -ProjectPath $PWD.Path; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Documentation\, links\, indexes\, roadmap\, ADR\, TOML\, runbook\, capacity helper\, policy routing\, or checker change]; evidenceDestination=Completion callback or commit evidence
+- Gate: id=governance-check; command=& .\\scripts\\check-governance.ps1 -ProjectPath $PWD.Path; stages=[iteration,targeted,completion]; includes=[renderer-check]; invalidatedBy=[Managed common\, project rules\, lock\, renderer\, validator\, generated AGENTS\, verification policy\, or operations summary change]; evidenceDestination=Completion callback\, or commit evidence
+- Gate: id=project-check; command=& .\\scripts\\check-project.ps1 -ProjectPath $PWD.Path; stages=[iteration,targeted,completion]; includes=[project-governance-regression]; invalidatedBy=[Documentation\, links\, indexes\, roadmap\, ADR\, TOML\, runbook\, capacity helper\, policy routing\, or checker change,Project governance helper or regression script change]; evidenceDestination=Completion callback or commit evidence
+- Gate: id=project-governance-regression; command=& .\\scripts\\test-project-governance.ps1; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Project checker\, governance helper\, regression script\, verification policy or runtime change]; evidenceDestination=Named child result and exit status from project-check\, or standalone command report
 <!-- END GENERATED VERIFICATION POLICY SUMMARY -->
 
 ### Gate Catalog and Inclusion
@@ -143,9 +148,14 @@ CLP作成・設定、積荷追加、コンテナの追加・編集・削除、�
 | `data-contract-check` | `& .\scripts\check-data-contract.ps1 -ProjectPath $PWD.Path` | Schema、仕様、data-model、ADR、source/test markerのdriftを検出する | 他の製品gateを包含しない |
 | `renderer-check` | `& .\scripts\render-governance.ps1 -ProjectPath $PWD.Path -Check` | 生成済み `AGENTS.md` のdriftを検出する | `governance-check` が包含する。standaloneで選ばない限り重複実行しない |
 | `governance-check` | `& .\scripts\check-governance.ps1 -ProjectPath $PWD.Path` | common/lock/hash/AGENTS/policy/operations summaryのdriftを検出する | includes `renderer-check`。包含childの結果とexit statusを保持する |
-| `project-check` | `& .\scripts\check-project.ps1 -ProjectPath $PWD.Path` | 必須文書、link/index、capacity routing、ADR、roadmap、TOML、policy routingのdriftを検出する | 他のgateを包含しない |
+| `project-check` | `& .\scripts\check-project.ps1 -ProjectPath $PWD.Path` | 必須文書、link/index、capacity routing、ADR、roadmap、TOML、policy routingのdriftを検出する | includes `project-governance-regression`。child結果とexit statusを保持する |
+| `project-governance-regression` | `& .\scripts\test-project-governance.ps1` | 検証分類・必須環境・総合gate保持の正常系と負例 | project-checkが包含するため重複実行しない |
 
 comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`browser-tests`、`build`、`data-contract-check`、`governance-check`、`project-check` である。包含closureを展開して同じgateを一度だけ実行する。`governance-check` 選択時は `renderer-check` を別のcompletion commandとして重複させない。
+
+### Execution Runtime
+
+検証policyの必須環境はWindows PowerShell 7（Core、major 7以上、`pwsh`）である。今回観測した7.6.4の実効ExecutionPolicyはRemoteSignedだった。Windows PowerShell 5.1（Desktop、`powershell`）は実効Restrictedを観測したためrequired=false、supportStatus=unverifiedとし、動作保証や必須gateを追加しない。既存のより強い要件が見つかった場合は削減せず停止する。ポリシー設定変更、Bypass、実行拒否の回避は行わない。
 
 ### Evidence Validity
 
@@ -154,7 +164,7 @@ comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`b
 - Schema、仕様、data-model、関連ADR、source/test契約markerの変更後は `data-contract-check` を失効させる。
 - common/project rules、lock、renderer、validator、AGENTS、verification policy、generated operations summaryの変更後はrenderer/governance evidenceを失効させる。
 - 文書、link、index、roadmap、ADR、TOML、runbook、capacity helper、policy routingの変更後は `project-check` を失効させる。
-- 内容を変えないstagingまたはcommitだけではproduct gateを失効させない。exact staging後の `git diff --cached --check`、commit後のHEAD、status、sole Worktree、handoff identifierは別に再確認する。
+- 内容を変えないstagingまたはcommitだけではproduct gateを失効させない。exact staging後の `git diff --cached --check`、commit後のHEAD、status、sole Worktreeは別に再確認する。
 - 各必須gateは別のコマンド、結果、終了コードとして記録する。まとめる場合は、どれか一つでも失敗すれば非ゼロで終了し、child結果を保持する検証済みrunnerだけを使う。`;` など状態を隠す連結や診断batchを完了、引き継ぎ、commit、統合、releaseの証拠にしない。
 
 ## Git Integration
@@ -169,28 +179,31 @@ comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`b
 
 ## Project Management Task Loop
 
-長期調整、checkpoint、callback、Git統合、task交代の実行手順は[プロジェクト調整runbook](runbooks/project-coordination.md)を正とする。一時task ID、host、baseline、pending checkpoint、所有権状態は[handoff index](handoffs/README.md)配下の最新記録を読む。製品仕様や恒久runbookへ一時IDを固定しない。
+長期調整、通常委任のcheckpoint/callback、Git統合、ユーザー依頼のtask交代、容量確認は[調整runbook](runbooks/project-coordination.md)を正とする。現在の製品情報と次作業は[仕様](specification.md)・[ロードマップ](roadmaps/auto-clp.md)・本運用文書へ記録する。[旧handoff索引](handoffs/README.md)はHistoricalであり、現在owner・承認状態の正本や通常起動の前提にはしない。
 
-## Governance Updates and Task Turnover
+## Governance Updates and Task Replacement
 
-- Managed common-governance version: 1.5.0
-- 管理対象はプロジェクト内で直接編集せず、承認後にスキルの `sync-project-governance.ps1 -Apply` で同期する。
-- 既存プロジェクト移行時は全規則を棚卸しし、未対応項目ゼロを要求する。1.5.0移行のinventoryは最新handoff recordへ記録する。
-- 共通契約、ルート `AGENTS.md`、全体権限・承認方針、調整責任、委任・Git統合、コールバック・引き継ぎ、安全境界の変更は全アクティブタスクの交代を要する。
-- 役割固有設定の変更は、その役割とコーディネーターの確認を要する。
-- 交代前に安全なチェックポイントを作り、担当作業を検証・コミットし、作業ツリーをクリーンにする。例外はファイル、目的、検証、理由、所有者、再開手順を記録する。
-- 新しいタスクはフォークせず、同じ基本名に連番を付ける。共通版、指示源、権限、再開状態、変更なしコールバック、割当先IDを検証してから旧タスクの所有権を終了する。
-- コーディネーター交代にはユーザー承認が必要。旧タスクはCodexがアーカイブ・削除せず、ユーザーへ手動削除可能と案内する。
+- Managed common-governance version: 3.0.0
+- 管理対象を直接編集しない。明示承認された移行でだけinstalled scaffold skillを読み、互換性準備後に同期Plan/Apply/Checkを使う。rendererはcheck-onlyであり、生成更新はsyncが所有する。
+- 3.0.0移行のinventoryは[内容を含まない文書対応表](migrations/document-plan.json)に置く。標準3正本は中央CLIが検証し、それ以外の元hashと対応理由は同表のproject-owned拡張を独立レビューする。元hashを変更後の値へ差し替えない。
+- 採用契約とCLIの所在は[契約索引](../references/README.md)を読む。文書移行CLIはinstalled packageに含まれないため、今回承認された中央の scripts/manage-document-migration.ps1 と対応functionsを使う。中央ソース・installed packageは変更せず、将来利用時も実物と承認範囲を再確認する。
+- 変更前にValidatePlanの未対応0と元hashを確認し、変更後にValidateResultの正本・相対link・到達可能性を確認する。既存索引が対応先へ既にlinkしている場合は通常のproject-owned索引を維持する。topology成功を意味保持・総合検証の代わりにしない。
+- ユーザー依頼のtask交代は、既存正本と次作業を更新し、関連変更を意味のある単位でcommitしてprimaryをcleanにした後、同じ基本名と次の連番の非fork新規taskを作る。編集ごとの細切れcommitや交代だけの空commitは作らない。
+- すべてのtaskはAGENTS.md、governance/project-rules.md、作業種別の正本を読む。手動作成や旧task利用不能時も同じ開始経路を使い、旧ID・旧ownerの応答・activation callback・最初の実file commitを要求しない。
+- ガバナンス変更は強制交代を起こさない。交代専用の台帳、履歴、cache、世代、handshake、validator、profileを追加しない。通常のプロジェクト作業はinstalled scaffold skillを読み込まない。
+- ガバナンス移行では既存総合9ゲートと包含される検査回帰、独立レビューを行う。後続実質変更では失効した証拠を再検証する。仕様・Schema・アプリ・依存関係・受入条件・98%は変更しない。
+- 同期失敗時の自動rollbackはその呼出しが変更した管理対象に限る。構造・意味・総合検証に失敗した場合は、承認境界に従い移行所有範囲を一体として復旧する。対応表の基準commitと既存1行修正を保全し、無関係な変更を巻き戻さない。履歴書換え・広範なresetは行わない。
+- 旧taskはCodexがarchive/deleteせず、ユーザーへ手動削除可能と案内する。通常委任のcallback、安全・権限・外部操作の承認境界は維持する。
 
 ## Coordinator Session Lifecycle
 
-`容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認` は[プロジェクト調整runbook](runbooks/project-coordination.md)へ経路指定する。これらはモデルtoken/context容量ではなく、現在taskの永続session JSONL容量を意味する。
+容量確認の各aliasは[調整runbook](runbooks/project-coordination.md)へ経路指定する。モデルtoken/contextではなく現在taskの永続session JSONL容量を意味する。
 
-- 信頼できる現在task IDを `scripts/check-codex-session-size.ps1 -SessionId <current-task-id>` へ明示し、ちょうど1件のsessionを測定する。最新または最終更新sessionを推測しない。
-- 個別sessionの引き継ぎ提案基準は300 MiB。Codex全体10 GiBは別の参考警告であり、個別task交代の判断に使わない。
-- 使用率、`handoff_required`、Codex全体容量、scan完全性/error数、各計測時刻/source、コマンド結果、独立した終了コードを報告する。session本文は読まず表示しない。
-- task ID不明、0/複数一致、script失敗では推測せず停止する。全体scan不完全時は全体容量をcleanupまたは閾値判断に使わない。
-- 長期作業開始時、callbackによる状態変更後、停止・完了時に計測する。状態変化がない反復測定は1時間に1回以下とする。
+- 信頼できる現在task IDをプロジェクト内helperへ明示し、ちょうど1件のsessionを測定する。最新または最終更新sessionを推測しない。
+- 個別300 MiBは交代提案基準、Codex全体10 GiBは別の参考警告であり、互いに流用しない。
+- 使用率、handoff_required、全体scan完全性/error数、各計測時刻/source、コマンド結果と独立終了コードを報告する。session本文・SQLite/WALは読まず変更しない。
+- task ID不明、0/複数一致、script失敗では推測せず停止する。全体scan不完全時は全体容量によるcleanup・閾値判断を停止する。
+- 長期作業開始時、callbackによる状態変更後、停止・完了時に計測する。状態変化がない反復測定は1時間に1回以下とする。測定を交代専用validationにはしない。
 
 ## Outputs
 
@@ -203,7 +216,7 @@ comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`b
 ## Errors and Recovery
 
 - 管理ハッシュまたは生成 `AGENTS.md` の不一致: 直接修正せず、承認済みスキル同期を再実行する。
-- 文書検証失敗: 該当リンク、索引、進捗、ADR、TOMLを修正し、失敗したコマンドだけでなく全必須検証を再実行する。
+- 文書検証失敗: 該当リンク、索引、進捗、ADR、TOMLを修正し、失敗したgateと、後続変更で証拠が失効したgateだけを再実行し、最終影響範囲で選択したすべてのgateの証拠が有効であることを確認する。
 - JSON・端末読込失敗: サイズ、読取、構文、版、スキーマ、意味、全候補Worker判定、非同期競合のどの失敗でも現在CLP、履歴、未保存入力を保持する。固定codeから理由を表示し、ファイル名、入力値、全文をエラーやログへ出さない。
 - 端末保存失敗: 未対応、open、blocked、read、write、delete、abort、容量不足相当を成功と表示しない。save/delete/exportは副作用完了後にstale失敗へ置き換えず、永続化中のProject commitを中央で拒否する。
 - UI入力失敗: 入力途中の文字列と確定済みCLPを分離し、固定code/pathから修正可能な理由を表示する。失敗時は確定済みCLPを同一参照で保持し、入力値をエラーやログへ反射しない。
