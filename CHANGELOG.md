@@ -4,6 +4,7 @@
 
 ### Changed
 
+- 現在値・現在地のGit報告に、ローカル状態と実際に照会したリモート状態、未push・未取り込み件数、確認日時を含める。接続失敗や未確認の状態を同期済みと扱わない。
 - 共通ガバナンス3.0.0、文書移行契約1.0.1、task交代契約2.0.0を採用する。ガバナンス変更による強制交代・旧ownerとの起動handshake・交代専用記録への依存を廃止し、ユーザー依頼時の通常repository再開へ統一する。検証は7分類と明示runtimeに対応し、既存総合9ゲートを維持する。仕様1.4.2、Schema 0.1.0、製品動作、依存、受入残条件、進捗98%は変更しない。
 
 - 共通ガバナンス1.5.0の影響ベース検証へ移行し、6つの変更class、iteration・targeted regression・completion・release-only stage、gate包含、evidence失効、省略理由、unknown impact時のcomprehensive fallbackをproject-owned policyと運用matrixで管理する。製品仕様1.4.2、Schema `0.1.0`、製品動作、依存関係、進捗98%は変更しない。
