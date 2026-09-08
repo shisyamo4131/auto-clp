@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定と自動提案の結果は本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。仕様1.5.0で承認された積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例は計画済みで未実装である。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
 
-仕様版 `1.4.2` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialogの変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `1.5.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog、および保存しない重心派生表示の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -96,6 +96,13 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 - `valid`、`invalid`、`unverified` の集約状態と理由コード。
 - Three.jsのメッシュ、材質、カメラ、選択ハイライト。
 - UIフォームの一時値、エラー表示、undo/redo履歴。
+- 選択中コンテナの幾何中心、配置済み積荷の合成重心、赤・黄ドット、凡例、重心計算状態。
+
+計画済みの重心計算は、選択中コンテナの内寸中央 `(L/2, W/2, H/2)` を比較基準とし、コンテナ自重を含めない。各配置済み積荷の中心は、向き適用後のAABB最小角と寸法から得る `(x + dx/2, y + dy/2, z + dz/2)`、合成重心は `massGrams` による加重平均とする。未配置、別コンテナ、drag previewは含めず、意味・参照が有効な対象コンテナの保存済み配置は物理的不適合・未確認でも現在状態として含める。配置0件は合成重心なし、対象解決または安全な計算に失敗した場合は計算不能とし、0位置または物理的不適合へ変換しない。
+
+奇数mm中心、負座標、最大1,000配置と許可値上限でも精度を失わないよう、軸ごとに倍座標 `2 × position + orientedDimension` と重量の積を順序非依存な整数で集計し、最後に総重量の2倍で除した有理数として扱う。実装は中間積がJavaScriptのsafe integerを超え得ることを前提にし、丸めた画面座標、mesh transformまたは浮動小数の逐次積和を正本計算に使わない。
+
+派生結果は `no-container`、`empty`、`available`、`unavailable` の判別可能な状態として返す。`no-container` は両中心なし、`empty` は幾何中心あり・積荷合成重心なし、`available` は両中心あり、`unavailable` は有効なコンテナを解決できる場合だけ幾何中心あり・積荷合成重心なしとする。scene投影が有限でもcameraの表示範囲外なら `available` のまま正規3D位置を保持し、画面端へclampしない。UIは状態変更ごとに同じ結果から赤・黄の両点、中心一致時の同心glyph、各中心を保つ近接glyph、凡例、画面外または計算不能statusを再導出し、これらを保存しない。
 
 不適合な配置も、座標値と参照整合性が有効なら保存できる。これにより、利用者が途中状態を失わず修正できる。読込時に不適合を成功扱いせず、再計算した理由を表示する。
 
@@ -127,6 +134,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在CLPを変�
 | `domain/model` | 実装済み: 版、向き、寸法、隙間、積荷、候補、配置、CLPのreadonly型 | React、Three.js、ブラウザ保存API |
 | `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、XY矩形の正面積重なり、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間、矩形開口寸法と許可向き抽出、単独支持・条件未確認・接触不成立の幾何区分。旧XY矩形和集合100%被覆helperは回帰用に保持 | UI、描画、永続化 |
 | `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計、計算可否を区別する総質量・耐荷重評価、対象コンテナへの配置抽出、境界、隙間、開口、支持、耐荷重の独立理由と集約状態、計算不能結果 | React、Three.js、I/O |
+| `domain/weight-balance` | 計画済み・未実装: 選択中コンテナの幾何中心、配置済み積荷の重量付き合成重心、空・計算不能を区別する決定的な純粋計算 | React、Three.js、I/O、物理合否、永続化、表示丸め |
 | `domain/automatic-proposal` | 実装済み: Schema・意味検証済みProjectだけを受ける、一候補完全案の決定的DFS、目的関数順位、向き重複排除、最大2,048点の遅延列挙、候補10,000・要求1,000,000 attempt境界、cutoff/no-complete-plan、未確認理由付き完全案。現在配置を入力anchorにせず変更もしない | Schema検証、Worker、取消、stale、UI、Projectへの適用、外部通信 |
 | `application/project-import`、`application/project-command`、`application/automatic-proposal-apply` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド、自動提案をSchema・意味・正本物理判定で再検証して配置だけを深いcopyで一括置換する適用境界 | DOM、Three.jsオブジェクトの所有、探索の再実装 |
 | `application/project-history` | 実装済み: 検証済みProject参照の最大100件履歴、stale base拒否、no-op除外、undo/redo、分岐時のredo破棄 | DOM、Three.jsオブジェクト、I/O、Projectの再検証 |
@@ -134,8 +142,8 @@ JSON読込は次の順序で行い、すべて成功するまで現在CLPを変�
 | `persistence/project-json`、`persistence/project-file` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し、標準File読込source、固定名Blob download | 3D描画、直接UI更新、CLP名のファイル名反映 |
 | `persistence/project-store` | 実装済み: IndexedDB `current-project` 単一枠のtransaction完了後save、load、delete、未対応・open・read・write・delete失敗 | 自動保存、Project解釈、UI更新、外部通信 |
 | `persistence/project-import-preflight-client`、`workers/project-import-preflight` | 実装済み: one-shot module Workerで全候補を置換前に判定し、応答検証後に必ずWorkerを終了 | DOM、IndexedDB、同期fallback、理由の保存 |
-| `scene` | 実装済み: WebGL能力確認と初回描画の必須ゲート、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointer dragのno-op先行と純粋な `xy-contained` / `partial` / `outside` 分類、床・支持面snap、単一支持面内clamp、支持候補preview、完全drag-out作業位置、X/Z軸別90度回転、同一候補のcamera保持。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持。非対応・描画障害時は通常操作を全面停止し、Projectを変更しないJSON救出だけを許可 | 判定規則の再実装、永続データ型の変更 |
-| `ui` | 実装済み: raw draft、gからkgへの表示変換、CLP・隙間・候補フォーム、全Project積荷の検索・選択、compact選択card、積荷定義と配置の別modal editor、非cascadeの配置取り外し・積荷削除、アクセシブルなfocus trap・dirty破棄確認・busy gate、canvas直接操作と正確な移動・向きのキーボードfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、CLP履歴ボタン・ショートカット・状態通知、手動端末保存・読込・削除、JSON入出力 | 幾何・制約計算と正規入力変換の再実装 |
+| `scene` | 実装済み: WebGL能力確認と初回描画の必須ゲート、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointer dragのno-op先行と純粋な `xy-contained` / `partial` / `outside` 分類、床・支持面snap、単一支持面内clamp、支持候補preview、完全drag-out作業位置、X/Z軸別90度回転、同一候補のcamera保持。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持。非対応・描画障害時は通常操作を全面停止し、Projectを変更しないJSON救出だけを許可。計画済み・未実装: domainの派生結果を赤・黄の固定画面サイズドットへ一方向投影する | 判定規則の再実装、永続データ型の変更 |
+| `ui` | 実装済み: raw draft、gからkgへの表示変換、CLP・隙間・候補フォーム、全Project積荷の検索・選択、compact選択card、積荷定義と配置の別modal editor、非cascadeの配置取り外し・積荷削除、アクセシブルなfocus trap・dirty破棄確認・busy gate、canvas直接操作と正確な移動・向きのキーボードfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、CLP履歴ボタン・ショートカット・状態通知、手動端末保存・読込・削除、JSON入出力。計画済み・未実装: 色だけに依存しない幾何中心・積荷合成重心の凡例と、操作・focus対象外の表示 | 幾何・制約計算と正規入力変換の再実装 |
 | `ui/automatic-proposal-session`、`ui/automatic-proposal-view`、`ui/useAutomaticProposalSession`、`ui/AutomaticProposalPanel` | 将来技術資産として保持: Project参照とinteraction generationを捕捉するセッション、取消・stale・retry・遅延結果mask、source ProjectとのID再相関、React hook、固定安全copy、25件単位のpreview、identityを一度だけ取得する確認付き適用、適用済み・変更なし表示。Phase 1の通常画面ではpanelをmountしない | 探索だけでのProject/history変更、永続化、Scene選択の変更 |
 | `workers` | 実装済み: 物理判定のローカルmodule Worker。将来自動提案用に、正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答maskを保持する。Phase 1の通常起動では自動提案Workerを開始しない | DOM、React状態の直接操作、外部通信 |
 
@@ -157,6 +165,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在CLPを変�
 - `validateProjectReferences(project)` — 実装済み。ID、参照、単一配置、許可向き、開口と内部寸法、安全な質量合計を検証する。
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
 - `evaluatePayloadCapacity(massesGrams, payloadCapacityGrams)` — 実装済み。非負safe integerの質量だけをoverflowなく合計し、計算可能なら総質量と耐荷重以内かを返す。等値は合格、超過は不合格とし、CLP内の配置・参照選択と理由は扱わない。
+- `calculateCargoCenterOfGravity(project, containerId)` — 計画済み・未実装。選択中コンテナの保存済み配置だけを参照解決し、各積荷の向き適用後中心と `massGrams` から倍座標の重量momentを正確に集計する。コンテナ幾何中心、積荷合成重心、配置0件、計算不能を区別し、入力を変更せず、物理合否または許容範囲を返さない。
 - `isRectangleFullyCoveredByUnion(target, coveringRectangles)` — 実装済み。safe integerの正面積XY矩形だけを受け、対象外をclipした支持矩形の和集合が対象矩形を100%覆うかを整数端点の走査で決定的に判定する。Z接触、段積み可否、対象ID、理由、隙間例外は扱わない。
 - `hasFullGeometricSupport(target, candidates)` — 旧和集合100%被覆の低レベル回帰用helperとして実装を保持するが、仕様1.0.1でも現行支持区分には使用しない。
 - `assessGeometricSupport(target, candidates)` — 実装済み。床、単一支持面によるX/Y完全包含、支持可能面を含む複数・隙間・張り出し・支持可否混在の条件未確認、接触なし・Z不一致・支持不可面だけの不適合を、正面積接触と安定したID順で純粋分類する。
@@ -171,5 +180,6 @@ JSON読込は次の順序で行い、すべて成功するまで現在CLPを変�
 - 有効、構文不正、未対応版、追加項目、範囲外、重複ID、参照切れ、不許可向き、開口超過、重量合計オーバーフローを独立テストする。
 - 読込失敗時に既存状態が変わらないことを確認する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
+- 合成重心は単一・不均等重量、奇数寸法、全6向き、負座標、最大値、入力順、空、参照不整合で決定的かつ非変異に計算し、赤・黄ドットと凡例は非操作、色以外の同値、狭幅、camera、コンテナ切替、Undo/Redo、保存・読込後の再計算を満たす。ドット、凡例、計算状態がJSONまたは端末保存へ入らないことを確認する。
 
 [データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、単独支持の等値、1 mm張り出し、複数支持、支持台間隙、支持可否混在、辺・点、Z不一致、重複、床・支持面snap、自動提案除外、総質量の空・等値・1 g超過・safe integer・overflow、対象コンテナ抽出、境界違反のカスケード抑制、支持接触時の隙間例外、独立理由保持、安定した理由順・ID、幾何・耐荷重の計算不能、Worker集約・25件理由ページ・遅延応答破棄・手動再試行、非変異、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲、履歴の参照同一性・非変異・stale/no-op拒否・100件上限・分岐、File size/readと固定名、preflight応答・終了、IndexedDB未対応・open・blocked・abort・error・not-found・破損・delete・往復を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・保存前draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・床・支持面snap・条件未確認preview・drag・取消・視点操作、タッチ時のフォーム操作、物理理由の優先・併記・ページ表示・狭幅表示、1,000配置の実Worker応答性、CLPCRUD・3D dragのundo/redo、入力中lock、native入力履歴の保護、実IndexedDB reload/delete、download/reimport、全JSON失敗段階、履歴barrier、遅延競合、削除focus、305/320/375px、1,000配置・100候補の実preflight Worker応答性に加え、WebGL非対応・初期描画失敗・context loss時の全面停止と現在CLP・端末保存の読み取り専用JSON救出を含む。

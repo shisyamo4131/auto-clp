@@ -5,7 +5,7 @@
 - Related specification: Placement and Validation
 - Supersedes: None
 - Refines: 0003
-- Partial supersession: ADR 0019 supersedes the multiple-support union rule and introduces single-support / support-conditions-unverified classification; the payload and uncalculated safety boundaries remain active.
+- Partial supersession: ADR 0019 supersedes the multiple-support union rule and introduces single-support / support-conditions-unverified classification. ADR 0032 supersedes only the clause that excluded all center-of-gravity calculation, by adding cargo-only reference visualization; the payload and remaining uncalculated safety boundaries remain active.
 
 ## Context
 

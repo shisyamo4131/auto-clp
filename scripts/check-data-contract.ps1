@@ -29,6 +29,7 @@ $viewerFirstShellDecisionPath = Join-Path $resolvedProject 'docs/decisions/0025-
 $tabbedSceneDecisionPath = Join-Path $resolvedProject 'docs/decisions/0026-tabbed-scene-annotations-and-validation-dialog.md'
 $drawerDeferralDecisionPath = Join-Path $resolvedProject 'docs/decisions/0029-phase1-drawer-entry-and-automatic-proposal-deferral.md'
 $containerOnlyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0030-container-only-drawer-management.md'
+$weightBalanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0032-cargo-center-of-gravity-visualization.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -89,6 +90,7 @@ foreach ($path in @(
     $tabbedSceneDecisionPath,
     $drawerDeferralDecisionPath,
     $containerOnlyDecisionPath,
+    $weightBalanceDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -297,7 +299,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.4.2' 'Approved specification version'
+Assert-Equal $specificationVersion '1.5.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -338,6 +340,30 @@ if ($drawerDeferralDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
 $containerOnlyDecision = [IO.File]::ReadAllText($containerOnlyDecisionPath)
 if ($containerOnlyDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0030 does not have Accepted status.'
+}
+$weightBalanceDecision = [IO.File]::ReadAllText($weightBalanceDecisionPath)
+if ($weightBalanceDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0032 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '- Partially supersedes: 0008',
+    'S_a = Σ mass_i',
+    '画面端へ移動またはclampせず',
+    '許容範囲または合否判定を設けない',
+    'Schema `0.1.0`'
+)) {
+    if (-not $weightBalanceDecision.Contains($requiredText)) {
+        throw "ADR 0032 does not contain the approved weight-balance marker: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    '[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)',
+    '`calculateCargoCenterOfGravity(project, containerId)`',
+    '`no-container`、`empty`、`available`、`unavailable`'
+)) {
+    if (-not $dataModel.Contains($requiredText)) {
+        throw "Data model does not contain the approved weight-balance contract text: $requiredText"
+    }
 }
 foreach ($requiredText in @(
     'Phase 1で登録・選択・編集・判定する積載空間はコンテナだけ',
@@ -905,4 +931,5 @@ foreach ($requiredText in @(
     automatic_proposal_current_ui_available = $false
     drawer_deferral_decision_0029_accepted = $true
     container_only_decision_0030_accepted = $true
+    weight_balance_decision_0032_accepted = $true
 }
