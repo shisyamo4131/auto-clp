@@ -81,6 +81,57 @@ interface DimensionAnnotationLine {
   }[];
 }
 
+export interface ProjectedViewportPoint {
+  readonly inViewport: boolean;
+  readonly leftPx: number;
+  readonly topPx: number;
+}
+
+export function projectedViewportPointsCoincide(
+  first: ProjectedViewportPoint | undefined,
+  second: ProjectedViewportPoint | undefined,
+): boolean {
+  return (
+    first?.inViewport === true &&
+    second?.inViewport === true &&
+    Math.abs(first.leftPx - second.leftPx) <= 0.01 &&
+    Math.abs(first.topPx - second.topPx) <= 0.01
+  );
+}
+
+interface WeightBalanceMarkerState {
+  readonly cargoCenter?: ProjectedViewportPoint;
+  readonly cargoCenterOffscreen: boolean;
+  readonly centersCoincide: boolean;
+  readonly containerCenter?: ProjectedViewportPoint;
+  readonly source: ProjectSceneProjection | null;
+}
+
+function sameProjectedPoint(
+  first: ProjectedViewportPoint | undefined,
+  second: ProjectedViewportPoint | undefined,
+): boolean {
+  if (first === undefined || second === undefined) return first === second;
+  return (
+    first.inViewport === second.inViewport &&
+    Math.abs(first.leftPx - second.leftPx) < 0.01 &&
+    Math.abs(first.topPx - second.topPx) < 0.01
+  );
+}
+
+function sameWeightBalanceMarkerState(
+  first: WeightBalanceMarkerState,
+  second: WeightBalanceMarkerState,
+): boolean {
+  return (
+    first.source === second.source &&
+    first.cargoCenterOffscreen === second.cargoCenterOffscreen &&
+    first.centersCoincide === second.centersCoincide &&
+    sameProjectedPoint(first.containerCenter, second.containerCenter) &&
+    sameProjectedPoint(first.cargoCenter, second.cargoCenter)
+  );
+}
+
 interface CargoVisual {
   readonly kind: "placed" | "staged";
   readonly mesh: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>;
@@ -362,6 +413,12 @@ export function ThreeViewport({
   const [dimensionAnnotations, setDimensionAnnotations] = useState<
     readonly DimensionAnnotationLine[]
   >([]);
+  const [weightBalanceMarkers, setWeightBalanceMarkers] =
+    useState<WeightBalanceMarkerState>({
+      cargoCenterOffscreen: false,
+      centersCoincide: false,
+      source: null,
+    });
 
   useEffect(() => {
     interactionDisabledRef.current = interactionDisabled;
@@ -438,6 +495,72 @@ export function ThreeViewport({
       if (disposed || renderer === undefined) return false;
       try {
         renderer.render(scene, camera);
+        const projectViewportPoint = (
+          point: SceneVector3,
+        ): ProjectedViewportPoint | undefined => {
+          const canvasBounds = canvas.getBoundingClientRect();
+          const containerBounds = container.getBoundingClientRect();
+          if (canvasBounds.width <= 0 || canvasBounds.height <= 0) return undefined;
+          const worldPoint = new THREE.Vector3(point.x, point.y, point.z);
+          const cameraPoint = worldPoint.clone().applyMatrix4(camera.matrixWorldInverse);
+          const ndc = worldPoint.project(camera);
+          const cameraDepth = -cameraPoint.z;
+          if (![cameraDepth, ndc.x, ndc.y, ndc.z].every(Number.isFinite)) {
+            return undefined;
+          }
+          return {
+            inViewport:
+              cameraDepth >= camera.near &&
+              cameraDepth <= camera.far &&
+              ndc.x >= -1 &&
+              ndc.x <= 1 &&
+              ndc.y >= -1 &&
+              ndc.y <= 1 &&
+              ndc.z >= -1 &&
+              ndc.z <= 1,
+            leftPx:
+              canvasBounds.left - containerBounds.left +
+              ((ndc.x + 1) * canvasBounds.width) / 2,
+            topPx:
+              canvasBounds.top - containerBounds.top +
+              ((1 - ndc.y) * canvasBounds.height) / 2,
+          };
+        };
+        const balance = projection?.weightBalance;
+        const nextWeightBalanceMarkers: WeightBalanceMarkerState = (() => {
+          if (projection === null || balance === undefined || balance.kind === "no-container") {
+            return {
+              cargoCenterOffscreen: false,
+              centersCoincide: false,
+              source: projection,
+            };
+          }
+          const containerCenter = projectViewportPoint(balance.containerCenter);
+          if (balance.kind !== "available") {
+            return {
+              cargoCenterOffscreen: false,
+              centersCoincide: false,
+              containerCenter,
+              source: projection,
+            };
+          }
+          const cargoCenter = projectViewportPoint(balance.cargoCenterOfGravity);
+          return {
+            cargoCenter,
+            cargoCenterOffscreen: cargoCenter === undefined || !cargoCenter.inViewport,
+            centersCoincide: projectedViewportPointsCoincide(
+              containerCenter,
+              cargoCenter,
+            ),
+            containerCenter,
+            source: projection,
+          };
+        })();
+        setWeightBalanceMarkers((current) =>
+          sameWeightBalanceMarkerState(current, nextWeightBalanceMarkers)
+            ? current
+            : nextWeightBalanceMarkers,
+        );
         const selected = projection?.cargoes.find(
           (cargo) => cargo.cargoId === selectedCargoIdRef.current,
         );
@@ -1110,6 +1233,21 @@ export function ThreeViewport({
     };
   }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragPreview, onCargoDragStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
 
+  const weightBalanceKind = projection?.weightBalance.kind ?? "no-container";
+  const currentWeightBalanceMarkers =
+    weightBalanceMarkers.source === projection ? weightBalanceMarkers : undefined;
+  const visibleContainerCenter =
+    currentWeightBalanceMarkers?.containerCenter?.inViewport === true
+      ? currentWeightBalanceMarkers.containerCenter
+      : undefined;
+  const visibleCargoCenter =
+    currentWeightBalanceMarkers?.cargoCenter?.inViewport === true
+      ? currentWeightBalanceMarkers.cargoCenter
+      : undefined;
+  const cargoCenterOffscreen =
+    weightBalanceKind === "available" &&
+    currentWeightBalanceMarkers?.cargoCenterOffscreen === true;
+
   return (
     <div className="viewport" ref={containerRef}>
       <div className="viewport__top-controls">
@@ -1212,6 +1350,59 @@ export function ThreeViewport({
           })}
         </svg>
       )}
+      <div
+        className="viewport__weight-balance"
+        data-state={weightBalanceKind}
+        data-coincident={
+          currentWeightBalanceMarkers?.centersCoincide === true ? "true" : "false"
+        }
+      >
+        {visibleContainerCenter === undefined ? null : (
+          <span
+            aria-hidden="true"
+            className="viewport__weight-balance-marker viewport__weight-balance-marker--container"
+            data-center-kind="container"
+            style={{ left: visibleContainerCenter.leftPx, top: visibleContainerCenter.topPx }}
+          />
+        )}
+        {visibleCargoCenter === undefined ? null : (
+          <span
+            aria-hidden="true"
+            className="viewport__weight-balance-marker viewport__weight-balance-marker--cargo"
+            data-center-kind="cargo"
+            style={{ left: visibleCargoCenter.leftPx, top: visibleCargoCenter.topPx }}
+          />
+        )}
+        <div className="viewport__weight-balance-legend" aria-live="polite">
+          {weightBalanceKind === "no-container" ? (
+            <span>コンテナ未選択またはコンテナなし</span>
+          ) : (
+            <>
+              <span className="viewport__weight-balance-key">
+                <span
+                  aria-hidden="true"
+                  className="viewport__weight-balance-swatch viewport__weight-balance-swatch--container"
+                />
+                赤い点：コンテナ幾何中心
+              </span>
+              {weightBalanceKind === "available" ? (
+                <span className="viewport__weight-balance-key">
+                  <span
+                    aria-hidden="true"
+                    className="viewport__weight-balance-swatch viewport__weight-balance-swatch--cargo"
+                  />
+                  黄色い点：現在重心（積荷のみ）
+                </span>
+              ) : null}
+              {weightBalanceKind === "empty" ? <span>配置積荷なし</span> : null}
+              {weightBalanceKind === "unavailable" ? (
+                <span>現在重心を計算できません</span>
+              ) : null}
+              {cargoCenterOffscreen ? <span>現在重心は画面外</span> : null}
+            </>
+          )}
+        </div>
+      </div>
       {bottomOverlay === undefined ? null : (
         <div
           ref={bottomOverlayRef}

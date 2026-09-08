@@ -415,14 +415,18 @@ test("gates a new usage-requirements version and persists successful confirmatio
   await page.goto("/");
   await page.addInitScript(`
     if (sessionStorage.getItem('usage-gate-once') === null) {
-      localStorage.removeItem('auto-clp.usage-requirements-version');
+      localStorage.setItem('auto-clp.usage-requirements-version', '1.1.0');
       sessionStorage.setItem('usage-gate-once', 'done');
     }
   `);
   await page.reload();
   const dialog = page.getByRole("dialog", { name: "使用上の重要事項" });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("内容版 1.1.0");
+  await expect(dialog).toContainText("内容版 1.2.0");
+  await expect(dialog).toContainText("各積荷の重心が向き適用後の直方体中央にあるという仮定");
+  await expect(dialog).toContainText("コンテナ自重、実貨物の偏心、支持反力、軸重、床荷重は計算しません");
+  await expect(dialog).toContainText("実際の積込み・運搬は、利用者が別途確認して責任を負ってください");
+  await expect(dialog).toContainText("赤い点はコンテナ幾何中心、黄色い点は積荷だけの現在重心");
   await expect(dialog).toContainText("法的な利用規約への同意ではありません");
   await expect(dialog).toContainText(
     "実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しないでください。",
@@ -431,7 +435,7 @@ test("gates a new usage-requirements version and persists successful confirmatio
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "内容を確認して続ける" }).click();
   await expect(dialog).toHaveCount(0);
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("auto-clp.usage-requirements-version"))).toBe("1.1.0");
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("auto-clp.usage-requirements-version"))).toBe("1.2.0");
   await page.reload();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByLabel("入力データの注意")).toHaveCount(0);

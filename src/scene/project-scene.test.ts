@@ -18,6 +18,7 @@ import {
   placedFloorDragDisposition,
   projectContainerToScene,
   projectSceneStagingAnchor,
+  projectWeightBalanceToScene,
   resolveSupportSnapPosition,
   sceneBoundsReachRadius,
   sceneContainerBounds,
@@ -30,6 +31,8 @@ import {
   type SceneStagingOverride,
   type SceneVector3,
 } from "./project-scene";
+import { projectedViewportPointsCoincide } from "./ThreeViewport";
+import { selectWorkspaceSceneProjection } from "./SceneWorkspace";
 
 function expectVectorClose(actual: SceneVector3, expected: SceneVector3): void {
   expect(actual.x).toBeCloseTo(expected.x, 12);
@@ -127,6 +130,21 @@ function expectBoxWithinProjectionBounds(
 }
 
 describe("project scene coordinate adapter", () => {
+  it("classifies coincidence from screen projection rather than source point identity", () => {
+    expect(projectedViewportPointsCoincide(
+      { inViewport: true, leftPx: 100, topPx: 200 },
+      { inViewport: true, leftPx: 100.005, topPx: 199.995 },
+    )).toBe(true);
+    expect(projectedViewportPointsCoincide(
+      { inViewport: true, leftPx: 100, topPx: 200 },
+      { inViewport: true, leftPx: 100.02, topPx: 200 },
+    )).toBe(false);
+    expect(projectedViewportPointsCoincide(
+      { inViewport: true, leftPx: 100, topPx: 200 },
+      { inViewport: false, leftPx: 100, topPx: 200 },
+    )).toBe(false);
+  });
+
   it.each([
     ["LWH", "WLH"],
     ["WLH", "LWH"],
@@ -162,6 +180,74 @@ describe("project scene coordinate adapter", () => {
       x: 1,
       y: 3,
       z: 2,
+    });
+  });
+
+  it("maps exact weight-balance centers through the approved scene axes", () => {
+    const base = projectFixture();
+    const project: Project = {
+      ...base,
+      cargoes: ["a", "b"].map((id) => ({
+        id,
+        name: `匿名重心積荷${id}`,
+        dimensionsMm: { lengthMm: 1_000, widthMm: 1_000, heightMm: 1_000 },
+        massGrams: 1_000_000,
+        canSupportCargo: false,
+        allowedOrientations: ["LWH"],
+      })),
+      containers: [{
+        ...base.containers[0]!,
+        internalDimensionsMm: { lengthMm: 4_000, widthMm: 2_000, heightMm: 2_000 },
+      }],
+      placements: [
+        {
+          cargoId: "a",
+          containerId: "container-1",
+          positionMm: { xMm: 0, yMm: 500, zMm: 0 },
+          orientation: "LWH",
+        },
+        {
+          cargoId: "b",
+          containerId: "container-1",
+          positionMm: { xMm: 3_000, yMm: 500, zMm: 1_000 },
+          orientation: "LWH",
+        },
+      ],
+    };
+
+    const result = projectWeightBalanceToScene(project, "container-1");
+    expect(result).toEqual({
+      kind: "available",
+      containerCenter: { x: 2, y: 1, z: -1 },
+      cargoCenterOfGravity: { x: 2, y: 1, z: -1 },
+    });
+  });
+
+  it("keeps weight-balance empty and unavailable states separate", () => {
+    const project = projectFixture();
+    const empty = projectWeightBalanceToScene(
+      { ...project, placements: [] },
+      "container-1",
+    );
+    expect(empty.kind).toBe("empty");
+    if (empty.kind === "empty") {
+      expectVectorClose(empty.containerCenter, { x: 0.5005, y: 0.5015, z: -0.5 });
+    }
+    const unavailable = projectWeightBalanceToScene({
+      ...project,
+      placements: [{
+        cargoId: "missing",
+        containerId: "container-1",
+        positionMm: { xMm: 0, yMm: 0, zMm: 0 },
+        orientation: "LWH",
+      }],
+    }, "container-1");
+    expect(unavailable.kind).toBe("unavailable");
+    if (unavailable.kind === "unavailable") {
+      expectVectorClose(unavailable.containerCenter, { x: 0.5005, y: 0.5015, z: -0.5 });
+    }
+    expect(projectWeightBalanceToScene(project, undefined)).toEqual({
+      kind: "no-container",
     });
   });
 
@@ -822,17 +908,32 @@ describe("project scene coordinate adapter", () => {
     const missingCargo: Project = {
       ...project,
       cargoes: project.cargoes.filter((cargo) => cargo.id !== "cargo-1"),
+      placements: project.placements.map((placement) =>
+        placement.cargoId === "cargo-2"
+          ? { ...placement, containerId: "container-1" }
+          : placement,
+      ),
     };
     const original = structuredClone(missingCargo);
 
-    expect(projectContainerToScene(missingCargo, "container-1")).toEqual({
-      ok: false,
-      error: {
+    const result = projectContainerToScene(missingCargo, "container-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toEqual({
         code: "scene.cargo-not-found",
         containerId: "container-1",
         cargoId: "cargo-1",
-      },
-    });
+      });
+      expect(result.recoveryProjection).toMatchObject({
+        container: { id: "container-1" },
+        cargoes: [{ kind: "placed", cargoId: "cargo-2" }],
+        weightBalance: { kind: "unavailable" },
+      });
+      expect(result.recoveryProjection?.weightBalance).not.toHaveProperty(
+        "cargoCenterOfGravity",
+      );
+      expect(selectWorkspaceSceneProjection(result)).toBe(result.recoveryProjection);
+    }
     expect(missingCargo).toEqual(original);
   });
 });

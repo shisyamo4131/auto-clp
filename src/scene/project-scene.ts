@@ -15,6 +15,11 @@ import type {
   PositionMm,
   Project,
 } from "../domain/model";
+import {
+  calculateCargoCenterOfGravity,
+  exactRationalMmToNumber,
+  type ExactPointMm,
+} from "../domain/weight-balance";
 
 export const MM_TO_SCENE_UNIT = 0.001;
 export const STAGING_GAP_MM = 100;
@@ -70,6 +75,22 @@ export interface SceneContainerProjection {
   readonly dimensions: SceneVector3;
   readonly opening: SceneOpeningFrame;
 }
+
+export type SceneWeightBalanceProjection =
+  | { readonly kind: "no-container" }
+  | {
+      readonly kind: "empty";
+      readonly containerCenter: SceneVector3;
+    }
+  | {
+      readonly kind: "available";
+      readonly containerCenter: SceneVector3;
+      readonly cargoCenterOfGravity: SceneVector3;
+    }
+  | {
+      readonly kind: "unavailable";
+      readonly containerCenter: SceneVector3;
+    };
 
 interface SceneCargoProjectionBase {
   readonly cargoId: string;
@@ -274,6 +295,7 @@ export type SceneCargoProjection =
 export interface ProjectSceneProjection {
   readonly container: SceneContainerProjection;
   readonly cargoes: readonly SceneCargoProjection[];
+  readonly weightBalance: SceneWeightBalanceProjection;
 }
 
 export interface SceneProjectionBounds {
@@ -309,7 +331,11 @@ export type ProjectSceneProjectionError =
 
 export type ProjectSceneProjectionResult =
   | { readonly ok: true; readonly projection: ProjectSceneProjection }
-  | { readonly ok: false; readonly error: ProjectSceneProjectionError };
+  | {
+      readonly ok: false;
+      readonly error: ProjectSceneProjectionError;
+      readonly recoveryProjection?: ProjectSceneProjection;
+    };
 
 function sceneBoxBounds(
   boxes: readonly {
@@ -373,6 +399,45 @@ export function domainPointToScene(point: PositionMm): SceneVector3 {
     x: point.xMm * MM_TO_SCENE_UNIT,
     y: point.zMm * MM_TO_SCENE_UNIT,
     z: -point.yMm * MM_TO_SCENE_UNIT,
+  };
+}
+
+function exactPointMmToScene(point: ExactPointMm): SceneVector3 | undefined {
+  const xMm = exactRationalMmToNumber(point.xMm);
+  const yMm = exactRationalMmToNumber(point.yMm);
+  const zMm = exactRationalMmToNumber(point.zMm);
+  if (xMm === undefined || yMm === undefined || zMm === undefined) {
+    return undefined;
+  }
+  const scenePoint = domainPointToScene({ xMm, yMm, zMm });
+  return Object.values(scenePoint).every(Number.isFinite) ? scenePoint : undefined;
+}
+
+/** Converts the exact domain result to floating point only at the scene boundary. */
+export function projectWeightBalanceToScene(
+  project: Project,
+  containerId?: string,
+): SceneWeightBalanceProjection {
+  const result = calculateCargoCenterOfGravity(project, containerId);
+  if (result.kind === "no-container") return result;
+
+  const containerCenter = exactPointMmToScene(result.containerCenterMm);
+  if (containerCenter === undefined) return { kind: "no-container" };
+  if (result.kind === "empty") return { kind: "empty", containerCenter };
+  if (result.kind === "unavailable") {
+    return { kind: "unavailable", containerCenter };
+  }
+
+  const cargoCenterOfGravity = exactPointMmToScene(
+    result.cargoCenterOfGravityMm,
+  );
+  if (cargoCenterOfGravity === undefined) {
+    return { kind: "unavailable", containerCenter };
+  }
+  return {
+    kind: "available",
+    containerCenter,
+    cargoCenterOfGravity,
   };
 }
 
@@ -779,6 +844,7 @@ export function projectContainerToScene(
     zMm: container.internalDimensionsMm.heightMm,
   };
   const cargoes: SceneCargoProjection[] = [];
+  let missingCargoId: string | undefined;
 
   for (const placement of project.placements) {
     if (placement.containerId !== containerId) {
@@ -787,14 +853,8 @@ export function projectContainerToScene(
 
     const cargo = project.cargoes.find((candidate) => candidate.id === placement.cargoId);
     if (cargo === undefined) {
-      return {
-        ok: false,
-        error: {
-          code: "scene.cargo-not-found",
-          containerId,
-          cargoId: placement.cargoId,
-        },
-      };
+      missingCargoId ??= placement.cargoId;
+      continue;
     }
 
     const bounds = placementBounds(cargo, placement);
@@ -818,28 +878,43 @@ export function projectContainerToScene(
     ),
   );
 
+  const projection: ProjectSceneProjection = {
+    container: {
+      id: container.id,
+      name: container.name,
+      center: centerFromBounds(
+        { xMm: 0, yMm: 0, zMm: 0 },
+        containerDimensions,
+      ),
+      dimensions: domainDimensionsToScene(containerDimensions),
+      opening: {
+        center: domainPointToScene({
+          xMm: 0,
+          yMm: container.internalDimensionsMm.widthMm / 2,
+          zMm: container.openingMm.heightMm / 2,
+        }),
+        width: container.openingMm.widthMm * MM_TO_SCENE_UNIT,
+        height: container.openingMm.heightMm * MM_TO_SCENE_UNIT,
+      },
+    },
+    cargoes,
+    weightBalance: projectWeightBalanceToScene(project, containerId),
+  };
+
+  if (missingCargoId !== undefined) {
+    return {
+      ok: false,
+      error: {
+        code: "scene.cargo-not-found",
+        containerId,
+        cargoId: missingCargoId,
+      },
+      recoveryProjection: projection,
+    };
+  }
+
   return {
     ok: true,
-    projection: {
-      container: {
-        id: container.id,
-        name: container.name,
-        center: centerFromBounds(
-          { xMm: 0, yMm: 0, zMm: 0 },
-          containerDimensions,
-        ),
-        dimensions: domainDimensionsToScene(containerDimensions),
-        opening: {
-          center: domainPointToScene({
-            xMm: 0,
-            yMm: container.internalDimensionsMm.widthMm / 2,
-            zMm: container.openingMm.heightMm / 2,
-          }),
-          width: container.openingMm.widthMm * MM_TO_SCENE_UNIT,
-          height: container.openingMm.heightMm * MM_TO_SCENE_UNIT,
-        },
-      },
-      cargoes,
-    },
+    projection,
   };
 }

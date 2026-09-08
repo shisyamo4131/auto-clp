@@ -41,6 +41,8 @@ import {
   resolveSupportSnapPosition,
   sceneFloorDragPositionMm,
   xAxisQuarterTurnOrientation,
+  type ProjectSceneProjection,
+  type ProjectSceneProjectionResult,
   type SceneStagingOverride,
   type SceneVector3,
 } from "./project-scene";
@@ -71,6 +73,14 @@ function projectionErrorMessage(code: "scene.container-not-found" | "scene.cargo
     return "選択したコンテナがCLP内に見つからないため、3D表示を更新できません。";
   }
   return "配置が参照する積荷がCLP内に見つからないため、3D表示を更新できません。";
+}
+
+/** Selects a safe read-only scene when a resolvable container has corrupt cargo references. */
+export function selectWorkspaceSceneProjection(
+  result: ProjectSceneProjectionResult | undefined,
+): ProjectSceneProjection | null {
+  if (result === undefined) return null;
+  return result.ok ? result.projection : result.recoveryProjection ?? null;
 }
 
 interface CandidateTabsProps {
@@ -349,7 +359,9 @@ export function SceneWorkspace({
         : projectContainerToScene(project, effectiveContainerId, stagingOverrides),
     [effectiveContainerId, project, stagingOverrides],
   );
-  const projection = projectionResult?.ok === true ? projectionResult.projection : null;
+  const projection = selectWorkspaceSceneProjection(projectionResult);
+  const projectionReadOnly =
+    projectionResult?.ok === false && projectionResult.recoveryProjection !== undefined;
 
   useEffect(() => {
     if (projection === null || effectiveContainerId === undefined) return;
@@ -1141,7 +1153,8 @@ export function SceneWorkspace({
             interactionDisabled={
               externalInteractionActive ||
               placementInteractionActive ||
-              physicalDialogOpen
+              physicalDialogOpen ||
+              projectionReadOnly
             }
             onCargoDragCancel={handleCargoDragCancel}
             onCargoDragCommit={handleCargoDragCommit}
@@ -1150,19 +1163,24 @@ export function SceneWorkspace({
             onCargoXAxisRotation={() => handleCargoRotation("X")}
             onCargoZAxisRotation={() => handleCargoRotation("Z")}
             onRotationUnavailable={setCanvasStatus}
-            onCargoSelectionChange={handleCargoSelectionChange}
+            onCargoSelectionChange={
+              projectionReadOnly ? () => undefined : handleCargoSelectionChange
+            }
             onRendererError={onRendererError}
             onRendererReady={onRendererReady}
             projection={projection}
             xRotationDisabled={
               externalInteractionActive ||
               interactionActive ||
+              projectionReadOnly ||
               selectedProjection === undefined ||
               !xRotationAllowed
             }
             xRotationExplanation={
               externalInteractionActive
                 ? "別のCLP操作または保存処理の完了後にX軸回転できます。"
+                : projectionReadOnly
+                ? "3D表示のエラーを解消するとX軸回転できます。"
                 : canvasDragActive
                 ? "積荷の移動を完了するとX軸回転できます。"
                 : placementInteractionActive
@@ -1176,12 +1194,15 @@ export function SceneWorkspace({
             zRotationDisabled={
               externalInteractionActive ||
               interactionActive ||
+              projectionReadOnly ||
               selectedProjection === undefined ||
               !zRotationAllowed
             }
             zRotationExplanation={
               externalInteractionActive
                 ? "別のCLP操作または保存処理の完了後にZ軸回転できます。"
+                : projectionReadOnly
+                ? "3D表示のエラーを解消するとZ軸回転できます。"
                 : canvasDragActive
                 ? "積荷の移動を完了するとZ軸回転できます。"
                 : placementInteractionActive
