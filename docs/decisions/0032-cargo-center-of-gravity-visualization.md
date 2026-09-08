@@ -2,6 +2,7 @@
 
 - Date: 2026-09-08
 - Status: Accepted
+- Partially superseded by: 0033がドット寸法、外枠、完全一致・近接時の見せ方だけを置換する
 - Related specification: Application Shell and Primary Workflow; Placement and Validation; Planned Terms of Use; Data and State
 - Partially supersedes: 0008の「重心を計算しない」境界だけを置換する
 - Refines: 0010, 0012, 0025, 0026, 0027

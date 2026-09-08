@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](decisions/0033-equal-borderless-center-markers.md)
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.0の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.1の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
 
-仕様版 `1.5.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog、および保存しない重心派生表示の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `1.5.1` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog、および保存しない重心派生表示の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -102,7 +102,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 
 奇数mm中心、負座標、最大1,000配置と許可値上限でも精度を失わないよう、軸ごとに倍座標 `2 × position + orientedDimension` と重量の積を順序非依存な整数で集計し、最後に総重量の2倍で除した有理数として扱う。実装は中間積がJavaScriptのsafe integerを超え得ることを前提にし、丸めた画面座標、mesh transformまたは浮動小数の逐次積和を正本計算に使わない。
 
-派生結果は `no-container`、`empty`、`available`、`unavailable` の判別可能な状態として返す。`no-container` は両中心なし、`empty` は幾何中心あり・積荷合成重心なし、`available` は両中心あり、`unavailable` は有効なコンテナを解決できる場合だけ幾何中心あり・積荷合成重心なしとする。scene投影が有限でもcameraの表示範囲外なら `available` のまま正規3D位置を保持し、画面端へclampしない。UIは状態変更ごとに同じ結果から赤・黄の両点、中心一致時の同心glyph、各中心を保つ近接glyph、凡例、画面外または計算不能statusを再導出し、これらを保存しない。
+派生結果は `no-container`、`empty`、`available`、`unavailable` の判別可能な状態として返す。`no-container` は両中心なし、`empty` は幾何中心あり・積荷合成重心なし、`available` は両中心あり、`unavailable` は有効なコンテナを解決できる場合だけ幾何中心あり・積荷合成重心なしとする。scene投影が有限でもcameraの表示範囲外なら `available` のまま正規3D位置を保持し、画面端へclampしない。UIは状態変更ごとに同じ結果から同径・外枠なしの赤・黄両点、完全一致・近接時の黄前面表示、凡例、画面外または計算不能statusを再導出し、これらを保存しない。
 
 不適合な配置も、座標値と参照整合性が有効なら保存できる。これにより、利用者が途中状態を失わず修正できる。読込時に不適合を成功扱いせず、再計算した理由を表示する。
 

@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-09-08
-- Specification version: 1.5.0
+- Specification version: 1.5.1
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -81,7 +81,7 @@
 - `操作方法` はDrawerを閉じてから独立した読み取り専用dialogを開き、3Dの積荷選択、空いた領域の左dragによる視点回転、Shift付き左dragまたは右dragによる平行移動、wheelのpage scroll、zoom・全体表示、積荷移動・回転、履歴、判定、座標・積荷編集の入口を簡潔に示す。touchは積荷選択とpage scrollを主とし、正確な座標・情報編集は下段button/dialogを案内する。版確認の `使用上の重要事項` とは分離し、CLP、履歴、保存、camera、判定状態を変更しない。
 - 旧3Dコンテナcardの外枠と見出しは置かない。コンテナtablistは3D viewportの直前、canvasおよびviewport overlayの外側上部へ一行で置き、コンテナ数または名前が幅を超える場合はExcelのsheet tab相当の左右buttonと横scrollで表示範囲だけを移動する。tabは折り返さず、active tabを表示範囲へ入れ、左右矢印・Home・End・Enter・Space、touch・trackpadを提供する。tabの選択だけがコンテナを切り替え、scroll buttonはコンテナを切り替えない。tablistはcanvasを覆わず、その表示・scrollでcanvasの寸法またはpage位置を変えない。
 - Undo/Redo、物理判定lamp、X/Z回転、拡大・縮小、全体表示toolbarはviewport内上段の固定rowへ置く。物理判定lampの常設表示は、判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とする状態別のicon-only buttonとし、色だけに依存しない。accessible nameとtitleに状態名、不適合・未確認件数、詳細を開く操作を持たせる。クリックすると現在のコンテナの理由をmodal dialogで開き、閉じても判定を継続する。
-- 選択中コンテナの内寸から求めた幾何中心を赤い固定画面サイズのドット、同コンテナへ配置済みの積荷だけから求めた合成重心を黄色い固定画面サイズのドットとして3D viewportへ重ねる。viewport内へ投影できる点は積荷より前面に表示し、pointer hit、focus、積荷選択、drag、camera、履歴、dirty状態を変えない。二点の画面上の中心が一致する場合は、座標をずらさず、赤い外側ドットと小さい黄色の内側ドットを同心表示する。近接して表示領域だけが重なる場合は各投影中心を維持し、異なる大きさ、輪郭、決定的な重ね順で両方を識別可能にする。色だけに依存しない凡例と読み上げ用の同値を一度だけ併設し、赤は異常または不適合、黄は警告または未確認を意味しない。X/Y/Z差または距離の数値は表示しない。
+- 選択中コンテナの内寸から求めた幾何中心を赤い10 CSS pxのドット、同コンテナへ配置済みの積荷だけから求めた合成重心を黄色い10 CSS pxのドットとして3D viewportへ重ねる。両ドットと凡例swatchには白い外枠を付けない。viewport内へ投影できる点は積荷より前面に表示し、pointer hit、focus、積荷選択、drag、camera、履歴、dirty状態を変えない。黄色を赤より上に重ね、二点の画面上の中心が完全一致する場合は座標をずらしたり赤を露出させたりせず、黄色が赤を完全に覆うことを許容する。近接して表示領域が重なる場合も各投影中心を維持し、重なった部分では黄色を前面にする。色だけに依存しない凡例と読み上げ用の同値を一度だけ併設し、赤は異常または不適合、黄は警告または未確認を意味しない。X/Y/Z差または距離の数値は表示しない。
 - 合成重心の正規3D位置がcameraの表示範囲外なら、黄色いドットを画面端へ移動またはclampせず、cameraも自動変更しない。黄色いドットは画面外のままとし、凡例へ非数値の `現在重心は画面外` を示す。orbit、pan、zoomまたは荷室全体表示で表示範囲が変わった時は同じ正規位置から再投影する。
 - 全CLP積荷を名前またはIDで検索する入力、未配置・現在のコンテナ・別のコンテナの状態付き積荷selector、件数、その下の固定context action rowをviewport下部へoverlayする。未選択でもrowの高さを予約し、選択積荷名、配置状態、配置済みなら正確な最小角X/Y/Zをcompactに示す。未配置では座標入力・積荷編集・積荷削除、現在のコンテナへ配置済みでは座標微調整・積荷編集・荷室から外す、別のコンテナへ配置済みでは配置先コンテナの表示・積荷編集を提供する。配置取り外しと積荷定義削除は別button、別確認、別履歴とする。
 - 305 / 320 / 375 pxではtablist、toolbar、検索・selector・action rowを必要な範囲で複数rowへし、水平overflowを起こさず、overlay外にcanvas操作領域を残す。可視の「荷室外の作業スペースN件」は置かないが、非視覚statusと積荷selectorの状態copyは維持する。overlayの出現、選択、検索結果、操作statusはcanvasの寸法またはページ上の位置を変えない。

@@ -146,7 +146,7 @@ async function moveDragToCommittedPreview(
   throw new Error("Placed cargo drag did not reach a committable preview");
 }
 
-test("shows exact coincident cargo-only COG as inert concentric red and yellow markers", async ({
+test("shows exact coincident cargo-only COG as same-size yellow-over-red inert markers", async ({
   page,
 }) => {
   await importWeightBalanceFixture(page);
@@ -167,8 +167,34 @@ test("shows exact coincident cargo-only COG as inert concentric red and yellow m
   expect(Math.abs(redCenter.y - yellowCenter.y)).toBeLessThan(0.1);
   const redBox = await page.locator(containerMarker).boundingBox();
   const yellowBox = await page.locator(cargoMarker).boundingBox();
-  expect(redBox!.width).toBeGreaterThan(yellowBox!.width);
-  expect(redBox!.height).toBeGreaterThan(yellowBox!.height);
+  expect(redBox).toMatchObject({ width: 10, height: 10 });
+  expect(yellowBox).toMatchObject({ width: 10, height: 10 });
+  await expect(page.locator(containerMarker)).toHaveCSS("z-index", "1");
+  await expect(page.locator(cargoMarker)).toHaveCSS("z-index", "2");
+  await expect(page.locator(containerMarker)).toHaveCSS("box-shadow", "none");
+  for (const marker of [
+    page.locator(containerMarker),
+    page.locator(cargoMarker),
+  ]) {
+    await expect(marker).toHaveCSS("border-top-width", "0px");
+    await expect(marker).toHaveCSS("outline-style", "none");
+    expect(await marker.evaluate((element) => {
+      const browserGlobal = globalThis as unknown as {
+        getComputedStyle(target: unknown): { readonly boxShadow: string };
+      };
+      return browserGlobal.getComputedStyle(element).boxShadow;
+    }))
+      .not.toContain("255, 255, 255");
+  }
+  const redSwatch = legend.locator(".viewport__weight-balance-swatch--container");
+  const yellowSwatch = legend.locator(".viewport__weight-balance-swatch--cargo");
+  for (const swatch of [redSwatch, yellowSwatch]) {
+    await expect(swatch).toHaveCSS("width", "10px");
+    await expect(swatch).toHaveCSS("height", "10px");
+    await expect(swatch).toHaveCSS("border-top-width", "0px");
+    await expect(swatch).toHaveCSS("outline-style", "none");
+    await expect(swatch).toHaveCSS("box-shadow", "none");
+  }
   await expect(overlay).toHaveCSS("pointer-events", "none");
   await expect(overlay).toHaveCSS("z-index", "2");
   await expect(page.locator(".viewport__top-controls")).toHaveCSS("z-index", "3");
@@ -468,8 +494,8 @@ test.describe("device scale factor 2", () => {
     const red = page.locator(containerMarker);
     const yellow = page.locator(cargoMarker);
     await expect(page.locator(balance)).toHaveAttribute("data-coincident", "true");
-    await expect(red).toHaveCSS("width", "18px");
-    await expect(red).toHaveCSS("height", "18px");
+    await expect(red).toHaveCSS("width", "10px");
+    await expect(red).toHaveCSS("height", "10px");
     await expect(yellow).toHaveCSS("width", "10px");
     await expect(yellow).toHaveCSS("height", "10px");
 
@@ -477,7 +503,7 @@ test.describe("device scale factor 2", () => {
     const shiftedStyle = await yellow.getAttribute("style");
     await page.getByRole("button", { name: "拡大" }).click();
     await expect.poll(() => yellow.getAttribute("style")).not.toBe(shiftedStyle);
-    await expect(red).toHaveCSS("width", "18px");
+    await expect(red).toHaveCSS("width", "10px");
     await expect(yellow).toHaveCSS("width", "10px");
   });
 });

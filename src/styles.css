@@ -2058,27 +2058,30 @@ legend {
 .viewport__weight-balance-marker {
   position: absolute;
   display: block;
+  width: 10px;
+  height: 10px;
+  border: 0;
   border-radius: 50%;
+  outline: 0;
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
 .viewport__weight-balance-marker--container {
   z-index: 1;
-  width: 18px;
-  height: 18px;
-  border: 3px solid #fff;
   background: #e53935;
-  box-shadow: 0 0 0 2px rgba(7, 17, 31, 0.9), 0 0 10px rgba(229, 57, 53, 0.9);
+  box-shadow: 0 0 10px rgba(229, 57, 53, 0.9);
 }
 
 .viewport__weight-balance-marker--cargo {
   z-index: 2;
-  width: 10px;
-  height: 10px;
-  border: 2px solid #151b23;
   background: #ffd600;
-  box-shadow: 0 0 0 1px #fff, 0 0 9px rgba(255, 214, 0, 0.9);
+  box-shadow: 0 0 9px rgba(255, 214, 0, 0.9);
+}
+
+.viewport__weight-balance[data-coincident="true"]
+  .viewport__weight-balance-marker--container {
+  box-shadow: none;
 }
 
 .viewport__weight-balance-legend {
@@ -2107,22 +2110,20 @@ legend {
 
 .viewport__weight-balance-swatch {
   display: inline-block;
+  width: 10px;
+  height: 10px;
   flex: 0 0 auto;
+  border: 0;
   border-radius: 50%;
+  outline: 0;
+  box-shadow: none;
 }
 
 .viewport__weight-balance-swatch--container {
-  width: 0.78rem;
-  height: 0.78rem;
-  border: 2px solid #fff;
   background: #e53935;
 }
 
 .viewport__weight-balance-swatch--cargo {
-  width: 0.58rem;
-  height: 0.58rem;
-  border: 1px solid #151b23;
-  outline: 1px solid #fff;
   background: #ffd600;
 }
 

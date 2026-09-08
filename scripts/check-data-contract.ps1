@@ -30,6 +30,7 @@ $tabbedSceneDecisionPath = Join-Path $resolvedProject 'docs/decisions/0026-tabbe
 $drawerDeferralDecisionPath = Join-Path $resolvedProject 'docs/decisions/0029-phase1-drawer-entry-and-automatic-proposal-deferral.md'
 $containerOnlyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0030-container-only-drawer-management.md'
 $weightBalanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0032-cargo-center-of-gravity-visualization.md'
+$weightBalanceMarkerDecisionPath = Join-Path $resolvedProject 'docs/decisions/0033-equal-borderless-center-markers.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -91,6 +92,7 @@ foreach ($path in @(
     $drawerDeferralDecisionPath,
     $containerOnlyDecisionPath,
     $weightBalanceDecisionPath,
+    $weightBalanceMarkerDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -299,7 +301,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.5.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.5.1' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -356,8 +358,24 @@ foreach ($requiredText in @(
         throw "ADR 0032 does not contain the approved weight-balance marker: $requiredText"
     }
 }
+$weightBalanceMarkerDecision = [IO.File]::ReadAllText($weightBalanceMarkerDecisionPath)
+if ($weightBalanceMarkerDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0033 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '- Partially supersedes: 0032',
+    'どちらも10 CSS px',
+    '白いborder、outlineおよび白い外枠として見えるshadowを除く',
+    '黄色いドットが赤いドットを完全に覆うことを許容',
+    'Schema `0.1.0`'
+)) {
+    if (-not $weightBalanceMarkerDecision.Contains($requiredText)) {
+        throw "ADR 0033 does not contain the approved marker-display contract text: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     '[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)',
+    '[ADR 0033](decisions/0033-equal-borderless-center-markers.md)',
     '`calculateCargoCenterOfGravity(project, containerId)`',
     '`no-container`、`empty`、`available`、`unavailable`'
 )) {
@@ -932,4 +950,5 @@ foreach ($requiredText in @(
     drawer_deferral_decision_0029_accepted = $true
     container_only_decision_0030_accepted = $true
     weight_balance_decision_0032_accepted = $true
+    weight_balance_marker_decision_0033_accepted = $true
 }

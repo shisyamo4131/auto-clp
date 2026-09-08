@@ -9,7 +9,7 @@
 - Implemented: Gitリポジトリ、ガバナンス、仕様、ロードマップ、ADR、CLP JSON Schema `0.1.0`、完全なreadonly CLP型、構造・意味検証、検証済みJSON書出し、派生計算成功後だけ置換する取引的読込基盤、IndexedDB単一手動枠の端末保存・読込・確認削除、固定名JSONファイル入出力、保存Navigation Drawerと操作単位のSnackbar、全候補の置換前Worker判定、CLP・隙間・積荷・候補の取引的な入力編集UI、配置追加・整数mm移動・許可向き変更・取り外しの原子的フォーム、viewport内のcompactな単一CLP履歴、全積荷pickerと固定context action row、成功したCLP変更を最大100件保持する非永続undo/redo、コンテナ包含・XY正面積重なり・正体積AABB重なり・隙間込み境界・非支持ペア軸別隙間・矩形開口寸法と許可向き抽出・支持面XY矩形和集合100%被覆・床と完全一致Z接触と段積み可の支持合成の純粋geometry基盤、safe integer総質量・耐荷重評価、対象コンテナの境界・重なり・隙間・開口・支持・耐荷重を独立理由付きで集約する純粋判定、ローカルWorkerによる非同期評価と25件理由ページ、利用者向け物理状態・対象・関連積荷・理由・判定不能表示、ローカルWebアプリ骨格、WebGL 2能力確認、候補tab、ProjectからThree非依存scene値への一方向投影、コンテナ内部・中央開口・登録済み配置と荷室外作業スペースのThree.js描画、canvas積荷選択、fine pointerによる未配置積荷の自由な荷室外移動・初回配置と配置済み床面方向drag・完全drag-out削除、許可済みX/Z軸90°回転、天地無用入力補助、viewport wheelのpage scroll、明示的な `＋` / `－` による拡大縮小、共有camera、touch/coarse pointerでの選択と縦scroll・フォームfallback、型・lint・単体・ブラウザ・ビルド検証。
 - Implemented support refinement: fine pointer dragの床・支持可能上面へのZ snap、単一支持面内のX/Y clamp、条件未確認・不適合preview、操作対象以外のほぼ透明な中立面と灰色点線、緑・黄点線による支持候補強調、単独支持・複数支持・隙間・張り出し・支持可否混在・接触不成立の派生判定。旧XY和集合100% helperは回帰用に保持するが、現行の支持区分には使用しない。
 - Implemented rotation-toolbar refinement: X/Z回転はUndo/Redo・拡大縮小と同じviewport固定toolbarへ常設する。一本の軸線へ矢印が回り込む同一SVGをXだけ90度回して区別し、未選択・天地無用のX軸・busyではfocus可能な理由付き `aria-disabled` とする。Z軸床面回転は常に許可し、使用可は拡大・縮小と同じ青緑の強調枠、使用不可は低彩度の枠・iconで区別する。紫色の塗り分けは使わず、回転前後でbutton位置は変えない。
-- Implemented weight-balance visualization: 仕様1.5.0・ADR 0032に従い、選択中コンテナの内寸中央を赤、同コンテナの配置済み積荷の重量付き合成重心を黄の固定画面サイズ・非操作ドットとして3D viewportへ表示し、色以外の凡例を併設する。二点の画面投影中心が一致する時は座標をずらさない赤い外側・黄色い内側の同心表示、近接時は各投影中心を保つ大きさ・輪郭・重ね順とし、重心が画面外ならclampまたはcamera自動変更をせず `現在重心は画面外` と示す。`no-container`、`empty`、`available`、`unavailable` の状態ごとに両点と非数値statusを再導出して古い表示を残さない。コンテナ自重、数値差、許容範囲、合否、物理判定理由は扱わず、保存済みProjectから確定後に再計算し、JSON・端末保存・履歴へ保存しない。使用上の重要事項は内容版1.2.0へ更新した。人間による差分視認性確認は未実施である。
+- Implemented weight-balance visualization: 仕様1.5.1・ADR 0033に従い、選択中コンテナの内寸中央を赤、同コンテナの配置済み積荷の重量付き合成重心を黄の10 CSS px・白い外枠なし・非操作ドットとして3D viewportへ表示し、同径・白い外枠なしの凡例を併設する。黄色を赤より前面にし、二点の画面投影中心が一致する時は座標をずらさず黄色が赤を完全に覆うことを許容し、近接時も各投影中心を保って重複部分では黄色を前面にする。重心が画面外ならclampまたはcamera自動変更をせず `現在重心は画面外` と示す。`no-container`、`empty`、`available`、`unavailable` の状態ごとに両点と非数値statusを再導出して古い表示を残さない。コンテナ自重、数値差、許容範囲、合否、物理判定理由は扱わず、保存済みProjectから確定後に再計算し、JSON・端末保存・履歴へ保存しない。使用上の重要事項は内容版1.2.0のままである。人間による差分視認性確認は未実施である。
 - Retained future technical assets: ADR 0004に基づく決定的DFS、Worker transport、session/view、React hook/panel、preview・適用境界、単体試験、AP-01〜08と `automatic-proposal-v2` の性能証拠を保持する。Phase 1の通常画面ではpanel、開始、取消、適用入口を提供せず、通常起動で自動提案Workerを開始しない。これらは現行利用可能機能、一般端末SLA、最低GPU、実務受入または安全保証ではない。
 - Unavailable: 自動配置提案の通常UI、端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上の自由な連続Z移動・取り外し、touch drag、積荷画像、デプロイ、クラウド保存、外部API、実運用サポート。
 
@@ -209,7 +209,7 @@ comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`b
 ## Outputs
 
 - 現在の成果物は本リポジトリ内の文書、設定、ローカルWebアプリ、入力編集UIである。
-- 仕様1.5.0の積荷合成重心可視化は、正確な純粋計算、scene投影、赤・黄ドット、凡例、4状態、camera・DPR・drag・読込・狭幅回帰まで実装済みである。人間による差分視認性と理解の確認はまだ利用できない。
+- 仕様1.5.1の積荷合成重心可視化は、正確な純粋計算、scene投影、同径・外枠なしの赤・黄ドット、完全一致・近接時の黄前面表示、凡例、4状態、camera・DPR・drag・読込・狭幅回帰まで実装済みである。人間による差分視認性と理解の確認はまだ利用できない。
 - CLPデータの機械可読な設計契約は `schemas/project-0.1.0.schema.json`、意味契約は `docs/data-model.md` である。構造・意味検証、検証済み書出し、取引的読込、手動の端末保存・確認削除、JSONファイル入出力、全候補Worker事前判定、CLP・隙間・積荷・候補の入力編集UIは実装済みである。
 - アプリのビルド出力は `dist/` であり、Git管理対象外とする。
 - 現在のビルドはJavaScript chunkがViteの500 kB推奨値を超える警告を出す。現チェックポイントのゲートではないが、Phase 1の利用者受入または公開検討前の性能チェックポイントで分割と初期読込性能を再評価する。
