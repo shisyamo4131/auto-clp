@@ -31,6 +31,7 @@ $drawerDeferralDecisionPath = Join-Path $resolvedProject 'docs/decisions/0029-ph
 $containerOnlyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0030-container-only-drawer-management.md'
 $weightBalanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0032-cargo-center-of-gravity-visualization.md'
 $weightBalanceMarkerDecisionPath = Join-Path $resolvedProject 'docs/decisions/0033-equal-borderless-center-markers.md'
+$cargoCsvDecisionPath = Join-Path $resolvedProject 'docs/decisions/0034-cargo-csv-template-and-replacement-import.md'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -93,6 +94,7 @@ foreach ($path in @(
     $containerOnlyDecisionPath,
     $weightBalanceDecisionPath,
     $weightBalanceMarkerDecisionPath,
+    $cargoCsvDecisionPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -301,7 +303,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.5.1' 'Approved specification version'
+Assert-Equal $specificationVersion '1.6.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -381,6 +383,38 @@ foreach ($requiredText in @(
 )) {
     if (-not $dataModel.Contains($requiredText)) {
         throw "Data model does not contain the approved weight-balance contract text: $requiredText"
+    }
+}
+$cargoCsvDecision = [IO.File]::ReadAllText($cargoCsvDecisionPath)
+if ($cargoCsvDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0034 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    'auto-clp-cargo-template.csv',
+    'name,length_mm,width_mm,height_mm,weight_kg',
+    '`cargo-1`〜`cargo-N`',
+    '`canSupportCargo=true`',
+    '一回の `cargo.csv-replace` 履歴操作',
+    'Schema `0.1.0`'
+)) {
+    if (-not $cargoCsvDecision.Contains($requiredText)) {
+        throw "ADR 0034 does not contain the approved cargo CSV contract text: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
+    '仕様版 `1.6.0`',
+    '承認済み・未実装',
+    '手動追加とCSV一括作成は共通の新規作成上限30件',
+    '## Transient Cargo CSV Contract',
+    '`cargoes`を新しい配列へ置換して`placements=[]`',
+    '取消、失敗、stale、busy、no-opではProjectと履歴を変更しない',
+    '`cargo-csv.record-count`',
+    '`/rows/{n}/weight_kg`',
+    '最大50件'
+)) {
+    if (-not $dataModel.Contains($requiredText)) {
+        throw "Data model does not contain the approved cargo CSV contract text: $requiredText"
     }
 }
 foreach ($requiredText in @(
@@ -613,6 +647,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '向き設定は「天地無用」checkboxだけ',
+    '- Refined by: 0034',
     'Z軸の床面回転',
     '常に利用できる',
     '旧JSONまたは端末保存を読込む時',
@@ -791,6 +826,11 @@ foreach ($requiredText in @(
     'AC-02 Exact Single Support and 1 mm Conditional Overhang',
     'AC-03 Independent Floor Penetration Diagnostics',
     'AC-04 Recovery, Portability, and Required-WebGL Failure Gate',
+    'AC-06 Cargo Center-of-Gravity Reference Markers',
+    'AC-07 Cargo CSV Template and Atomic Replacement',
+    'このケースは仕様1.6.0・ADR 0034で承認済み、未実装',
+    '`input.kg-format` と `/rows/2/weight_kg`',
+    'legacy 31〜1,000件',
     'AP-01 Candidate objective',
     'small=200×100×100',
     '10,000回目で自然終了',
@@ -806,6 +846,22 @@ foreach ($requiredText in @(
 )) {
     if (-not $acceptance.Contains($requiredText)) {
         throw "Acceptance contract does not contain the approved case text: $requiredText"
+    }
+}
+
+foreach ($requiredText in @(
+    'auto-clp-cargo-template.csv',
+    'name,length_mm,width_mm,height_mm,weight_kg',
+    '新規積荷件数',
+    '一回の `cargo.csv-replace` Undo/Redo対象',
+    '31〜1,000件の既存JSON・端末保存',
+    '`cargo-csv.record-count`',
+    '`/rows/{n}/{column}`',
+    'field検証の合否を問わない',
+    '最大50件'
+)) {
+    if (-not $specification.Contains($requiredText)) {
+        throw "Specification does not contain the approved cargo CSV contract text: $requiredText"
     }
 }
 
@@ -951,4 +1007,5 @@ foreach ($requiredText in @(
     container_only_decision_0030_accepted = $true
     weight_balance_decision_0032_accepted = $true
     weight_balance_marker_decision_0033_accepted = $true
+    cargo_csv_decision_0034_accepted = $true
 }

@@ -44,5 +44,6 @@
 | [0031](0031-user-requested-task-replacement.md) | ユーザー依頼のtask交代と通常再開 | Accepted | 2026-09-03 |
 | [0032](0032-cargo-center-of-gravity-visualization.md) | 積荷合成重心の参考可視化 | Accepted | 2026-09-08 |
 | [0033](0033-equal-borderless-center-markers.md) | 同径・外枠なしの重心ドット | Accepted | 2026-09-08 |
+| [0034](0034-cargo-csv-template-and-replacement-import.md) | CSVテンプレートによる積荷一括置換 | Accepted | 2026-09-08 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

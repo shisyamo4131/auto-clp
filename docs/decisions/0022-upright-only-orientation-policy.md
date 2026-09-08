@@ -1,6 +1,7 @@
 # 0022 天地無用だけを使う積荷向き方針
 
 - Status: Accepted
+- Refined by: 0034が天地無用ON/OFFの写像を維持し、現行仕様の新規積荷既定をOFFへ変更する
 - Date: 2026-08-30
 - Related specification: `../specification.md` 0.18.0
 - Supersedes: ADR 0007の利用者が任意の許可向き集合を編集する規則、ADR 0017の詳細checkbox、ADR 0021の許可集合不足によるZ軸回転無効化

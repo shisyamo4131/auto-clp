@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-09-08
-- Specification version: 1.5.1
+- Specification version: 1.6.0
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -62,7 +62,7 @@
 
 - 各積荷は一意な識別子、表示名、長さ、幅、高さ、重量、段積み可否を持つ。
 - 積荷は直方体として扱い、3軸方向を入れ替える回転を可能にする。
-- 各積荷は6種類の直交向きから非空の許可向き集合を持つ。新規積荷の既定は、高さ軸をZに保つ2種類の水平向きとする。
+- 各積荷は6種類の直交向きから非空の許可向き集合を持つ。手動追加とCSV一括作成による新規積荷の既定は、段積みOKの `canSupportCargo=true`、天地無用OFFに対応する全6向きとする。既存CLPの積荷は暗黙に変更せず、必要な例外だけを利用者が画面上で段積み不可または天地無用ONへ編集する。
 - 横倒しまたは天地反転を含む向きは利用者が明示的に許可し、手動回転、自動提案、開口部判定は同じ許可集合だけを使う。
 - 「天地無用」は独立した保存項目ではなく、元の高さ軸を荷室Zへ保つ `LWH` / `WLH` だけを許可する入力補助とする。orientation codeは面の表裏を区別しないため、天地無用は横倒し防止を意味し、上下反転そのものを識別または保証しない。
 - 複雑形状は、利用者が収まる外接直方体または組み合わせ後の直方体として入力する。
@@ -76,7 +76,12 @@
 ### Application Shell and Primary Workflow
 
 - 3D viewportを通常画面の主作業面とし、最上部のApplication Barは左から `Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chip、Navigation Drawerを開くmenu buttonの順に置く。menu buttonはDOM上も視覚上も右端とし、現在のCLP名はCLP設定dialogの入口とする。通常画面のApplication Shellはbrowser viewport高以上とし、通常のデスクトップ高では上下padding、Application Bar高とその下余白を除いた残りを3D作業sectionへ、さらにコンテナtab高を除いた残りをviewportへ割り当てる。短い画面ではtoolbarと下段操作を失わない最低viewport高を優先し、ページscrollで到達可能にする。
-- 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`、`積荷を追加`、`コンテナを追加`、選択中コンテナの編集・削除、`操作方法` は一つのNavigation Drawerへまとめる。Drawer最下部にはpackageのAuto CLPアプリ版とCLPデータ形式版を表示する。常設の保存card、CLP設定card、積荷card、コンテナcard、通常画面の追加buttonは置かない。コンテナの編集・削除対象は3Dの選択中コンテナとし、既存editor、Project command、履歴、busy/dirty gate、積荷1,000件・コンテナ100件の上限、非cascade削除を再利用する。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
+- 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`、`積荷を追加`、CSVテンプレート取得・一括登録、`コンテナを追加`、選択中コンテナの編集・削除、`操作方法` は一つのNavigation Drawerへまとめる。Drawer最下部にはpackageのAuto CLPアプリ版とCLPデータ形式版を表示する。常設の保存card、CLP設定card、積荷card、コンテナcard、通常画面の追加buttonは置かない。コンテナの編集・削除対象は3Dの選択中コンテナとし、既存editor、Project command、履歴、busy/dirty gate、積荷の新規作成上限30件・コンテナ100件の上限、非cascade削除を再利用する。新規作成上限は一つの名前付き定数から手動追加とCSVへ適用し、将来の緩和を局所変更にする。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
+- `auto-clp-cargo-template.csv` は、固定順・大文字小文字を区別する `name,length_mm,width_mm,height_mm,weight_kg` の見出しだけを持つUTF-8 BOM・CRLFのExcel向けテンプレートとしてダウンロードする。CSV読込はUTF-8のBOM有無、CRLFまたはLF、カンマ区切り、引用符付きfield、`""` による引用符escapeを受け付ける。見出しの不足、余分、重複、並べ替え、大小文字違い、列数不一致、不正な引用、不正UTF-8、データ0件または31件以上をファイル全体の失敗とする。decoded fieldがすべて空白のrecordだけは場所を問わず無視する。
+- CSVの各有効recordは1始まりの論理順で `cargo-1` から `cargo-N` のIDを持ち、重複名を許可する。名前は前後空白を除いた後に既存の1〜120文字・制御文字禁止を適用する。寸法は既存の整数mm範囲、重量はkgのASCII十進表記・小数第3位までを既存の正確なg変換で検証し、桁区切り、指数表記、全角数字、単位、式、丸めを受け付けない。CSVに段積み可否または天地無用の列は設けず、全recordを段積みOK・天地無用OFFの全6向きで作成する。
+- CSVは申告サイズと読取後のUTF-8実サイズを5 MiB上限で確認してから全recordを一時解析・検証する。1件でも失敗すれば現在CLP、履歴、選択、scene一時状態と派生表示を変更せず、入力値、積荷名、ファイル名またはCSV全文をエラーやログへ反射しない。安定したcodeと論理record番号・列名のpathで修正箇所を示す。
+- CSV検証issueは次の固定code/pathだけを使う。template出力は `cargo-csv.download-unavailable` / `cargo-csv.download-failed` と `/template`、file入力能力不足は `cargo-csv.import-unavailable` と `/file`、サイズ超過・読取失敗・不正UTF-8・CSV構文不正は順に `cargo-csv.file-size` / `cargo-csv.read` / `cargo-csv.utf8` / `cargo-csv.syntax` と `/file`、見出し不一致は `cargo-csv.header` と `/header`、有効record件数不正は `cargo-csv.record-count` と `/rows`、列数不一致は `cargo-csv.column-count` と `/rows/{n}`、名前の空・長さ・制御文字は `cargo-csv.name-required` / `cargo-csv.name-length` / `cargo-csv.name-control` と `/rows/{n}/name`、寸法と重量は既存の `input.mm-length` / `input.mm-format` / `input.mm-range`、`input.kg-length` / `input.kg-format` / `input.kg-range` と `/rows/{n}/{column}`、防御的な置換後Project不正は `cargo-csv.candidate-invalid` と `/` を返す。`{n}` は見出しを除き、全空白recordだけを数えない非空の論理データrecordの1始まり順序で、field検証の合否を問わない。quoted field内の改行を含む物理行番号は使わない。issueはpath、codeのcode-unit順に並べて重複を除き、最大50件に切り詰める。
+- 有効なCSVを選択しても直ちに置換せず、新規積荷件数、削除する既存積荷件数、解除する配置件数を示して確認する。確定時だけCLP ID・名前、隙間、コンテナを保持し、積荷をCSV由来配列へ一括置換して全配置を空にする。成功全体を一回の `cargo.csv-replace` Undo/Redo対象とし、Undoは31件以上を含む従来積荷と全配置も完全に復元する。取消、失敗、stale、busyまたは同一状態へのno-opは履歴へ追加しない。成功時は旧積荷の選択、荷室外pose、drag preview、物理判定と重心表示を破棄または新Projectから再導出するが、コンテナ選択とcameraは対象コンテナが変わらないため維持できる。
 - Drawer外の背景相当領域をクリックするとDrawerだけを閉じ、同じclickで背面のbutton、履歴またはscene操作を発火させない。close buttonおよびEscapeと同様、未実行の端末保存削除確認と新規CLP確認を取り消し、page scrollを変えずApplication Barのmenu buttonへfocusを戻す。進行中の永続化処理はDrawerを閉じても中断しない。
 - `操作方法` はDrawerを閉じてから独立した読み取り専用dialogを開き、3Dの積荷選択、空いた領域の左dragによる視点回転、Shift付き左dragまたは右dragによる平行移動、wheelのpage scroll、zoom・全体表示、積荷移動・回転、履歴、判定、座標・積荷編集の入口を簡潔に示す。touchは積荷選択とpage scrollを主とし、正確な座標・情報編集は下段button/dialogを案内する。版確認の `使用上の重要事項` とは分離し、CLP、履歴、保存、camera、判定状態を変更しない。
 - 旧3Dコンテナcardの外枠と見出しは置かない。コンテナtablistは3D viewportの直前、canvasおよびviewport overlayの外側上部へ一行で置き、コンテナ数または名前が幅を超える場合はExcelのsheet tab相当の左右buttonと横scrollで表示範囲だけを移動する。tabは折り返さず、active tabを表示範囲へ入れ、左右矢印・Home・End・Enter・Space、touch・trackpadを提供する。tabの選択だけがコンテナを切り替え、scroll buttonはコンテナを切り替えない。tablistはcanvasを覆わず、その表示・scrollでcanvasの寸法またはpage位置を変えない。
@@ -166,7 +171,7 @@
 
 ### Operation History
 
-- CLP設定、積荷、コンテナ、配置の追加・更新・削除と、3D上の一回の床面方向dragによる配置更新または配置削除を、成功してCLPを変更した単位ごとに最大100件まで取り消し・やり直しできる。
+- CLP設定、積荷、コンテナ、配置の追加・更新・削除、CSVによる積荷・配置の一括置換と、3D上の一回の床面方向dragによる配置更新または配置削除を、成功してCLPを変更した単位ごとに最大100件まで取り消し・やり直しできる。
 - 取り消し・やり直しは検証済みCLP状態を復元し、入力不正、参照不整合、失敗、同一状態へのno-opを履歴へ追加しない。取り消した後に別のCLP変更を確定した場合は、その時点のやり直し履歴を破棄する。
 - 未保存のフォーム入力、削除確認、3D移動preview、コンテナ・積荷の選択、camera、Worker結果と理由ページは履歴へ含めない。未保存入力、削除確認、または3D移動中はCLP履歴の操作を無効にし、入力途中の値を暗黙に破棄しない。
 - 新規CLPの作成、端末読込、JSON読込は履歴へ追加せず、成功時に過去・未来をともに破棄するbarrierとする。新規作成前の未保存変更は明示確認なしに破棄しない。
@@ -217,7 +222,7 @@
 - 保存対象には、積荷、コンテナ、配置、回転、隙間設定、仕様スキーマバージョンを含める。
 - コンテナ幾何中心、積荷合成重心、赤・黄ドット、凡例、計算状態は正規CLPから毎回導く派生状態であり、CLP JSON、端末保存、Undo/Redo履歴へ保存しない。
 - 配置座標はコンテナ局所の整数mmで、向き適用後の積荷直方体の最小角を保存する。描画用の中心座標、scene縮尺、camera、選択状態は保存しない。
-- ファイルは5 MiB、積荷は1,000件、コンテナは100件、配置は1,000件を上限とする。ID一意性、参照整合性、積荷ごとの単一配置、許可向き、開口と内部寸法の関係を意味検証する。
+- CLP JSONとSchema `0.1.0`は既存互換のため積荷1,000件、コンテナ100件、配置1,000件、ファイル5 MiBを上限として維持する。手動追加とCSV一括作成の新規積荷は30件を製品上限とする。31〜1,000件の既存JSON・端末保存は引き続き読込、表示、編集、削除、書出しできるが、現在件数が30件以上なら新規追加を拒否し、29件以下になれば再び追加できる。配置上限は1,000件のままとする。ID一意性、参照整合性、積荷ごとの単一配置、許可向き、開口と内部寸法の関係を意味検証する。
 - 不適合な配置は修正途中の状態として保存できるが、読込後に必ず再判定し、不適合または未確認を表示する。
 - 実在顧客の機密情報を前提とせず、名称欄へ個人情報や秘密情報を保存しないよう表示する。
 
@@ -225,6 +230,7 @@
 
 - 入力不正、配置不適合、ファイル読込失敗、未対応データ版、WebGL 2非対応、初期描画失敗、描画中障害、探索打切りを区別する。
 - JSON読込は、解析前サイズ、構文、対応版、JSON Schema、意味整合性の順に一時値を検証し、すべて成功した場合だけ現在CLPを一括置換する。
+- CSV読込は、解析前後のサイズ、UTF-8、CSV構文、固定見出し、record数、各field、生成した積荷配列、置換後Projectの順に一時検証し、利用者が件数付き確認を確定した場合だけ積荷と配置を一回の履歴操作として置換する。
 - 読込失敗時は現在のCLP状態を保持し、上書きしない。入力全体や秘密情報をログへ出さず、修正可能な理由を表示する。
 - WebGL 2非対応、初期描画失敗または描画中障害を黙って無視せず、Auto CLP全体を操作不能にして、人が対象・結果・次行動を理解できる読み取り専用の作業データ退避と復旧案内だけを表示する。現在メモリ内のProjectを保持し、再読込前に操作可能へ戻さない。
 - CLPの参照整合性、対象コンテナ解決、または安全な整数計算に失敗した場合は、物理的不適合と混同せず判定不能として扱う。
@@ -238,6 +244,7 @@
 - 秘密情報、資格情報、個人情報、実在顧客の貨物明細、搬送経路、価格情報をリポジトリ、ログ、テスト、プロンプトへ保存しない。
 - 初期版は外部通信と外部書き込みを行わない。
 - JSON読込は解析前に5 MiB上限を確認し、型、値域、追加項目、スキーマ、意味整合性を検証して、実行可能コードとして評価しない。
+- CSVは外部通信または式評価を行わず、引用符を含む文字列としてだけ解析する。Excelのformula、数値式または単位付き文字列を実行・換算せず不正値として拒否する。
 
 ## Current Phase Completion Criteria
 

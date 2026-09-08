@@ -131,6 +131,33 @@
 - 向き適用: 元寸法 `101 × 203 × 305 mm` は、`LWH=(101,203,305)`、`WLH=(203,101,305)`、`LHW=(101,305,203)`、`HLW=(305,101,203)`、`WHL=(203,305,101)`、`HWL=(305,203,101)` として各軸中心へ反映する。
 - 上限とoverflow: 1,000個すべてを100,000,000 g、向き適用後寸法 `(100,000, 100,000, 100,000) mm`、位置 `(1,000,000, 1,000,000, 1,000,000) mm` とすると、各軸の倍座標momentは `210,000,000,000,000,000`、合成重心は `(1,050,000, 1,050,000, 1,050,000) mm` となる。JavaScriptのsafe integerを超える中間値を丸めず、順序変更でも結果を変えない。
 
+## AC-07 Cargo CSV Template and Atomic Replacement
+
+このケースは仕様1.6.0・ADR 0034で承認済み、未実装である。自動証拠、Windows版Excel往復、人間による確認はまだ利用できない。
+
+### Initial State and CSV
+
+- 現在CLPは、積荷2件、両積荷を参照する配置2件、コンテナ2件、非0の隙間設定を持つ。
+- CSVテンプレートの固定名は `auto-clp-cargo-template.csv`、bytesはUTF-8 BOM、CRLF、固定見出し `name,length_mm,width_mm,height_mm,weight_kg` と末尾改行だけである。
+- 入力CSVは3件とする。論理record 1は日本語名、record 2と3は同じ名前を持ち、一つは引用commaとescaped quoteを含む。各寸法は整数mm、重量はkg小数第3位以内とする。
+
+### Steps and Expected Results
+
+1. Drawerからテンプレートを取得し、固定名、BOM、CRLF、固定順・大小文字を区別する5列、データrecordなしを確認する。テンプレート自体をそのまま読み込むと0件として拒否し、現在CLPと履歴を変更しない。
+2. BOM有無、CRLF / LF、quoted commaとescaped quoteを正しく解析し、全空白recordだけを無視する。重複名を保持し、有効record順に `cargo-1`、`cargo-2`、`cargo-3` を割り当てる。各積荷は `canSupportCargo=true`、天地無用OFFの全6向きを持つ。名前の制御文字は既存契約に従い拒否する。
+3. 適用前に「新規積荷3件、既存積荷2件を削除、配置2件を解除」に相当する件数を表示する。取消ではProject、履歴、選択、scene一時状態、物理判定、合成重心を変更しない。
+4. 確定すると、CLP ID・名前、隙間、コンテナ2件を同値で保持し、積荷をCSV由来3件へ置換し、配置を0件にする。旧積荷の選択、荷室外pose、drag previewを残さず、物理判定と合成重心を新Projectから再導出する。端末保存を自動上書きしない。
+5. 一回のUndoで元の積荷2件と配置2件を完全に復元し、一回のRedoでCSV由来積荷3件・配置0件へ戻す。失敗、取消、stale、busy、同一状態no-opを履歴へ追加しない。
+6. 1件と30件は受け入れ、31件、0件、空file、header-only、不正UTF-8、5 MiB超過、見出し不足・余分・重複・並べ替え・大小文字違い、列不足・余分、不正引用、部分空欄、範囲外、丸めが必要な値をファイル全体として拒否する。どの失敗でも現在Project参照と対応する派生表示を保持し、cell値、積荷名、filename、CSV全文を表示またはログへ反射しない。
+7. 名前1 / 120文字、寸法1 / 100,000 mm、重量0.001 / 100,000 kgを受け入れ、名前0 / 121文字・制御文字、寸法0 / 100,001・小数、重量0 / 100,000.001・小数4桁、負数、指数、全角数字、桁区切り、単位、式を拒否する。
+8. 手動追加も段積みOK・天地無用OFFを既定とする。積荷数29件では1件追加でき、30件では手動追加を拒否する。Schema `0.1.0`の既存31〜1,000件Projectは読込、表示、編集、削除、書出しできるが追加できず、29件以下へ削除すると追加できる。配置上限1,000件は変更しない。Undoで31件以上を復元した場合も同じ追加制限を再適用する。
+9. 305 / 320 / 375 px、keyboard、focus trap、Escape、Drawer背景、busy、WebGL障害の全面停止を既存UI契約どおり維持する。CSV操作の出現またはstatusで3D canvasの寸法・位置を変えない。
+10. 見出し後に全空白recordを置き、その後の論理record 1のquoted name内に改行を含め、さらに全空白recordを挟んだ論理record 2の `weight_kg` を不正値にする。物理行数にかかわらず `input.kg-format` と `/rows/2/weight_kg` を返す。file・header・record件数・列数・名前・寸法・重量・置換後Projectの各失敗は仕様の固定code/pathだけを返し、path→codeの順、重複なし、最大50件、入力値非反射を維持する。
+
+### Human Excel Gate
+
+Windows版Excelでテンプレートを開き、日本語、引用comma・quote、kg小数を含む匿名データを入力して「CSV UTF-8（コンマ区切り）」として保存し、再読込後の順序、値、段積みOK、全6向き、件数確認、Undo/Redoを確認する。通常の非UTF-8 CSVは状態を変えず拒否されることを確認する。この人間確認が完了するまでCSVマイルストーンの最終1点と実務受入を獲得しない。
+
 ## Evidence and Completion
 
 - 自動証拠: domainと表示の単体試験、Worker経由のブラウザ試験、履歴、IndexedDB、JSON往復、WebGL必須能力ゲートと読み取り専用救出回帰を個別の終了コードで記録する。
@@ -157,6 +184,7 @@
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` がWebGL利用可能時の履歴、IndexedDB、固定JSON往復を実行し、`tests/browser/capability.spec.ts` が非対応・初期描画失敗・context lossの全面停止と2種類の読み取り専用救出を実行する。
 - AC-06: `src/domain/weight-balance.test.ts` と `src/scene/project-scene.test.ts` が正確な重量moment、全向き、上限・上限外、4状態、scene変換、計算不能回復投影を検証する。`tests/browser/weight-balance.spec.ts` が赤・黄点と凡例、画面投影中心一致・近接・画面外、非操作、camera、drag、履歴、DPR 1/2、読込成功・失敗、統合 `unavailable`、305 / 320 / 375 pxを実行し、既存永続化回帰が派生状態をJSON・端末保存・履歴へ含めない。匿名合成データによる人間視認性確認は未実施。
+- AC-07: 未実装。実装後にCSV parser/file、正規入力、全体置換、履歴、既存保存互換の単体試験と `tests/browser/cargo-csv.spec.ts` を追加し、全行検証、全空白recordとquoted改行を含む1始まり論理record path、全固定code/path、決定的sort・重複排除・50件上限・入力値非反射、件数確認、取消・失敗保持、成功、Undo/Redo、再導出、30件上限、legacy 31〜1,000件、狭幅・focus・WebGL停止を実行する。Windows版Excel往復は別の人間証拠とする。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 - 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。

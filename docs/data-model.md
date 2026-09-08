@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](decisions/0033-equal-borderless-center-markers.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](decisions/0033-equal-borderless-center-markers.md)、[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.1の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.1の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例は実装済みである。仕様1.6.0のCSVテンプレート、30件新規作成上限、既定値統一、積荷・配置の一括置換は承認済み・未実装である。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
 
-仕様版 `1.5.1` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog、および保存しない重心派生表示の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `1.6.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog、保存しない重心派生表示、およびSchema上限内の一時CSV入力と新規作成上限の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -28,6 +28,8 @@ CLP JSONは次のトップレベル要素だけを持つ。
 
 ファイルサイズ上限は5 MiB（5,242,880 bytes）とし、サイズ超過はJSON解析前に拒否する。空の積荷・候補・配置配列は、入力途中のCLP保存を可能にするため許可する。
 
+Schema `0.1.0`の積荷・配置上限1,000件は既存JSON・端末保存の互換性境界である。手動追加とCSV一括作成は共通の新規作成上限30件を使う。既存31〜1,000件は有効なProjectとして読込、編集、削除、書出しでき、現在件数30以上では追加だけを拒否する。配置上限は1,000件のままとする。
+
 ## Identifiers and References
 
 - IDは1〜64文字のASCII英数字、`.`、`_`、`-`とし、先頭は英数字にする。
@@ -43,7 +45,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 
 向きコードは、元の `Length`、`Width`、`Height` を参照先コンテナの局所X、Y、Z軸へ割り当てる順序を表す。ADR 0007でいう世界X、Y、Zは、ADR 0010の採択以後このコンテナ局所軸を意味し、Three.js固有のworld軸を意味しない。
 
-| Code | Container X | Container Y | Container Z | Default |
+| Code | Container X | Container Y | Container Z | Schema `0.1.0` default metadata |
 | --- | --- | --- | --- | --- |
 | `LWH` | Length | Width | Height | Yes |
 | `WLH` | Width | Length | Height | Yes |
@@ -52,7 +54,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 | `WHL` | Width | Height | Length | No |
 | `HWL` | Height | Width | Length | No |
 
-積荷編集UIで利用者が指定する向き方針は天地無用だけである。天地無用ONは `LWH` / `WLH`、OFFは全6向きを `allowedOrientations` へ保存し、任意の部分集合を作るUIは提供しない。旧Schema `0.1.0` の有効な部分集合は、読込preflight合格後に、立置き2向きだけの部分集合ならONの2向き、それ以外ならOFFの全6向きへ非変異で正規化する。Z軸床面回転は常に許可し、天地無用はX軸回転だけを禁止する。
+表のDefault列は既存互換のため変更しないSchema annotationであり、アプリの新規作成既定ではない。手動追加とCSV作成の新規積荷は全6向きを明示的に保存する。積荷編集UIで利用者が指定する向き方針は天地無用だけである。天地無用ONは `LWH` / `WLH`、OFFは全6向きを `allowedOrientations` へ保存し、任意の部分集合を作るUIは提供しない。旧Schema `0.1.0` の有効な部分集合は、読込preflight合格後に、立置き2向きだけの部分集合ならONの2向き、それ以外ならOFFの全6向きへ非変異で正規化する。Z軸床面回転は常に許可し、天地無用はX軸回転だけを禁止する。
 
 ## Placement Coordinate Contract
 
@@ -123,7 +125,32 @@ JSON読込は次の順序で行い、すべて成功するまで現在CLPを変�
 
 どの段階で失敗しても現在CLP、履歴、未保存入力を保持し、ファイル名、秘密情報、入力全体をログへ出さず、利用者が修正できる固定理由を示す。読込成功時は旧CLPの履歴、draft、選択、camera、drag preview、Worker結果を再利用しない。
 
+## Transient Cargo CSV Contract
+
+CSVはProjectの永続形式またはbackupではなく、新しい積荷配列を作る一時入力である。固定名テンプレート `auto-clp-cargo-template.csv` はUTF-8 BOM、CRLF、見出し `name,length_mm,width_mm,height_mm,weight_kg` だけを持つ。読込はUTF-8のBOM有無、CRLF / LF、quoted fieldと二重引用符escapeを受け、見出し順・大小文字・列数を厳密に検証する。すべて空白のrecordだけを無視し、有効recordを1〜30件とする。
+
+各recordは論理順で `cargo-1`〜`cargo-N` を得る。重複名を許可し、既存の名前、寸法mm、重量kg→g変換を使い、`canSupportCargo=true`、`allowedOrientations`は全6向きとする。raw CSV、filename、cell値、parser状態はProject、JSON、IndexedDB、履歴へ保存しない。
+
+全recordと置換候補を一時検証した後、確認時だけ現在Projectの `schemaVersion`、`projectId`、`name`、`clearancesMm`、`containers`を保持し、`cargoes`を新しい配列へ置換して`placements=[]`とする。この一回のProject変更だけを履歴へ保存し、Undoは旧積荷・配置を完全復元する。取消、失敗、stale、busy、no-opではProjectと履歴を変更しない。
+
 実装は申告サイズと読取後のUTF-8実サイズをともに確認し、構造エラーを入力値や未知プロパティ名を反射しない安定したcode/pathへ正規化する。構造エラーは決定的な順序で重複を除き、最大50件を返す。書出しも明示的な保存対象だけへ射影した後、同じ構造・意味検証に合格した場合だけJSONを生成する。
+
+CSV issueの正規形は次のとおりとする。
+
+| Stage | Code | Path |
+| --- | --- | --- |
+| template出力能力・失敗 | `cargo-csv.download-unavailable` / `cargo-csv.download-failed` | `/template` |
+| file入力能力不足 | `cargo-csv.import-unavailable` | `/file` |
+| サイズ・読取・UTF-8・構文 | `cargo-csv.file-size` / `cargo-csv.read` / `cargo-csv.utf8` / `cargo-csv.syntax` | `/file` |
+| 固定見出し | `cargo-csv.header` | `/header` |
+| 有効record件数 | `cargo-csv.record-count` | `/rows` |
+| record列数 | `cargo-csv.column-count` | `/rows/{n}` |
+| 名前 | `cargo-csv.name-required` / `cargo-csv.name-length` / `cargo-csv.name-control` | `/rows/{n}/name` |
+| 寸法 | `input.mm-length` / `input.mm-format` / `input.mm-range` | `/rows/{n}/length_mm`、`/rows/{n}/width_mm`、`/rows/{n}/height_mm` |
+| 重量 | `input.kg-length` / `input.kg-format` / `input.kg-range` | `/rows/{n}/weight_kg` |
+| 置換後Projectの防御的検証 | `cargo-csv.candidate-invalid` | `/` |
+
+`{n}` は見出しを除き、decoded fieldがすべて空白のrecordを数えない1始まりの論理データrecord順である。quoted field内の改行を含む物理行番号はpathに使わない。issueはpath、codeのcode-unit順に並べ、同一code/pathを除いて最大50件とする。どのcode/pathにもfilename、見出し実値、cell値またはCSV本文を含めない。
 
 ## Module Boundaries
 
@@ -137,6 +164,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在CLPを変�
 | `domain/weight-balance` | 実装済み: 選択中コンテナの幾何中心、配置済み積荷の重量付き合成重心、空・計算不能を区別するBigInt・有理数による決定的な純粋計算 | React、Three.js、I/O、物理合否、永続化、表示丸め |
 | `domain/automatic-proposal` | 実装済み: Schema・意味検証済みProjectだけを受ける、一候補完全案の決定的DFS、目的関数順位、向き重複排除、最大2,048点の遅延列挙、候補10,000・要求1,000,000 attempt境界、cutoff/no-complete-plan、未確認理由付き完全案。現在配置を入力anchorにせず変更もしない | Schema検証、Worker、取消、stale、UI、Projectへの適用、外部通信 |
 | `application/project-import`、`application/project-command`、`application/automatic-proposal-apply` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド、自動提案をSchema・意味・正本物理判定で再検証して配置だけを深いcopyで一括置換する適用境界 | DOM、Three.jsオブジェクトの所有、探索の再実装 |
+| `persistence/cargo-csv`、`persistence/cargo-csv-file`、`application/cargo-csv-import` | 計画済み: UTF-8 CSVと固定template bytes、全recordの一時解析・正規化、決定的ID・既定値、30件上限、置換後Project検証、件数付き確認後の一回の積荷・配置置換 | JSON互換境界の変更、部分適用、式評価、DOM、Three.js、外部通信 |
 | `application/project-history` | 実装済み: 検証済みProject参照の最大100件履歴、stale base拒否、no-op除外、undo/redo、分岐時のredo破棄 | DOM、Three.jsオブジェクト、I/O、Projectの再検証 |
 | `application/project-persistence` | 実装済み: 永続化用の検証済み直列化、読込失敗段階の固定code化、全候補preflight後だけのCLP準備 | DOM、Three.jsオブジェクト、直接IndexedDB操作 |
 | `persistence/project-json`、`persistence/project-file` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し、標準File読込source、固定名Blob download | 3D描画、直接UI更新、CLP名のファイル名反映 |
@@ -179,6 +207,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在CLPを変�
 - JSON SchemaがDraft 2020-12として解析でき、正規版、上限、向き列挙が設計値と一致する。
 - 有効、構文不正、未対応版、追加項目、範囲外、重複ID、参照切れ、不許可向き、開口超過、重量合計オーバーフローを独立テストする。
 - 読込失敗時に既存状態が変わらないことを確認する。
+- CSVのBOM・改行・quoted field・固定見出し・UTF-8・サイズ・1/30/31件、値域、決定的ID、既定値、全体rollback、確認、Undo/Redo、旧31〜1,000件互換を実装時に検証する。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 - 合成重心は単一・不均等重量、奇数寸法、全6向き、負座標、最大値、入力順、空、参照不整合で決定的かつ非変異に計算し、赤・黄ドットと凡例は非操作、色以外の同値、狭幅、camera、コンテナ切替、Undo/Redo、保存・読込後の再計算を満たす。ドット、凡例、計算状態がJSONまたは端末保存へ入らないことを確認する。
 
