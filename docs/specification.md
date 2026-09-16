@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-09-16
-- Specification version: 1.11.0
+- Specification version: 1.12.0
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -91,7 +91,7 @@
 - Drawer外の背景相当領域をクリックするとDrawerだけを閉じ、同じclickで背面のbutton、履歴またはscene操作を発火させない。close buttonおよびEscapeと同様、未実行の端末保存削除確認と新規CLP確認を取り消し、page scrollを変えずApplication Barのmenu buttonへfocusを戻す。進行中の永続化処理はDrawerを閉じても中断しない。
 - `操作方法` はDrawerを閉じてから独立した読み取り専用dialogを開き、3Dの積荷選択、空いた領域の左dragによる視点回転、Shift付き左drag・右drag・Ctrl付き左dragによる平行移動、wheel zoom、全体表示、荷室外積荷の寄せ、積荷drag・視点基準の矢印キー調整・回転、履歴、判定、座標・積荷編集の入口を簡潔に示す。Ctrl中は積荷上から開始した左dragも積荷移動ではなくcamera平行移動を優先し、cursorを十字矢印相当へ変える。touchは積荷選択とpage scrollを主とし、正確な座標・情報編集は下段button/dialogを案内する。版確認の `使用上の重要事項` とは分離し、CLP、履歴、保存、camera、判定状態を変更しない。
 - 旧3Dコンテナcardの外枠と見出しは置かない。コンテナtablistは3D viewportの直前、canvasおよびviewport overlayの外側上部へ一行で置き、コンテナ数または名前が幅を超える場合はExcelのsheet tab相当の左右buttonと横scrollで表示範囲だけを移動する。tabは折り返さず、active tabを表示範囲へ入れ、左右矢印・Home・End・Enter・Space、touch・trackpadを提供する。tabの選択だけがコンテナを切り替え、scroll buttonはコンテナを切り替えない。tablistはcanvasを覆わず、その表示・scrollでcanvasの寸法またはpage位置を変えない。
-- 荷室外積荷の寄せ、Undo/Redo、物理判定lamp、X/Z回転、全体表示toolbarはviewport内上段の固定rowへ置く。寄せbuttonはUndoの左にMaterial Design Iconsの `arrow-collapse-all` 相当iconで置き、全未配置積荷の現在向きを保持したまま、選択中コンテナの負X側へ重ならない決定的gridで再整列する。寄せ実行前後でcamera位置、注視点、視点方向、縮尺を変えない。寄せはsession内の荷室外位置だけを変え、Project、保存、Undo/Redo履歴へ含めない。物理判定lampの常設表示は、判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とする状態別のicon-only buttonとし、色だけに依存しない。accessible nameとtitleに状態名、不適合・未確認件数、詳細を開く操作を持たせる。クリックすると現在のコンテナの理由をmodal dialogで開き、閉じても判定を継続する。
+- 荷室外積荷の寄せ、側面・内壁スナップ切替、Undo/Redo、物理判定lamp、X/Z回転、全体表示toolbarはviewport内上段の固定rowへ置く。寄せbuttonはUndoの左にMaterial Design Iconsの `arrow-collapse-all` 相当iconで置き、全未配置積荷の現在向きを保持したまま、選択中コンテナの負X側へ重ならない決定的gridで再整列する。寄せ実行前後でcamera位置、注視点、視点方向、縮尺を変えない。寄せはsession内の荷室外位置だけを変え、Project、保存、Undo/Redo履歴へ含めない。スナップ切替はMaterial Design Iconsの `adjust` 相当icon-only button、既定ON、session限定とし、積荷側面・内壁のX/Y fitだけを切り替える。物理判定lampの常設表示はMaterial Design Iconsの `information-box-outline` 相当iconを全状態で使い、判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とするicon-only buttonとし、色だけに依存しない。accessible nameとtitleに状態名、不適合・未確認件数、詳細を開く操作を持たせる。クリックすると現在のコンテナの理由をmodal dialogで開き、閉じても判定を継続する。
 - 選択中コンテナの内寸から求めた幾何中心を赤い10 CSS pxのドット、同コンテナへ配置済みの積荷だけから求めた合成重心を黄色い10 CSS pxのドットとして3D viewportへ重ねる。両ドットと凡例swatchには白い外枠を付けない。viewport内へ投影できる点は積荷より前面に表示し、pointer hit、focus、積荷選択、drag、camera、履歴、dirty状態を変えない。黄色を赤より上に重ね、二点の画面上の中心が完全一致する場合は座標をずらしたり赤を露出させたりせず、黄色が赤を完全に覆うことを許容する。近接して表示領域が重なる場合も各投影中心を維持し、重なった部分では黄色を前面にする。色だけに依存しない凡例と読み上げ用の同値を一度だけ併設し、赤は異常または不適合、黄は警告または未確認を意味しない。X/Y/Z差または距離の数値は表示しない。
 - 合成重心の正規3D位置がcameraの表示範囲外なら、黄色いドットを画面端へ移動またはclampせず、cameraも自動変更しない。黄色いドットは画面外のままとし、凡例へ非数値の `現在重心は画面外` を示す。orbit、pan、zoomまたは荷室全体表示で表示範囲が変わった時は同じ正規位置から再投影する。
 - 全CLP積荷を名前またはIDで検索する入力、積荷selector、その右側の選択状態dot、その下の固定context action rowをviewport下部へoverlayする。検索結果件数は表示しない。selectorの各積荷は `積荷名 — 長さ×幅×高さ mm／重量 kg` とし、kgは正規g値を最大小数第3位・不要な末尾0なしで表示する。選択状態dotは現在のコンテナへ配置済みを青、未配置を黄、別のコンテナへ配置済みを緑、未選択を灰とし、読み上げ名とtitleで色以外の同値を持つ。未選択でもrowの高さを予約し、選択積荷名、配置状態、配置済みなら正確な最小角X/Y/Zをcompactに示す。未配置では座標入力・積荷編集・積荷削除、現在のコンテナへ配置済みでは座標微調整・積荷編集・荷室から外す、別のコンテナへ配置済みでは配置先コンテナの表示・積荷編集を提供する。配置取り外しと積荷定義削除は別button、別確認、別履歴とする。
@@ -120,9 +120,9 @@
 - 任意のコンテナで荷室外積荷を動かすと同じcargo-global anchorを更新し、別のコンテナでも同じ側・gap・接線方向関係として表示する。一つの積荷の移動・回転、他積荷の配置・削除、コンテナ切替で他のanchorを再計算しない。配置中のanchorは隠して保持し、drag-outのUndo/Redoで再利用し、積荷定義削除時だけ破棄する。anchor、選択、tab、共有cameraはCLP、JSON、端末保存、履歴、物理判定へ含めない。
 - cameraはコンテナ別に保存せず、全コンテナで一つの視線方向・上下角度・荷室全体表示に対する距離倍率を共有する。tab切替時は切替先の荷室中心と大きさへrebaseして同じ視点関係を維持し、コンテナ寸法差で荷室全体が画面外へ失われないようにする。全体表示は共有cameraをactive containerの既定へresetする。
 - fine pointerの床面dragは、scene差分を整数mmのX/Yへ量子化した後、向き適用後のX/Y占有範囲を生の荷室床面 `[0, L] × [0, W]` に対して `xy-contained`、`partial`、`outside` の三状態へ分類する。両軸で正の共通長を持つが完全包含でない場合を `partial`、面・辺・点の接触を含め一方でも共通長0の場合を `outside` とし、Zは分類に使わない。X/Yが変わらないno-opは分類より先に扱い、CLP、履歴、session poseを変更しない。
-- 未配置積荷のdropが `xy-contained` または `partial` なら、量子化したX/Yと向き、および後述の床・支持面snapで決めたZを使って一回の `placement.add` とする。`partial` は修正途中の境界不適合配置として直ちに保存し、物理判定の再計算と不適合表示へ渡す。`outside` はProjectと履歴を変更せずsessionの作業位置だけを更新する。
-- 配置済み積荷のdropが `xy-contained` または `partial` なら、量子化したX/Yと向き、および床・支持面snapで決めたZを使って一回の `placement.drag-xy` とする。`outside` ならdrop位置と向きをsessionへ記録して一回の `placement.delete` とする。Undoは元配置を復元し、Redoは同じ外側作業位置へ戻す。失敗、取消、staleはstatusまたはpreviewを戻す以外、Project、履歴、session poseを変更しない。この三状態分類は3Dのfine-pointer dragだけに適用し、座標フォーム、JSON読込、回転、積荷・コンテナ編集、既存Project配置を自動的に再分類しない。
-- fine-pointer dragで積荷footprintが荷室床面と正面積で重なるとき、支持可能な積荷上面がなければZ=0の床へsnapする。支持可能な上面とX/Yで正面積が重なる場合は最も高い上面へZをsnapする。対象底面をX/Y両軸で収容できる単一上面がある場合は、その上面内に完全包含される範囲へX/Yを制限する。単一上面が対象底面より一軸でも小さい場合はZだけを仮snapし、X/Yは制限しない。荷室外ではZを自動変更しない。支持不可積荷の上面だけにはsnapしない。床または上面Zを決めた後、同じ最小Zにある固定積荷と直交軸で正面積が重なる側面までの距離が20 mm以内なら、最小移動量のXまたはY側面へ隙間0 mmでfitする。同値はX、積荷ID、符号の決定順で選び、fitで移動グループが別の固定積荷と立体重複する候補は採用しない。
+- 未配置積荷のdropが `xy-contained` または `partial` なら、量子化したX/Yと向き、および後述の床・支持面snapで決めたZを使って一回の `placement.add` とする。`partial` は修正途中の境界不適合配置として直ちに保存し、物理判定の再計算と不適合表示へ渡す。`outside` はZ=0へ正規化したsessionの作業位置だけを更新し、Projectと履歴を変更しない。
+- 配置済み積荷のdropが `xy-contained` または `partial` なら、量子化したX/Yと向き、および床・支持面snapで決めたZを使って一回の `placement.drag-xy` とする。`outside` ならZ=0へ正規化したdrop位置と向きをsessionへ記録して一回の `placement.delete` とする。Undoは元配置を復元し、Redoは同じ外側床面位置へ戻す。失敗、取消、staleはstatusまたはpreviewを戻す以外、Project、履歴、session poseを変更しない。この三状態分類は3Dのfine-pointer dragだけに適用し、座標フォーム、JSON読込、回転、積荷・コンテナ編集、既存Project配置を自動的に再分類しない。
+- fine-pointer dragで積荷footprintが荷室床面と正面積で重なるとき、支持可能な積荷上面がなければZ=0の床へsnapする。支持可能な上面とX/Yで正面積が重なる場合は最も高い上面へZをsnapする。対象底面をX/Y両軸で収容できる単一上面がある場合は、その上面内に完全包含される範囲へX/Yを制限する。単一上面が対象底面より一軸でも小さい場合はZだけを仮snapし、X/Yは制限しない。荷室外はZ=0の作業床面へsnapする。支持不可積荷の上面だけにはsnapしない。側面・内壁スナップがONの場合、床または上面Zを決めた後、同じ最小Zにある固定積荷と直交軸で正面積が重なる側面およびコンテナ内壁4面までの距離が50 mm以内なら、最小移動量のXまたはY面へ隙間0 mmでfitする。同値は移動量、X軸、内壁、積荷ID・面方向の決定順で選び、fitで移動グループが別の固定積荷と立体重複する候補は採用しない。OFFでも床・支持上面へのZ snapと単一支持面内clampは維持する。
 - 単一支持グループをdragする場合は、移動開始時に根と全子孫を確定してから床・支持面snap、側面fit、立体重複を解決し、移動グループ自身の移動前配置を支持・fit・衝突候補に含めない。
 - 配置済みの選択積荷へ3D canvasのfocusがある間、修飾キーなしの矢印キーは、現在cameraから画面水平に最も強く投影されるコンテナX/Y軸を左右、残る軸を上下へ割り当て、対応する正規座標を1回につき1 mm変更する。Z、向き、cameraは変更せず、単一支持子孫を同じ差分で連動させる。コンテナ境界、支持面端、支持喪失では止めず修正途中の座標として保存するが、移動グループ外の積荷との正体積重複は拒否し、面接触までは許容する。入力欄、選択欄、dialogまたは3D外の矢印キーを奪わない。
 - 矢印キーの通常押下または同一keyの長押しrepeatはmeshをpreviewし、keyを離した時に一回だけProject全体を検証・commitして一回の `placement.keyboard-nudge` Undo/Redo対象とする。衝突で拒否されたstepは直前のpreview位置を維持し、Escape、window blur、描画更新、保存失敗またはstaleでは未確定previewを元に戻す。
@@ -276,7 +276,7 @@
 - 対応ブラウザと最低GPU性能。
 - 実務利用者試用の評価担当、日程、合否記録。
 
-自動提案の将来技術契約はADR 0004、Phase 1での公開延期とDrawer入口はADR 0029、正規単位と値域とPhase 1の開口部モデルはADR 0005・0006、旧積荷別許可向きはADR 0007、支持と荷重の基礎はADR 0008、軸別固定隙間の意味はADR 0011、物理制約の独立診断と集約はADR 0012、床突き抜けの専用診断はADR 0014、3D作業面・軸別回転はADR 0017、drag三状態分類とdialog編集はADR 0018、支持面snapと支持区分の改定はADR 0019、実行可能な開口診断とdrag集中表示はADR 0020、固定回転toolbarと軸iconはADR 0021、天地無用だけの向き方針と旧データ正規化はADR 0022、WebGL 2必須運用と読み取り専用JSON救出はADR 0023、利用者向けCLP用語はADR 0024、3D主作業面を優先するApplication ShellはADR 0025、積荷合成重心の参考可視化はADR 0032、荷室外積荷の寄せ・選択状態・wheel/Ctrl操作はADR 0039、移動グループを除外するdrag判定・20 mm側面fit・視点基準1 mm矢印調整はADR 0041で確定した。匿名の合成受入契約は `acceptance.md` を正とする。完全な搬入経路、積荷別上載荷重、支持位置または範囲、積荷個別の実重心、許容支持間隔、支持反力、軸重、床荷重、荷崩れ、固縛、動荷重が代表ケースで必要になった場合は、後継ADRで範囲を拡張する。
+自動提案の将来技術契約はADR 0004、Phase 1での公開延期とDrawer入口はADR 0029、正規単位と値域とPhase 1の開口部モデルはADR 0005・0006、旧積荷別許可向きはADR 0007、支持と荷重の基礎はADR 0008、軸別固定隙間の意味はADR 0011、物理制約の独立診断と集約はADR 0012、床突き抜けの専用診断はADR 0014、3D作業面・軸別回転はADR 0017、drag三状態分類とdialog編集はADR 0018、支持面snapと支持区分の改定はADR 0019、実行可能な開口診断とdrag集中表示はADR 0020、固定回転toolbarと軸iconはADR 0021、天地無用だけの向き方針と旧データ正規化はADR 0022、WebGL 2必須運用と読み取り専用JSON救出はADR 0023、利用者向けCLP用語はADR 0024、3D主作業面を優先するApplication ShellはADR 0025、積荷合成重心の参考可視化はADR 0032、荷室外積荷の寄せ・選択状態・wheel/Ctrl操作はADR 0039、移動グループを除外するdrag判定・20 mm側面fit・視点基準1 mm矢印調整はADR 0041、荷室外Z=0・50 mm積荷側面／内壁fit・既定ONの切替・物理判定iconはADR 0042で確定した。匿名の合成受入契約は `acceptance.md` を正とする。完全な搬入経路、積荷別上載荷重、支持位置または範囲、積荷個別の実重心、許容支持間隔、支持反力、軸重、床荷重、荷崩れ、固縛、動荷重が代表ケースで必要になった場合は、後継ADRで範囲を拡張する。
 
 ## Specification Change Rules
 

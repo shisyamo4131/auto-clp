@@ -80,6 +80,23 @@ function ArrowCollapseAllIcon() {
   );
 }
 
+function AdjustIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      data-icon="adjust"
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+    >
+      <path
+        fill="currentColor"
+        d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9A3,3 0 0,1 15,12Z"
+      />
+    </svg>
+  );
+}
+
 interface SceneWorkspaceProps {
   readonly externalInteractionActive: boolean;
   readonly forceInitialRenderError?: boolean;
@@ -310,6 +327,7 @@ export function SceneWorkspace({
   const [selectedCargoId, setSelectedCargoId] = useState<string>();
   const [cargoQuery, setCargoQuery] = useState("");
   const [canvasStatus, setCanvasStatus] = useState("");
+  const [faceSnapEnabled, setFaceSnapEnabled] = useState(true);
   const dragPreviewStatusRef = useRef("");
   const dragFollowerGroupRef = useRef<
     | {
@@ -731,6 +749,7 @@ export function SceneWorkspace({
         projectedCargo.orientation,
         rawPositionMm,
         [cargoId, ...followerCargoIds],
+        faceSnapEnabled,
       );
       const positionMm = resolved?.positionMm ?? rawPositionMm;
       const supporterNames = (resolved?.supporterIds ?? [])
@@ -750,13 +769,15 @@ export function SceneWorkspace({
               : resolved?.disposition === "floor"
                 ? "荷室床面にスナップ中です。"
                 : "荷室外の作業スペースを移動中です。";
-      const faceSnapName = resolved?.faceSnap === undefined
+      const faceSnap = resolved?.faceSnap;
+      const faceSnapMessage = faceSnap === undefined
         ? undefined
-        : project.cargoes.find((candidate) => candidate.id === resolved.faceSnap?.cargoId)
-            ?.name ?? resolved.faceSnap.cargoId;
-      const message = faceSnapName === undefined
+        : faceSnap.kind === "container-wall"
+          ? "コンテナ内壁にフィットしています。"
+          : `${project.cargoes.find((candidate) => candidate.id === faceSnap.cargoId)?.name ?? faceSnap.cargoId}の側面にフィットしています。`;
+      const message = faceSnapMessage === undefined
         ? baseMessage
-        : `${baseMessage} ${faceSnapName}の側面にフィットしています。`;
+        : `${baseMessage} ${faceSnapMessage}`;
       const groupMessage =
         followerCargoIds.length === 0
           ? message
@@ -779,7 +800,7 @@ export function SceneWorkspace({
         followerCargoIds,
       };
     },
-    [effectiveContainerId, project, projection],
+    [effectiveContainerId, faceSnapEnabled, project, projection],
   );
 
   const handleCargoNudgeStateChange = useCallback((active: boolean) => {
@@ -1486,6 +1507,24 @@ export function SceneWorkspace({
                   onClick={handleCompactStaging}
                 >
                   <ArrowCollapseAllIcon />
+                </button>
+                <button
+                  type="button"
+                  className="viewport__snap-toggle"
+                  data-active={faceSnapEnabled ? "true" : "false"}
+                  aria-pressed={faceSnapEnabled}
+                  aria-label={`側面・内壁スナップを${faceSnapEnabled ? "OFF" : "ON"}にする`}
+                  title={`側面・内壁スナップ: ${faceSnapEnabled ? "ON" : "OFF"}`}
+                  disabled={interactionActive || externalInteractionActive}
+                  onClick={() => {
+                    setFaceSnapEnabled((current) => {
+                      const next = !current;
+                      setCanvasStatus(`側面・内壁スナップを${next ? "ON" : "OFF"}にしました。`);
+                      return next;
+                    });
+                  }}
+                >
+                  <AdjustIcon />
                 </button>
                 <ProjectHistoryControls {...historyControls} compact />
               </>

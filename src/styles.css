@@ -1078,8 +1078,14 @@ h1 {
   line-height: 1;
 }
 
-.viewport__compact-staging svg {
+.viewport__compact-staging svg,
+.viewport__snap-toggle svg {
   display: block;
+}
+
+.viewport__snap-toggle[data-active="false"] {
+  border-color: rgba(88, 112, 136, 0.48);
+  color: #667887;
 }
 
 .viewport__reset-view-icon {
@@ -2258,14 +2264,10 @@ legend {
 }
 
 .physical-validation-lamp__icon {
-  display: grid;
-  width: 1.25rem;
-  height: 1.25rem;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  place-items: center;
-  font-weight: 900;
-  line-height: 1;
+  display: block;
+  width: 1.45rem;
+  height: 1.45rem;
+  fill: currentColor;
 }
 
 .modal-shell .physical-validation {

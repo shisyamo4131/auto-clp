@@ -198,35 +198,35 @@ test("keeps none, loading, unverified, and unavailable lamp states icon-only and
   const icon = lamp.locator(".physical-validation-lamp__icon");
 
   await expect(lamp).toHaveAttribute("data-status", "neutral");
-  await expect(icon).toHaveText("○");
+  await expect(icon).toHaveAttribute("data-icon", "information-box-outline");
   await expect(lamp).toHaveAttribute("title", /判定対象なし.*詳細を開く/);
-  expect((await lamp.textContent())?.trim()).toBe("○");
+  expect((await lamp.textContent())?.trim()).toBe("");
 
   await addContainer(page, "lamp状態候補");
   await expect(lamp).toHaveAttribute("data-status", "neutral");
-  await expect(icon).toHaveText("↻");
+  await expect(icon).toHaveAttribute("data-icon", "information-box-outline");
   await expect(lamp).toHaveAttribute("title", /判定中.*詳細を開く/);
-  expect((await lamp.textContent())?.trim()).toBe("↻");
+  expect((await lamp.textContent())?.trim()).toBe("");
 
   await page.evaluate(() => {
     (globalThis as unknown as { __lampWorkerMode: string }).__lampWorkerMode = "unverified";
   });
   await addCargo(page, "lamp未確認積荷");
   await expect(lamp).toHaveAttribute("data-status", "unverified");
-  await expect(icon).toHaveText("△");
+  await expect(icon).toHaveAttribute("data-icon", "information-box-outline");
   await expect(lamp).toHaveAttribute("aria-label", /未確認.*不適合0件、未確認1件.*詳細を開く/);
   await expect(lamp).toHaveAttribute("title", /未確認.*不適合0件.*未確認1件.*詳細を開く/);
-  expect((await lamp.textContent())?.trim()).toBe("△");
+  expect((await lamp.textContent())?.trim()).toBe("");
 
   await page.evaluate(() => {
     (globalThis as unknown as { __lampWorkerMode: string }).__lampWorkerMode = "unavailable";
   });
   await addCargo(page, "lamp判定不能積荷");
   await expect(lamp).toHaveAttribute("data-status", "invalid");
-  await expect(icon).toHaveText("×");
+  await expect(icon).toHaveAttribute("data-icon", "information-box-outline");
   await expect(lamp).toHaveAttribute("aria-label", /判定不能.*詳細を開く/);
   await expect(lamp).toHaveAttribute("title", /判定不能.*詳細を開く/);
-  expect((await lamp.textContent())?.trim()).toBe("×");
+  expect((await lamp.textContent())?.trim()).toBe("");
 });
 
 test("masks old generations and ignores terminated workers and stale page requestIds", async ({

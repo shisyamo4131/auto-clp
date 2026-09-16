@@ -200,6 +200,16 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 5. 通常押下または長押しrepeatはkey releaseまでpreviewし、一回の `placement.keyboard-nudge` 履歴としてUndo/Redoできる。衝突拒否、Escape、window blur、描画更新、保存失敗、staleは未確定位置を残さない。
 6. input、select、dialog、3D外focusの矢印キーを奪わず、操作方法dialogと読み上げ説明が矢印調整のfocus条件、視点基準、1 mm単位を案内する。
 
+## AC-12 Grounded Staging, Inner-Wall Fit, and Snap Toggle
+
+このケースは仕様1.12.0・ADR 0042に従い、AC-11の荷室外ZとX/Y fit距離を更新する。ProjectとSchema `0.1.0`は変更しない。
+
+1. 積荷上面にある積荷を完全に荷室外へdragすると、previewと確定session位置のZは0 mmになる。配置済みなら一回の `placement.delete` として確定し、Undoは元の積層配置、Redoは同じ荷室外床面位置を復元する。
+2. 床または支持上面のZ決定後、同じ最小Zの固定積荷側面とコンテナ内壁4面をX/Y fit候補にする。距離50 mmでは隙間0 mmへfitし、51 mmではfitしない。候補は移動量、X軸、内壁、積荷ID・面方向の順で決定し、正体積重複する候補は採用しない。
+3. viewport toolbarのMaterial Design Icons `adjust` 相当buttonは起動時ONで、押下ごとに積荷側面・内壁へのX/Y fitだけをOFF / ONできる。OFFでも床・支持上面へのZ snapと単一支持面内clampは有効である。
+4. 切替はUI sessionだけに保持し、Project、JSON、端末保存、Undo/Redo履歴へ含めない。ページ再読込または新しい実行セッションでは既定ONへ戻る。
+5. 物理判定buttonはMaterial Design Icons `information-box-outline` 相当iconへ統一し、状態別の色、accessible name、title、件数、dialogを維持する。
+
 ## Evidence and Completion
 
 - 自動証拠: domainと表示の単体試験、Worker経由のブラウザ試験、履歴、IndexedDB、JSON往復、WebGL必須能力ゲートと読み取り専用救出回帰を個別の終了コードで記録する。
@@ -215,6 +225,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - 2026-09-16の利用者試用では、20件のCSV一括登録と一回のUndoによる元状態復元を確認した。これはWindows版Excelでのtemplate往復、非UTF-8拒否、正式fixtureまたは実務利用者受入の証拠ではない。
 - 仕様1.10.2の自動証拠: typecheck、lint、単体32ファイル1,017件、ブラウザ106件、build、データ契約、ガバナンス、プロジェクト検査に合格した。コンテナ0件のviewport中央案内、`登録` からの既存dialog表示、busy時無効化、テンプレートインポートだけの理由付き無効化、テンプレートダウンロード・JSON読込互換、コンテナ登録後のCSV既存回帰を確認した。
 - 仕様1.11.0の自動証拠: typecheck、lint、単体32ファイル1,024件、ブラウザ107件、build、データ契約に合格した。移動グループ旧位置の候補除外、床・支持上面の20 / 21 mm側面fit、支持喪失・境界外を許容する1 mm矢印調整、固定積荷との衝突停止、視点軸対応、3回repeatの一回履歴、Escape取消、Undo/Redo、操作方法copyを回帰した。積層fixtureの実pointer差分確認は人間確認として残す。
+- 仕様1.12.0の自動証拠: typecheck、lint、単体32ファイル1,030件、ブラウザ107件、build、データ契約、ガバナンス、プロジェクト検査に合格した。荷室外Z=0、内壁4面の50 mm境界、51 mm非fit、積荷側面との同距離時の内壁優先、OFF時のX/Y非fitとZ snap継続、`adjust` buttonの既定ON・切替・非履歴、操作方法copy、`information-box-outline` 相当SVGと状態表示を回帰した。積層fixtureを使う実pointerの荷室外dragとUndo/Redoは人間確認として残す。
 - 仕様1.7.0単一支持グループ移動自動証拠: typecheck、lint、単体32ファイル1,014件、ブラウザ103件、buildに合格。3段再帰移動、回転・支持不可・複数支持の非連動、子孫座標失敗のrollback、配置解除拒否、一回のUndo、支持不可専用理由と関連積荷名、CSV確認文を回帰した。3D dragの連動preview・取消・dropは実装され既存drag回帰に合格したが、積層fixtureでの人間差分確認は未実施である。
 - 仕様1.8.0積荷制約一覧編集の自動証拠: typecheck、lint、単体32ファイル1,016件、ブラウザ104件、build、データ契約・ガバナンス・プロジェクト検査に合格。保存値反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表記一致、一回のUndo、dirty確認、305 / 320 / 375 px、支持不可理由を回帰した。内蔵ブラウザでの人間差分確認は未実施である。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
@@ -236,6 +247,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - AC-08: `src/application/project-command.test.ts`、`src/domain/validation.test.ts`、`src/ui/physical-validation-view.test.ts`、`src/workers/physical-validation-worker-protocol.test.ts` と `tests/browser/placement.spec.ts` が、3段再帰移動、回転・支持不可・複数支持の非連動、座標失敗の原子的rollback、配置解除拒否、一回のUndo、専用理由と関連積荷名を含む表示を検証する。`src/scene/SceneWorkspace.tsx` と `src/scene/ThreeViewport.tsx` の連動preview・取消実装は既存の実pointer drag回帰を通すが、積層fixtureの実pointer差分確認は人間確認として残す。
 - AC-09: `src/application/project-command.test.ts` と `tests/browser/input.spec.ts` が、制約値の反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表示一致、一回のUndo、dirty破棄と狭幅を検証し、既存物理表示回帰が「上乗せ禁止」理由を検証する。
 - AC-11: `src/scene/project-scene.test.ts` が移動グループ除外、20 / 21 mm境界、床・支持上面fit、支持喪失・境界外、面接触と正体積衝突、screen投影から一軸1 mmへの対応を検証する。`tests/browser/scene.spec.ts` がcanvas focus、3回repeatの一回履歴、Escape取消、Undo/Redoを実行し、`tests/browser/persistence.spec.ts` が操作方法copyを検証する。積層fixtureでの短距離実pointer dragと視点変更後の方向理解は人間確認として残す。
+- AC-12: `src/scene/project-scene.test.ts` が荷室外Z=0、内壁4面、50 / 51 mm境界、OFF時のX/Y非fitとZ snap継続を検証する。`tests/browser/scene.spec.ts` が `adjust` buttonの既定ON、OFF / ON、非履歴を実行し、`tests/browser/persistence.spec.ts` が操作方法copy、`tests/browser/scene-workspace-v12.spec.ts` と `tests/browser/physical-validation-worker.spec.ts` が `information-box-outline` 相当SVGと状態表示を検証する。積層fixtureを使う実pointerの荷室外dragとUndo/Redoは人間確認として残す。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 - 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。

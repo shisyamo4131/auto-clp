@@ -47,6 +47,22 @@ interface PageSelection {
   readonly unverifiedOffset: number;
 }
 
+function InformationBoxOutlineIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="physical-validation-lamp__icon"
+      data-icon="information-box-outline"
+      viewBox="0 0 24 24"
+    >
+      <path
+        fill="currentColor"
+        d="M13 9H11V7H13V9M13 17H11V11H13V17M5 3H19C20.1 3 21 3.89 21 5V19C21 19.53 20.79 20.04 20.41 20.41C20.04 20.79 19.53 21 19 21H5C4.47 21 3.96 20.79 3.59 20.41C3.21 20.04 3 19.53 3 19V5C3 3.89 3.89 3 5 3M19 19V5H5V19H19Z"
+      />
+    </svg>
+  );
+}
+
 interface PanelSummary {
   readonly status: PhysicalValidationViewStatus | "loading";
   readonly statusLabel: string;
@@ -108,17 +124,6 @@ export function PhysicalValidationLamp({
   const statusLabel = summary.status === "valid"
     ? "実装済み確認項目内で問題なし"
     : summary.statusLabel;
-  const icon = summary.status === "none"
-    ? "○"
-    : summary.status === "loading"
-      ? "↻"
-      : summary.status === "valid"
-        ? "✓"
-        : summary.status === "unverified"
-          ? "△"
-          : summary.status === "unavailable"
-            ? "×"
-            : "!";
   return (
     <button
       id="physical-validation-lamp"
@@ -133,7 +138,7 @@ export function PhysicalValidationLamp({
         if (!disabled) onOpen();
       }}
     >
-      <span aria-hidden="true" className="physical-validation-lamp__icon">{icon}</span>
+      <InformationBoxOutlineIcon />
     </button>
   );
 }

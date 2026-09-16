@@ -389,8 +389,8 @@ test("keeps the physical controller fresh while its dialog is closed", async ({ 
     "title",
     /実装済み確認項目内で問題なし.*不適合0件.*未確認0件.*詳細を開く/,
   );
-  await expect(lamp.locator(".physical-validation-lamp__icon")).toHaveText("✓");
-  expect((await lamp.textContent())?.trim()).toBe("✓");
+  await expect(lamp.locator('svg[data-icon="information-box-outline"]')).toBeVisible();
+  expect((await lamp.textContent())?.trim()).toBe("");
   await expect(lamp.getByText("実装済み確認項目内で問題なし", { exact: true })).toHaveCount(0);
   await openPhysicalValidation(page);
   await expect(page.getByRole("dialog", { name: "物理判定" })).toContainText(
@@ -403,8 +403,8 @@ test("keeps the physical controller fresh while its dialog is closed", async ({ 
   await expect(lamp).toHaveAttribute("data-status", "invalid");
   await expect(lamp).toHaveAttribute("aria-label", /不適合1件、未確認0件/);
   await expect(lamp).toHaveAttribute("title", /不適合.*不適合1件.*未確認0件.*詳細を開く/);
-  await expect(lamp.locator(".physical-validation-lamp__icon")).toHaveText("!");
-  expect((await lamp.textContent())?.trim()).toBe("!");
+  await expect(lamp.locator('svg[data-icon="information-box-outline"]')).toBeVisible();
+  expect((await lamp.textContent())?.trim()).toBe("");
   await openPhysicalValidation(page);
   await expect(page.getByRole("dialog", { name: "物理判定" })).toContainText("不適合理由（1件）");
 });

@@ -23,7 +23,7 @@ import {
 
 export const MM_TO_SCENE_UNIT = 0.001;
 export const STAGING_GAP_MM = 100;
-export const FACE_SNAP_THRESHOLD_MM = 20;
+export const FACE_SNAP_THRESHOLD_MM = 50;
 
 const FLOOR_QUARTER_TURN_ORIENTATION = {
   LWH: "WLH",
@@ -498,10 +498,17 @@ export type SupportSnapDisposition =
 
 export interface SupportSnapResult {
   readonly disposition: SupportSnapDisposition;
-  readonly faceSnap?: {
-    readonly axis: "x" | "y";
-    readonly cargoId: string;
-  };
+  readonly faceSnap?:
+    | {
+        readonly axis: "x" | "y";
+        readonly kind: "cargo";
+        readonly cargoId: string;
+      }
+    | {
+        readonly axis: "x" | "y";
+        readonly kind: "container-wall";
+        readonly wall: "x-min" | "x-max" | "y-min" | "y-max";
+      };
   readonly positionMm: PositionMm;
   readonly supporterIds: readonly string[];
 }
@@ -622,14 +629,64 @@ function resolveFaceSnap(
   fixedCandidates: readonly PlacedCargoBounds[],
 ): Pick<SupportSnapResult, "faceSnap" | "positionMm"> {
   const bounds = placementBounds(cargo, { orientation, positionMm });
-  const candidates = fixedCandidates.flatMap((candidate) => {
+  const container = project.containers.find((candidate) => candidate.id === containerId);
+  if (container === undefined) return { positionMm };
+  type FaceSnapCandidate = {
+    readonly axis: "x" | "y";
+    readonly deltaMm: number;
+    readonly positionMm: PositionMm;
+    readonly snap: NonNullable<SupportSnapResult["faceSnap"]>;
+    readonly targetOrder: string;
+  };
+  const wallCandidates = ([
+    {
+      axis: "x",
+      deltaMm: -bounds.min.xMm,
+      positionMm: { ...positionMm, xMm: positionMm.xMm - bounds.min.xMm },
+      snap: { axis: "x", kind: "container-wall", wall: "x-min" },
+      targetOrder: "0:x-min",
+    },
+    {
+      axis: "x",
+      deltaMm: container.internalDimensionsMm.lengthMm - bounds.max.xMm,
+      positionMm: {
+        ...positionMm,
+        xMm:
+          positionMm.xMm +
+          container.internalDimensionsMm.lengthMm -
+          bounds.max.xMm,
+      },
+      snap: { axis: "x", kind: "container-wall", wall: "x-max" },
+      targetOrder: "0:x-max",
+    },
+    {
+      axis: "y",
+      deltaMm: -bounds.min.yMm,
+      positionMm: { ...positionMm, yMm: positionMm.yMm - bounds.min.yMm },
+      snap: { axis: "y", kind: "container-wall", wall: "y-min" },
+      targetOrder: "0:y-min",
+    },
+    {
+      axis: "y",
+      deltaMm: container.internalDimensionsMm.widthMm - bounds.max.yMm,
+      positionMm: {
+        ...positionMm,
+        yMm:
+          positionMm.yMm +
+          container.internalDimensionsMm.widthMm -
+          bounds.max.yMm,
+      },
+      snap: { axis: "y", kind: "container-wall", wall: "y-max" },
+      targetOrder: "0:y-max",
+    },
+  ] satisfies FaceSnapCandidate[]).filter(
+    (candidate) =>
+      candidate.deltaMm !== 0 &&
+      Math.abs(candidate.deltaMm) <= FACE_SNAP_THRESHOLD_MM,
+  );
+  const cargoCandidates = fixedCandidates.flatMap<FaceSnapCandidate>((candidate) => {
     if (candidate.bounds.min.zMm !== bounds.min.zMm) return [];
-    const options: Array<{
-      readonly axis: "x" | "y";
-      readonly cargoId: string;
-      readonly deltaMm: number;
-      readonly positionMm: PositionMm;
-    }> = [];
+    const options: FaceSnapCandidate[] = [];
     if (
       positiveIntervalOverlap(
         bounds.min.yMm,
@@ -645,9 +702,10 @@ function resolveFaceSnap(
         if (deltaMm !== 0 && Math.abs(deltaMm) <= FACE_SNAP_THRESHOLD_MM) {
           options.push({
             axis: "x",
-            cargoId: candidate.cargo.id,
             deltaMm,
             positionMm: { ...positionMm, xMm: positionMm.xMm + deltaMm },
+            snap: { axis: "x", kind: "cargo", cargoId: candidate.cargo.id },
+            targetOrder: `1:${candidate.cargo.id}`,
           });
         }
       }
@@ -667,16 +725,17 @@ function resolveFaceSnap(
         if (deltaMm !== 0 && Math.abs(deltaMm) <= FACE_SNAP_THRESHOLD_MM) {
           options.push({
             axis: "y",
-            cargoId: candidate.cargo.id,
             deltaMm,
             positionMm: { ...positionMm, yMm: positionMm.yMm + deltaMm },
+            snap: { axis: "y", kind: "cargo", cargoId: candidate.cargo.id },
+            targetOrder: `1:${candidate.cargo.id}`,
           });
         }
       }
     }
     return options;
   });
-  const selected = candidates
+  const selected = [...wallCandidates, ...cargoCandidates]
     .filter(
       (candidate) =>
         !groupOverlapsFixedCargo(
@@ -692,13 +751,13 @@ function resolveFaceSnap(
     .sort((first, second) =>
       Math.abs(first.deltaMm) - Math.abs(second.deltaMm) ||
       first.axis.localeCompare(second.axis) ||
-      first.cargoId.localeCompare(second.cargoId) ||
+      first.targetOrder.localeCompare(second.targetOrder) ||
       first.deltaMm - second.deltaMm,
     )[0];
   return selected === undefined
     ? { positionMm }
     : {
-        faceSnap: { axis: selected.axis, cargoId: selected.cargoId },
+        faceSnap: selected.snap,
         positionMm: selected.positionMm,
       };
 }
@@ -732,6 +791,7 @@ export function resolveSupportSnapPosition(
   orientation: Orientation,
   rawPositionMm: PositionMm,
   movingCargoIds: readonly string[] = [cargoId],
+  faceSnapEnabled = true,
 ): SupportSnapResult | undefined {
   const cargo = project.cargoes.find((candidate) => candidate.id === cargoId);
   const container = project.containers.find(
@@ -758,7 +818,11 @@ export function resolveSupportSnapPosition(
       },
     )
   ) {
-    return { disposition: "outside", positionMm: rawPositionMm, supporterIds: [] };
+    return {
+      disposition: "outside",
+      positionMm: { ...rawPositionMm, zMm: 0 },
+      supporterIds: [],
+    };
   }
 
   const movingCargoIdSet = new Set([cargoId, ...movingCargoIds]);
@@ -817,15 +881,17 @@ export function resolveSupportSnapPosition(
           };
   }
 
-  const faceSnap = resolveFaceSnap(
-    project,
-    containerId,
-    cargo,
-    orientation,
-    snappedPositionMm,
-    movingCargoIdSet,
-    placedCandidates,
-  );
+  const faceSnap = faceSnapEnabled
+    ? resolveFaceSnap(
+        project,
+        containerId,
+        cargo,
+        orientation,
+        snappedPositionMm,
+        movingCargoIdSet,
+        placedCandidates,
+      )
+    : { positionMm: snappedPositionMm };
   snappedPositionMm = faceSnap.positionMm;
   const snappedBounds = placementBounds(cargo, {
     orientation,

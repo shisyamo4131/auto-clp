@@ -1126,7 +1126,7 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "outside",
-      positionMm: { xMm: -500, yMm: 100, zMm: 900 },
+      positionMm: { xMm: -500, yMm: 100, zMm: 0 },
       supporterIds: [],
     });
   });
@@ -1165,7 +1165,7 @@ describe("support-surface drag snapping", () => {
     });
   });
 
-  it("fits a floor cargo side to a neighboring cargo within 20 mm", () => {
+  it("fits a floor cargo side to a neighboring cargo within 50 mm", () => {
     const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
 
     expect(
@@ -1174,17 +1174,17 @@ describe("support-surface drag snapping", () => {
         "container",
         "upper",
         "LWH",
-        { xMm: 1_115, yMm: 200, zMm: 900 },
+        { xMm: 1_150, yMm: 200, zMm: 900 },
       ),
     ).toEqual({
       disposition: "floor",
-      faceSnap: { axis: "x", cargoId: "support" },
+      faceSnap: { axis: "x", kind: "cargo", cargoId: "support" },
       positionMm: { xMm: 1_100, yMm: 200, zMm: 0 },
       supporterIds: [],
     });
   });
 
-  it("does not fit a cargo side when the gap exceeds 20 mm", () => {
+  it("does not fit a cargo side when the gap exceeds 50 mm", () => {
     const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
 
     expect(
@@ -1193,11 +1193,11 @@ describe("support-surface drag snapping", () => {
         "container",
         "upper",
         "LWH",
-        { xMm: 1_121, yMm: 200, zMm: 900 },
+        { xMm: 1_151, yMm: 200, zMm: 900 },
       ),
     ).toEqual({
       disposition: "floor",
-      positionMm: { xMm: 1_121, yMm: 200, zMm: 0 },
+      positionMm: { xMm: 1_151, yMm: 200, zMm: 0 },
       supporterIds: [],
     });
   });
@@ -1234,9 +1234,123 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "single-support",
-      faceSnap: { axis: "x", cargoId: "neighbor" },
+      faceSnap: { axis: "x", kind: "cargo", cargoId: "neighbor" },
       positionMm: { xMm: 300, yMm: 100, zMm: 500 },
       supporterIds: ["support"],
+    });
+  });
+
+  it.each([
+    [
+      "x-min",
+      { xMm: 50, yMm: 1_500, zMm: 900 },
+      { xMm: 0, yMm: 1_500, zMm: 0 },
+    ],
+    [
+      "x-max",
+      { xMm: 2_550, yMm: 1_500, zMm: 900 },
+      { xMm: 2_600, yMm: 1_500, zMm: 0 },
+    ],
+    [
+      "y-min",
+      { xMm: 1_500, yMm: 50, zMm: 900 },
+      { xMm: 1_500, yMm: 0, zMm: 0 },
+    ],
+    [
+      "y-max",
+      { xMm: 1_500, yMm: 1_650, zMm: 900 },
+      { xMm: 1_500, yMm: 1_700, zMm: 0 },
+    ],
+  ] as const)("fits to the %s container inner wall at 50 mm", (wall, raw, snapped) => {
+    const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        raw,
+      ),
+    ).toEqual({
+      disposition: "floor",
+      faceSnap: {
+        axis: wall.startsWith("x") ? "x" : "y",
+        kind: "container-wall",
+        wall,
+      },
+      positionMm: snapped,
+      supporterIds: [],
+    });
+  });
+
+  it("does not fit to a container wall beyond 50 mm or when face snap is disabled", () => {
+    const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 51, yMm: 1_500, zMm: 900 },
+      ),
+    ).toEqual({
+      disposition: "floor",
+      positionMm: { xMm: 51, yMm: 1_500, zMm: 0 },
+      supporterIds: [],
+    });
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 45, yMm: 1_500, zMm: 900 },
+        ["upper"],
+        false,
+      ),
+    ).toEqual({
+      disposition: "floor",
+      positionMm: { xMm: 45, yMm: 1_500, zMm: 0 },
+      supporterIds: [],
+    });
+  });
+
+  it("prefers an inner wall when an equally near cargo side is also eligible", () => {
+    const base = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+    const neighbor = {
+      ...base.cargoes[1]!,
+      id: "wall-tie-neighbor",
+      name: "匿名内壁同距離荷",
+    };
+    const project: Project = {
+      ...base,
+      cargoes: [...base.cargoes, neighbor],
+      placements: [
+        ...base.placements,
+        {
+          cargoId: neighbor.id,
+          containerId: "container",
+          positionMm: { xMm: 500, yMm: 1_200, zMm: 0 },
+          orientation: "LWH",
+        },
+      ],
+    };
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 50, yMm: 1_200, zMm: 900 },
+      ),
+    ).toEqual({
+      disposition: "floor",
+      faceSnap: { axis: "x", kind: "container-wall", wall: "x-min" },
+      positionMm: { xMm: 0, yMm: 1_200, zMm: 0 },
+      supporterIds: [],
     });
   });
 });

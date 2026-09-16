@@ -38,6 +38,7 @@ $cargoConstraintDecisionPath = Join-Path $resolvedProject 'docs/decisions/0037-c
 $stagingCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0039-staging-compact-load-summary-and-viewer-inputs.md'
 $emptyContainerDecisionPath = Join-Path $resolvedProject 'docs/decisions/0040-empty-container-guidance-and-csv-import-gate.md'
 $movingGroupNudgeDecisionPath = Join-Path $resolvedProject 'docs/decisions/0041-moving-group-face-fit-and-view-relative-nudge.md'
+$groundedWallSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0042-grounded-staging-wall-snap-toggle-and-validation-icon.md'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
 $cargoConstraintsDialogPath = Join-Path $resolvedProject 'src/ui/CargoConstraintsDialog.tsx'
@@ -120,6 +121,7 @@ foreach ($path in @(
     $stagingCompactDecisionPath,
     $emptyContainerDecisionPath,
     $movingGroupNudgeDecisionPath,
+    $groundedWallSnapDecisionPath,
     $projectCommandPath,
     $projectCommandTestPath,
     $cargoConstraintsDialogPath,
@@ -312,7 +314,9 @@ foreach ($requiredText in @(
     '共有modal shell上の別dialog',
     'drag中の操作通知は固定高またはoverlay領域'
     '移動グループ自身の移動前配置を支持・fit・衝突候補に含めない'
-    '側面までの距離が20 mm以内'
+    'コンテナ内壁4面までの距離が50 mm以内'
+    'スナップ切替はMaterial Design Iconsの `adjust` 相当icon-only button、既定ON、session限定'
+    '物理判定lampの常設表示はMaterial Design Iconsの `information-box-outline` 相当icon'
     '一回の `placement.keyboard-nudge` Undo/Redo対象'
     '操作対象以外の積荷は面をほぼ透明な中立色、辺を灰色の点線'
     '寸法上通る場合は積荷ごとの理由を生成せず'
@@ -344,7 +348,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.11.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.12.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -476,6 +480,21 @@ $movingGroupNudgeDecision = [IO.File]::ReadAllText($movingGroupNudgeDecisionPath
 if ($movingGroupNudgeDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0041 does not have Accepted status.'
 }
+$groundedWallSnapDecision = [IO.File]::ReadAllText($groundedWallSnapDecisionPath)
+if ($groundedWallSnapDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0042 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    'Zを0 mmへ正規化',
+    '距離が50 mm以内',
+    'Material Design Iconsの `adjust`',
+    '`information-box-outline`',
+    'Schema `0.1.0`'
+)) {
+    if (-not $groundedWallSnapDecision.Contains($requiredText)) {
+        throw "ADR 0042 does not contain the approved grounded wall-snap contract text: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     '移動グループ全体の移動前配置を除外',
     '距離が20 mm以内',
@@ -532,7 +551,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.11.0`',
+    '仕様版 `1.12.0`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -1207,6 +1226,7 @@ foreach ($requiredText in @(
     staging_compact_decision_0039_accepted = $true
     empty_container_decision_0040_accepted = $true
     moving_group_nudge_decision_0041_accepted = $true
+    grounded_wall_snap_decision_0042_accepted = $true
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true
 }

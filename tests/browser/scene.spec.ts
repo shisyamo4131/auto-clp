@@ -412,6 +412,22 @@ test("shows cargo weight, four selection states, load totals, compact staging, a
   const compactStaging = page.getByRole("button", { name: "荷室外の積荷をコンテナへ寄せる" });
   await expect(compactStaging.locator('svg[data-icon="arrow-collapse-all"]')).toBeVisible();
   await expect(compactStaging).toBeEnabled();
+  const snapToggle = page.getByRole("button", { name: "側面・内壁スナップをOFFにする" });
+  await expect(snapToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(snapToggle.locator('svg[data-icon="adjust"]')).toBeVisible();
+  await snapToggle.click();
+  await expect(page.getByRole("button", { name: "側面・内壁スナップをONにする" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(page.locator("#scene-workspace-action-status")).toContainText(
+    "側面・内壁スナップをOFFにしました",
+  );
+  await page.getByRole("button", { name: "側面・内壁スナップをONにする" }).click();
+  await expect(page.getByRole("button", { name: "側面・内壁スナップをOFFにする" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   const canvas = page.getByRole("img", { name: previewName });
   await canvas.hover();
   await page.mouse.wheel(0, -240);
