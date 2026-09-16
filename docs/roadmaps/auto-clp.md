@@ -1,6 +1,6 @@
 # Auto CLP Roadmap
 
-- Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと手動配置を確認できるローカルWebアプリを完成させる。
+- Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと手動配置を確認できるローカルファーストWebアプリを完成させ、技術試用版をWebから利用可能にする。
 - Current progress: 96%
 - Last reviewed: 2026-09-16
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
@@ -27,6 +27,7 @@
 | Item | Current state | Re-entry gate |
 | --- | --- | --- |
 | 自動配置提案 | Phase 1の重み付き現行範囲から除外し、通常ページのpanel・開始・適用入口を非表示とする。既存のdomain探索、Worker、session/view、React panel、適用境界、試験、ADR 0004、AP-08証拠は将来技術資産として保持する | 利用時期と目的を改めて仕様承認し、現行Application Shellへの統合、Worker lifecycle、通常回帰suite、実務利用者受入を再検証する |
+| 認証・subscription・将来hosting | GitHub Pagesをアカウント・課金・クラウド保存なしの技術試用版に使う。Firebase Hosting、Authentication、Firestore、Functions / Runは将来候補として記録するが未採用 | 利用者、アクセス制御、決済、権限、データ保存、費用上限を確定し、backend webhookを含む別仕様・ADR・security reviewを承認する |
 
 ## Next Work
 
@@ -35,7 +36,7 @@
 3. Windows版Excelでtemplate download、匿名データ編集、CSV UTF-8保存、再読込、確認、Undo/Redoと非UTF-8拒否を人間確認する。
 4. [AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers)と[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)の匿名合成データで重心表示を人間確認する。
 5. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
-5. 公開または実務運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
+6. 第三者利用者の募集、実在CLPの取扱い、課金または本番運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
 
 ## Deliverables and Verification Evidence
 

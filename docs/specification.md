@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-09-16
-- Specification version: 1.8.1
+- Specification version: 1.9.0
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -34,24 +34,27 @@
 - 端末内保存とJSONファイルによるCLPの入出力。
 - 選択中コンテナの幾何中心と、配置済み積荷の重量・位置から求めた合成重心の3D可視化。
 - 積荷の複雑な凹凸を、利用者が組み合わせた一つの直方体として登録する運用。
+- GitHub Pagesで配信する、アカウント・課金・クラウド保存を伴わない公開技術試用版。
 
 ### Out of Scope
 
 - 任意形状メッシュを使った厳密な凹凸ネスティング。
 - 搬出順または目的地順を考慮した積み込み順の提案。
 - アカウント、クラウド保存、共同編集、外部API連携。
-- 一般公開デプロイ、課金、収益化。
+- 利用者アカウント、subscription課金、収益化、アクセス制御付き本番運用。
 - 実運送の安全性、法令適合性、荷崩れ防止を保証する判定。
 - 車両を積載空間として登録・判定する機能。Phase 1はコンテナ専用とする。
 
 ### Planned Future Scope
 
 - 必要コンテナおよび積荷配置の自動提案。Phase 1の通常画面では提供せず、保持済みの探索・Worker・適用・試験・性能証拠は将来再開用の技術資産として扱う。
+- Firebase Hosting、Authentication、Firestore、Cloud FunctionsまたはCloud Runを含む将来の配信・認証・backend候補。具体的な利用者、課金、権限、費用上限が確定した時点で再評価する。
 
 ## Environment and Boundaries
 
 - WebGL 2と初回3D描画の成功をAuto CLPの必須動作条件とする。能力確認中はCLP操作を開始せず、非対応、初期化・描画失敗、WebGLコンテキスト喪失時は、CLP編集、配置、物理判定、履歴、端末保存・読込・削除、JSON読込をすべて停止する。具体的な対応ブラウザ一覧と最低GPU性能は未決定。
 - 初期版は静的なクライアントアプリで、サーバー処理と外部送信を行わない。
+- 公開技術試用版はGitHub PagesへHTTPS配信し、`main`へのpushまたは手動実行を契機にGitHub ActionsでVite成果物を生成する。公開版も静的クライアントであり、CLP、CSV、JSONの内容をAuto CLPのserverへ送信しない。localhost、GitHub Pages、将来の別originは個別のブラウザ保存領域を持ち、端末保存を自動移行しない。
 - 計画技術はTypeScript、React、Three.js、Vite。重い探索処理はWeb Workerへ分離する。
 - ライブラリの具体的なバージョンは実装開始時に検証してロックする。
 - すべての開発タスクは `C:\Users\seven\projects\auto-clp` を使用し、承認のない別Worktreeを使用しない。

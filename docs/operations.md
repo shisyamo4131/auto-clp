@@ -86,6 +86,16 @@ corepack pnpm run dev:ui-trial
 
 このscriptは `http://127.0.0.1:4174/` を `strictPort` で使用する。port使用中なら別serverへ接続または別portへ迂回せず、起動を失敗させる。
 
+### GitHub Pages Technical Preview
+
+公開先は `https://shisyamo4131.github.io/auto-clp/` とする。`.github/workflows/deploy-pages.yml` は `main`へのpushまたは手動実行でNode.js 22、Corepack、lockfile固定のpnpmを使い、`AUTO_CLP_BASE_PATH=/<repository>/` を指定して `dist/` を生成・配信する。Actions sourceはGitHub repositoryのSettings > PagesでGitHub Actionsを選ぶ。
+
+公開前は総合9ゲートを対象commitで完了し、追加でPages用base pathを指定したbuildの `index.html` が `/<repository>/assets/` を参照することを確認する。公開後はActionsの成功と対象commitを確認し、実HTTPS URLで初期表示、WebGL 2、Drawer、積荷・コンテナ操作、CSV template download/import、JSON download/import、端末保存・再読込を匿名合成データだけで試用する。localhostの端末保存は公開originへ移らないため、必要ならlocalhostでJSONへ保存し、公開版で明示的にJSONから読み込む。
+
+公開停止はGitHub Pagesをunpublishし、workflowを無効化または削除する。repositoryやCLPデータを削除する必要はない。公開済み内容が第三者cacheまたはcopyへ残らないことまでは保証しない。GitHub、Googleその他のpassword、2FA、recovery code、個人access tokenを文書、repository、Actions secretへ保存しない。
+
+この公開はアカウント、課金、クラウド保存を持たない技術試用である。第三者利用者の募集、実在CLP、課金または本番運用の前に、利用規約、privacy、運用責任、認証、backend、決済webhookと権限管理を別checkpointで承認する。Firebaseはその時点の要件と公式料金で再評価し、現行Pages採用だけを理由に採用または除外しない。
+
 CLP名、軸別隙間、積荷、コンテナは入力・編集できる。車両はPhase 1の対象外である。入力途中の文字列は明示的な保存操作まで正規CLPへ反映せず、不正入力時は直前の正規CLPを保持する。入力成功は積載可能性や物理的安全性の確認を意味しない。
 
 「端末へ保存」は現在の検証済みCLPをIndexedDBの単一枠へ手動保存し、transaction完了後だけ成功を表示する。「端末から読込」は全候補のWorker事前判定後にCLPを一括置換し、旧履歴・draft・選択・camera・判定結果をリセットする。「端末保存を削除」は確認後に保存コピーだけを削除し、画面のCLPとJSONファイルは削除しない。自動保存・自動読込はない。保存中のCLPcommit・履歴操作、読込中に入力状態が変化したCLP置換は拒否する。
@@ -112,7 +122,7 @@ Drawerから固定名 `auto-clp-cargo-template.csv` を取得し、Excelで名�
 | `governance-permissions-agents` | common/project governance、policy/matrix、AGENTS、managed scripts、権限、agent、approval、task lifecycle | diff, governance, project | governance, project | comprehensive | なし | なし |
 | `build-release-deploy` | package/lock、Vite/Playwright/build設定、release evidence、publish/deploy手順 | type, lint | type, lint, unit, browser, build | comprehensive | 現在なし | なし |
 
-製品仕様またはデータ意味を変える文書は `documentation-only` だけに分類せず、該当classとの和集合を使う。UI/applicationのcompletionは、現行仕様が要求するtypecheck、lint、unit、browser、buildを維持する。data、governance、build/release/deployおよびunknown impactのcompletionはcomprehensiveとする。公開・deploy機能は現在利用不可であり、release-only gateが空であることは公開可能性を意味しない。
+製品仕様またはデータ意味を変える文書は `documentation-only` だけに分類せず、該当classとの和集合を使う。UI/applicationのcompletionは、現行仕様が要求するtypecheck、lint、unit、browser、buildを維持する。data、governance、build/release/deployおよびunknown impactのcompletionはcomprehensiveとする。GitHub Pages公開は総合gate、Pages用build、Actions成功、実URL確認をrelease evidenceとし、release-only gateが空であることだけを公開可否の根拠にしない。
 
 省略したgateは、completion reportへgate IDと影響がない理由を記録する。release判断が将来承認された場合は、release evidenceへ追加gateと結果を記録する。
 
@@ -212,7 +222,7 @@ comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`b
 
 ## Outputs
 
-- 現在の成果物は本リポジトリ内の文書、設定、ローカルWebアプリ、入力編集UIである。
+- 現在の成果物は本リポジトリ内の文書、設定、ローカルWebアプリ、入力編集UI、およびGitHub Pages向けActions配信設定である。
 - 仕様1.5.1の積荷合成重心可視化は、正確な純粋計算、scene投影、同径・外枠なしの赤・黄ドット、完全一致・近接時の黄前面表示、凡例、4状態、camera・DPR・drag・読込・狭幅回帰まで実装済みである。人間による差分視認性と理解の確認はまだ利用できない。
 - CLPデータの機械可読な設計契約は `schemas/project-0.1.0.schema.json`、意味契約は `docs/data-model.md` である。構造・意味検証、検証済み書出し、取引的読込、手動の端末保存・確認削除、JSONファイル入出力、全候補Worker事前判定、CLP・隙間・積荷・候補の入力編集UIは実装済みである。
 - アプリのビルド出力は `dist/` であり、Git管理対象外とする。
