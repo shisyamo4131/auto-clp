@@ -4,6 +4,8 @@
 
 ### Changed
 
+- 仕様1.10.2・ADR 0040で、コンテナ0件の3D viewport中央へ登録案内と既存コンテナ追加dialogを開くbuttonを追加した。コンテナ0件ではテンプレートインポートだけを理由付きで無効にし、テンプレートダウンロード、JSON読込、積荷だけの既存JSON互換、Schema `0.1.0`は維持する。
+
 - 仕様1.10.1で、荷室外積荷の寄せbuttonをMaterial Design Iconsの `arrow-collapse-all` 相当iconへ変更し、寄せ実行時にcamera位置・注視点・視点方向・縮尺を変更しないよう改めた。寄せ位置、Project、保存、Undo/Redo履歴、Schema `0.1.0`は変更しない。
 
 - 仕様1.10.0・ADR 0039で、全未配置積荷の向きを維持して選択中コンテナ近傍へ再整列し、全体へcameraを合わせる非保存・非履歴の磁石buttonをUndo左へ追加した。積荷selectorは重量表示と右側の青・黄・緑・灰の選択状態dotへ変更し、検索結果件数を撤去した。重心凡例へ選択中コンテナの総重量／耐荷重と全CLPの積込済数／全積荷数を追加した。viewerのwheel zoomを復活して `＋` / `－` buttonを撤去し、Ctrl中は十字矢印相当cursorと積荷上からのcamera panを優先する。Schema `0.1.0`、CSV、JSON、端末保存、既存Projectの意味は変更しない。

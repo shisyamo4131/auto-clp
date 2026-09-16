@@ -33,6 +33,7 @@ export interface CargoDragPreviewResult {
 
 interface ThreeViewportProps {
   readonly bottomOverlay?: ReactNode;
+  readonly centerOverlay?: ReactNode;
   readonly forceInitialRenderError?: boolean;
   readonly interactionDisabled: boolean;
   readonly onCargoDragCancel: (message: string) => void;
@@ -392,6 +393,7 @@ function ResetViewIcon() {
 
 export function ThreeViewport({
   bottomOverlay,
+  centerOverlay,
   forceInitialRenderError = false,
   interactionDisabled,
   onCargoDragCancel,
@@ -1314,6 +1316,11 @@ export function ThreeViewport({
           </button>
         </div>
       </div>
+      {centerOverlay === undefined ? null : (
+        <div className="viewport__overlay viewport__overlay--center">
+          {centerOverlay}
+        </div>
+      )}
       {dimensionAnnotations.length === 0 ? null : (
         <svg
           className="viewport__dimension-annotations"

@@ -786,6 +786,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       historyRevision={historyRevision}
       onBusyChange={handleSceneBusyChange}
       onOpenCargoEditor={handleOpenCargoEditor}
+      onOpenContainerAdd={() => handleOpenContainerEditor({ kind: "add" })}
       onOpenUsageRequirements={handleOpenUsageRequirementsFromScene}
       onProjectCommit={handleProjectCommit}
       onSelectedContainerChange={setSelectedContainerId}

@@ -467,7 +467,33 @@ test("shares camera framing across resized candidates and restores the same cand
 
 test("keeps all-cargo selection and oriented dimensions available with no candidate", async ({ page }) => {
   await page.goto("/");
+  const emptyPrompt = page.locator(".viewport-empty-container");
+  const register = page.getByRole("button", { name: "登録", exact: true });
+  await expect(emptyPrompt).toContainText("コンテナを登録してください");
+  const viewportBounds = await page.locator(".viewport").boundingBox();
+  const promptBounds = await emptyPrompt.boundingBox();
+  expect(viewportBounds).not.toBeNull();
+  expect(promptBounds).not.toBeNull();
+  expect(
+    Math.abs(
+      promptBounds!.x + promptBounds!.width / 2 -
+      (viewportBounds!.x + viewportBounds!.width / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      promptBounds!.y + promptBounds!.height / 2 -
+      (viewportBounds!.y + viewportBounds!.height / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
+  await openProjectSettings(page);
+  await expect(register).toBeDisabled();
+  await page.getByRole("button", { name: "CLP設定を閉じる" }).click();
+  await register.click();
+  await expect(page.getByRole("dialog", { name: "コンテナを追加" })).toBeVisible();
+  await page.getByRole("button", { name: "キャンセル" }).click();
   await addCargo(page, "候補なし積荷");
+  await expect(page.getByText("コンテナを登録してください", { exact: true })).toBeVisible();
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
   await expect(page.locator("#scene-workspace-action-status")).not.toContainText("操作対象として選択しました");
   await expect(page.getByText("3D描画と判定は、積載可能性や物理的安全性を保証しません。", { exact: true })).toHaveCount(0);

@@ -1,6 +1,7 @@
 import { expect, test, type Download, type Page } from "./fixtures";
 import { weightBalanceProject } from "./fixtures";
 import {
+  addContainerFromDrawer,
   openPersistenceDrawer,
 } from "./ui-helpers";
 
@@ -233,6 +234,11 @@ test("uses manual defaults and blocks only new cargo creation at 30 or legacy co
   });
 
   await openPersistenceDrawer(page);
+  await expect(page.locator("#cargo-csv-template-download")).toBeEnabled();
+  await expect(page.locator("#cargo-csv-file-input")).toBeDisabled();
+  await expect(page.locator("#cargo-csv-container-required")).toHaveText(
+    "テンプレートを読み込む前にコンテナを登録してください。",
+  );
   await page.getByRole("button", { name: "積荷追加", exact: true }).click();
   await expect(page.getByLabel(/天地無用/)).not.toBeChecked();
   await expect(
@@ -281,6 +287,7 @@ test("keeps confirmation modal focus, busy isolation, narrow layout, and WebGL s
 }) => {
   await page.setViewportSize({ width: 305, height: 700 });
   await page.goto("/");
+  await addContainerFromDrawer(page, "匿名コンテナ");
   const canvasBefore = await page.locator("#scene-viewport-canvas").boundingBox();
   await chooseCsv(page, `${csvHeader}\n匿名荷,1,2,3,1`);
   const dialog = page.getByRole("dialog", { name: "CSVで積荷を一括登録" });

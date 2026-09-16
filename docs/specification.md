@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-09-16
-- Specification version: 1.10.1
+- Specification version: 1.10.2
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -77,6 +77,8 @@
 - 開口部判定は積荷を許可向きの一つへ固定し、開口面に直角な直線で通す寸法モデルとする。開口内回転、斜め通過、斜路、扉厚、段差、車内旋回、既配置積荷を避ける経路は「経路未確認」とする。
 
 ### Application Shell and Primary Workflow
+
+- コンテナ0件では3D viewport中央に「コンテナを登録してください」とDOM overlayで表示し、同じ案内内の `登録` buttonから既存のコンテナ追加dialogを開く。別のCLP操作または保存処理中はbuttonを無効にする。積荷だけを含むJSONは引き続き読み込めるが、Drawerの `テンプレートインポート` はコンテナ0件では理由付きで無効にする。`テンプレートダウンロード` と `JSONから読込` はコンテナ件数に依存させない。
 
 - 3D viewportを通常画面の主作業面とし、最上部のApplication Barは左から `Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chip、Navigation Drawerを開くmenu buttonの順に置く。menu buttonはDOM上も視覚上も右端とし、現在のCLP名はCLP設定dialogの入口とする。通常画面のApplication Shellはbrowser viewport高以上とし、通常のデスクトップ高では上下padding、Application Bar高とその下余白を除いた残りを3D作業sectionへ、さらにコンテナtab高を除いた残りをviewportへ割り当てる。短い画面ではtoolbarと下段操作を失わない最低viewport高を優先し、ページscrollで到達可能にする。
 - 端末保存・読込・削除、JSON入出力、CLP作成・設定、積荷追加・制約一括編集、積荷一括登録、コンテナの追加・編集・削除、ヘルプは一つのNavigation Drawerへまとめる。CLP欄は `新規` と `設定` を1段目に横並び、`積荷追加` を2段目、`制約一括編集` を3段目に置き、積荷件数メッセージは表示しない。`積荷一括登録` 欄は説明を「テンプレートにまとめて入力し、一括登録します。」とし、`テンプレートダウンロード` と `テンプレートインポート` を縦並びにする。コンテナ欄は `追加`、`編集`、`削除` を横並びにする。保存欄は `端末へ保存` と `JSONへ保存` を、読込欄は `端末から読込` と `JSONから読込` をそれぞれ横並びにする。端末保存削除は保存欄の別行に維持し、直近結果と単一端末保存の注意を保存buttonの下へ置く。可視のDrawerタイトル、自動保存・自動読込説明、旧 `このブラウザ内`・`JSONファイル` 欄は置かず、close buttonはDrawer幅いっぱいにする。Drawer最下部にはpackageのAuto CLPアプリ版とCLPデータ形式版を表示する。常設の保存card、CLP設定card、積荷card、コンテナcard、通常画面の追加buttonは置かない。コンテナの編集・削除対象は3Dの選択中コンテナとし、既存editor、Project command、履歴、busy/dirty gate、積荷の新規作成上限30件・コンテナ100件の上限、非cascade削除を再利用する。新規作成上限は一つの名前付き定数から手動追加とCSVへ適用し、将来の緩和を局所変更にする。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。

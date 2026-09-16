@@ -197,6 +197,7 @@ export function ProjectPersistencePanel({
   const selectedContainer = project.containers.find(
     (container) => container.id === selectedContainerId,
   ) ?? project.containers[0];
+  const cargoCsvRequiresContainer = project.containers.length === 0;
   const controlsDisabled = busy || operation !== undefined || deleteConfirmation || newProjectConfirmation;
 
   const publish = useCallback((message: string, kind: NotificationKind) => {
@@ -580,7 +581,15 @@ export function ProjectPersistencePanel({
                 </button>
                 <label
                   className="file-input-button"
-                  aria-disabled={controlsDisabled || !cargoCsvImportAvailable}
+                  aria-disabled={
+                    controlsDisabled || !cargoCsvImportAvailable || cargoCsvRequiresContainer
+                  }
+                  aria-describedby={
+                    cargoCsvRequiresContainer ? "cargo-csv-container-required" : undefined
+                  }
+                  title={
+                    cargoCsvRequiresContainer ? "先にコンテナを登録してください" : undefined
+                  }
                 >
                   テンプレートインポート
                   <input
@@ -588,11 +597,21 @@ export function ProjectPersistencePanel({
                     type="file"
                     accept=".csv,text/csv"
                     data-project-history-shortcuts="local"
-                    disabled={controlsDisabled || !cargoCsvImportAvailable}
+                    disabled={
+                      controlsDisabled || !cargoCsvImportAvailable || cargoCsvRequiresContainer
+                    }
                     onChange={handleCargoCsvFile}
                   />
                 </label>
               </div>
+              {cargoCsvRequiresContainer ? (
+                <p
+                  id="cargo-csv-container-required"
+                  className="project-persistence__availability"
+                >
+                  テンプレートを読み込む前にコンテナを登録してください。
+                </p>
+              ) : null}
               {!cargoCsvImportAvailable || !cargoCsvDownloadAvailable ? (
                 <p className="project-persistence__availability">
                   このブラウザでは積荷CSVの読込またはテンプレート取得の一部を利用できません。

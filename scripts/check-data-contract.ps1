@@ -36,6 +36,7 @@ $supportGroupDecisionPath = Join-Path $resolvedProject 'docs/decisions/0035-recu
 $cargoCsvCopyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0036-cargo-csv-destructive-confirmation-copy.md'
 $cargoConstraintDecisionPath = Join-Path $resolvedProject 'docs/decisions/0037-cargo-constraint-list-and-prohibition-wording.md'
 $stagingCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0039-staging-compact-load-summary-and-viewer-inputs.md'
+$emptyContainerDecisionPath = Join-Path $resolvedProject 'docs/decisions/0040-empty-container-guidance-and-csv-import-gate.md'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
 $cargoConstraintsDialogPath = Join-Path $resolvedProject 'src/ui/CargoConstraintsDialog.tsx'
@@ -116,6 +117,7 @@ foreach ($path in @(
     $cargoCsvCopyDecisionPath,
     $cargoConstraintDecisionPath,
     $stagingCompactDecisionPath,
+    $emptyContainerDecisionPath,
     $projectCommandPath,
     $projectCommandTestPath,
     $cargoConstraintsDialogPath,
@@ -337,7 +339,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.10.1' 'Approved specification version'
+Assert-Equal $specificationVersion '1.10.2' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -461,6 +463,20 @@ $stagingCompactDecision = [IO.File]::ReadAllText($stagingCompactDecisionPath)
 if ($stagingCompactDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0039 does not have Accepted status.'
 }
+$emptyContainerDecision = [IO.File]::ReadAllText($emptyContainerDecisionPath)
+if ($emptyContainerDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0040 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    'コンテナを登録してください',
+    'テンプレートインポート」を無効',
+    'テンプレートダウンロード」と「JSONから読込」はコンテナ件数に依存させない',
+    'Schema `0.1.0`'
+)) {
+    if (-not $emptyContainerDecision.Contains($requiredText)) {
+        throw "ADR 0040 does not contain the approved empty-container contract text: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     '全未配置積荷の現在向きを維持',
     'Material Design Iconsの `arrow-collapse-all` 相当icon button',
@@ -497,7 +513,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.10.1`',
+    '仕様版 `1.10.2`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -972,6 +988,10 @@ foreach ($sourceContract in @(
     @{ Text = $cargoCsvAppSource; Marker = '<CargoCsvImportDialog' },
     @{ Text = $cargoCsvAppSource; Marker = 'onApplied={() => setSceneSessionResetRevision' },
     @{ Text = $cargoCsvPanelSource; Marker = 'id="cargo-csv-file-input"' },
+    @{ Text = $cargoCsvPanelSource; Marker = 'cargoCsvRequiresContainer' },
+    @{ Text = $cargoCsvPanelSource; Marker = 'テンプレートを読み込む前にコンテナを登録してください。' },
+    @{ Text = $cargoCsvSceneSource; Marker = 'viewport-empty-container' },
+    @{ Text = $cargoCsvSceneSource; Marker = 'コンテナを登録してください' },
     @{ Text = $cargoCsvSceneSource; Marker = 'appliedSessionResetRevisionRef.current !== sessionResetRevisionAtProjection' },
     @{ Text = $cargoCsvParserTest; Marker = 'accepts a CRLF quoted newline inside an ignored all-whitespace record' },
     @{ Text = $cargoCsvFileTest; Marker = 'accepts declared and actual bytes at the exact 5 MiB boundary' },
@@ -1166,6 +1186,7 @@ foreach ($requiredText in @(
     cargo_csv_copy_decision_0036_accepted = $true
     cargo_constraint_decision_0037_accepted = $true
     staging_compact_decision_0039_accepted = $true
+    empty_container_decision_0040_accepted = $true
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true
 }

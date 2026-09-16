@@ -85,6 +85,7 @@ interface SceneWorkspaceProps {
   readonly historyRevision: number;
   readonly onBusyChange: (busy: boolean) => void;
   readonly onOpenCargoEditor: (intent: CargoEditorIntent) => void;
+  readonly onOpenContainerAdd: () => void;
   readonly onOpenUsageRequirements: () => void;
   readonly onProjectCommit: ProjectHistoryCommitHandler;
   readonly onSelectedContainerChange: (containerId?: string) => void;
@@ -290,6 +291,7 @@ export function SceneWorkspace({
   historyRevision,
   onBusyChange,
   onOpenCargoEditor,
+  onOpenContainerAdd,
   onOpenUsageRequirements,
   onProjectCommit,
   onSelectedContainerChange,
@@ -1137,6 +1139,21 @@ export function SceneWorkspace({
             />
           </div>
           <ThreeViewport
+            centerOverlay={
+              project.containers.length === 0 ? (
+                <div className="viewport-empty-container">
+                  <p aria-live="polite">コンテナを登録してください</p>
+                  <button
+                    id="scene-empty-container-add"
+                    type="button"
+                    disabled={externalInteractionActive || interactionActive}
+                    onClick={onOpenContainerAdd}
+                  >
+                    登録
+                  </button>
+                </div>
+              ) : undefined
+            }
             bottomOverlay={(
               <div className="viewport-control viewport-control--cargo">
                 {canvasStatus === "" && (projectionResult === undefined || projectionResult.ok) ? null : (
