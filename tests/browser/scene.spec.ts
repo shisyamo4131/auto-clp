@@ -874,3 +874,52 @@ test("keeps the 3D action row compact as cargo count grows", async ({ page }) =>
   expect((await card.boundingBox())?.height ?? 0).toBeLessThanOrEqual(height + 220);
   await expect(page.getByText("6/6件")).toHaveCount(0);
 });
+
+test("nudges a placed cargo by view-relative millimetres as one undoable key gesture", async ({ page }) => {
+  await page.goto("/");
+  await addCargo(page, "矢印調整積荷");
+  await addContainer(page, "矢印調整コンテナ");
+  await place(page, "cargo-1", "1000", "700");
+
+  const canvas = page.getByRole("img", { name: previewName });
+  const card = page.locator(".viewport-context-actions");
+  const readPosition = async () => {
+    const text = (await card.textContent()) ?? "";
+    const match = /現在の座標[^X]*X\s*(-?\d+)[^Y]*Y\s*(-?\d+)[^Z]*Z\s*(-?\d+)/.exec(text);
+    if (match === null) throw new Error(`Could not read selected placement coordinates: ${text}`);
+    return { xMm: Number(match[1]), yMm: Number(match[2]), zMm: Number(match[3]) };
+  };
+  const before = await readPosition();
+  await canvas.focus();
+  await expect(canvas).toBeFocused();
+  const historyBeforeCancel = await page.locator(".project-history__summary").textContent();
+  await page.evaluate<void>(`(() => {
+    window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "ArrowRight" }));
+    window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
+    window.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "ArrowRight" }));
+  })()`);
+  await expect(page.locator("#scene-workspace-action-status")).toContainText("矢印調整をキャンセル");
+  expect(await page.locator(".project-history__summary").textContent()).toBe(historyBeforeCancel);
+  expect(await readPosition()).toEqual(before);
+
+  await page.evaluate<void>(`(() => {
+    for (let index = 0; index < 3; index += 1) {
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        bubbles: true,
+        key: "ArrowRight",
+        repeat: index > 0,
+      }));
+    }
+    window.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "ArrowRight" }));
+  })()`);
+
+  const after = await readPosition();
+  expect(Math.abs(after.xMm - before.xMm) + Math.abs(after.yMm - before.yMm)).toBe(3);
+  expect(after.zMm).toBe(before.zMm);
+  await expect(page.locator(".project-history__summary")).toContainText("矢印キーでの配置調整");
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  expect(await readPosition()).toEqual(before);
+  await page.getByRole("button", { name: "やり直す" }).click();
+  expect(await readPosition()).toEqual(after);
+});

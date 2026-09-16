@@ -20,12 +20,14 @@ import {
   projectContainerToScene,
   projectSceneStagingAnchor,
   projectWeightBalanceToScene,
+  resolveKeyboardNudgePosition,
   resolveSupportSnapPosition,
   sceneBoundsReachRadius,
   sceneContainerBounds,
   sceneFloorDragPositionMm,
   sceneProjectionBounds,
   stagedCargoOverlapsContainerFloor,
+  viewRelativeArrowDeltaMm,
   xAxisQuarterTurnOrientation,
   type ProjectSceneProjection,
   type SceneStagingAnchorSide,
@@ -1127,6 +1129,231 @@ describe("support-surface drag snapping", () => {
       positionMm: { xMm: -500, yMm: 100, zMm: 900 },
       supporterIds: [],
     });
+  });
+
+  it("excludes every recursively moving cargo from support and collision candidates", () => {
+    const base = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+    const project: Project = {
+      ...base,
+      cargoes: base.cargoes.map((cargo) =>
+        cargo.id === "upper" ? { ...cargo, canSupportCargo: true } : cargo,
+      ),
+      placements: [
+        ...base.placements,
+        {
+          cargoId: "upper",
+          containerId: "container",
+          positionMm: { xMm: 100, yMm: 100, zMm: 500 },
+          orientation: "LWH",
+        },
+      ],
+    };
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "support",
+        "LWH",
+        { xMm: 110, yMm: 100, zMm: 0 },
+        ["support", "upper"],
+      ),
+    ).toEqual({
+      disposition: "floor",
+      positionMm: { xMm: 110, yMm: 100, zMm: 0 },
+      supporterIds: [],
+    });
+  });
+
+  it("fits a floor cargo side to a neighboring cargo within 20 mm", () => {
+    const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 1_115, yMm: 200, zMm: 900 },
+      ),
+    ).toEqual({
+      disposition: "floor",
+      faceSnap: { axis: "x", cargoId: "support" },
+      positionMm: { xMm: 1_100, yMm: 200, zMm: 0 },
+      supporterIds: [],
+    });
+  });
+
+  it("does not fit a cargo side when the gap exceeds 20 mm", () => {
+    const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 1_121, yMm: 200, zMm: 900 },
+      ),
+    ).toEqual({
+      disposition: "floor",
+      positionMm: { xMm: 1_121, yMm: 200, zMm: 0 },
+      supporterIds: [],
+    });
+  });
+
+  it("fits cargo sides on a shared support top without treating the support as a side", () => {
+    const base = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+    const neighbor = {
+      ...base.cargoes[1]!,
+      id: "neighbor",
+      name: "匿名上面隣接荷",
+      dimensionsMm: { lengthMm: 200, widthMm: 300, heightMm: 200 },
+    };
+    const project: Project = {
+      ...base,
+      cargoes: [...base.cargoes, neighbor],
+      placements: [
+        ...base.placements,
+        {
+          cargoId: "neighbor",
+          containerId: "container",
+          positionMm: { xMm: 100, yMm: 100, zMm: 500 },
+          orientation: "LWH",
+        },
+      ],
+    };
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 315, yMm: 100, zMm: 0 },
+      ),
+    ).toEqual({
+      disposition: "single-support",
+      faceSnap: { axis: "x", cargoId: "neighbor" },
+      positionMm: { xMm: 300, yMm: 100, zMm: 500 },
+      supporterIds: ["support"],
+    });
+  });
+});
+
+describe("keyboard placement nudging", () => {
+  it("allows container and support overhang while preserving Z", () => {
+    const project: Project = {
+      schemaVersion: PROJECT_SCHEMA_VERSION,
+      projectId: "nudge-project",
+      name: "匿名矢印調整試験",
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
+      cargoes: [
+        {
+          id: "base",
+          name: "匿名支持台",
+          dimensionsMm: { lengthMm: 100, widthMm: 100, heightMm: 100 },
+          massGrams: 1_000,
+          canSupportCargo: true,
+          allowedOrientations: ["LWH"],
+        },
+        {
+          id: "upper",
+          name: "匿名上段荷",
+          dimensionsMm: { lengthMm: 50, widthMm: 50, heightMm: 50 },
+          massGrams: 1_000,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH"],
+        },
+      ],
+      containers: [
+        {
+          id: "container",
+          name: "匿名コンテナ",
+          internalDimensionsMm: { lengthMm: 200, widthMm: 200, heightMm: 200 },
+          openingMm: { widthMm: 200, heightMm: 200 },
+          payloadCapacityGrams: 10_000,
+        },
+      ],
+      placements: [
+        {
+          cargoId: "base",
+          containerId: "container",
+          positionMm: { xMm: 0, yMm: 0, zMm: 0 },
+          orientation: "LWH",
+        },
+        {
+          cargoId: "upper",
+          containerId: "container",
+          positionMm: { xMm: 0, yMm: 0, zMm: 100 },
+          orientation: "LWH",
+        },
+      ],
+    };
+
+    expect(
+      resolveKeyboardNudgePosition(
+        project,
+        "container",
+        "upper",
+        { xMm: 250, yMm: 0 },
+        ["upper"],
+      ),
+    ).toEqual({
+      disposition: "update",
+      positionMm: { xMm: 250, yMm: 0, zMm: 100 },
+    });
+  });
+
+  it("allows face contact and blocks positive-volume overlap with fixed cargo", () => {
+    const base = projectFixture();
+    const fixedCargo = {
+      ...base.cargoes[0]!,
+      id: "fixed",
+      name: "匿名固定荷",
+    };
+    const project: Project = {
+      ...base,
+      cargoes: [...base.cargoes, fixedCargo],
+      placements: [
+        { ...base.placements[0]!, positionMm: { xMm: 0, yMm: 0, zMm: 0 } },
+        {
+          cargoId: "fixed",
+          containerId: base.containers[0]!.id,
+          positionMm: { xMm: 102, yMm: 0, zMm: 0 },
+          orientation: "LWH",
+        },
+      ],
+    };
+
+    expect(
+      resolveKeyboardNudgePosition(
+        project,
+        base.containers[0]!.id,
+        base.cargoes[0]!.id,
+        { xMm: 1, yMm: 0 },
+      )?.disposition,
+    ).toBe("update");
+    expect(
+      resolveKeyboardNudgePosition(
+        project,
+        base.containers[0]!.id,
+        base.cargoes[0]!.id,
+        { xMm: 2, yMm: 0 },
+      )?.disposition,
+    ).toBe("blocked");
+  });
+
+  it("maps arrows to one-millimetre container axes using their screen projection", () => {
+    const axes = {
+      x: { screenX: 0.8, screenY: 0.2 },
+      y: { screenX: -0.3, screenY: 0.7 },
+    };
+
+    expect(viewRelativeArrowDeltaMm("ArrowRight", axes)).toEqual({ xMm: 1, yMm: 0 });
+    expect(viewRelativeArrowDeltaMm("ArrowLeft", axes)).toEqual({ xMm: -1, yMm: 0 });
+    expect(viewRelativeArrowDeltaMm("ArrowUp", axes)).toEqual({ xMm: 0, yMm: 1 });
+    expect(viewRelativeArrowDeltaMm("ArrowDown", axes)).toEqual({ xMm: 0, yMm: -1 });
   });
 });
 

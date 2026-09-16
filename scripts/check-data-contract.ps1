@@ -37,6 +37,7 @@ $cargoCsvCopyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0036-carg
 $cargoConstraintDecisionPath = Join-Path $resolvedProject 'docs/decisions/0037-cargo-constraint-list-and-prohibition-wording.md'
 $stagingCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0039-staging-compact-load-summary-and-viewer-inputs.md'
 $emptyContainerDecisionPath = Join-Path $resolvedProject 'docs/decisions/0040-empty-container-guidance-and-csv-import-gate.md'
+$movingGroupNudgeDecisionPath = Join-Path $resolvedProject 'docs/decisions/0041-moving-group-face-fit-and-view-relative-nudge.md'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
 $cargoConstraintsDialogPath = Join-Path $resolvedProject 'src/ui/CargoConstraintsDialog.tsx'
@@ -118,6 +119,7 @@ foreach ($path in @(
     $cargoConstraintDecisionPath,
     $stagingCompactDecisionPath,
     $emptyContainerDecisionPath,
+    $movingGroupNudgeDecisionPath,
     $projectCommandPath,
     $projectCommandTestPath,
     $cargoConstraintsDialogPath,
@@ -309,6 +311,9 @@ foreach ($requiredText in @(
     'CLPの全積荷を対象',
     '共有modal shell上の別dialog',
     'drag中の操作通知は固定高またはoverlay領域'
+    '移動グループ自身の移動前配置を支持・fit・衝突候補に含めない'
+    '側面までの距離が20 mm以内'
+    '一回の `placement.keyboard-nudge` Undo/Redo対象'
     '操作対象以外の積荷は面をほぼ透明な中立色、辺を灰色の点線'
     '寸法上通る場合は積荷ごとの理由を生成せず'
     '同じviewport固定toolbarへ常時表示'
@@ -339,7 +344,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.10.2' 'Approved specification version'
+Assert-Equal $specificationVersion '1.11.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -467,6 +472,20 @@ $emptyContainerDecision = [IO.File]::ReadAllText($emptyContainerDecisionPath)
 if ($emptyContainerDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0040 does not have Accepted status.'
 }
+$movingGroupNudgeDecision = [IO.File]::ReadAllText($movingGroupNudgeDecisionPath)
+if ($movingGroupNudgeDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0041 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '移動グループ全体の移動前配置を除外',
+    '距離が20 mm以内',
+    '`placement.keyboard-nudge`',
+    'Schema `0.1.0`'
+)) {
+    if (-not $movingGroupNudgeDecision.Contains($requiredText)) {
+        throw "ADR 0041 does not contain the approved moving-group nudge contract text: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     'コンテナを登録してください',
     'テンプレートインポート」を無効',
@@ -513,7 +532,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.10.2`',
+    '仕様版 `1.11.0`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -1187,6 +1206,7 @@ foreach ($requiredText in @(
     cargo_constraint_decision_0037_accepted = $true
     staging_compact_decision_0039_accepted = $true
     empty_container_decision_0040_accepted = $true
+    moving_group_nudge_decision_0041_accepted = $true
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true
 }

@@ -189,6 +189,17 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 5. Ctrl押下中だけcanvas cursorが十字矢印相当となり、積荷上から左dragしても積荷位置・選択・履歴を変えずcameraを平行移動する。Ctrl解除とwindow blurで通常cursorへ戻る。Shift付き左drag、右drag、touch境界、荷室全体表示は回帰しない。
 6. 305 / 320 / 375 pxでtoolbar、重量凡例、selector、状態dot、context actionが水平overflowせず、canvas操作領域を残す。
 
+## AC-11 Moving Stack, Face Fit, and Keyboard Nudge
+
+このケースは仕様1.11.0・ADR 0041に従う。保存形式を変更せず、移動グループ、fit候補、矢印方向を現在Projectとcameraから派生する。
+
+1. 単一支持されたBを載せたAを短距離dragしても、移動前のA・Bを支持面、側面fitまたは衝突候補として扱わず、A・Bは同じ差分で床または外部の固定支持面へ移動する。旧位置を根拠にAが空中へsnapしない。
+2. 床またはある積荷上面の同じ最小Zにある隣接積荷との側面距離が20 mmなら隙間0 mmへfitし、21 mmならfitしない。複数候補は最小移動量、X軸、積荷ID、符号の順で決定し、fit後に移動グループ外の積荷と立体重複する候補は採用しない。
+3. 配置済み積荷を選択して3D canvasへfocusし、修飾キーなしの矢印キーを押すと、現在視点に対応するコンテナX/Yの一軸だけを1 mm変更する。Z、向き、cameraは変えず、上段の単一支持子孫も同じ差分で移動する。
+4. 矢印調整はコンテナ外、支持面からの部分張り出し、完全な支持喪失を保存でき、物理判定が現在座標を再評価する。移動グループ外の積荷とは面接触まで進めるが正体積重複するstepで停止する。
+5. 通常押下または長押しrepeatはkey releaseまでpreviewし、一回の `placement.keyboard-nudge` 履歴としてUndo/Redoできる。衝突拒否、Escape、window blur、描画更新、保存失敗、staleは未確定位置を残さない。
+6. input、select、dialog、3D外focusの矢印キーを奪わず、操作方法dialogと読み上げ説明が矢印調整のfocus条件、視点基準、1 mm単位を案内する。
+
 ## Evidence and Completion
 
 - 自動証拠: domainと表示の単体試験、Worker経由のブラウザ試験、履歴、IndexedDB、JSON往復、WebGL必須能力ゲートと読み取り専用救出回帰を個別の終了コードで記録する。
@@ -203,6 +214,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - 仕様1.6.0 CSV積荷一括置換自動証拠: typecheck、lint、単体32ファイル1,006件、ブラウザ102件、buildに合格。固定template bytes、厳格なUTF-8・CSV・値検証、1 / 30 / 31件、共通新規作成上限、legacy 31〜1,000件互換、決定的ID・既定値、件数付き確認、取消・失敗・stale・busy・no-op保持、原子的置換、一回のUndo/Redo、同一IDを含むscene一時状態reset、派生再導出、305 / 320 / 375 px、focus、WebGL停止を回帰し、独立コードレビューは二つの指摘修正後に合格した。Windows版Excel往復と実務利用者受入の証拠ではない。
 - 2026-09-16の利用者試用では、20件のCSV一括登録と一回のUndoによる元状態復元を確認した。これはWindows版Excelでのtemplate往復、非UTF-8拒否、正式fixtureまたは実務利用者受入の証拠ではない。
 - 仕様1.10.2の自動証拠: typecheck、lint、単体32ファイル1,017件、ブラウザ106件、build、データ契約、ガバナンス、プロジェクト検査に合格した。コンテナ0件のviewport中央案内、`登録` からの既存dialog表示、busy時無効化、テンプレートインポートだけの理由付き無効化、テンプレートダウンロード・JSON読込互換、コンテナ登録後のCSV既存回帰を確認した。
+- 仕様1.11.0の自動証拠: typecheck、lint、単体32ファイル1,024件、ブラウザ107件、build、データ契約に合格した。移動グループ旧位置の候補除外、床・支持上面の20 / 21 mm側面fit、支持喪失・境界外を許容する1 mm矢印調整、固定積荷との衝突停止、視点軸対応、3回repeatの一回履歴、Escape取消、Undo/Redo、操作方法copyを回帰した。積層fixtureの実pointer差分確認は人間確認として残す。
 - 仕様1.7.0単一支持グループ移動自動証拠: typecheck、lint、単体32ファイル1,014件、ブラウザ103件、buildに合格。3段再帰移動、回転・支持不可・複数支持の非連動、子孫座標失敗のrollback、配置解除拒否、一回のUndo、支持不可専用理由と関連積荷名、CSV確認文を回帰した。3D dragの連動preview・取消・dropは実装され既存drag回帰に合格したが、積層fixtureでの人間差分確認は未実施である。
 - 仕様1.8.0積荷制約一覧編集の自動証拠: typecheck、lint、単体32ファイル1,016件、ブラウザ104件、build、データ契約・ガバナンス・プロジェクト検査に合格。保存値反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表記一致、一回のUndo、dirty確認、305 / 320 / 375 px、支持不可理由を回帰した。内蔵ブラウザでの人間差分確認は未実施である。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
@@ -223,6 +235,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - AC-07: `src/persistence/cargo-csv.test.ts`、`src/persistence/cargo-csv-file.test.ts`、`src/application/cargo-csv-import.test.ts`、`src/application/project-command.test.ts` と `tests/browser/cargo-csv.spec.ts` が、CSV parser/file、共通正規入力、全体置換、履歴、既存保存互換を検証する。全行検証、全空白recordとquoted改行を含む1始まり論理record path、全固定code/path、決定的sort・重複排除・50件上限・入力値非反射、件数確認、取消・失敗保持、成功、Undo/Redo、scene一時状態resetと派生再導出、30件上限、legacy 31〜1,000件、狭幅・focus・WebGL停止を実行する。Windows版Excel往復は別の人間証拠とする。
 - AC-08: `src/application/project-command.test.ts`、`src/domain/validation.test.ts`、`src/ui/physical-validation-view.test.ts`、`src/workers/physical-validation-worker-protocol.test.ts` と `tests/browser/placement.spec.ts` が、3段再帰移動、回転・支持不可・複数支持の非連動、座標失敗の原子的rollback、配置解除拒否、一回のUndo、専用理由と関連積荷名を含む表示を検証する。`src/scene/SceneWorkspace.tsx` と `src/scene/ThreeViewport.tsx` の連動preview・取消実装は既存の実pointer drag回帰を通すが、積層fixtureの実pointer差分確認は人間確認として残す。
 - AC-09: `src/application/project-command.test.ts` と `tests/browser/input.spec.ts` が、制約値の反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表示一致、一回のUndo、dirty破棄と狭幅を検証し、既存物理表示回帰が「上乗せ禁止」理由を検証する。
+- AC-11: `src/scene/project-scene.test.ts` が移動グループ除外、20 / 21 mm境界、床・支持上面fit、支持喪失・境界外、面接触と正体積衝突、screen投影から一軸1 mmへの対応を検証する。`tests/browser/scene.spec.ts` がcanvas focus、3回repeatの一回履歴、Escape取消、Undo/Redoを実行し、`tests/browser/persistence.spec.ts` が操作方法copyを検証する。積層fixtureでの短距離実pointer dragと視点変更後の方向理解は人間確認として残す。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 - 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。

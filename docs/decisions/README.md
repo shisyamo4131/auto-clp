@@ -51,5 +51,6 @@
 | [0038](0038-github-pages-technical-preview-and-future-hosting.md) | GitHub Pages技術試用版と将来の配信基盤 | Accepted | 2026-09-16 |
 | [0039](0039-staging-compact-load-summary-and-viewer-inputs.md) | 荷室外積荷の寄せ・積載概要・viewer入力 | Accepted | 2026-09-16 |
 | [0040](0040-empty-container-guidance-and-csv-import-gate.md) | コンテナ未登録時の案内とCSVインポート制限 | Accepted | 2026-09-16 |
+| [0041](0041-moving-group-face-fit-and-view-relative-nudge.md) | 移動グループ判定・側面fit・視点基準矢印調整 | Accepted | 2026-09-16 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

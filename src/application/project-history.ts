@@ -16,6 +16,7 @@ export type ProjectHistoryAction =
   | "placement.update"
   | "placement.delete"
   | "placement.drag-xy"
+  | "placement.keyboard-nudge"
   | "automatic-proposal.apply";
 
 export interface ProjectHistoryFrame {

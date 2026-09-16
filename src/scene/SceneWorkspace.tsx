@@ -41,6 +41,7 @@ import {
   placedFloorDragDisposition,
   projectSceneStagingAnchor,
   projectContainerToScene,
+  resolveKeyboardNudgePosition,
   resolveSupportSnapPosition,
   sceneFloorDragPositionMm,
   xAxisQuarterTurnOrientation,
@@ -53,6 +54,7 @@ import {
   ThreeViewport,
   type CargoDragCommitResult,
   type CargoDragPreviewResult,
+  type CargoNudgePreviewResult,
 } from "./ThreeViewport";
 
 function gramsToKilograms(grams: number): string {
@@ -697,31 +699,6 @@ export function SceneWorkspace({
         projectedCargo.positionMm,
         deltaScene,
       );
-      const resolved = resolveSupportSnapPosition(
-        project,
-        effectiveContainerId,
-        cargoId,
-        projectedCargo.orientation,
-        rawPositionMm,
-      );
-      const positionMm = resolved?.positionMm ?? rawPositionMm;
-      const supporterNames = (resolved?.supporterIds ?? [])
-        .map(
-          (supporterId) =>
-            project.cargoes.find((candidate) => candidate.id === supporterId)
-              ?.name ?? supporterId,
-        )
-        .join("、");
-      const message =
-        resolved?.disposition === "single-support"
-          ? `${supporterNames}の上面に単独支持としてスナップ中です。上面内で移動できます。`
-          : resolved?.disposition === "support-conditions-unverified"
-            ? `${supporterNames}の上面に仮スナップ中です。張り出し・複数支持等の支持条件は未確認です。`
-            : resolved?.disposition === "invalid-overlap"
-              ? "積荷同士が立体的に重なる位置です。Drop後は不適合として保存されます。"
-              : resolved?.disposition === "floor"
-                ? "荷室床面にスナップ中です。"
-                : "荷室外の作業スペースを移動中です。";
       const followerCargoIds =
         projectedCargo.kind === "placed"
           ? (() => {
@@ -747,6 +724,39 @@ export function SceneWorkspace({
               return derived;
             })()
           : [];
+      const resolved = resolveSupportSnapPosition(
+        project,
+        effectiveContainerId,
+        cargoId,
+        projectedCargo.orientation,
+        rawPositionMm,
+        [cargoId, ...followerCargoIds],
+      );
+      const positionMm = resolved?.positionMm ?? rawPositionMm;
+      const supporterNames = (resolved?.supporterIds ?? [])
+        .map(
+          (supporterId) =>
+            project.cargoes.find((candidate) => candidate.id === supporterId)
+              ?.name ?? supporterId,
+        )
+        .join("、");
+      const baseMessage =
+        resolved?.disposition === "single-support"
+          ? `${supporterNames}の上面に単独支持としてスナップ中です。上面内で移動できます。`
+          : resolved?.disposition === "support-conditions-unverified"
+            ? `${supporterNames}の上面に仮スナップ中です。張り出し・複数支持等の支持条件は未確認です。`
+            : resolved?.disposition === "invalid-overlap"
+              ? "積荷同士が立体的に重なる位置です。Drop後は不適合として保存されます。"
+              : resolved?.disposition === "floor"
+                ? "荷室床面にスナップ中です。"
+                : "荷室外の作業スペースを移動中です。";
+      const faceSnapName = resolved?.faceSnap === undefined
+        ? undefined
+        : project.cargoes.find((candidate) => candidate.id === resolved.faceSnap?.cargoId)
+            ?.name ?? resolved.faceSnap.cargoId;
+      const message = faceSnapName === undefined
+        ? baseMessage
+        : `${baseMessage} ${faceSnapName}の側面にフィットしています。`;
       const groupMessage =
         followerCargoIds.length === 0
           ? message
@@ -770,6 +780,130 @@ export function SceneWorkspace({
       };
     },
     [effectiveContainerId, project, projection],
+  );
+
+  const handleCargoNudgeStateChange = useCallback((active: boolean) => {
+    setCanvasDragActive(active);
+  }, []);
+
+  const handleCargoNudgePreview = useCallback(
+    (
+      cargoId: string,
+      deltaMm: { readonly xMm: number; readonly yMm: number },
+    ): CargoNudgePreviewResult => {
+      const projectedCargo = projection?.cargoes.find(
+        (candidate) => candidate.cargoId === cargoId,
+      );
+      if (
+        projectedCargo?.kind !== "placed" ||
+        effectiveContainerId === undefined
+      ) {
+        setCanvasStatus("配置済みの積荷を選択すると矢印キーで調整できます。");
+        return {
+          accepted: false,
+          followerCargoIds: [],
+          positionMm: projectedCargo?.positionMm ?? { xMm: 0, yMm: 0, zMm: 0 },
+          sceneDelta: { x: 0, y: 0, z: 0 },
+        };
+      }
+      const followerCargoIds = singleSupportDescendantCargoIds(
+        project,
+        effectiveContainerId,
+        cargoId,
+      );
+      const resolved = resolveKeyboardNudgePosition(
+        project,
+        effectiveContainerId,
+        cargoId,
+        deltaMm,
+        [cargoId, ...followerCargoIds],
+      );
+      if (resolved === undefined || resolved.disposition === "blocked") {
+        setCanvasStatus("別の積荷に接触しているため、これ以上その方向へ移動できません。");
+        return {
+          accepted: false,
+          followerCargoIds,
+          positionMm: projectedCargo.positionMm,
+          sceneDelta: { x: 0, y: 0, z: 0 },
+        };
+      }
+      const followerMessage = followerCargoIds.length === 0
+        ? ""
+        : ` 上段積荷${followerCargoIds.length}件も連動します。`;
+      setCanvasStatus(
+        `X ${resolved.positionMm.xMm}・Y ${resolved.positionMm.yMm}・Z ${resolved.positionMm.zMm} mmへ矢印調整中です。${followerMessage}`,
+      );
+      return {
+        accepted: true,
+        followerCargoIds,
+        positionMm: resolved.positionMm,
+        sceneDelta: domainPositionDeltaToScene(
+          projectedCargo.positionMm,
+          resolved.positionMm,
+        ),
+      };
+    },
+    [effectiveContainerId, project, projection],
+  );
+
+  const handleCargoNudgeCommit = useCallback(
+    (
+      cargoId: string,
+      preview: CargoNudgePreviewResult,
+    ): CargoDragCommitResult => {
+      if (!preview.accepted || effectiveContainerId === undefined) {
+        return { ok: true, message: "" };
+      }
+      if (externalInteractionActive) {
+        return {
+          ok: false,
+          message: "別のCLP操作または保存処理中のため、矢印調整を保存しませんでした。",
+        };
+      }
+      const placement = project.placements.find(
+        (candidate) =>
+          candidate.cargoId === cargoId &&
+          candidate.containerId === effectiveContainerId,
+      );
+      if (placement === undefined) {
+        return {
+          ok: false,
+          message: "対象の配置が最新のCLPに見つからないため、矢印調整を元に戻しました。",
+        };
+      }
+      const result = updatePlacement(project, cargoId, effectiveContainerId, {
+        xMm: String(preview.positionMm.xMm),
+        yMm: String(preview.positionMm.yMm),
+        zMm: String(preview.positionMm.zMm),
+        orientation: placement.orientation,
+      });
+      if (!result.ok) {
+        return {
+          ok: false,
+          message: "移動後の座標が保存可能な範囲にないため、矢印調整を元に戻しました。",
+        };
+      }
+      const transition = onProjectCommit({
+        baseProject: project,
+        nextProject: result.project,
+        action: "placement.keyboard-nudge",
+      });
+      if (!transition.ok) {
+        return {
+          ok: false,
+          message: "CLPが更新されたため矢印調整を保存できませんでした。配置を確認してください。",
+        };
+      }
+      if (!transition.changed) {
+        setCanvasStatus("配置位置は変わりませんでした。");
+        return { ok: true, message: "" };
+      }
+      setCanvasStatus(
+        `配置をX ${preview.positionMm.xMm}・Y ${preview.positionMm.yMm}・Z ${preview.positionMm.zMm} mmへ矢印キーで調整しました。物理判定を再計算しています。`,
+      );
+      return { ok: true, message: "" };
+    },
+    [effectiveContainerId, externalInteractionActive, onProjectCommit, project],
   );
 
   const handleCargoDragCommit = useCallback(
@@ -1374,6 +1508,9 @@ export function SceneWorkspace({
             onCargoDragCommit={handleCargoDragCommit}
             onCargoDragPreview={handleCargoDragPreview}
             onCargoDragStateChange={handleCargoDragStateChange}
+            onCargoNudgeCommit={handleCargoNudgeCommit}
+            onCargoNudgePreview={handleCargoNudgePreview}
+            onCargoNudgeStateChange={handleCargoNudgeStateChange}
             onCargoXAxisRotation={() => handleCargoRotation("X")}
             onCargoZAxisRotation={() => handleCargoRotation("Z")}
             onRotationUnavailable={setCanvasStatus}
@@ -1456,7 +1593,7 @@ export function SceneWorkspace({
         {canvasStatus}
       </p>
       <p id="scene-workspace-interaction-help" className="visually-hidden">
-        3Dでは積荷を直接選ぶか、下部で検索・選択できます。空白の左ドラッグで視点回転、右ドラッグまたはCtrlを押しながら左ドラッグで平行移動します。ホイールで拡大・縮小できます。
+        3Dでは積荷を直接選ぶか、下部で検索・選択できます。配置済み積荷は3Dへフォーカスした状態で矢印キーを押すと、視点基準で1 mmずつ調整できます。空白の左ドラッグで視点回転、右ドラッグまたはCtrlを押しながら左ドラッグで平行移動します。ホイールで拡大・縮小できます。
       </p>
 
       <div className="scene-workspace__secondary">

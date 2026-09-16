@@ -23,6 +23,7 @@ import {
 
 export const MM_TO_SCENE_UNIT = 0.001;
 export const STAGING_GAP_MM = 100;
+export const FACE_SNAP_THRESHOLD_MM = 20;
 
 const FLOOR_QUARTER_TURN_ORIENTATION = {
   LWH: "WLH",
@@ -497,8 +498,209 @@ export type SupportSnapDisposition =
 
 export interface SupportSnapResult {
   readonly disposition: SupportSnapDisposition;
+  readonly faceSnap?: {
+    readonly axis: "x" | "y";
+    readonly cargoId: string;
+  };
   readonly positionMm: PositionMm;
   readonly supporterIds: readonly string[];
+}
+
+interface PlacedCargoBounds {
+  readonly cargo: Cargo;
+  readonly placement: Placement;
+  readonly bounds: ReturnType<typeof placementBounds>;
+}
+
+function translateBounds(
+  bounds: ReturnType<typeof placementBounds>,
+  delta: PositionMm,
+): ReturnType<typeof placementBounds> {
+  return {
+    dimensions: bounds.dimensions,
+    min: {
+      xMm: bounds.min.xMm + delta.xMm,
+      yMm: bounds.min.yMm + delta.yMm,
+      zMm: bounds.min.zMm + delta.zMm,
+    },
+    max: {
+      xMm: bounds.max.xMm + delta.xMm,
+      yMm: bounds.max.yMm + delta.yMm,
+      zMm: bounds.max.zMm + delta.zMm,
+    },
+  };
+}
+
+function placedCargoBounds(
+  project: Project,
+  containerId: string,
+): readonly PlacedCargoBounds[] {
+  const cargoById = new Map(project.cargoes.map((cargo) => [cargo.id, cargo]));
+  return project.placements
+    .filter((placement) => placement.containerId === containerId)
+    .flatMap((placement) => {
+      const cargo = cargoById.get(placement.cargoId);
+      return cargo === undefined
+        ? []
+        : [{ cargo, placement, bounds: placementBounds(cargo, placement) }];
+    });
+}
+
+function movedGroupBounds(
+  project: Project,
+  containerId: string,
+  cargo: Cargo,
+  orientation: Orientation,
+  rootPositionMm: PositionMm,
+  movingCargoIds: ReadonlySet<string>,
+): readonly ReturnType<typeof placementBounds>[] {
+  const rootPlacement = project.placements.find(
+    (placement) =>
+      placement.containerId === containerId && placement.cargoId === cargo.id,
+  );
+  const rootBounds = placementBounds(cargo, {
+    orientation,
+    positionMm: rootPositionMm,
+  });
+  if (rootPlacement === undefined) return [rootBounds];
+
+  const delta = {
+    xMm: rootPositionMm.xMm - rootPlacement.positionMm.xMm,
+    yMm: rootPositionMm.yMm - rootPlacement.positionMm.yMm,
+    zMm: rootPositionMm.zMm - rootPlacement.positionMm.zMm,
+  };
+  return [
+    rootBounds,
+    ...placedCargoBounds(project, containerId)
+      .filter(
+        (candidate) =>
+          candidate.cargo.id !== cargo.id && movingCargoIds.has(candidate.cargo.id),
+      )
+      .map((candidate) => translateBounds(candidate.bounds, delta)),
+  ];
+}
+
+function groupOverlapsFixedCargo(
+  project: Project,
+  containerId: string,
+  cargo: Cargo,
+  orientation: Orientation,
+  rootPositionMm: PositionMm,
+  movingCargoIds: ReadonlySet<string>,
+  fixedCandidates: readonly PlacedCargoBounds[],
+): boolean {
+  return movedGroupBounds(
+    project,
+    containerId,
+    cargo,
+    orientation,
+    rootPositionMm,
+    movingCargoIds,
+  ).some((movingBounds) =>
+    fixedCandidates.some((candidate) =>
+      hasPositiveVolumeOverlap(movingBounds, candidate.bounds),
+    ),
+  );
+}
+
+function positiveIntervalOverlap(
+  firstMin: number,
+  firstMax: number,
+  secondMin: number,
+  secondMax: number,
+): boolean {
+  return Math.min(firstMax, secondMax) - Math.max(firstMin, secondMin) > 0;
+}
+
+function resolveFaceSnap(
+  project: Project,
+  containerId: string,
+  cargo: Cargo,
+  orientation: Orientation,
+  positionMm: PositionMm,
+  movingCargoIds: ReadonlySet<string>,
+  fixedCandidates: readonly PlacedCargoBounds[],
+): Pick<SupportSnapResult, "faceSnap" | "positionMm"> {
+  const bounds = placementBounds(cargo, { orientation, positionMm });
+  const candidates = fixedCandidates.flatMap((candidate) => {
+    if (candidate.bounds.min.zMm !== bounds.min.zMm) return [];
+    const options: Array<{
+      readonly axis: "x" | "y";
+      readonly cargoId: string;
+      readonly deltaMm: number;
+      readonly positionMm: PositionMm;
+    }> = [];
+    if (
+      positiveIntervalOverlap(
+        bounds.min.yMm,
+        bounds.max.yMm,
+        candidate.bounds.min.yMm,
+        candidate.bounds.max.yMm,
+      )
+    ) {
+      for (const deltaMm of [
+        candidate.bounds.max.xMm - bounds.min.xMm,
+        candidate.bounds.min.xMm - bounds.max.xMm,
+      ]) {
+        if (deltaMm !== 0 && Math.abs(deltaMm) <= FACE_SNAP_THRESHOLD_MM) {
+          options.push({
+            axis: "x",
+            cargoId: candidate.cargo.id,
+            deltaMm,
+            positionMm: { ...positionMm, xMm: positionMm.xMm + deltaMm },
+          });
+        }
+      }
+    }
+    if (
+      positiveIntervalOverlap(
+        bounds.min.xMm,
+        bounds.max.xMm,
+        candidate.bounds.min.xMm,
+        candidate.bounds.max.xMm,
+      )
+    ) {
+      for (const deltaMm of [
+        candidate.bounds.max.yMm - bounds.min.yMm,
+        candidate.bounds.min.yMm - bounds.max.yMm,
+      ]) {
+        if (deltaMm !== 0 && Math.abs(deltaMm) <= FACE_SNAP_THRESHOLD_MM) {
+          options.push({
+            axis: "y",
+            cargoId: candidate.cargo.id,
+            deltaMm,
+            positionMm: { ...positionMm, yMm: positionMm.yMm + deltaMm },
+          });
+        }
+      }
+    }
+    return options;
+  });
+  const selected = candidates
+    .filter(
+      (candidate) =>
+        !groupOverlapsFixedCargo(
+          project,
+          containerId,
+          cargo,
+          orientation,
+          candidate.positionMm,
+          movingCargoIds,
+          fixedCandidates,
+        ),
+    )
+    .sort((first, second) =>
+      Math.abs(first.deltaMm) - Math.abs(second.deltaMm) ||
+      first.axis.localeCompare(second.axis) ||
+      first.cargoId.localeCompare(second.cargoId) ||
+      first.deltaMm - second.deltaMm,
+    )[0];
+  return selected === undefined
+    ? { positionMm }
+    : {
+        faceSnap: { axis: selected.axis, cargoId: selected.cargoId },
+        positionMm: selected.positionMm,
+      };
 }
 
 function positiveOverlapAreaMm2(
@@ -529,6 +731,7 @@ export function resolveSupportSnapPosition(
   cargoId: string,
   orientation: Orientation,
   rawPositionMm: PositionMm,
+  movingCargoIds: readonly string[] = [cargoId],
 ): SupportSnapResult | undefined {
   const cargo = project.cargoes.find((candidate) => candidate.id === cargoId);
   const container = project.containers.find(
@@ -558,24 +761,10 @@ export function resolveSupportSnapPosition(
     return { disposition: "outside", positionMm: rawPositionMm, supporterIds: [] };
   }
 
-  const placedCandidates = project.placements
-    .filter(
-      (placement) =>
-        placement.containerId === containerId && placement.cargoId !== cargoId,
-    )
-    .flatMap((placement) => {
-      const candidateCargo = project.cargoes.find(
-        (candidate) => candidate.id === placement.cargoId,
-      );
-      return candidateCargo === undefined
-        ? []
-        : [
-            {
-              cargo: candidateCargo,
-              bounds: placementBounds(candidateCargo, placement),
-            },
-          ];
-    });
+  const movingCargoIdSet = new Set([cargoId, ...movingCargoIds]);
+  const placedCandidates = placedCargoBounds(project, containerId).filter(
+    (candidate) => !movingCargoIdSet.has(candidate.cargo.id),
+  );
   const overlappingEligible = placedCandidates.filter(
     (candidate) =>
       candidate.cargo.canSupportCargo &&
@@ -628,13 +817,29 @@ export function resolveSupportSnapPosition(
           };
   }
 
+  const faceSnap = resolveFaceSnap(
+    project,
+    containerId,
+    cargo,
+    orientation,
+    snappedPositionMm,
+    movingCargoIdSet,
+    placedCandidates,
+  );
+  snappedPositionMm = faceSnap.positionMm;
   const snappedBounds = placementBounds(cargo, {
     orientation,
     positionMm: snappedPositionMm,
   });
   if (
-    placedCandidates.some((candidate) =>
-      hasPositiveVolumeOverlap(snappedBounds, candidate.bounds),
+    groupOverlapsFixedCargo(
+      project,
+      containerId,
+      cargo,
+      orientation,
+      snappedPositionMm,
+      movingCargoIdSet,
+      placedCandidates,
     )
   ) {
     return {
@@ -644,7 +849,12 @@ export function resolveSupportSnapPosition(
     };
   }
   if (snappedPositionMm.zMm === 0) {
-    return { disposition: "floor", positionMm: snappedPositionMm, supporterIds: [] };
+    return {
+      disposition: "floor",
+      faceSnap: faceSnap.faceSnap,
+      positionMm: snappedPositionMm,
+      supporterIds: [],
+    };
   }
 
   const assessment = assessGeometricSupport(
@@ -662,9 +872,92 @@ export function resolveSupportSnapPosition(
         : assessment.kind === "conditional"
           ? "support-conditions-unverified"
           : "invalid-overlap",
+    faceSnap: faceSnap.faceSnap,
     positionMm: snappedPositionMm,
     supporterIds: assessment.contactIds,
   };
+}
+
+export type KeyboardNudgeDisposition = "update" | "blocked";
+
+export interface KeyboardNudgeResult {
+  readonly disposition: KeyboardNudgeDisposition;
+  readonly positionMm: PositionMm;
+}
+
+/**
+ * Resolves an explicit X/Y keyboard translation. Container and support bounds
+ * deliberately do not constrain this repair operation; only positive-volume
+ * overlap with cargo outside the moving group blocks the step.
+ */
+export function resolveKeyboardNudgePosition(
+  project: Project,
+  containerId: string,
+  cargoId: string,
+  deltaMm: Pick<PositionMm, "xMm" | "yMm">,
+  movingCargoIds: readonly string[] = [cargoId],
+): KeyboardNudgeResult | undefined {
+  const cargo = project.cargoes.find((candidate) => candidate.id === cargoId);
+  const placement = project.placements.find(
+    (candidate) =>
+      candidate.containerId === containerId && candidate.cargoId === cargoId,
+  );
+  if (cargo === undefined || placement === undefined) return undefined;
+
+  const movingCargoIdSet = new Set([cargoId, ...movingCargoIds]);
+  const fixedCandidates = placedCargoBounds(project, containerId).filter(
+    (candidate) => !movingCargoIdSet.has(candidate.cargo.id),
+  );
+  const positionMm = {
+    xMm: placement.positionMm.xMm + deltaMm.xMm,
+    yMm: placement.positionMm.yMm + deltaMm.yMm,
+    zMm: placement.positionMm.zMm,
+  };
+  return {
+    disposition: groupOverlapsFixedCargo(
+      project,
+      containerId,
+      cargo,
+      placement.orientation,
+      positionMm,
+      movingCargoIdSet,
+      fixedCandidates,
+    )
+      ? "blocked"
+      : "update",
+    positionMm,
+  };
+}
+
+export type ViewRelativeArrowKey = "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight";
+
+export interface ProjectedFloorAxes {
+  readonly x: { readonly screenX: number; readonly screenY: number };
+  readonly y: { readonly screenX: number; readonly screenY: number };
+}
+
+/** Maps screen-relative arrows to exactly one canonical container axis. */
+export function viewRelativeArrowDeltaMm(
+  key: ViewRelativeArrowKey,
+  axes: ProjectedFloorAxes,
+): Pick<PositionMm, "xMm" | "yMm"> {
+  const horizontalAxis =
+    Math.abs(axes.x.screenX) >= Math.abs(axes.y.screenX) ? "x" : "y";
+  const verticalAxis = horizontalAxis === "x" ? "y" : "x";
+  const axis = key === "ArrowLeft" || key === "ArrowRight"
+    ? horizontalAxis
+    : verticalAxis;
+  const projected = axes[axis];
+  const positivePointsTowardKey =
+    key === "ArrowRight"
+      ? projected.screenX >= 0
+      : key === "ArrowLeft"
+        ? projected.screenX <= 0
+        : key === "ArrowUp"
+          ? projected.screenY >= 0
+          : projected.screenY <= 0;
+  const amount = positivePointsTowardKey ? 1 : -1;
+  return axis === "x" ? { xMm: amount, yMm: 0 } : { xMm: 0, yMm: amount };
 }
 
 export type PlacedFloorDragDisposition = "no-op" | "update" | "delete";

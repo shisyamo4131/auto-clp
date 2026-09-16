@@ -7,8 +7,10 @@ import {
   sceneBoundsReachRadius,
   sceneContainerBounds,
   sceneProjectionBounds,
+  viewRelativeArrowDeltaMm,
   type ProjectSceneProjection,
   type SceneVector3,
+  type ViewRelativeArrowKey,
 } from "./project-scene";
 
 export interface CargoDragCommitResult {
@@ -31,6 +33,13 @@ export interface CargoDragPreviewResult {
   readonly supporterIds: readonly string[];
 }
 
+export interface CargoNudgePreviewResult {
+  readonly accepted: boolean;
+  readonly followerCargoIds: readonly string[];
+  readonly positionMm: PositionMm;
+  readonly sceneDelta: SceneVector3;
+}
+
 interface ThreeViewportProps {
   readonly bottomOverlay?: ReactNode;
   readonly centerOverlay?: ReactNode;
@@ -46,6 +55,15 @@ interface ThreeViewportProps {
     deltaScene: Pick<SceneVector3, "x" | "z">,
   ) => CargoDragPreviewResult;
   readonly onCargoDragStateChange: (active: boolean) => void;
+  readonly onCargoNudgeCommit: (
+    cargoId: string,
+    preview: CargoNudgePreviewResult,
+  ) => CargoDragCommitResult;
+  readonly onCargoNudgePreview: (
+    cargoId: string,
+    deltaMm: Pick<PositionMm, "xMm" | "yMm">,
+  ) => CargoNudgePreviewResult;
+  readonly onCargoNudgeStateChange: (active: boolean) => void;
   readonly onCargoXAxisRotation: () => void;
   readonly onCargoZAxisRotation: () => void;
   readonly onRotationUnavailable: (message: string) => void;
@@ -168,6 +186,13 @@ interface CargoPointerGesture {
   dragActive: boolean;
   followerStartPositions?: ReadonlyMap<string, THREE.Vector3>;
   lastPreview?: CargoDragPreviewResult;
+}
+
+interface CargoKeyboardGesture {
+  readonly cargoId: string;
+  deltaMm: { xMm: number; yMm: number };
+  readonly startPositions: ReadonlyMap<string, THREE.Vector3>;
+  lastPreview?: CargoNudgePreviewResult;
 }
 
 function setVector(target: THREE.Vector3, source: SceneVector3): void {
@@ -400,6 +425,9 @@ export function ThreeViewport({
   onCargoDragCommit,
   onCargoDragPreview,
   onCargoDragStateChange,
+  onCargoNudgeCommit,
+  onCargoNudgePreview,
+  onCargoNudgeStateChange,
   onCargoXAxisRotation,
   onCargoZAxisRotation,
   onRotationUnavailable,
@@ -491,6 +519,7 @@ export function ThreeViewport({
     let renderer: THREE.WebGLRenderer | undefined;
     let controls: OrbitControls | undefined;
     let gesture: CargoPointerGesture | undefined;
+    let keyboardGesture: CargoKeyboardGesture | undefined;
     const geometries: THREE.BufferGeometry[] = [];
     const materials: THREE.Material[] = [];
     let resizeObserver: ResizeObserver | undefined;
@@ -940,6 +969,95 @@ export function ThreeViewport({
       if (wasActive) onCargoDragStateChange(false);
     };
 
+    const restoreKeyboardGesturePreview = () => {
+      if (keyboardGesture === undefined) return;
+      for (const [cargoId, position] of keyboardGesture.startPositions) {
+        cargoVisuals.get(cargoId)?.mesh.position.copy(position);
+      }
+      applySelectionVisuals(selectedCargoIdRef.current);
+      renderScene();
+    };
+
+    const finishKeyboardGesture = (commit: boolean) => {
+      if (keyboardGesture === undefined) return;
+      const completed = keyboardGesture;
+      restoreKeyboardGesturePreview();
+      keyboardGesture = undefined;
+      onCargoNudgeStateChange(false);
+      if (!commit || completed.lastPreview === undefined) return;
+      const result = onCargoNudgeCommit(completed.cargoId, completed.lastPreview);
+      if (!result.ok) onCargoDragCancel(result.message);
+    };
+
+    const projectedFloorAxes = (cargoId: string) => {
+      const visual = cargoVisuals.get(cargoId);
+      if (visual === undefined) return undefined;
+      camera.updateMatrixWorld();
+      const base = visual.mesh.position.clone().project(camera);
+      const x = visual.mesh.position
+        .clone()
+        .add(new THREE.Vector3(1, 0, 0))
+        .project(camera);
+      const y = visual.mesh.position
+        .clone()
+        .add(new THREE.Vector3(0, 0, -1))
+        .project(camera);
+      if (![base.x, base.y, x.x, x.y, y.x, y.y].every(Number.isFinite)) {
+        return undefined;
+      }
+      return {
+        x: { screenX: x.x - base.x, screenY: x.y - base.y },
+        y: { screenX: y.x - base.x, screenY: y.y - base.y },
+      };
+    };
+
+    const previewKeyboardNudge = (key: ViewRelativeArrowKey) => {
+      const cargoId = keyboardGesture?.cargoId ?? selectedCargoIdRef.current;
+      if (cargoId === undefined) return;
+      const axes = projectedFloorAxes(cargoId);
+      if (axes === undefined) return;
+      const step = viewRelativeArrowDeltaMm(key, axes);
+      const currentDelta = keyboardGesture?.deltaMm ?? { xMm: 0, yMm: 0 };
+      const nextDelta = {
+        xMm: currentDelta.xMm + step.xMm,
+        yMm: currentDelta.yMm + step.yMm,
+      };
+      const preview = onCargoNudgePreview(cargoId, nextDelta);
+      if (!preview.accepted) return;
+
+      if (keyboardGesture === undefined) {
+        const movingIds = [cargoId, ...preview.followerCargoIds];
+        const startPositions = new Map(
+          movingIds.flatMap((movingCargoId) => {
+            const visual = cargoVisuals.get(movingCargoId);
+            return visual === undefined
+              ? []
+              : [[movingCargoId, visual.mesh.position.clone()] as const];
+          }),
+        );
+        keyboardGesture = {
+          cargoId,
+          deltaMm: nextDelta,
+          startPositions,
+          lastPreview: preview,
+        };
+        onCargoNudgeStateChange(true);
+      } else {
+        keyboardGesture.deltaMm = nextDelta;
+        keyboardGesture.lastPreview = preview;
+      }
+      for (const [movingCargoId, startPosition] of keyboardGesture.startPositions) {
+        const visual = cargoVisuals.get(movingCargoId);
+        if (visual === undefined) continue;
+        visual.mesh.position.copy(startPosition);
+        visual.mesh.position.x += preview.sceneDelta.x;
+        visual.mesh.position.y += preview.sceneDelta.y;
+        visual.mesh.position.z += preview.sceneDelta.z;
+      }
+      applySelectionVisuals(selectedCargoIdRef.current);
+      renderScene();
+    };
+
     const rollbackGesture = (message: string) => {
       if (gesture === undefined) return;
       const wasActive = gesture.dragActive;
@@ -949,7 +1067,8 @@ export function ThreeViewport({
     };
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (gesture !== undefined) return;
+      if (gesture !== undefined || keyboardGesture !== undefined) return;
+      canvas.focus({ preventScroll: true });
       const finePointer = pointerIsFine(event);
       if (event.button !== 0) {
         if (!finePointer) event.stopImmediatePropagation();
@@ -1093,18 +1212,56 @@ export function ThreeViewport({
         event.preventDefault();
         rollbackGesture("Escapeキーで配置の移動をキャンセルしました。");
       }
+      if (event.key === "Escape" && keyboardGesture !== undefined) {
+        event.preventDefault();
+        finishKeyboardGesture(false);
+        onCargoDragCancel("Escapeキーで矢印調整をキャンセルしました。");
+      }
+      if (
+        (event.key === "ArrowUp" ||
+          event.key === "ArrowDown" ||
+          event.key === "ArrowLeft" ||
+          event.key === "ArrowRight") &&
+        document.activeElement === canvas &&
+        gesture === undefined &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.shiftKey &&
+        (!interactionDisabledRef.current || keyboardGesture !== undefined)
+      ) {
+        event.preventDefault();
+        previewKeyboardNudge(event.key);
+      }
     };
     const handleKeyUp = (event: KeyboardEvent) => {
       if (event.key === "Control") setCtrlPanActive(false);
+      if (
+        keyboardGesture !== undefined &&
+        (event.key === "ArrowUp" ||
+          event.key === "ArrowDown" ||
+          event.key === "ArrowLeft" ||
+          event.key === "ArrowRight")
+      ) {
+        event.preventDefault();
+        finishKeyboardGesture(true);
+      }
     };
     const handleWindowBlur = () => {
       setCtrlPanActive(false);
-      rollbackGesture("ウィンドウの操作が中断されたため、配置の移動を元に戻しました。");
+      const keyboardNudgeWasActive = keyboardGesture !== undefined;
+      finishKeyboardGesture(false);
+      if (keyboardNudgeWasActive) {
+        onCargoDragCancel("ウィンドウの操作が中断されたため、矢印調整を元に戻しました。");
+      } else {
+        rollbackGesture("ウィンドウの操作が中断されたため、配置の移動を元に戻しました。");
+      }
     };
 
     const dispose = () => {
       if (disposed) return;
       disposed = true;
+      finishKeyboardGesture(false);
       rollbackGesture("3D表示が更新されたため、未確定の配置移動を元に戻しました。");
       canvas.removeEventListener("pointerdown", handlePointerDown, true);
       canvas.removeEventListener("pointermove", handlePointerMove, true);
@@ -1251,7 +1408,7 @@ export function ThreeViewport({
       dispose();
       setDimensionAnnotations([]);
     };
-  }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragPreview, onCargoDragStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
+  }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragPreview, onCargoDragStateChange, onCargoNudgeCommit, onCargoNudgePreview, onCargoNudgeStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
 
   const weightBalanceKind = projection?.weightBalance.kind ?? "no-container";
   const currentWeightBalanceMarkers =
@@ -1445,6 +1602,7 @@ export function ThreeViewport({
         role="img"
         aria-label="積荷を選択・床面移動できる3Dプレビュー"
         aria-describedby={statusDescriptionId}
+        tabIndex={0}
       />
     </div>
   );

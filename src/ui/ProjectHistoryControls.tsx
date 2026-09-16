@@ -28,6 +28,7 @@ const actionCopy = {
   "placement.update": "配置の更新",
   "placement.delete": "配置の削除",
   "placement.drag-xy": "3Dでの配置移動",
+  "placement.keyboard-nudge": "矢印キーでの配置調整",
   "automatic-proposal.apply": "自動提案の一括適用",
 } satisfies Record<ProjectHistoryAction, string>;
 
