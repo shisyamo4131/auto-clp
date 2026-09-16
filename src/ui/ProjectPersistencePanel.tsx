@@ -501,12 +501,10 @@ export function ProjectPersistencePanel({
           onKeyDownCapture={handleDrawerKeyDownCapture}
         >
           <div className="project-persistence__heading">
-            <div>
-              <p className="eyebrow">LOCAL PERSISTENCE</p>
-              <h2 id="project-persistence-title">CLPメニュー — 保存・再読込</h2>
-            </div>
+            <h2 id="project-persistence-title" className="visually-hidden">CLPメニュー — 保存・再読込</h2>
             <button
               ref={closeButtonRef}
+              className="project-persistence__close"
               type="button"
               aria-label="メニューを閉じる（CLPデータを閉じる）"
               onClick={closeDrawer}
@@ -514,15 +512,12 @@ export function ProjectPersistencePanel({
               メニューを閉じる
             </button>
           </div>
-          <p className="project-persistence__manual-copy">
-            自動保存・自動読込は行いません。
-          </p>
 
           <div className="project-persistence__groups">
 
             <div className="project-persistence__group">
               <h3>CLP</h3>
-              <div className="button-row">
+              <div className="project-persistence__button-grid project-persistence__button-grid--two">
                 <button
                   id="project-persistence-new-project"
                   ref={newProjectButtonRef}
@@ -539,15 +534,17 @@ export function ProjectPersistencePanel({
                     finishDrawerAction(onCreateNewProject);
                   }}
                 >
-                  新規CLP
+                  新規
                 </button>
                 <button
                   type="button"
                   disabled={controlsDisabled}
                   onClick={() => finishDrawerAction(onOpenProjectSettings)}
                 >
-                  CLP設定
+                  設定
                 </button>
+              </div>
+              <div className="project-persistence__button-stack">
                 <button
                   id="cargo-add-button"
                   className="secondary-button"
@@ -555,7 +552,7 @@ export function ProjectPersistencePanel({
                   disabled={controlsDisabled || project.cargoes.length >= CARGO_CREATION_LIMIT}
                   onClick={() => finishDrawerAction(onOpenCargoEditor)}
                 >
-                  積荷を追加
+                  積荷追加
                 </button>
                 <button
                   id="cargo-constraints-button"
@@ -563,35 +560,29 @@ export function ProjectPersistencePanel({
                   disabled={controlsDisabled || project.cargoes.length === 0}
                   onClick={() => finishDrawerAction(onOpenCargoConstraints)}
                 >
-                  積荷の制約を一覧編集
+                  制約一括編集
                 </button>
               </div>
-              <p className="project-persistence__availability">
-                新規作成: {Math.min(project.cargoes.length, CARGO_CREATION_LIMIT)} / {CARGO_CREATION_LIMIT}件
-                {project.cargoes.length > CARGO_CREATION_LIMIT
-                  ? `（既存データは${project.cargoes.length}件。編集・削除・書出しは継続できます）`
-                  : ""}
-              </p>
             </div>
             <div className="project-persistence__group">
-              <h3>積荷CSV</h3>
+              <h3>積荷一括登録</h3>
               <p className="project-persistence__availability">
-                テンプレートへ1〜30件を入力し、現在の積荷と全配置を確認後に一括置換します。
+                テンプレートにまとめて入力し、一括登録します。
               </p>
-              <div className="button-row">
+              <div className="project-persistence__button-stack">
                 <button
                   id="cargo-csv-template-download"
                   type="button"
                   disabled={controlsDisabled || !cargoCsvDownloadAvailable}
                   onClick={handleCargoCsvTemplateDownload}
                 >
-                  CSVテンプレートを取得
+                  テンプレートダウンロード
                 </button>
                 <label
                   className="file-input-button"
                   aria-disabled={controlsDisabled || !cargoCsvImportAvailable}
                 >
-                  CSVで積荷を一括登録
+                  テンプレートインポート
                   <input
                     id="cargo-csv-file-input"
                     type="file"
@@ -615,7 +606,7 @@ export function ProjectPersistencePanel({
                   ? "コンテナはまだありません。"
                   : `選択中: ${selectedContainer?.name ?? "コンテナなし"} · ${project.containers.length} / 100件`}
               </p>
-              <div className="button-row">
+              <div className="project-persistence__button-grid project-persistence__button-grid--three">
                 <button
                   id="container-add-button"
                   className="secondary-button"
@@ -623,7 +614,7 @@ export function ProjectPersistencePanel({
                   disabled={controlsDisabled || project.containers.length >= 100}
                   onClick={() => finishDrawerAction(() => onOpenContainerEditor({ kind: "add" }))}
                 >
-                  コンテナを追加
+                  追加
                 </button>
                 <button
                   id="container-edit-button"
@@ -636,7 +627,7 @@ export function ProjectPersistencePanel({
                     }
                   }}
                 >
-                  選択中のコンテナを編集
+                  編集
                 </button>
                 <button
                   id="container-delete-button"
@@ -650,32 +641,13 @@ export function ProjectPersistencePanel({
                     }
                   }}
                 >
-                  選択中のコンテナを削除
+                  削除
                 </button>
               </div>
             </div>
             <div className="project-persistence__group">
-              <h3>ヘルプ</h3>
-              <div className="button-row">
-                <button
-                  type="button"
-                  disabled={controlsDisabled}
-                  onClick={() => finishDrawerAction(() => setOperationGuideOpen(true))}
-                >
-                  操作方法
-                </button>
-                <button
-                  type="button"
-                  disabled={controlsDisabled}
-                  onClick={() => finishDrawerAction(onOpenUsageRequirements)}
-                >
-                  使用上の重要事項
-                </button>
-              </div>
-            </div>
-            <div className="project-persistence__group">
-              <h3>このブラウザ内</h3>
-              <div className="button-row">
+              <h3>保存</h3>
+              <div className="project-persistence__button-grid project-persistence__button-grid--two">
                 <button
                   type="button"
                   disabled={controlsDisabled || !deviceAvailable}
@@ -685,11 +657,13 @@ export function ProjectPersistencePanel({
                 </button>
                 <button
                   type="button"
-                  disabled={controlsDisabled || !deviceAvailable}
-                  onClick={() => void run("load-device", () => onLoadDevice(project))}
+                  disabled={controlsDisabled || !fileExportAvailable}
+                  onClick={() => void run("export-file", () => onExportFile(project))}
                 >
-                  端末保存を読込
+                  JSONへ保存
                 </button>
+              </div>
+              <div className="project-persistence__button-stack project-persistence__button-stack--secondary">
                 <button
                   id="project-persistence-delete-device"
                   ref={deleteButtonRef}
@@ -707,28 +681,40 @@ export function ProjectPersistencePanel({
                   端末保存を削除
                 </button>
               </div>
-              {!deviceAvailable ? (
+              {!deviceAvailable || !fileExportAvailable ? (
                 <p className="project-persistence__availability">
-                  このブラウザでは端末内保存を利用できません。
+                  このブラウザでは端末保存またはJSON保存の一部を利用できません。
                 </p>
               ) : null}
+              <section
+                className="project-persistence__last-result"
+                aria-labelledby="project-persistence-last-result-title"
+              >
+                <h4 id="project-persistence-last-result-title">直近の結果</h4>
+                <p className="project-persistence__status">
+                  {status === "" ? "まだ保存・再読込操作を行っていません。" : status}
+                </p>
+              </section>
+              <aside className="project-persistence__notice">
+                端末保存は1件だけです。明示的に削除するまで保持を試みますが、ブラウザのサイトデータ削除や容量管理で失われる場合があります。バックアップではありません。必要な時はJSONも書き出してください。操作履歴、未保存入力、選択、カメラ、判定結果は保存しません。
+              </aside>
             </div>
 
             <div className="project-persistence__group">
-              <h3>JSONファイル</h3>
-              <div className="button-row">
+              <h3>読込</h3>
+              <div className="project-persistence__button-grid project-persistence__button-grid--two">
                 <button
                   type="button"
-                  disabled={controlsDisabled || !fileExportAvailable}
-                  onClick={() => void run("export-file", () => onExportFile(project))}
+                  disabled={controlsDisabled || !deviceAvailable}
+                  onClick={() => void run("load-device", () => onLoadDevice(project))}
                 >
-                  JSONを書き出す
+                  端末から読込
                 </button>
                 <label
                   className="file-input-button"
                   aria-disabled={controlsDisabled || !fileImportAvailable}
                 >
-                  JSONを読み込む
+                  JSONから読込
                   <input
                     id="project-json-file-input"
                     type="file"
@@ -739,11 +725,30 @@ export function ProjectPersistencePanel({
                   />
                 </label>
               </div>
-              {!fileImportAvailable || !fileExportAvailable ? (
+              {!deviceAvailable || !fileImportAvailable ? (
                 <p className="project-persistence__availability">
-                  このブラウザではJSONファイルの読込または書出しの一部を利用できません。
+                  このブラウザでは端末またはJSONからの読込の一部を利用できません。
                 </p>
               ) : null}
+            </div>
+            <div className="project-persistence__group">
+              <h3>ヘルプ</h3>
+              <div className="project-persistence__button-grid project-persistence__button-grid--two">
+                <button
+                  type="button"
+                  disabled={controlsDisabled}
+                  onClick={() => finishDrawerAction(() => setOperationGuideOpen(true))}
+                >
+                  操作方法
+                </button>
+                <button
+                  type="button"
+                  disabled={controlsDisabled}
+                  onClick={() => finishDrawerAction(onOpenUsageRequirements)}
+                >
+                  使用上の重要事項
+                </button>
+              </div>
             </div>
           </div>
 
@@ -805,18 +810,6 @@ export function ProjectPersistencePanel({
             </div>
           ) : null}
 
-          <section
-            className="project-persistence__last-result"
-            aria-labelledby="project-persistence-last-result-title"
-          >
-            <h3 id="project-persistence-last-result-title">直近の結果</h3>
-            <p className="project-persistence__status">
-              {status === "" ? "まだ保存・再読込操作を行っていません。" : status}
-            </p>
-          </section>
-          <aside className="project-persistence__notice">
-            端末保存は1件だけです。明示的に削除するまで保持を試みますが、ブラウザのサイトデータ削除や容量管理で失われる場合があります。バックアップではありません。必要な時はJSONも書き出してください。操作履歴、未保存入力、選択、カメラ、判定結果は保存しません。
-          </aside>
           <footer className="project-persistence__version-info" aria-label="バージョン情報">
             <span>Auto CLP v{packageMetadata.version}</span>
             <span>CLPデータ形式 v{PROJECT_SCHEMA_VERSION}</span>

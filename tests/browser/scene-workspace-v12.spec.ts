@@ -460,7 +460,7 @@ test("allows session-only continuation when usage preference storage fails", asy
   await dialog.getByRole("button", { name: "このセッションだけ続ける" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator("#app-navigation-button")).toBeEnabled();
-  await expect(page.getByRole("button", { name: "積荷を追加", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "積荷追加", exact: true })).toHaveCount(0);
   await page.reload();
   await expect(dialog).toBeVisible();
 });

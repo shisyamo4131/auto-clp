@@ -41,7 +41,7 @@ export async function openCargoAddEditor(page: Page): Promise<void> {
   await openPersistenceDrawer(page);
   await page
     .locator("#project-persistence-drawer")
-    .getByRole("button", { name: "積荷を追加", exact: true })
+    .getByRole("button", { name: "積荷追加", exact: true })
     .click();
   await page.getByRole("dialog", { name: "積荷を追加" }).waitFor({ state: "visible" });
 }
@@ -73,7 +73,7 @@ export async function openContainerAddEditor(page: Page): Promise<void> {
   await openPersistenceDrawer(page);
   await page
     .locator("#project-persistence-drawer")
-    .getByRole("button", { name: "コンテナを追加", exact: true })
+    .getByRole("button", { name: "追加", exact: true })
     .click();
   await page.getByRole("dialog", { name: "コンテナを追加" }).waitFor({ state: "visible" });
 }

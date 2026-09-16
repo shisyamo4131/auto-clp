@@ -280,7 +280,7 @@ $automaticProposalPanel = [IO.File]::ReadAllText($automaticProposalPanelPath)
 foreach ($contract in @(
     @{ Name = 'CLP settings'; Text = $projectSettingsDialog; Required = @('CLP設定', 'CLP名', 'CLPを保存') },
     @{ Name = 'CLP history'; Text = $projectHistoryControls; Required = @('CLP-WIDE HISTORY', 'CLP全体の操作') },
-    @{ Name = 'CLP persistence'; Text = $projectPersistencePanel; Required = @('CLPメニュー', '新規CLP', 'CLP設定', '積荷を追加', 'コンテナを追加', '選択中のコンテナを編集', '選択中のコンテナを削除', 'project-persistence__backdrop') },
+    @{ Name = 'CLP persistence'; Text = $projectPersistencePanel; Required = @('CLPメニュー', 'project-persistence-new-project', 'cargo-add-button', '積荷追加', '制約一括編集', '積荷一括登録', 'テンプレートダウンロード', 'テンプレートインポート', 'container-add-button', 'container-edit-button', 'container-delete-button', 'JSONへ保存', '端末から読込', 'JSONから読込', 'project-persistence__backdrop') },
     @{ Name = 'Container editor'; Text = $containerEditor; Required = @('コンテナ名', 'コンテナを保存', 'command.container-referenced') },
     @{ Name = 'CLP scene'; Text = $sceneWorkspace; Required = @('3D積載作業', '操作する積荷', '積荷を検索') },
     @{ Name = 'Placement proposal'; Text = $automaticProposalPanel; Required = @('配置案を適用', '配置案（未適用）') }
@@ -335,7 +335,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.8.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.8.1' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -476,7 +476,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.8.0`',
+    '仕様版 `1.8.1`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',

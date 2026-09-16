@@ -1,7 +1,7 @@
 # Phase 1 Synthetic Acceptance Contract
 
 - Status: Active
-- Last updated: 2026-09-08
+- Last updated: 2026-09-16
 - Scope: Phase 1 — ローカル3D手動配置試作
 - Data classification: 匿名の合成データのみ
 
@@ -21,7 +21,7 @@
 - キーボード操作と305、320、375 px幅で、主要操作、理由、確認、focusを失わない。
 - fine-pointer床面dragはno-opを先行し、両軸に正の共通長があるpartialを修正途中配置として保存し、面・辺・点接触を含むoutsideだけを荷室外作業状態にする。status出現でviewport位置を変えない。
 - 全積荷を検索・選択でき、別のコンテナへの配置は所有コンテナへ切り替えてから扱う。積荷定義と配置は別dialog・別履歴で、配置取り外しと積荷削除をcascadeしない。
-- Application Barにmenu、現在CLP名、3D能力Chipがあり、保存・読込・JSON・新規CLP・CLP設定・積荷追加・コンテナの追加・編集・削除・ヘルプはNavigation Drawerに集約される。Drawer最下部でAuto CLPアプリ版とCLPデータ形式版を確認できる。積荷cardとコンテナcardは通常画面に置かない。Drawer外clickはDrawerだけを閉じ、背面操作を発火させずmenu focusとpage scrollを復元する。通常のデスクトップ高ではApplication Shellがbrowser viewport高に一致し、上下padding、Application Barと余白、コンテナtabを除いた残りを3D viewportが占める。通常時の操作案内帯は表示せず、必要な操作statusだけをviewport内へ浮動表示してcanvasの寸法・位置を変えない。
+- Application Barにmenu、現在CLP名、3D能力Chipがあり、保存・読込・JSON・CLP作成・設定・積荷追加・制約一括編集・積荷一括登録・コンテナ管理・ヘルプはNavigation Drawerに集約される。CLPの作成・設定とコンテナの追加・編集・削除、保存2操作、読込2操作は指定どおり横並び、積荷一括登録は縦並びとし、close buttonは全幅にする。可視のDrawerタイトル、積荷件数、自動保存説明、旧保存・JSON区分は表示せず、直近結果と端末保存注意は保存欄のbutton下に表示する。Drawer最下部でAuto CLPアプリ版とCLPデータ形式版を確認できる。積荷cardとコンテナcardは通常画面に置かない。Drawer外clickはDrawerだけを閉じ、背面操作を発火させずmenu focusとpage scrollを復元する。通常のデスクトップ高ではApplication Shellがbrowser viewport高に一致し、上下padding、Application Barと余白、コンテナtabを除いた残りを3D viewportが占める。通常時の操作案内帯は表示せず、必要な操作statusだけをviewport内へ浮動表示してcanvasの寸法・位置を変えない。
 - 未保存変更がある新規CLP作成は破棄確認を要求し、作成後は新しい `projectId` と空CLP設定dialogを提供する。新規作成はUndo対象ではなく、旧履歴を破棄するbarrierとする。
 - dialogはfocus trap、dirty破棄確認、背景操作遮断、preventScroll復帰、305 / 320 / 375 px内部scrollを維持する。X/Z回転は固定toolbar上の同一glyphを90度差とaccessible nameで区別でき、積荷editorの向き設定は天地無用だけとする。Z軸床面回転は常に利用でき、天地無用はXだけを無効にする。
 - 重心可視化はコンテナ幾何中心の赤点、配置積荷の合成重心の黄点、色以外の凡例だけを使い、数値、許容範囲、合否、安全性を表示しない。二つの点は操作対象にならず、物理判定lampの赤・黄状態と意味を混同させない。
@@ -98,7 +98,7 @@
 6. 初回または内容版更新後は操作開始前に「使用上の重要事項」を確認し、Drawerと物理判定dialogから再表示できる。実在する顧客名、個人情報、秘密情報、実貨物や搬送記録を入力しない注意は同dialogにあり、主ページへ重複表示しない。確認状態はCLP、JSON、端末保存、履歴へ入らず、法的な利用規約同意とは表示しない。
 7. 305 / 320 / 375 px、コンテナ0 / 1 / 100件、積荷0 / 1 / 1,000件、keyboard、touch、WebGL context lossでoverlay重複、page横overflow、focus消失、stale判定、別のコンテナ配置の重複表示がない。
 8. Drawerの `操作方法` は独立dialogを開き、積荷選択、視点回転・平行移動、wheel、toolbar、積荷drag・回転、Undo/Redo、判定、座標・積荷編集とtouch境界を正しく案内する。dialogはCLP・履歴・保存・sceneを変更せず、背景inert、Tab trap、Escape・close、menu buttonへのfocusとpage scroll復帰、狭幅内部scrollを維持する。現在のコンテナの配置は `現在の座標` と明記する。
-9. 通常画面とDrawerには自動配置提案panel、開始、取消、適用入口がなく、通常起動で自動提案Workerを開始しない。通常画面に積荷cardとコンテナcardはなく、Drawerの `積荷を追加`、`コンテナを追加`、選択中コンテナの編集・削除はmodal editorを開き、save/cancel/dirty/busy/history/limit/focusと非cascade削除を維持する。Drawer外click、close button、Escapeは同じclose境界を使い、未実行の新規CLP・端末保存削除確認を取り消す。
+9. 通常画面とDrawerには自動配置提案panel、開始、取消、適用入口がなく、通常起動で自動提案Workerを開始しない。通常画面に積荷cardとコンテナcardはなく、Drawerの `積荷追加`、コンテナの `追加`・`編集`・`削除` はmodal editorを開き、save/cancel/dirty/busy/history/limit/focusと非cascade削除を維持する。Drawer外click、close button、Escapeは同じclose境界を使い、未実行の新規CLP・端末保存削除確認を取り消す。
 
 ## AC-06 Cargo Center-of-Gravity Reference Markers
 

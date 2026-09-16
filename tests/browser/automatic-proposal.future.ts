@@ -50,7 +50,7 @@ async function addCargo(
   name: string,
   options: { massKg?: string; canSupportCargo?: boolean } = {},
 ) {
-  await page.getByRole("button", { name: "積荷を追加" }).click();
+  await page.getByRole("button", { name: "積荷追加" }).click();
   await page.getByLabel("積荷名").fill(name);
   await page.getByLabel("長さ", { exact: true }).fill("100");
   await page.getByLabel("幅", { exact: true }).fill("100");
@@ -657,7 +657,7 @@ test("invalidates a running preview for Project commits, undo, redo, and generat
 
   await retry().click();
   await expectPendingCount(page, 4);
-  await page.getByRole("button", { name: "積荷を追加" }).click();
+  await page.getByRole("button", { name: "積荷追加" }).click();
   await expect(panel).toHaveAttribute("data-automatic-proposal-phase", "stale");
   await expect(page.getByLabel("積荷名")).toBeFocused();
   await page.getByRole("button", { name: "キャンセル" }).click();
@@ -701,7 +701,7 @@ test("disables start for a draft and exposes keyboard, live, busy, and narrow-sc
 
   await expect(summary).toHaveAttribute("aria-live", "polite");
   await expect(summary).toHaveAttribute("aria-atomic", "true");
-  await page.getByRole("button", { name: "積荷を追加" }).click();
+  await page.getByRole("button", { name: "積荷追加" }).click();
   await expect(start).toBeDisabled();
   await expect(start).toHaveAttribute("aria-describedby", "automatic-proposal-blocked");
   await expect(panel).toContainText("未保存入力、削除確認、3D移動、または保存処理");

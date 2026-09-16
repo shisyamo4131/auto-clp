@@ -67,7 +67,7 @@ test("falls back when a selected container disappears and does not auto-select i
   await addContainer(page, "候補B");
   await activateContainer(page, "container-2");
   await openPersistenceDrawer(page);
-  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
+  await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.getByRole("button", { name: "削除を確定: 候補B" }).click();
   await expect(page.getByRole("tab", { name: /ID: container-1/ })).toHaveAttribute("aria-selected", "true");
   await page.getByRole("button", { name: "元に戻す" }).click();

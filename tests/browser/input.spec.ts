@@ -129,7 +129,7 @@ test("edits cargo constraints as one reversible batch with prohibition wording",
   await addCargo(page, "制約積荷B");
 
   await openPersistenceDrawer(page);
-  await page.getByRole("button", { name: "積荷の制約を一覧編集" }).click();
+  await page.getByRole("button", { name: "制約一括編集" }).click();
   const dialog = page.getByRole("dialog", { name: "積荷の制約を一覧編集" });
   const first = dialog.getByRole("group", { name: "制約積荷A" });
   await expect(first.getByLabel("天地無用")).not.toBeChecked();
@@ -162,12 +162,12 @@ test("container CRUD remains transactional", async ({ page }) => {
   await addContainer(page, "合成コンテナ");
   await expect(page.getByRole("tab", { name: /合成コンテナ/ })).toBeVisible();
   await openPersistenceDrawer(page);
-  await page.getByRole("button", { name: "選択中のコンテナを編集" }).click();
+  await page.getByRole("button", { name: "編集", exact: true }).click();
   await page.getByLabel("コンテナ名").fill("合成コンテナ更新");
   await page.getByRole("button", { name: "コンテナ情報を保存" }).click();
   await expect(page.getByRole("tab", { name: /合成コンテナ更新/ })).toBeVisible();
   await openPersistenceDrawer(page);
-  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
+  await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.getByRole("button", { name: "削除を確定: 合成コンテナ更新" }).click();
   await expect(page.getByRole("tab")).toHaveCount(0);
 });
@@ -182,7 +182,7 @@ test("rejects deleting a referenced container without cascading placements", asy
   await page.getByRole("button", { name: "配置を保存" }).click();
 
   await openPersistenceDrawer(page);
-  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
+  await page.getByRole("button", { name: "削除", exact: true }).click();
   const deleteDialog = page.getByRole("dialog", { name: "参照中コンテナを削除" });
   await deleteDialog.getByRole("button", { name: "削除を確定: 参照中コンテナ" }).click();
   await expect(deleteDialog).toContainText("先にすべての積荷を荷室から外してください");
@@ -192,7 +192,7 @@ test("rejects deleting a referenced container without cascading placements", asy
   await actions.getByRole("button", { name: "荷室から外す" }).click();
   await page.getByRole("dialog", { name: "荷室から外す" }).getByRole("button", { name: "荷室から外す", exact: true }).click();
   await openPersistenceDrawer(page);
-  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
+  await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.getByRole("button", { name: "削除を確定: 参照中コンテナ" }).click();
   await expect(page.getByRole("tab")).toHaveCount(0);
 });

@@ -232,7 +232,7 @@ test("uses manual defaults and blocks only new cargo creation at 30 or legacy co
   });
 
   await openPersistenceDrawer(page);
-  await page.getByRole("button", { name: "積荷を追加", exact: true }).click();
+  await page.getByRole("button", { name: "積荷追加", exact: true }).click();
   await expect(page.getByLabel(/天地無用/)).not.toBeChecked();
   await expect(
     page.getByLabel("この積荷の上に別の積荷を載せない"),
@@ -244,8 +244,8 @@ test("uses manual defaults and blocks only new cargo creation at 30 or legacy co
   await page.getByLabel("重量").fill("0.001");
   await page.getByRole("button", { name: "積荷を保存" }).click();
   await openPersistenceDrawer(page);
-  await expect(page.getByRole("button", { name: "積荷を追加", exact: true })).toBeDisabled();
-  await expect(page.getByText(/30 \/ 30件/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "積荷追加", exact: true })).toBeDisabled();
+  await expect(page.getByText(/30 \/ 30件/)).toHaveCount(0);
 
   await importProject(page, {
     schemaVersion: "0.1.0",
@@ -270,9 +270,9 @@ test("uses manual defaults and blocks only new cargo creation at 30 or legacy co
   });
   await expect(page.getByLabel("操作する積荷").locator("option")).toHaveCount(32);
   await openPersistenceDrawer(page);
-  await expect(page.getByRole("button", { name: "積荷を追加", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "積荷追加", exact: true })).toBeDisabled();
   await expect(page.getByText("既存データは31件。編集・削除・書出しは継続できます", { exact: false }))
-    .toBeVisible();
+    .toHaveCount(0);
 });
 
 test("keeps confirmation modal focus, busy isolation, narrow layout, and WebGL stop contract", async ({
@@ -310,6 +310,6 @@ test("keeps confirmation modal focus, busy isolation, narrow layout, and WebGL s
   await expect(page.getByLabel("操作する積荷")).toHaveCount(0);
 
   await page.goto("/?forceWebgl2=unsupported");
-  await expect(page.getByText("CSVテンプレートを取得")).toHaveCount(0);
-  await expect(page.getByText("CSVで積荷を一括登録")).toHaveCount(0);
+  await expect(page.getByText("テンプレートダウンロード")).toHaveCount(0);
+  await expect(page.getByText("テンプレートインポート")).toHaveCount(0);
 });

@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-09-16
-- Specification version: 1.8.0
+- Specification version: 1.8.1
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -76,7 +76,7 @@
 ### Application Shell and Primary Workflow
 
 - 3D viewportを通常画面の主作業面とし、最上部のApplication Barは左から `Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chip、Navigation Drawerを開くmenu buttonの順に置く。menu buttonはDOM上も視覚上も右端とし、現在のCLP名はCLP設定dialogの入口とする。通常画面のApplication Shellはbrowser viewport高以上とし、通常のデスクトップ高では上下padding、Application Bar高とその下余白を除いた残りを3D作業sectionへ、さらにコンテナtab高を除いた残りをviewportへ割り当てる。短い画面ではtoolbarと下段操作を失わない最低viewport高を優先し、ページscrollで到達可能にする。
-- 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`、`積荷を追加`、CSVテンプレート取得・一括登録、`コンテナを追加`、選択中コンテナの編集・削除、`操作方法` は一つのNavigation Drawerへまとめる。Drawer最下部にはpackageのAuto CLPアプリ版とCLPデータ形式版を表示する。常設の保存card、CLP設定card、積荷card、コンテナcard、通常画面の追加buttonは置かない。コンテナの編集・削除対象は3Dの選択中コンテナとし、既存editor、Project command、履歴、busy/dirty gate、積荷の新規作成上限30件・コンテナ100件の上限、非cascade削除を再利用する。新規作成上限は一つの名前付き定数から手動追加とCSVへ適用し、将来の緩和を局所変更にする。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
+- 端末保存・読込・削除、JSON入出力、CLP作成・設定、積荷追加・制約一括編集、積荷一括登録、コンテナの追加・編集・削除、ヘルプは一つのNavigation Drawerへまとめる。CLP欄は `新規` と `設定` を1段目に横並び、`積荷追加` を2段目、`制約一括編集` を3段目に置き、積荷件数メッセージは表示しない。`積荷一括登録` 欄は説明を「テンプレートにまとめて入力し、一括登録します。」とし、`テンプレートダウンロード` と `テンプレートインポート` を縦並びにする。コンテナ欄は `追加`、`編集`、`削除` を横並びにする。保存欄は `端末へ保存` と `JSONへ保存` を、読込欄は `端末から読込` と `JSONから読込` をそれぞれ横並びにする。端末保存削除は保存欄の別行に維持し、直近結果と単一端末保存の注意を保存buttonの下へ置く。可視のDrawerタイトル、自動保存・自動読込説明、旧 `このブラウザ内`・`JSONファイル` 欄は置かず、close buttonはDrawer幅いっぱいにする。Drawer最下部にはpackageのAuto CLPアプリ版とCLPデータ形式版を表示する。常設の保存card、CLP設定card、積荷card、コンテナcard、通常画面の追加buttonは置かない。コンテナの編集・削除対象は3Dの選択中コンテナとし、既存editor、Project command、履歴、busy/dirty gate、積荷の新規作成上限30件・コンテナ100件の上限、非cascade削除を再利用する。新規作成上限は一つの名前付き定数から手動追加とCSVへ適用し、将来の緩和を局所変更にする。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
 - `auto-clp-cargo-template.csv` は、固定順・大文字小文字を区別する `name,length_mm,width_mm,height_mm,weight_kg` の見出しだけを持つUTF-8 BOM・CRLFのExcel向けテンプレートとしてダウンロードする。CSV読込はUTF-8のBOM有無、CRLFまたはLF、カンマ区切り、引用符付きfield、`""` による引用符escapeを受け付ける。見出しの不足、余分、重複、並べ替え、大小文字違い、列数不一致、不正な引用、不正UTF-8、データ0件または31件以上をファイル全体の失敗とする。decoded fieldがすべて空白のrecordだけは場所を問わず無視する。
 - CSVの各有効recordは1始まりの論理順で `cargo-1` から `cargo-N` のIDを持ち、重複名を許可する。名前は前後空白を除いた後に既存の1〜120文字・制御文字禁止を適用する。寸法は既存の整数mm範囲、重量はkgのASCII十進表記・小数第3位までを既存の正確なg変換で検証し、桁区切り、指数表記、全角数字、単位、式、丸めを受け付けない。CSVに上乗せ禁止または天地無用の列は設けず、全recordを上乗せ禁止OFF・天地無用OFFの全6向きで作成する。
 - Drawerから全積荷の制約一覧を開き、各積荷の「天地無用」と「上乗せ禁止」だけをcheckboxで編集して「変更を適用」でまとめて更新できる。名前、寸法、重量、配置は一覧から変更しない。「上乗せ禁止」ONは `canSupportCargo=false`、OFFは `true` に対応し、個別積荷editorも同じ否定形表示へ統一する。変更全体を一回の `cargo.constraints-update` Undo/Redo対象とし、取消、失敗、stale、busy、no-opはProjectと履歴を変更しない。制約変更で現在配置が不適合になっても自動移動・配置解除をせず、物理判定を再計算して理由を表示する。横倒し配置中の積荷を天地無用ONへする変更は従来どおり原子的に拒否する。

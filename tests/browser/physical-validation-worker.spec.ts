@@ -317,7 +317,7 @@ test("terminates the completed last-candidate worker, clears old reasons, and ev
 
   await page.getByRole("button", { name: "物理判定を閉じる" }).click();
   await openPersistenceDrawer(page);
-  await page.getByRole("button", { name: "選択中のコンテナを削除" }).click();
+  await page.getByRole("button", { name: "削除", exact: true }).click();
   await page.getByRole("button", { name: "削除を確定: 削除前候補" }).click();
   await expect(page.getByText("コンテナ0件、積荷0件。")).toBeVisible();
   await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "neutral");
