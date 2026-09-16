@@ -17,4 +17,4 @@
 
 | Product or task | Progress | Last reviewed | Roadmap |
 | --- | ---: | --- | --- |
-| Auto CLP | 92% | 2026-09-08 | [Auto CLP roadmap](auto-clp.md) |
+| Auto CLP | 96% | 2026-09-16 | [Auto CLP roadmap](auto-clp.md) |

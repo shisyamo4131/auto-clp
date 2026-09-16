@@ -133,7 +133,7 @@
 
 ## AC-07 Cargo CSV Template and Atomic Replacement
 
-このケースは仕様1.6.0・ADR 0034で承認済み、未実装である。自動証拠、Windows版Excel往復、人間による確認はまだ利用できない。
+このケースは仕様1.6.0・ADR 0034に従って実装済みであり、単体・ブラウザ自動証拠を持つ。Windows版Excel往復と人間による実務受入は未実施である。
 
 ### Initial State and CSV
 
@@ -169,6 +169,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - 仕様1.4.1自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ84件、buildに合格。主ページの入力データ注意撤去、内容版1.1.0の「使用上の重要事項」への集約、確認版更新、Drawer最下部のアプリ版・CLPデータ形式版表示を回帰した。これは人間または実務利用者受入の証拠ではない。
 - 仕様1.4.2自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ85件、buildに合格。通常デスクトップ高でApplication Shellとbrowser viewport高が一致し、残り高を3D viewportが使用すること、通常時の操作案内帯を表示しないこと、必要な操作statusが浮動表示されてもcanvas寸法・位置を変えないことを回帰した。これは人間または実務利用者受入の証拠ではない。
 - 仕様1.5.1重心可視化自動証拠: typecheck、lint、単体29ファイル975件、ブラウザ97件、build、データ契約・ガバナンス・プロジェクト検査に合格。正確なBigInt・有理数domain計算、scene投影、4状態、同径10 CSS px・白い外枠なし、完全一致・近接時の黄前面表示、画面外、非操作、camera、drag、履歴、DPR 1/2、305 / 320 / 375 px、使用事項内容版1.2.0、JSON・端末保存への派生状態非保存と読込再計算・失敗保持を回帰し、独立コードレビューは指摘修正後に合格した。人間による差分視認性と凡例理解は未確認であり、実務利用者受入の証拠ではない。
+- 仕様1.6.0 CSV積荷一括置換自動証拠: typecheck、lint、単体32ファイル1,006件、ブラウザ102件、buildに合格。固定template bytes、厳格なUTF-8・CSV・値検証、1 / 30 / 31件、共通新規作成上限、legacy 31〜1,000件互換、決定的ID・既定値、件数付き確認、取消・失敗・stale・busy・no-op保持、原子的置換、一回のUndo/Redo、同一IDを含むscene一時状態reset、派生再導出、305 / 320 / 375 px、focus、WebGL停止を回帰し、独立コードレビューは二つの指摘修正後に合格した。Windows版Excel往復と実務利用者受入の証拠ではない。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
 - canvas追加操作の判断: AC-01で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。
@@ -184,7 +185,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` がWebGL利用可能時の履歴、IndexedDB、固定JSON往復を実行し、`tests/browser/capability.spec.ts` が非対応・初期描画失敗・context lossの全面停止と2種類の読み取り専用救出を実行する。
 - AC-06: `src/domain/weight-balance.test.ts` と `src/scene/project-scene.test.ts` が正確な重量moment、全向き、上限・上限外、4状態、scene変換、計算不能回復投影を検証する。`tests/browser/weight-balance.spec.ts` が赤・黄点と凡例、画面投影中心一致・近接・画面外、非操作、camera、drag、履歴、DPR 1/2、読込成功・失敗、統合 `unavailable`、305 / 320 / 375 pxを実行し、既存永続化回帰が派生状態をJSON・端末保存・履歴へ含めない。匿名合成データによる人間視認性確認は未実施。
-- AC-07: 未実装。実装後にCSV parser/file、正規入力、全体置換、履歴、既存保存互換の単体試験と `tests/browser/cargo-csv.spec.ts` を追加し、全行検証、全空白recordとquoted改行を含む1始まり論理record path、全固定code/path、決定的sort・重複排除・50件上限・入力値非反射、件数確認、取消・失敗保持、成功、Undo/Redo、再導出、30件上限、legacy 31〜1,000件、狭幅・focus・WebGL停止を実行する。Windows版Excel往復は別の人間証拠とする。
+- AC-07: `src/persistence/cargo-csv.test.ts`、`src/persistence/cargo-csv-file.test.ts`、`src/application/cargo-csv-import.test.ts`、`src/application/project-command.test.ts` と `tests/browser/cargo-csv.spec.ts` が、CSV parser/file、共通正規入力、全体置換、履歴、既存保存互換を検証する。全行検証、全空白recordとquoted改行を含む1始まり論理record path、全固定code/path、決定的sort・重複排除・50件上限・入力値非反射、件数確認、取消・失敗保持、成功、Undo/Redo、scene一時状態resetと派生再導出、30件上限、legacy 31〜1,000件、狭幅・focus・WebGL停止を実行する。Windows版Excel往復は別の人間証拠とする。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 - 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。

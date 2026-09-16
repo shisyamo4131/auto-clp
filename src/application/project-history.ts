@@ -7,6 +7,7 @@ export type ProjectHistoryAction =
   | "cargo.add"
   | "cargo.update"
   | "cargo.delete"
+  | "cargo.csv-replace"
   | "container.add"
   | "container.update"
   | "container.delete"

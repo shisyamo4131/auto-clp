@@ -106,11 +106,14 @@ test("keeps cargo input available with WebGL and exposes specific safety boundar
   await expect(page.getByRole("dialog", { name: "使用上の重要事項" })).toContainText("実積載の安全性");
 });
 
-test("uses 天地無用 as the only cargo orientation setting", async ({ page }) => {
+test("uses the approved support and all-orientation defaults for new cargo", async ({ page }) => {
   await page.goto("/");
   await openCargoAddEditor(page);
   await fillCargo(page, "天地無用合成積荷");
-  await expect(page.getByLabel(/天地無用/)).toBeChecked();
+  await expect(page.getByLabel(/天地無用/)).not.toBeChecked();
+  await expect(
+    page.getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる"),
+  ).toBeChecked();
   await expect(page.getByLabel(/^LWH/)).toHaveCount(0);
   await expect(page.getByLabel(/^WLH/)).toHaveCount(0);
   await expect(page.getByLabel(/^LHW/)).toHaveCount(0);

@@ -35,8 +35,8 @@ const EMPTY_CARGO_DRAFT: CargoDraft = {
   widthMm: "",
   heightMm: "",
   massKg: "",
-  canSupportCargo: false,
-  allowedOrientations: orientationsForUprightPolicy(true),
+  canSupportCargo: true,
+  allowedOrientations: orientationsForUprightPolicy(false),
 };
 
 function gramsToKilograms(grams: number): string {
@@ -72,7 +72,7 @@ function issueMessage(issue: ValidationIssue): string {
     "schema.maxLength": "名称は120文字以内で入力してください。",
     "schema.pattern": "名称に制御文字は使用できません。",
     "semantic.disallowed-orientation": "配置で使用中の向きは許可から外せません。",
-    "command.cargo-limit": "積荷は最大1,000件です。",
+    "command.cargo-limit": "新しく作成できる積荷は最大30件です。",
     "command.cargo-referenced": "配置中の積荷は削除できません。先に荷室から外してください。",
     "command.cargo-not-found": "対象の積荷が見つかりません。",
   };

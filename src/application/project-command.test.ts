@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import type { Cargo, Container, Placement, Project } from "../domain/model";
+import {
+  CARGO_CREATION_LIMIT,
+  parseClearanceMm,
+  parseDimensionMm,
+  parseKilogramsToGrams,
+  parsePositionMm,
+} from "../domain/input";
 import { createInitialProject } from "./project-factory";
 import {
   addPlacement,
   deletePlacement,
   deleteCargo,
   deleteContainer,
-  parseClearanceMm,
-  parseDimensionMm,
-  parseKilogramsToGrams,
-  parsePositionMm,
   saveCargo,
   saveContainer,
   updatePlacement,
@@ -358,22 +361,33 @@ describe("project commands", () => {
     expect(result.project).toBe(current);
   });
 
-  it("enforces cargo maximum in the command layer", () => {
+  it("enforces the 30-cargo creation maximum while retaining legacy edit compatibility", () => {
     const prototype = cargo();
-    const current: Project = {
+    const atTwentyNine: Project = {
+      ...createInitialProject(),
+      cargoes: Array.from({ length: CARGO_CREATION_LIMIT - 1 }, (_, index) => ({
+        ...prototype,
+        id: `cargo-${index + 1}`,
+      })),
+    };
+    const added = saveCargo(atTwentyNine, cargoDraft);
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+    expect(added.project.cargoes).toHaveLength(CARGO_CREATION_LIMIT);
+    const result = saveCargo(added.project, cargoDraft);
+    expect(result).toMatchObject({
+      ok: false,
+      project: added.project,
+      issues: [{ code: "command.cargo-limit", path: "/cargoes" }],
+    });
+    const legacy: Project = {
       ...createInitialProject(),
       cargoes: Array.from({ length: 1000 }, (_, index) => ({
         ...prototype,
         id: `cargo-${index + 1}`,
       })),
     };
-    const result = saveCargo(current, cargoDraft);
-    expect(result).toMatchObject({
-      ok: false,
-      project: current,
-      issues: [{ code: "command.cargo-limit", path: "/cargoes" }],
-    });
-    const edited = saveCargo(current, { ...cargoDraft, name: "上限時の編集" }, "cargo-1");
+    const edited = saveCargo(legacy, { ...cargoDraft, name: "上限時の編集" }, "cargo-1");
     expect(edited.ok).toBe(true);
     if (edited.ok) expect(edited.project.cargoes).toHaveLength(1000);
   });

@@ -36,7 +36,7 @@ async function importJson(
   filename = "anonymous-project.json",
 ) {
   const text = typeof value === "string" ? value : JSON.stringify(value);
-  await page.locator("input[type='file']").setInputFiles({
+  await page.locator("#project-json-file-input").setInputFiles({
     name: filename,
     mimeType: "application/json",
     buffer: Buffer.from(text),
@@ -260,7 +260,7 @@ async function openOperationGuide(page: Page) {
 async function expectModalFocusCycle(page: Page) {
   const drawer = page.getByRole("dialog", { name: "保存・再読込" });
   const close = page.getByRole("button", { name: "CLPデータを閉じる" });
-  const fileInput = drawer.locator("input[type='file']");
+  const fileInput = drawer.locator("#project-json-file-input");
   await expect(drawer).toHaveAttribute("aria-modal", "true");
   await close.focus();
   await page.keyboard.press("Shift+Tab");
@@ -710,7 +710,7 @@ test("keeps focus and global shortcuts inside the modal while a file preflight i
   const drawer = page.getByRole("dialog", { name: "保存・再読込" });
   const close = page.getByRole("button", { name: "CLPデータを閉じる" });
   const entry = page.getByRole("button", { name: "CLPデータを開く" });
-  const fileInput = drawer.locator("input[type='file']");
+  const fileInput = drawer.locator("#project-json-file-input");
   await fileInput.focus();
   await fileInput.setInputFiles({
     name: "focus-pending.json",
@@ -953,7 +953,7 @@ test("rejects every JSON failure stage without reflecting filename or values", a
   const status = page.locator(".project-persistence__status");
   const sensitive = "private-looking-value";
 
-  await page.locator("input[type='file']").setInputFiles({
+  await page.locator("#project-json-file-input").setInputFiles({
     name: `${sensitive}.json`,
     mimeType: "application/json",
     buffer: Buffer.alloc(5_242_881, 0x20),

@@ -19,6 +19,7 @@ const actionCopy = {
   "cargo.add": "積荷の追加",
   "cargo.update": "積荷の更新",
   "cargo.delete": "積荷の削除",
+  "cargo.csv-replace": "CSVによる積荷の一括置換",
   "container.add": "コンテナの追加",
   "container.update": "コンテナの更新",
   "container.delete": "コンテナの削除",

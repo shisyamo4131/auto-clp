@@ -12,7 +12,7 @@ const cargoMarker = `${balance} [data-center-kind="cargo"]`;
 
 async function importWeightBalanceFixture(page: Page) {
   await page.goto("/");
-  await page.locator("input[type='file']").setInputFiles({
+  await page.locator("#project-json-file-input").setInputFiles({
     name: "anonymous-weight-balance.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(weightBalanceProject())),
@@ -208,7 +208,7 @@ test("uses coincident glyphs when distinct 3D centers share one screen projectio
   page,
 }) => {
   await page.goto("/");
-  await page.locator("input[type='file']").setInputFiles({
+  await page.locator("#project-json-file-input").setInputFiles({
     name: "anonymous-screen-coincidence.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(screenCoincidenceProject())),
@@ -269,7 +269,7 @@ test("clears stale markers across no-container, empty, available and container s
   await expect(page.locator(`${balance} .viewport__weight-balance-legend`))
     .toContainText("コンテナ未選択またはコンテナなし");
 
-  await page.locator("input[type='file']").setInputFiles({
+  await page.locator("#project-json-file-input").setInputFiles({
     name: "anonymous-weight-balance.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(weightBalanceProject())),
@@ -336,7 +336,7 @@ test("keeps the Project-corresponding markers after rejected JSON imports", asyn
   const redBefore = await page.locator(containerMarker).getAttribute("style");
   const yellowBefore = await page.locator(cargoMarker).getAttribute("style");
 
-  await page.locator("input[type='file']").setInputFiles({
+  await page.locator("#project-json-file-input").setInputFiles({
     name: "anonymous-invalid.json",
     mimeType: "application/json",
     buffer: Buffer.from("{"),
@@ -354,7 +354,7 @@ test("keeps the Project-corresponding markers after rejected JSON imports", asyn
   missingReferenceProject.cargoes = missingReferenceProject.cargoes.filter(
     (cargo) => cargo.id !== "cargo-a",
   );
-  await page.locator("input[type='file']").setInputFiles({
+  await page.locator("#project-json-file-input").setInputFiles({
     name: "anonymous-missing-reference.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(missingReferenceProject)),

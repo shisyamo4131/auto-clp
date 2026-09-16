@@ -66,6 +66,7 @@ interface SceneWorkspaceProps {
   readonly onRendererReady: () => void;
   readonly project: Project;
   readonly rendererMounted: boolean;
+  readonly sessionResetRevision: number;
 }
 
 function projectionErrorMessage(code: "scene.container-not-found" | "scene.cargo-not-found"): string {
@@ -270,6 +271,7 @@ export function SceneWorkspace({
   onRendererReady,
   project,
   rendererMounted,
+  sessionResetRevision,
 }: SceneWorkspaceProps) {
   const [selectedContainerId, setSelectedContainerId] = useState<string>();
   const [placementInteractionActive, setPlacementInteractionActive] = useState(false);
@@ -279,6 +281,7 @@ export function SceneWorkspace({
   const [cargoQuery, setCargoQuery] = useState("");
   const [canvasStatus, setCanvasStatus] = useState("");
   const dragPreviewStatusRef = useRef("");
+  const appliedSessionResetRevisionRef = useRef(0);
   const [stagingOverrides, setStagingOverrides] = useState<
     Record<string, SceneStagingOverride>
   >({});
@@ -292,6 +295,24 @@ export function SceneWorkspace({
     project,
     effectiveContainerId,
   );
+
+  useEffect(() => {
+    if (sessionResetRevision === 0) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      appliedSessionResetRevisionRef.current = sessionResetRevision;
+      setSelectedCargoId(undefined);
+      setCargoQuery("");
+      setCanvasStatus("");
+      setCanvasDragActive(false);
+      setStagingOverrides({});
+      dragPreviewStatusRef.current = "";
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionResetRevision]);
 
   useEffect(() => {
     onSelectedContainerChange(effectiveContainerId);
@@ -374,8 +395,12 @@ export function SceneWorkspace({
     );
     if (projectedStaged.length === 0) return;
     let cancelled = false;
+    const sessionResetRevisionAtProjection = appliedSessionResetRevisionRef.current;
     queueMicrotask(() => {
-      if (cancelled) return;
+      if (
+        cancelled ||
+        appliedSessionResetRevisionRef.current !== sessionResetRevisionAtProjection
+      ) return;
       setStagingOverrides((current) => {
         let changed = false;
         const next = { ...current };

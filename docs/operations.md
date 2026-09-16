@@ -10,7 +10,7 @@
 - Implemented support refinement: fine pointer dragの床・支持可能上面へのZ snap、単一支持面内のX/Y clamp、条件未確認・不適合preview、操作対象以外のほぼ透明な中立面と灰色点線、緑・黄点線による支持候補強調、単独支持・複数支持・隙間・張り出し・支持可否混在・接触不成立の派生判定。旧XY和集合100% helperは回帰用に保持するが、現行の支持区分には使用しない。
 - Implemented rotation-toolbar refinement: X/Z回転はUndo/Redo・拡大縮小と同じviewport固定toolbarへ常設する。一本の軸線へ矢印が回り込む同一SVGをXだけ90度回して区別し、未選択・天地無用のX軸・busyではfocus可能な理由付き `aria-disabled` とする。Z軸床面回転は常に許可し、使用可は拡大・縮小と同じ青緑の強調枠、使用不可は低彩度の枠・iconで区別する。紫色の塗り分けは使わず、回転前後でbutton位置は変えない。
 - Implemented weight-balance visualization: 仕様1.5.1・ADR 0033に従い、選択中コンテナの内寸中央を赤、同コンテナの配置済み積荷の重量付き合成重心を黄の10 CSS px・白い外枠なし・非操作ドットとして3D viewportへ表示し、同径・白い外枠なしの凡例を併設する。黄色を赤より前面にし、二点の画面投影中心が一致する時は座標をずらさず黄色が赤を完全に覆うことを許容し、近接時も各投影中心を保って重複部分では黄色を前面にする。重心が画面外ならclampまたはcamera自動変更をせず `現在重心は画面外` と示す。`no-container`、`empty`、`available`、`unavailable` の状態ごとに両点と非数値statusを再導出して古い表示を残さない。コンテナ自重、数値差、許容範囲、合否、物理判定理由は扱わず、保存済みProjectから確定後に再計算し、JSON・端末保存・履歴へ保存しない。使用上の重要事項は内容版1.2.0のままである。人間による差分視認性確認は未実施である。
-- Planned CSV cargo replacement: 仕様1.6.0・ADR 0034のExcel向け固定CSVテンプレート、手動・CSV共通の新規作成上限30件、段積みOK・天地無用OFFの新規既定、全recordの一時検証、件数付き確認、積荷全置換・配置全解除、一回のUndo/Redo、legacy 31〜1,000件互換は承認済みだが未実装である。Schema `0.1.0`、既存JSON・端末保存、配置上限1,000件は変更しない。Windows版Excel往復は実装後の人間確認である。
+- Current CSV cargo replacement: 仕様1.6.0・ADR 0034のExcel向け固定CSVテンプレート、手動・CSV共通の新規作成上限30件、段積みOK・天地無用OFFの新規既定、全recordの一時検証、件数付き確認、積荷全置換・配置全解除、一回のUndo/Redo、legacy 31〜1,000件互換は実装済みである。Schema `0.1.0`、既存JSON・端末保存、配置上限1,000件は変更しない。Windows版Excel往復は未実施の人間確認である。
 - Retained future technical assets: ADR 0004に基づく決定的DFS、Worker transport、session/view、React hook/panel、preview・適用境界、単体試験、AP-01〜08と `automatic-proposal-v2` の性能証拠を保持する。Phase 1の通常画面ではpanel、開始、取消、適用入口を提供せず、通常起動で自動提案Workerを開始しない。これらは現行利用可能機能、一般端末SLA、最低GPU、実務受入または安全保証ではない。
 - Unavailable: 自動配置提案の通常UI、端末保存の自動保存・起動時自動読込・複数枠・自動期限、canvas上の自由な連続Z移動・取り外し、touch drag、積荷画像、デプロイ、クラウド保存、外部API、実運用サポート。
 
@@ -91,7 +91,7 @@ CLP名、軸別隙間、積荷、コンテナは入力・編集できる。車�
 
 CLP作成・設定、積荷追加、コンテナの追加・編集・削除、保存・JSON、ヘルプは右側Navigation Drawerへまとめる。Drawer最下部ではpackageのAuto CLPアプリ版と、現在対応するCLPデータ形式版を確認できる。Drawerはモーダルとして背景のpointer、Tab移動、CLPUndo/Redo shortcutを遮断し、close button、Escape、Drawer外の背景相当領域clickでDrawerだけを閉じて入口へfocusを戻す。同じclickで背面controlを作動させず、page scrollを変えない。積荷追加とコンテナ管理はDrawerを閉じて既存のmodal editorを開く。編集・削除は3Dで選択中のコンテナを対象とし、配置参照中の削除は先に積荷を外すよう理由付きで拒否する。処理中にDrawerを閉じても永続化処理は継続する。処理中と完了はDrawerを閉じた画面でもSnackbarへ操作単位で表示し、成功と取消は6秒後に消去、失敗は明示的に閉じるまで保持する。Drawer内の直近結果はlive regionにせず、同じ文の連続操作でも新しい通知として扱う。
 
-CSV機能の実装後は、Drawerから固定名 `auto-clp-cargo-template.csv` を取得し、Excelで名前・長さmm・幅mm・高さmm・重量kgだけを編集する。一括登録は全record検証後に新規・削除・配置解除件数を確認し、確定時だけ積荷と配置を一回の履歴操作で置換する。取消または失敗では現在CLPを変更しない。CSVはCLP全体のbackupではなく、コンテナ、隙間、配置またはCLP名を持ち運ばない。現時点のUI、template download、CSV読込、確認、Undo/Redoはまだ利用できない。
+Drawerから固定名 `auto-clp-cargo-template.csv` を取得し、Excelで名前・長さmm・幅mm・高さmm・重量kgだけを編集できる。一括登録は全record検証後に新規・削除・配置解除件数を確認し、確定時だけ積荷と配置を一回の履歴操作で置換する。取消または失敗では現在CLPを変更しない。CSVはCLP全体のbackupではなく、コンテナ、隙間、配置またはCLP名を持ち運ばない。template download、CSV読込、確認、Undo/Redoは利用可能であるが、Windows版Excelでの往復確認は未実施である。
 
 通常のデスクトップ高では、Application Shellをbrowser viewport高に合わせ、上下padding、Application Barと余白、コンテナtabを除いた残りを3D viewportへ割り当てる。短い画面では操作overlayを失わない最低高を優先してpage scrollを許す。通常時の一般案内帯は表示せず、drag、回転不可、失敗などの操作statusだけをviewport内へ浮動表示し、canvasの寸法とpage位置を変更しない。
 

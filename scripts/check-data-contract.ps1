@@ -32,6 +32,15 @@ $containerOnlyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0030-con
 $weightBalanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0032-cargo-center-of-gravity-visualization.md'
 $weightBalanceMarkerDecisionPath = Join-Path $resolvedProject 'docs/decisions/0033-equal-borderless-center-markers.md'
 $cargoCsvDecisionPath = Join-Path $resolvedProject 'docs/decisions/0034-cargo-csv-template-and-replacement-import.md'
+$inputPath = Join-Path $resolvedProject 'src/domain/input.ts'
+$cargoCsvPath = Join-Path $resolvedProject 'src/persistence/cargo-csv.ts'
+$cargoCsvFilePath = Join-Path $resolvedProject 'src/persistence/cargo-csv-file.ts'
+$cargoCsvImportPath = Join-Path $resolvedProject 'src/application/cargo-csv-import.ts'
+$cargoCsvDialogPath = Join-Path $resolvedProject 'src/ui/CargoCsvImportDialog.tsx'
+$cargoCsvParserTestPath = Join-Path $resolvedProject 'src/persistence/cargo-csv.test.ts'
+$cargoCsvFileTestPath = Join-Path $resolvedProject 'src/persistence/cargo-csv-file.test.ts'
+$cargoCsvImportTestPath = Join-Path $resolvedProject 'src/application/cargo-csv-import.test.ts'
+$cargoCsvBrowserTestPath = Join-Path $resolvedProject 'tests/browser/cargo-csv.spec.ts'
 $optimizationDecisionPath = Join-Path $resolvedProject 'docs/decisions/0004-optimization-objective.md'
 $acceptancePath = Join-Path $resolvedProject 'docs/acceptance.md'
 $automaticProposalPath = Join-Path $resolvedProject 'src/domain/automatic-proposal.ts'
@@ -95,6 +104,15 @@ foreach ($path in @(
     $weightBalanceDecisionPath,
     $weightBalanceMarkerDecisionPath,
     $cargoCsvDecisionPath,
+    $inputPath,
+    $cargoCsvPath,
+    $cargoCsvFilePath,
+    $cargoCsvImportPath,
+    $cargoCsvDialogPath,
+    $cargoCsvParserTestPath,
+    $cargoCsvFileTestPath,
+    $cargoCsvImportTestPath,
+    $cargoCsvBrowserTestPath,
     $optimizationDecisionPath,
     $acceptancePath,
     $automaticProposalPath,
@@ -404,7 +422,7 @@ foreach ($requiredText in @(
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
     '仕様版 `1.6.0`',
-    '承認済み・未実装',
+    '積荷・配置の一括置換は実装済み',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
     '`cargoes`を新しい配列へ置換して`placements=[]`',
@@ -828,7 +846,7 @@ foreach ($requiredText in @(
     'AC-04 Recovery, Portability, and Required-WebGL Failure Gate',
     'AC-06 Cargo Center-of-Gravity Reference Markers',
     'AC-07 Cargo CSV Template and Atomic Replacement',
-    'このケースは仕様1.6.0・ADR 0034で承認済み、未実装',
+    'このケースは仕様1.6.0・ADR 0034に従って実装済み',
     '`input.kg-format` と `/rows/2/weight_kg`',
     'legacy 31〜1,000件',
     'AP-01 Candidate objective',
@@ -846,6 +864,44 @@ foreach ($requiredText in @(
 )) {
     if (-not $acceptance.Contains($requiredText)) {
         throw "Acceptance contract does not contain the approved case text: $requiredText"
+    }
+}
+
+$inputSource = [IO.File]::ReadAllText($inputPath)
+$cargoCsvSource = [IO.File]::ReadAllText($cargoCsvPath)
+$cargoCsvFileSource = [IO.File]::ReadAllText($cargoCsvFilePath)
+$cargoCsvImportSource = [IO.File]::ReadAllText($cargoCsvImportPath)
+$cargoCsvDialogSource = [IO.File]::ReadAllText($cargoCsvDialogPath)
+$cargoCsvParserTest = [IO.File]::ReadAllText($cargoCsvParserTestPath)
+$cargoCsvFileTest = [IO.File]::ReadAllText($cargoCsvFileTestPath)
+$cargoCsvImportTest = [IO.File]::ReadAllText($cargoCsvImportTestPath)
+$cargoCsvBrowserTest = [IO.File]::ReadAllText($cargoCsvBrowserTestPath)
+$cargoCsvAppSource = [IO.File]::ReadAllText($appPath)
+$cargoCsvPanelSource = [IO.File]::ReadAllText($projectPersistencePanelPath)
+$cargoCsvSceneSource = [IO.File]::ReadAllText($sceneWorkspacePath)
+foreach ($sourceContract in @(
+    @{ Text = $inputSource; Marker = 'export const CARGO_CREATION_LIMIT = 30;' },
+    @{ Text = $cargoCsvSource; Marker = 'auto-clp-cargo-template.csv' },
+    @{ Text = $cargoCsvSource; Marker = 'CARGO_CSV_MAX_RECORDS = CARGO_CREATION_LIMIT' },
+    @{ Text = $cargoCsvSource; Marker = 'templateBytes.set([0xef, 0xbb, 0xbf])' },
+    @{ Text = $cargoCsvFileSource; Marker = 'new TextDecoder("utf-8", { fatal: true })' },
+    @{ Text = $cargoCsvImportSource; Marker = 'placements: []' },
+    @{ Text = $cargoCsvDialogSource; Marker = 'action: "cargo.csv-replace"' },
+    @{ Text = $cargoCsvAppSource; Marker = 'transition.action === "cargo.csv-replace"' },
+    @{ Text = $cargoCsvAppSource; Marker = '<CargoCsvImportDialog' },
+    @{ Text = $cargoCsvAppSource; Marker = 'onApplied={() => setSceneSessionResetRevision' },
+    @{ Text = $cargoCsvPanelSource; Marker = 'id="cargo-csv-file-input"' },
+    @{ Text = $cargoCsvSceneSource; Marker = 'appliedSessionResetRevisionRef.current !== sessionResetRevisionAtProjection' },
+    @{ Text = $cargoCsvParserTest; Marker = 'accepts a CRLF quoted newline inside an ignored all-whitespace record' },
+    @{ Text = $cargoCsvFileTest; Marker = 'accepts declared and actual bytes at the exact 5 MiB boundary' },
+    @{ Text = $cargoCsvImportTest; Marker = 'returns an identical Project for no-op and does not bypass defensive validation' },
+    @{ Text = $cargoCsvImportTest; Marker = 'supports one history action with complete undo and redo, including legacy cargo counts' },
+    @{ Text = $cargoCsvImportTest; Marker = 'rejects a stale CSV-labeled history commit without changing history' },
+    @{ Text = $cargoCsvBrowserTest; Marker = 'atomically replaces cargoes with one undo/redo' },
+    @{ Text = $cargoCsvBrowserTest; Marker = 'clears same-ID scene session state across CSV undo and redo' }
+)) {
+    if (-not $sourceContract.Text.Contains($sourceContract.Marker)) {
+        throw "Cargo CSV implementation does not contain the required marker: $($sourceContract.Marker)"
     }
 }
 
@@ -1008,4 +1064,6 @@ foreach ($requiredText in @(
     weight_balance_decision_0032_accepted = $true
     weight_balance_marker_decision_0033_accepted = $true
     cargo_csv_decision_0034_accepted = $true
+    cargo_csv_implemented = $true
+    cargo_csv_regression_contract_present = $true
 }

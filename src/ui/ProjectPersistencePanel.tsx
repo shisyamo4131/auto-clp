@@ -12,6 +12,7 @@ import type {
   ProjectPersistenceFailureCode,
 } from "../application/project-persistence";
 import packageMetadata from "../../package.json";
+import { CARGO_CREATION_LIMIT } from "../domain/input";
 import { PROJECT_SCHEMA_VERSION, type Project } from "../domain/model";
 import type { ContainerEditorIntent } from "./ContainerEditorDialog";
 import {
@@ -19,6 +20,11 @@ import {
   isProjectFileImportAvailable,
 } from "../persistence/project-file";
 import { isProjectStoreAvailable } from "../persistence/project-store";
+import {
+  downloadCargoCsvTemplate,
+  isCargoCsvFileImportAvailable,
+  isCargoCsvTemplateDownloadAvailable,
+} from "../persistence/cargo-csv-file";
 import { OperationGuideDialog } from "./OperationGuideDialog";
 
 type PersistenceAction =
@@ -50,6 +56,7 @@ interface ProjectPersistencePanelProps {
   readonly onLoadDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
   readonly onSaveDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
   readonly onOpenCargoEditor: () => void;
+  readonly onOpenCargoCsv: (file: File) => void;
   readonly onOpenChange: (open: boolean) => void;
   readonly onOpenProjectSettings: () => void;
   readonly onOpenUsageRequirements: () => void;
@@ -144,6 +151,7 @@ export function ProjectPersistencePanel({
   onLoadDevice,
   onSaveDevice,
   onOpenCargoEditor,
+  onOpenCargoCsv,
   onOpenChange,
   onOpenProjectSettings,
   onOpenUsageRequirements,
@@ -182,6 +190,8 @@ export function ProjectPersistencePanel({
   const deviceAvailable = isProjectStoreAvailable();
   const fileImportAvailable = isProjectFileImportAvailable();
   const fileExportAvailable = isProjectFileExportAvailable();
+  const cargoCsvImportAvailable = isCargoCsvFileImportAvailable();
+  const cargoCsvDownloadAvailable = isCargoCsvTemplateDownloadAvailable();
   const selectedContainer = project.containers.find(
     (container) => container.id === selectedContainerId,
   ) ?? project.containers[0];
@@ -439,6 +449,26 @@ export function ProjectPersistencePanel({
     void run("import-file", () => onImportFile(project, file));
   };
 
+  const handleCargoCsvFile = (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (file === undefined) return;
+    finishDrawerAction(() => onOpenCargoCsv(file));
+  };
+
+  const handleCargoCsvTemplateDownload = () => {
+    const result = downloadCargoCsvTemplate();
+    publish(
+      result.ok
+        ? "積荷CSVテンプレートのダウンロードを開始しました。"
+        : result.issue.code === "cargo-csv.download-unavailable"
+          ? "このブラウザでは積荷CSVテンプレートをダウンロードできません。"
+          : "積荷CSVテンプレートのダウンロードを開始できませんでした。",
+      result.ok ? "success" : "failure",
+    );
+  };
+
   return (
     <>
       <div
@@ -520,12 +550,53 @@ export function ProjectPersistencePanel({
                   id="cargo-add-button"
                   className="secondary-button"
                   type="button"
-                  disabled={controlsDisabled || project.cargoes.length >= 1000}
+                  disabled={controlsDisabled || project.cargoes.length >= CARGO_CREATION_LIMIT}
                   onClick={() => finishDrawerAction(onOpenCargoEditor)}
                 >
                   積荷を追加
                 </button>
               </div>
+              <p className="project-persistence__availability">
+                新規作成: {Math.min(project.cargoes.length, CARGO_CREATION_LIMIT)} / {CARGO_CREATION_LIMIT}件
+                {project.cargoes.length > CARGO_CREATION_LIMIT
+                  ? `（既存データは${project.cargoes.length}件。編集・削除・書出しは継続できます）`
+                  : ""}
+              </p>
+            </div>
+            <div className="project-persistence__group">
+              <h3>積荷CSV</h3>
+              <p className="project-persistence__availability">
+                テンプレートへ1〜30件を入力し、現在の積荷と全配置を確認後に一括置換します。
+              </p>
+              <div className="button-row">
+                <button
+                  id="cargo-csv-template-download"
+                  type="button"
+                  disabled={controlsDisabled || !cargoCsvDownloadAvailable}
+                  onClick={handleCargoCsvTemplateDownload}
+                >
+                  CSVテンプレートを取得
+                </button>
+                <label
+                  className="file-input-button"
+                  aria-disabled={controlsDisabled || !cargoCsvImportAvailable}
+                >
+                  CSVで積荷を一括登録
+                  <input
+                    id="cargo-csv-file-input"
+                    type="file"
+                    accept=".csv,text/csv"
+                    data-project-history-shortcuts="local"
+                    disabled={controlsDisabled || !cargoCsvImportAvailable}
+                    onChange={handleCargoCsvFile}
+                  />
+                </label>
+              </div>
+              {!cargoCsvImportAvailable || !cargoCsvDownloadAvailable ? (
+                <p className="project-persistence__availability">
+                  このブラウザでは積荷CSVの読込またはテンプレート取得の一部を利用できません。
+                </p>
+              ) : null}
             </div>
             <div className="project-persistence__group">
               <h3>コンテナ</h3>
@@ -649,6 +720,7 @@ export function ProjectPersistencePanel({
                 >
                   JSONを読み込む
                   <input
+                    id="project-json-file-input"
                     type="file"
                     accept=".json,application/json"
                     data-project-history-shortcuts="local"

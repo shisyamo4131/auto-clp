@@ -42,6 +42,10 @@ import {
   type CargoEditorRequest,
 } from "./ui/CargoEditorDialog";
 import {
+  CargoCsvImportDialog,
+  type CargoCsvImportRequest,
+} from "./ui/CargoCsvImportDialog";
+import {
   ContainerEditorDialog,
   type ContainerEditorIntent,
   type ContainerEditorRequest,
@@ -149,6 +153,10 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   const cargoEditorSequence = useRef(0);
   const [cargoEditorRequest, setCargoEditorRequest] =
     useState<CargoEditorRequest>();
+  const cargoCsvSequence = useRef(0);
+  const [cargoCsvRequest, setCargoCsvRequest] =
+    useState<CargoCsvImportRequest>();
+  const [sceneSessionResetRevision, setSceneSessionResetRevision] = useState(0);
   const containerEditorSequence = useRef(0);
   const [containerEditorRequest, setContainerEditorRequest] =
     useState<ContainerEditorRequest>();
@@ -245,6 +253,24 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     setCargoEditorRequest(undefined);
     handleBusyChange("cargoDialog", false);
   }, [handleBusyChange]);
+  const handleOpenCargoCsv = useCallback(
+    (file: File) => {
+      if (busyRef.current) return;
+      handleBusyChange("project", true);
+      cargoCsvSequence.current += 1;
+      setCargoCsvRequest({
+        baseProject: historyRef.current.present,
+        file,
+        key: cargoCsvSequence.current,
+        returnScrollPosition: { left: window.scrollX, top: window.scrollY },
+      });
+    },
+    [handleBusyChange],
+  );
+  const handleCloseCargoCsv = useCallback(() => {
+    setCargoCsvRequest(undefined);
+    handleBusyChange("project", false);
+  }, [handleBusyChange]);
   const handleOpenContainerEditor = useCallback(
     (intent: ContainerEditorIntent) => {
       if (busyRef.current) return;
@@ -321,6 +347,9 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       bumpProjectInteractionGeneration();
       setHistory(transition.state);
       setHistoryRevision((current) => current + 1);
+      if (transition.action === "cargo.csv-replace") {
+        setSceneSessionResetRevision((current) => current + 1);
+      }
       return true;
     },
     [bumpProjectInteractionGeneration],
@@ -742,6 +771,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       onSelectedContainerChange={setSelectedContainerId}
       project={project}
       rendererMounted={rendererMounted}
+      sessionResetRevision={sceneSessionResetRevision}
     />
   );
 
@@ -814,6 +844,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         onInteractionChange={handlePersistenceInteractionChange}
         onLoadDevice={handleLoadDevice}
         onOpenCargoEditor={() => handleOpenCargoEditor({ kind: "add" })}
+        onOpenCargoCsv={handleOpenCargoCsv}
         onOpenContainerEditor={handleOpenContainerEditor}
         onOpenChange={setNavigationOpen}
         onOpenProjectSettings={handleOpenProjectSettings}
@@ -846,6 +877,15 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           onProjectCommit={handleProjectCommit}
           project={project}
           request={cargoEditorRequest}
+        />
+      )}
+      {cargoCsvRequest === undefined ? null : (
+        <CargoCsvImportDialog
+          key={cargoCsvRequest.key}
+          onApplied={() => setSceneSessionResetRevision((current) => current + 1)}
+          onClose={handleCloseCargoCsv}
+          onProjectCommit={handleProjectCommit}
+          request={cargoCsvRequest}
         />
       )}
       {containerEditorRequest === undefined ? null : (

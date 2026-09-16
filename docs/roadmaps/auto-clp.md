@@ -1,8 +1,8 @@
 # Auto CLP Roadmap
 
 - Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと手動配置を確認できるローカルWebアプリを完成させる。
-- Current progress: 92%
-- Last reviewed: 2026-09-08
+- Current progress: 96%
+- Last reviewed: 2026-09-16
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
 ## Milestones
@@ -15,9 +15,9 @@
 | 物理制約の判定 | 23 | 23 | Complete | 低レベルgeometry・耐荷重評価、高位集約、単独支持・支持条件未確認・支持接触不成立、接触時の隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL 2利用可能時のUI、許可上限1,000配置の応答性を実装・検証。人間の派生床突き抜け観察で発見した境界違反由来の上段支持不足カスケード `HUT-01` は、診断上の床Z=0正規化、負例、複数支持、実Worker表示を追加して修正・回帰済み |
 | 保存・再読込・操作性 | 13 | 13 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、保存Navigation Drawer、操作単位Snackbar、modal focus・狭幅を実装・検証 |
 | 重量バランス可視化 | 5 | 4 | In progress | 正確なBigInt・有理数による純粋計算、scene/UIの同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、非clampの画面外status、4状態、内容版1.2.0の使用事項、単体・browser・保存回帰を実装し独立レビュー済み。人間による中心一致・近接・偏り・画面外・物理lampとの非混同・凡例理解の差分確認を残す |
-| CSV積荷一括置換 | 5 | 0 | Planned | Excel向け固定CSV、手動・CSV共通の30件新規作成上限と既定値、全行検証、件数付き確認、積荷・配置の原子的置換、一回のUndo/Redo、legacy互換を承認済み。実装・自動回帰・独立レビュー4点とWindows版Excel往復1点を残す |
+| CSV積荷一括置換 | 5 | 4 | In progress | Excel向け固定CSV、手動・CSV共通の30件新規作成上限と既定値、全行検証、件数付き確認、積荷・配置の原子的置換、一回のUndo/Redo、legacy互換を実装し、自動回帰と独立レビューに合格。Windows版Excel往復1点を残す |
 | 実務利用者による受入 | 5 | 3 | In progress | 4本の匿名合成ケース、合格基準、自動証拠に加え、案内付き人間評価で移動・向き・削除・履歴・物理理由・保存・JSON往復、305 / 320 / 375 px、Tab・dialog focusを観察し、床突き抜け由来の支持不足カスケード不具合を発見。WebGL 2非対応・初期描画失敗時の阻止・退避画面は人間確認済み。作業中context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
-| **Total** | **100** | **92** |  |  |
+| **Total** | **100** | **96** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
 
@@ -29,11 +29,10 @@
 
 ## Next Work
 
-1. [仕様1.6.0](../specification.md)、[ADR 0034](../decisions/0034-cargo-csv-template-and-replacement-import.md)、[AC-07](../acceptance.md#ac-07-cargo-csv-template-and-atomic-replacement)に従い、CSV parser・file adapter・一括command・30件上限・既定値・確認UI・一回のUndo/Redoを実装して総合回帰と独立レビューを行う。
-2. Windows版Excelでtemplate download、匿名データ編集、CSV UTF-8保存、再読込、確認、Undo/Redoと非UTF-8拒否を人間確認する。
-3. [AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers)と[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)の匿名合成データで重心表示を人間確認する。
-4. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
-5. 公開または実務運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
+1. Windows版Excelでtemplate download、匿名データ編集、CSV UTF-8保存、再読込、確認、Undo/Redoと非UTF-8拒否を人間確認する。
+2. [AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers)と[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)の匿名合成データで重心表示を人間確認する。
+3. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
+4. 公開または実務運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
 
 ## Deliverables and Verification Evidence
 
@@ -44,7 +43,7 @@
 | 3D表示と手動配置 | [仕様](../specification.md)、[ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0015](../decisions/0015-scene-wheel-drag-out-and-size-copy.md)、[ADR 0017](../decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](../decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](../decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](../decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](../decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](../decisions/0022-upright-only-orientation-policy.md)、[ADR 0026](../decisions/0026-tabbed-scene-annotations-and-validation-dialog.md)、[ADR 0027](../decisions/0027-external-tabs-compact-dimensions-and-icon-lamp.md)、[ADR 0028](../decisions/0028-operation-guide-and-compact-dimension-arrows.md) | 共通drag三状態classifier、床・支持面snap、支持面内clamp、条件未確認preview、drag中の周辺透過・点線と支持候補色、cargo-global side-relative荷室外anchor、3D欄外の一行候補tab、候補間共有camera、compact矢印の3軸寸法annotation、`現在の座標` 付き固定context action row、icon-only物理判定lamp/dialog、Drawerの操作方法dialog、版付き使用上の重要事項、X/Z回転、天地無用だけの向き設定を実装 | 型・lint・全単体952件・全ブラウザ93件・ビルド・305/320/375px・候補0/1/100・4辺anchor・共有camera・寸法annotation・操作方法dialog・固定action・判定dialog・使用事項gate・実drag safe area・独立レビュー |
 | 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0019](../decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](../decisions/0020-actionable-opening-diagnostics-and-drag-focus.md) | 低レベルgeometry・耐荷重評価、単独支持・条件未確認・接触不成立、寸法不適合だけを通知する開口診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 全単体・全ブラウザ、型・lint・build。単独包含の等値、1 mm張り出し、複数支持、隙間、支持可否混在、辺・点、Z不一致、重複、開口寸法合否、Worker表示、自動提案除外を検証 |
 | 重量バランス可視化 | [仕様1.5.1](../specification.md)、[ADR 0032](../decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)、[データ契約](../data-model.md)、[AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers) | 実装済み: 正確な重量moment、4状態、コンテナ幾何中心、配置積荷の合成重心、同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、画面外status、色以外の凡例、計算不能時の読取専用回復投影 | 全単体29ファイル975件・全browser 97件、型・lint・build・文書検査に合格。不均等重量、奇数寸法、全向き、負・不適合配置、上限1,000件、上限外、空・計算不能、中心一致・近接・画面外、DPR 1/2、camera、drag、履歴、保存除外・読込再計算と失敗保持、4状態、305/320/375px、非操作・非保証を検証。独立コードレビューは指摘修正後に合格。人間視認性は未確認 |
-| CSV積荷一括置換 | [仕様1.6.0](../specification.md)、[ADR 0034](../decisions/0034-cargo-csv-template-and-replacement-import.md)、[データ契約](../data-model.md)、[AC-07](../acceptance.md#ac-07-cargo-csv-template-and-atomic-replacement) | 未実装: 固定CSV template、parser、30件新規作成上限、手動・CSV既定値、一時検証、件数確認、積荷・配置置換、一回の履歴、scene一時状態reset | 計画済み: parser/file/application/history/UI/browser、legacy31〜1,000互換、305/320/375px、WebGL停止、総合9ゲート、独立レビュー、Windows版Excel往復 |
+| CSV積荷一括置換 | [仕様1.6.0](../specification.md)、[ADR 0034](../decisions/0034-cargo-csv-template-and-replacement-import.md)、[データ契約](../data-model.md)、[AC-07](../acceptance.md#ac-07-cargo-csv-template-and-atomic-replacement) | 実装済み: 固定CSV template、parser、30件新規作成上限、手動・CSV既定値、一時検証、件数確認、積荷・配置置換、一回の履歴、scene一時状態reset | 単体32ファイル1,006件・ブラウザ102件、型・lint・buildでparser/file/application/history/UI、legacy31〜1,000互換、305/320/375px、WebGL停止を回帰し、指摘修正後の独立レビューに合格。Windows版Excel往復は未実施 |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0023](../decisions/0023-webgl-required-operation-and-read-only-rescue.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、WebGL障害時の読み取り専用救出、固定code UI | 実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL 2利用可能時の通常操作、非対応・描画障害時の全面停止と2種類の救出、305/320/375px、1,000配置・100候補の実Worker応答性を回帰 |
 | 自動配置提案の将来技術資産（非加重点） | [ADR 0004](../decisions/0004-optimization-objective.md)、[ADR 0029](../decisions/0029-phase1-drawer-entry-and-automatic-proposal-deferral.md)、[将来合成ケースAP-01〜08](../acceptance.md#future-automatic-proposal-retained-technical-cases) | 純粋探索・Worker・session/view・React panel・適用境界を将来再利用候補として保持。Phase 1の通常UIには表示せずWorkerを開始しない | `automatic-proposal-v2` の単体資産、非実行browser snapshot、[AP-08技術証拠](../evidence/automatic-proposal-ap08-733b250.md)を履歴資産として保持。再公開には仕様再承認、現行shellまたは専用harnessへの再接続、収集設定、全回帰と実務受入が必要 |
 | 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | [Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)に加え、[案内付き人間評価](../evidence/phase1-human-ui-trial-4e6c680.md)で派生ケースの移動・向き・削除・履歴・理由理解・端末保存・JSON往復、狭幅・Tab・focus、viewer-first shell 1.3.0までの変更差分、WebGL非対応・初期描画失敗時の阻止・退避画面を確認し、`HUT-01` とUI改善根拠を記録。context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
@@ -55,7 +54,7 @@
 - 対応ブラウザと最低GPU性能が未決定。
 - JSON出力名をCLP名または利用者指定へ変える要望は、固定名・CLP名非反射を定める現仕様とADR 0013に衝突し、別承認が未決定。
 - 重量バランス可視化の実装・自動回帰・独立レビューは完了したが、人間による差分視認性と凡例理解の確認は未実施。
-- CSV積荷一括置換は仕様・ADR・ACを承認済みだが未実装で、Windows版Excel往復も未実施。
+- CSV積荷一括置換は仕様・ADR・ACに従い実装・自動回帰・独立レビュー済みだが、Windows版Excel往復は未実施。
 
 ## Definition of Done
 
@@ -141,3 +140,4 @@
 | 2026-09-08 | 93% | -5 | 仕様1.5.0・ADR 0032で積荷合成重心の参考可視化を現行範囲へ追加した。コンテナ幾何中心を赤、配置積荷の重量付き合成重心を黄の非操作ドットとし、数値・許容範囲・合否を設けない。新規5点を未実装0/5とし、既存完了範囲を3D 30→27、物理25→23へ再配分したため、獲得点を98/100から93/100へ補正。Schema 0.1.0は変更しない |
 | 2026-09-08 | 97% | +4 | 仕様1.5.1・ADR 0033の正確な積荷合成重心、同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、4状態、画面外、内容版1.2.0の使用事項を実装。全単体29ファイル975件・全browser 97件、型・lint・build・文書検査と、指摘修正後の独立レビューに合格したため重量バランス可視化を4/5とした。人間による差分視認性・凡例理解の確認を残し、Schema 0.1.0は変更しない |
 | 2026-09-08 | 92% | -5 | 仕様1.6.0・ADR 0034でCSV積荷一括置換を現行範囲へ追加した。入力モデルから3点、保存・再読込から2点を新規5点へ再配分し、未実装0/5のため獲得点を97/100から92/100へ補正した。手動・CSVの新規積荷は30件、段積みOK・天地無用OFFを既定とし、Schema 0.1.0の既存31〜1,000件と配置上限1,000件は維持する |
+| 2026-09-16 | 96% | +4 | 仕様1.6.0・ADR 0034のCSV積荷一括置換、共通30件上限、既定値、原子的置換、一回のUndo/Redo、scene一時状態reset、legacy互換を実装し、単体32ファイル1,006件・ブラウザ102件と指摘修正後の独立レビューに合格した。Windows版Excel往復1点は未獲得 |

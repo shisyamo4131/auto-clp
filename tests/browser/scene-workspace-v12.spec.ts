@@ -230,7 +230,7 @@ for (const width of [305, 320, 375] as const) {
   }) => {
     await page.setViewportSize({ width, height: 740 });
     await page.goto("/");
-    await page.locator("input[type='file']").setInputFiles({
+    await page.locator("#project-json-file-input").setInputFiles({
       name: "anonymous-tabs.json",
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(hundredCandidateProject())),

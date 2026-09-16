@@ -8,7 +8,7 @@
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.1の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例は実装済みである。仕様1.6.0のCSVテンプレート、30件新規作成上限、既定値統一、積荷・配置の一括置換は承認済み・未実装である。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.1の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例、仕様1.6.0のCSVテンプレート、30件新規作成上限、既定値統一、積荷・配置の一括置換は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
 
 仕様版 `1.6.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog、保存しない重心派生表示、およびSchema上限内の一時CSV入力と新規作成上限の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
@@ -164,7 +164,7 @@ CSV issueの正規形は次のとおりとする。
 | `domain/weight-balance` | 実装済み: 選択中コンテナの幾何中心、配置済み積荷の重量付き合成重心、空・計算不能を区別するBigInt・有理数による決定的な純粋計算 | React、Three.js、I/O、物理合否、永続化、表示丸め |
 | `domain/automatic-proposal` | 実装済み: Schema・意味検証済みProjectだけを受ける、一候補完全案の決定的DFS、目的関数順位、向き重複排除、最大2,048点の遅延列挙、候補10,000・要求1,000,000 attempt境界、cutoff/no-complete-plan、未確認理由付き完全案。現在配置を入力anchorにせず変更もしない | Schema検証、Worker、取消、stale、UI、Projectへの適用、外部通信 |
 | `application/project-import`、`application/project-command`、`application/automatic-proposal-apply` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド、自動提案をSchema・意味・正本物理判定で再検証して配置だけを深いcopyで一括置換する適用境界 | DOM、Three.jsオブジェクトの所有、探索の再実装 |
-| `persistence/cargo-csv`、`persistence/cargo-csv-file`、`application/cargo-csv-import` | 計画済み: UTF-8 CSVと固定template bytes、全recordの一時解析・正規化、決定的ID・既定値、30件上限、置換後Project検証、件数付き確認後の一回の積荷・配置置換 | JSON互換境界の変更、部分適用、式評価、DOM、Three.js、外部通信 |
+| `domain/input`、`persistence/cargo-csv`、`persistence/cargo-csv-file`、`application/cargo-csv-import` | 実装済み: 手動・CSV共通の正規入力と30件上限、UTF-8 CSVと固定template bytes、全recordの一時解析・正規化、決定的ID・既定値、置換後Project検証、件数付き確認後の一回の積荷・配置置換 | JSON互換境界の変更、部分適用、式評価、DOM、Three.js、外部通信 |
 | `application/project-history` | 実装済み: 検証済みProject参照の最大100件履歴、stale base拒否、no-op除外、undo/redo、分岐時のredo破棄 | DOM、Three.jsオブジェクト、I/O、Projectの再検証 |
 | `application/project-persistence` | 実装済み: 永続化用の検証済み直列化、読込失敗段階の固定code化、全候補preflight後だけのCLP準備 | DOM、Three.jsオブジェクト、直接IndexedDB操作 |
 | `persistence/project-json`、`persistence/project-file` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し、標準File読込source、固定名Blob download | 3D描画、直接UI更新、CLP名のファイル名反映 |
@@ -207,7 +207,7 @@ CSV issueの正規形は次のとおりとする。
 - JSON SchemaがDraft 2020-12として解析でき、正規版、上限、向き列挙が設計値と一致する。
 - 有効、構文不正、未対応版、追加項目、範囲外、重複ID、参照切れ、不許可向き、開口超過、重量合計オーバーフローを独立テストする。
 - 読込失敗時に既存状態が変わらないことを確認する。
-- CSVのBOM・改行・quoted field・固定見出し・UTF-8・サイズ・1/30/31件、値域、決定的ID、既定値、全体rollback、確認、Undo/Redo、旧31〜1,000件互換を実装時に検証する。
+- CSVのBOM・改行・quoted field・固定見出し・UTF-8・サイズ・1/30/31件、値域、決定的ID、既定値、全体rollback、確認、Undo/Redo、旧31〜1,000件互換を単体・ブラウザ回帰で検証する。Windows版Excelとの往復は別の人間確認として残す。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 - 合成重心は単一・不均等重量、奇数寸法、全6向き、負座標、最大値、入力順、空、参照不整合で決定的かつ非変異に計算し、赤・黄ドットと凡例は非操作、色以外の同値、狭幅、camera、コンテナ切替、Undo/Redo、保存・読込後の再計算を満たす。ドット、凡例、計算状態がJSONまたは端末保存へ入らないことを確認する。
 
