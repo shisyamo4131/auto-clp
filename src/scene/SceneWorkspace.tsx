@@ -16,6 +16,7 @@ import type { ProjectHistoryCommitHandler } from "../application/project-history
 import type { Project } from "../domain/model";
 import { singleSupportDescendantCargoIds } from "../domain/geometry";
 import { isUprightOnlyOrientationPolicy } from "../domain/orientation-policy";
+import { evaluatePayloadCapacity } from "../domain/validation";
 import {
   PhysicalValidationLamp,
   PhysicalValidationPanel,
@@ -33,6 +34,7 @@ import {
 import { presentOrientedPlacement } from "../ui/placement-presentation";
 import {
   classifyFloorFootprint,
+  compactSceneStagingOverrides,
   domainPositionDeltaToScene,
   encodeSceneStagingAnchor,
   floorQuarterTurnOrientation,
@@ -52,6 +54,23 @@ import {
   type CargoDragCommitResult,
   type CargoDragPreviewResult,
 } from "./ThreeViewport";
+
+function gramsToKilograms(grams: number): string {
+  const whole = Math.floor(grams / 1000);
+  const fraction = String(grams % 1000).padStart(3, "0").replace(/0+$/, "");
+  return fraction.length === 0 ? String(whole) : `${whole}.${fraction}`;
+}
+
+function MagnetIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22">
+      <path
+        fill="currentColor"
+        d="M6 2h4v7a2 2 0 0 0 4 0V2h4v7a6 6 0 0 1-12 0V2Zm0 0h4v3H6V2Zm8 0h4v3h-4V2Z"
+      />
+    </svg>
+  );
+}
 
 interface SceneWorkspaceProps {
   readonly externalInteractionActive: boolean;
@@ -281,6 +300,7 @@ export function SceneWorkspace({
   const [selectedCargoId, setSelectedCargoId] = useState<string>();
   const [cargoQuery, setCargoQuery] = useState("");
   const [canvasStatus, setCanvasStatus] = useState("");
+  const [fitAllRevision, setFitAllRevision] = useState(0);
   const dragPreviewStatusRef = useRef("");
   const dragFollowerGroupRef = useRef<
     | {
@@ -300,6 +320,9 @@ export function SceneWorkspace({
     (container) => container.id === selectedContainerId,
   );
   const effectiveContainerId = selectedContainer?.id ?? project.containers[0]?.id;
+  const effectiveContainer = project.containers.find(
+    (container) => container.id === effectiveContainerId,
+  );
   const previousEffectiveContainerIdRef = useRef(effectiveContainerId);
   const physicalValidationController = usePhysicalValidationWorker(
     project,
@@ -467,6 +490,25 @@ export function SceneWorkspace({
   );
   const stagedCount =
     projection?.cargoes.filter((cargo) => cargo.kind === "staged").length ?? 0;
+  const placedCargoCount = new Set(
+    project.placements.map((placement) => placement.cargoId),
+  ).size;
+  const selectedContainerMass = (() => {
+    if (effectiveContainer === undefined) return undefined;
+    const massesGrams: number[] = [];
+    for (const placement of project.placements) {
+      if (placement.containerId !== effectiveContainer.id) continue;
+      const cargo = project.cargoes.find(
+        (candidate) => candidate.id === placement.cargoId,
+      );
+      if (cargo === undefined) return undefined;
+      massesGrams.push(cargo.massGrams);
+    }
+    return evaluatePayloadCapacity(
+      massesGrams,
+      effectiveContainer.payloadCapacityGrams,
+    );
+  })();
   const selectedAnyPlacement = project.placements.find(
     (placement) => placement.cargoId === selectedCargoId,
   );
@@ -579,6 +621,33 @@ export function SceneWorkspace({
     setSelectedContainerId(containerId);
     setCanvasStatus("");
   }, [effectiveContainerId, externalInteractionActive, interactionActive]);
+
+  const handleCompactStaging = useCallback(() => {
+    if (
+      effectiveContainerId === undefined ||
+      stagedCount === 0 ||
+      interactionActive ||
+      externalInteractionActive ||
+      projectionReadOnly
+    ) {
+      setCanvasStatus("現在は荷室外の積荷をコンテナへ寄せられません。");
+      return;
+    }
+    const compacted = compactSceneStagingOverrides(
+      project,
+      effectiveContainerId,
+      stagingOverrides,
+    );
+    if (compacted === undefined) {
+      setCanvasStatus("荷室外の積荷を安全に再配置できませんでした。");
+      return;
+    }
+    setStagingOverrides({ ...compacted });
+    setFitAllRevision((current) => current + 1);
+    setCanvasStatus(
+      `荷室外の積荷${stagedCount}件をコンテナの近くへ寄せました。この整理はUndoと保存の対象外です。`,
+    );
+  }, [effectiveContainerId, externalInteractionActive, interactionActive, project, projectionReadOnly, stagedCount, stagingOverrides]);
 
   const handleCargoDragStateChange = useCallback((active: boolean) => {
     setCanvasDragActive(active);
@@ -1095,32 +1164,53 @@ export function SceneWorkspace({
                 onChange={(event) => setCargoQuery(event.target.value)}
               />
               <label className="visually-hidden" htmlFor="scene-cargo-select">操作する積荷</label>
-              <select
-                id="scene-cargo-select"
-                aria-label="操作する積荷"
-                value={selectedCargoId ?? ""}
-                disabled={interactionActive || externalInteractionActive}
-                onChange={(event) => handleCargoSelectionChange(event.target.value || undefined)}
-              >
-                <option value="">操作する積荷を選択</option>
-                {selectableCargoes.map((cargo) => {
-                  const placement = project.placements.find((candidate) => candidate.cargoId === cargo.id);
-                  const placementContainer = project.containers.find((container) => container.id === placement?.containerId);
-                  const placementState = placement === undefined
-                    ? "荷室外"
-                    : placement.containerId === effectiveContainerId
-                      ? "配置済み"
-                      : `${placementContainer?.name ?? "別のコンテナ"}に配置`;
-                  return (
+              <div className="viewport-control__cargo-selector">
+                <select
+                  id="scene-cargo-select"
+                  aria-label="操作する積荷"
+                  value={selectedCargoId ?? ""}
+                  disabled={interactionActive || externalInteractionActive}
+                  onChange={(event) => handleCargoSelectionChange(event.target.value || undefined)}
+                >
+                  <option value="">操作する積荷を選択</option>
+                  {selectableCargoes.map((cargo) => (
                     <option key={cargo.id} value={cargo.id}>
-                      {cargo.name} — {cargo.dimensionsMm.lengthMm}×{cargo.dimensionsMm.widthMm}×{cargo.dimensionsMm.heightMm} mm — {placementState}
+                      {cargo.name} — {cargo.dimensionsMm.lengthMm}×{cargo.dimensionsMm.widthMm}×{cargo.dimensionsMm.heightMm} mm／{gramsToKilograms(cargo.massGrams)} kg
                     </option>
-                  );
-                })}
-              </select>
-              <span className="viewport-control__count" aria-live="polite">
-                {filteredCargoes.length}/{project.cargoes.length}件
-              </span>
+                  ))}
+                </select>
+                <span
+                  className="viewport-control__cargo-state"
+                  data-state={
+                    selectedCargo === undefined
+                      ? "none"
+                      : selectedAnyPlacement === undefined
+                        ? "unplaced"
+                        : selectedOtherContainer === undefined
+                          ? "current"
+                          : "other"
+                  }
+                  role="img"
+                  aria-label={
+                    selectedCargo === undefined
+                      ? "積荷未選択"
+                      : selectedAnyPlacement === undefined
+                        ? "未配置"
+                        : selectedOtherContainer === undefined
+                          ? "現在のコンテナに配置済み"
+                          : "別のコンテナに配置済み"
+                  }
+                  title={
+                    selectedCargo === undefined
+                      ? "積荷未選択"
+                      : selectedAnyPlacement === undefined
+                        ? "未配置"
+                        : selectedOtherContainer === undefined
+                          ? "現在のコンテナに配置済み"
+                          : "別のコンテナに配置済み"
+                  }
+                />
+              </div>
                 </>
               )}
               <div className="viewport-context-actions" aria-live="polite">
@@ -1224,7 +1314,28 @@ export function SceneWorkspace({
               </div>
             )}
             forceInitialRenderError={forceInitialRenderError}
-            historyControls={<ProjectHistoryControls {...historyControls} compact />}
+            fitAllRevision={fitAllRevision}
+            historyControls={(
+              <>
+                <button
+                  type="button"
+                  className="viewport__compact-staging"
+                  aria-label="荷室外の積荷をコンテナへ寄せる"
+                  title="荷室外の積荷をコンテナへ寄せる"
+                  disabled={
+                    effectiveContainerId === undefined ||
+                    stagedCount === 0 ||
+                    interactionActive ||
+                    externalInteractionActive ||
+                    projectionReadOnly
+                  }
+                  onClick={handleCompactStaging}
+                >
+                  <MagnetIcon />
+                </button>
+                <ProjectHistoryControls {...historyControls} compact />
+              </>
+            )}
             validationControl={(
               <PhysicalValidationLamp
                 controller={physicalValidationController}
@@ -1252,6 +1363,15 @@ export function SceneWorkspace({
             onRendererError={onRendererError}
             onRendererReady={onRendererReady}
             projection={projection}
+            loadSummary={{
+              loadedCargoCount: placedCargoCount,
+              totalCargoCount: project.cargoes.length,
+              totalMassGrams:
+                selectedContainerMass?.calculable === true
+                  ? selectedContainerMass.totalMassGrams
+                  : undefined,
+              payloadCapacityGrams: effectiveContainer?.payloadCapacityGrams,
+            }}
             xRotationDisabled={
               externalInteractionActive ||
               interactionActive ||
@@ -1316,7 +1436,7 @@ export function SceneWorkspace({
         {canvasStatus}
       </p>
       <p id="scene-workspace-interaction-help" className="visually-hidden">
-        3Dでは積荷を直接選ぶか、下部で検索・選択できます。空白の左ドラッグで視点回転、右ドラッグで平行移動し、ボタンで拡大・縮小します。ホイールはページをスクロールします。
+        3Dでは積荷を直接選ぶか、下部で検索・選択できます。空白の左ドラッグで視点回転、右ドラッグまたはCtrlを押しながら左ドラッグで平行移動します。ホイールで拡大・縮小できます。
       </p>
 
       <div className="scene-workspace__secondary">

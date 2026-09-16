@@ -10,7 +10,7 @@
 
 この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.1の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例、仕様1.6.0のCSVテンプレート、30件新規作成上限、既定値統一、積荷・配置の一括置換、仕様1.7.0の単一支持グループ連動移動と支持不可専用理由、および仕様1.8.0の積荷制約一覧編集は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
 
-仕様版 `1.9.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示・操作配置、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog、保存しない重心派生表示、派生する単一支持グループ移動、積荷制約の一覧編集、GitHub Pagesによる静的配信、およびSchema上限内の一時CSV入力と新規作成上限の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `1.10.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示・操作配置、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog・未配置積荷の寄せ、保存しない重心・積載概要の派生表示、wheel zoom・Ctrl平行移動、派生する単一支持グループ移動、積荷制約の一覧編集、GitHub Pagesによる静的配信、およびSchema上限内の一時CSV入力と新規作成上限の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -170,8 +170,8 @@ CSV issueの正規形は次のとおりとする。
 | `persistence/project-json`、`persistence/project-file` | 実装済み: サイズ、構文、版、スキーマ、意味検証、明示射影書出し、標準File読込source、固定名Blob download | 3D描画、直接UI更新、CLP名のファイル名反映 |
 | `persistence/project-store` | 実装済み: IndexedDB `current-project` 単一枠のtransaction完了後save、load、delete、未対応・open・read・write・delete失敗 | 自動保存、Project解釈、UI更新、外部通信 |
 | `persistence/project-import-preflight-client`、`workers/project-import-preflight` | 実装済み: one-shot module Workerで全候補を置換前に判定し、応答検証後に必ずWorkerを終了 | DOM、IndexedDB、同期fallback、理由の保存 |
-| `scene` | 実装済み: WebGL能力確認と初回描画の必須ゲート、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointer dragのno-op先行と純粋な `xy-contained` / `partial` / `outside` 分類、床・支持面snap、単一支持面内clamp、支持候補preview、完全drag-out作業位置、X/Z軸別90度回転、同一候補のcamera保持、domainの重心派生結果を赤・黄の固定画面サイズドットへ一方向投影する。wheelはpage scrollへ渡し、camera zoomは明示buttonだけを使う。touch/coarse pointerは選択のみで縦scrollを保持。非対応・描画障害時は通常操作を全面停止し、Projectを変更しないJSON救出だけを許可 | 判定規則の再実装、永続データ型の変更 |
-| `ui` | 実装済み: raw draft、gからkgへの表示変換、CLP・隙間・候補フォーム、全Project積荷の検索・選択、compact選択card、積荷定義と配置の別modal editor、非cascadeの配置取り外し・積荷削除、アクセシブルなfocus trap・dirty破棄確認・busy gate、canvas直接操作と正確な移動・向きのキーボードfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、CLP履歴ボタン・ショートカット・状態通知、手動端末保存・読込・削除、JSON入出力、色だけに依存しない幾何中心・積荷合成重心の凡例と操作・focus対象外の表示 | 幾何・制約計算と正規入力変換の再実装 |
+| `scene` | 実装済み: WebGL能力確認と初回描画の必須ゲート、選択候補の内部・中央開口・登録済み配置とsession外側poseの純粋投影、Three.js描画、全投影範囲へ適応するcamera、canvas picking、fine pointer dragのno-op先行と純粋な `xy-contained` / `partial` / `outside` 分類、床・支持面snap、単一支持面内clamp、支持候補preview、完全drag-out作業位置、向きを維持した未配置積荷の決定的な近接grid再整列、X/Z軸別90度回転、同一候補のcamera保持、domainの重心派生結果を赤・黄の固定画面サイズドットへ一方向投影する。wheelはcamera zoom、Ctrl付き左dragは積荷上からでもcamera panを優先し、touch/coarse pointerは選択のみで縦scrollを保持する。非対応・描画障害時は通常操作を全面停止し、Projectを変更しないJSON救出だけを許可 | 判定規則の再実装、永続データ型の変更 |
+| `ui` | 実装済み: raw draft、gからkgへの表示変換、CLP・隙間・候補フォーム、全Project積荷の検索・選択、積荷重量付きselector、選択状態4色dot、compact選択card、積荷定義と配置の別modal editor、非cascadeの配置取り外し・積荷削除、アクセシブルなfocus trap・dirty破棄確認・busy gate、canvas直接操作と正確な移動・向きのキーボードfallback、物理判定の状態・対象・関連積荷・独立理由・判定不能・ページ表示、CLP履歴ボタン・ショートカット・状態通知、手動端末保存・読込・削除、JSON入出力、色だけに依存しない幾何中心・積荷合成重心の凡例、選択中コンテナの総重量／耐荷重、全CLP積込済数、操作・focus対象外の表示 | 幾何・制約計算と正規入力変換の再実装 |
 | `ui/automatic-proposal-session`、`ui/automatic-proposal-view`、`ui/useAutomaticProposalSession`、`ui/AutomaticProposalPanel` | 将来技術資産として保持: Project参照とinteraction generationを捕捉するセッション、取消・stale・retry・遅延結果mask、source ProjectとのID再相関、React hook、固定安全copy、25件単位のpreview、identityを一度だけ取得する確認付き適用、適用済み・変更なし表示。Phase 1の通常画面ではpanelをmountしない | 探索だけでのProject/history変更、永続化、Scene選択の変更 |
 | `workers` | 実装済み: 物理判定のローカルmodule Worker。将来自動提案用に、正本Schema・意味検証後だけbrand化して本番上限の純粋探索を実行するone-shot Worker、厳格な応答guard、同期fallbackなしのclient、即時terminate取消・遅延応答maskを保持する。Phase 1の通常起動では自動提案Workerを開始しない | DOM、React状態の直接操作、外部通信 |
 
@@ -194,6 +194,7 @@ CSV issueの正規形は次のとおりとする。
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
 - `evaluatePayloadCapacity(massesGrams, payloadCapacityGrams)` — 実装済み。非負safe integerの質量だけをoverflowなく合計し、計算可能なら総質量と耐荷重以内かを返す。等値は合格、超過は不合格とし、CLP内の配置・参照選択と理由は扱わない。
 - `calculateCargoCenterOfGravity(project, containerId)` — 実装済み。選択中コンテナの保存済み配置だけを参照解決し、各積荷の向き適用後中心と `massGrams` から倍座標の重量momentを正確に集計する。コンテナ幾何中心、積荷合成重心、配置0件、計算不能を区別し、入力を変更せず、物理合否または許容範囲を返さない。
+- `compactSceneStagingOverrides(project, containerId, overrides)` — 実装済み。全未配置積荷の現在session向きを保持し、選択中コンテナの負X側へ重ならない決定的gridのside-relative anchorを新しく返す。Project、入力override、配置、履歴を変更しない。
 - `isRectangleFullyCoveredByUnion(target, coveringRectangles)` — 実装済み。safe integerの正面積XY矩形だけを受け、対象外をclipした支持矩形の和集合が対象矩形を100%覆うかを整数端点の走査で決定的に判定する。Z接触、段積み可否、対象ID、理由、隙間例外は扱わない。
 - `hasFullGeometricSupport(target, candidates)` — 旧和集合100%被覆の低レベル回帰用helperとして実装を保持するが、仕様1.0.1でも現行支持区分には使用しない。
 - `assessGeometricSupport(target, candidates)` — 実装済み。床、単一支持面によるX/Y完全包含、支持可能面を含む複数・隙間・張り出し・支持可否混在の条件未確認、接触なし・Z不一致・支持不可面だけの不適合を、正面積接触と安定したID順で純粋分類する。

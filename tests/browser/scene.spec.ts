@@ -351,10 +351,70 @@ test("renders the selected container and keeps the viewport controls after reloa
   await page.goto("/");
   await addContainer(page, "scene候補");
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
-  await expect(page.getByRole("button", { name: "拡大" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "拡大" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "荷室外の積荷をコンテナへ寄せる" })).toBeVisible();
   await page.goto("/");
   await expect(page.getByRole("img", { name: previewName })).toBeVisible();
   await expect(page.getByRole("button", { name: "元に戻す" })).toBeVisible();
+});
+
+test("shows cargo weight, four selection states, load totals, compact staging, and Ctrl pan cursor", async ({ page }) => {
+  await page.goto("/");
+  await addCargo(page, "状態積荷A");
+  await addCargo(page, "状態積荷B");
+  await addContainer(page, "状態コンテナA");
+  await addContainer(page, "状態コンテナB");
+
+  const selector = page.getByLabel("操作する積荷");
+  const state = page.locator(".viewport-control__cargo-state");
+  await expect(state).toHaveAttribute("data-state", "none");
+  await expect(state).toHaveAttribute("aria-label", "積荷未選択");
+  await expect(state).toHaveCSS("background-color", "rgb(129, 144, 157)");
+  await expect(selector.locator('option[value="cargo-1"]')).toHaveText(
+    "状態積荷A — 500×400×300 mm／1 kg",
+  );
+
+  await selector.selectOption("cargo-1");
+  await expect(state).toHaveAttribute("data-state", "unplaced");
+  await expect(state).toHaveCSS("background-color", "rgb(255, 214, 0)");
+  await place(page, "cargo-1");
+  await expect(state).toHaveAttribute("data-state", "current");
+  await expect(state).toHaveCSS("background-color", "rgb(66, 165, 245)");
+  const legend = page.locator(".viewport__weight-balance-legend");
+  await expect(legend).toContainText("総重量: 1 kg/100000 kg");
+  await expect(legend).toContainText("積込済: 1個/2個");
+
+  await activateContainer(page, "container-2");
+  await place(page, "cargo-2");
+  await activateContainer(page, "container-1");
+  await selector.selectOption("cargo-2");
+  await expect(state).toHaveAttribute("data-state", "other");
+  await expect(state).toHaveAttribute("aria-label", "別のコンテナに配置済み");
+  await expect(state).toHaveCSS("background-color", "rgb(102, 187, 106)");
+  await expect(legend).toContainText("積込済: 2個/2個");
+
+  await expect(page.getByRole("button", { name: "荷室から外す" })).toHaveCount(0);
+  await activateContainer(page, "container-2");
+  await selector.selectOption("cargo-2");
+  await page.getByRole("button", { name: "荷室から外す" }).click();
+  await page.getByRole("dialog", { name: "荷室から外す" })
+    .getByRole("button", { name: "荷室から外す", exact: true })
+    .click();
+  const historyBefore = await page.locator(".project-history__summary").textContent();
+  const magnet = page.getByRole("button", { name: "荷室外の積荷をコンテナへ寄せる" });
+  await expect(magnet).toBeEnabled();
+  await magnet.click();
+  await expect(page.locator("#scene-workspace-action-status")).toContainText(
+    "荷室外の積荷1件をコンテナの近くへ寄せました",
+  );
+  expect(await page.locator(".project-history__summary").textContent()).toBe(historyBefore);
+
+  const canvas = page.getByRole("img", { name: previewName });
+  await canvas.hover();
+  await page.keyboard.down("Control");
+  await expect(canvas).toHaveCSS("cursor", "move");
+  await page.keyboard.up("Control");
+  await expect(canvas).toHaveCSS("cursor", "grab");
 });
 
 test("shares camera framing across resized candidates and restores the same candidate view", async ({ page }) => {
@@ -367,8 +427,8 @@ test("shares camera framing across resized candidates and restores the same cand
   });
   await activateContainer(page, "container-1");
   const canvas = page.getByRole("img", { name: previewName });
-  await page.getByRole("button", { name: "拡大" }).click();
-  await page.getByRole("button", { name: "拡大" }).click();
+  await canvas.hover();
+  await page.mouse.wheel(0, -480);
   await page.waitForTimeout(100);
   const candidateAFrame = measureContainerFrame(await canvas.screenshot());
 
@@ -603,7 +663,8 @@ test("keeps placed selection no-op and partial drag atomic while preserving came
   await dragCargoToPartialFloorBoundary(page, cargoPoint, bounds);
   await expect(page.locator("#physical-validation-lamp")).toHaveAttribute("data-status", "invalid");
   await expect(history).toContainText("3Dでの配置移動");
-  await page.getByRole("button", { name: "拡大" }).click();
+  await canvas.hover();
+  await page.mouse.wheel(0, -240);
   const cameraFrame = measureContainerFrame(await canvas.screenshot());
   await page.getByRole("button", { name: "Z軸を中心に90°回転" }).click();
   expectSameContainerFrame(measureContainerFrame(await canvas.screenshot()), cameraFrame);
@@ -652,7 +713,7 @@ test("keeps axis rotation controls fixed, always visible, and distinguishable by
   await expect(z).toHaveCSS("background-color", "rgba(7, 17, 31, 0.9)");
   await expect(z).toHaveCSS("border-color", "rgba(114, 234, 220, 0.75)");
   await expect(z).toHaveCSS("color", "rgb(237, 247, 255)");
-  await expect(page.getByRole("button", { name: "拡大" })).toHaveCSS(
+  await expect(page.getByRole("button", { name: "荷室全体を表示" })).toHaveCSS(
     "border-color",
     "rgba(114, 234, 220, 0.75)",
   );
@@ -686,7 +747,7 @@ test("rotates a tip-enabled cargo around X and keeps it undoable", async ({ page
   await expect(page.getByLabel("向き")).toHaveValue("LWH");
 });
 
-test("wheel over the viewport scrolls the page without changing history", async ({ page }) => {
+test("wheel over the viewport zooms without scrolling the page or changing history", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 540 });
   await page.goto("/");
   await addCargo(page, "wheel積荷");
@@ -696,10 +757,11 @@ test("wheel over the viewport scrolls the page without changing history", async 
   const before = await page.locator(".project-history__summary").textContent();
   await canvas.hover();
   const scrollBefore = await page.evaluate<number>("scrollY");
+  const imageBefore = await canvas.screenshot();
   await page.mouse.wheel(0, 240);
-  await expect.poll(() => page.evaluate<number>("scrollY")).toBeGreaterThan(scrollBefore);
-  const scrollAfter = await page.evaluate<number>("scrollY");
-  expect(scrollAfter - scrollBefore).toBeLessThanOrEqual(300);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate<number>("scrollY")).toBe(scrollBefore);
+  expect((await canvas.screenshot()).equals(imageBefore)).toBe(false);
   expect(await page.locator(".project-history__summary").textContent()).toBe(before);
 });
 
@@ -751,8 +813,8 @@ test("keeps touch selection form fallback and narrow modal layouts", async ({ pa
   await expect(resetViewButton).toHaveAttribute("title", "荷室全体を表示");
   await expect(resetViewButton.locator("svg.viewport__reset-view-icon")).toHaveCount(1);
   expect((await resetViewButton.textContent())?.trim()).toBe("");
-  await page.getByRole("button", { name: "拡大" }).focus();
-  await expect(page.getByRole("button", { name: "拡大" })).toBeFocused();
+  await page.getByRole("button", { name: "荷室外の積荷をコンテナへ寄せる" }).focus();
+  await expect(page.getByRole("button", { name: "荷室外の積荷をコンテナへ寄せる" })).toBeFocused();
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
   await page.getByRole("button", { name: "座標を入力して配置" }).click();
   await expect(page.getByRole("dialog", { name: "touch積荷" })).toBeVisible();
@@ -767,5 +829,5 @@ test("keeps the 3D action row compact as cargo count grows", async ({ page }) =>
   const height = (await card.boundingBox())?.height ?? 0;
   await page.getByLabel("操作する積荷").selectOption("cargo-6");
   expect((await card.boundingBox())?.height ?? 0).toBeLessThanOrEqual(height + 220);
-  await expect(page.getByText("6/6件")).toBeVisible();
+  await expect(page.getByText("6/6件")).toHaveCount(0);
 });

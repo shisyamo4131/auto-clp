@@ -343,8 +343,6 @@ test("keeps the navigation drawer initially closed and restores focus while safe
   await undo.scrollIntoViewIfNeeded();
   const scrollBeforeBackdrop = await pageScrollTop(page);
   const historyBeforeBackdrop = await historySummary.textContent();
-  const undoBounds = await undo.boundingBox();
-  if (undoBounds === null) throw new Error("Undo button has no bounding box");
   await openPersistenceDrawer(page);
   await expect(drawer).toBeVisible();
   await expect(drawer.getByLabel("バージョン情報")).toHaveText(
@@ -355,6 +353,7 @@ test("keeps the navigation drawer initially closed and restores focus while safe
   const historyBeforeModalInput = await historySummary.textContent();
   await page.keyboard.press("Control+z");
   expect(await historySummary.textContent()).toBe(historyBeforeModalInput);
+  const backdropPoint = { x: 12, y: 180 };
   expect(
     await page.evaluate(({ x, y }) => {
       const browserGlobal = globalThis as unknown as {
@@ -367,15 +366,9 @@ test("keeps the navigation drawer initially closed and restores focus while safe
       return browserGlobal.document
         .elementFromPoint(x, y)
         ?.classList.contains("project-persistence__backdrop");
-    }, {
-        x: undoBounds.x + undoBounds.width / 2,
-        y: undoBounds.y + undoBounds.height / 2,
-      }),
+    }, backdropPoint),
   ).toBe(true);
-  await page.mouse.click(
-    undoBounds.x + undoBounds.width / 2,
-    undoBounds.y + undoBounds.height / 2,
-  );
+  await page.mouse.click(backdropPoint.x, backdropPoint.y);
   await expect(drawer).toHaveCount(0);
   await expect(undo).toBeEnabled();
   await expect(entry).toBeFocused();
@@ -478,8 +471,8 @@ test("opens the operation guide without changing CLP, history, or scene and rest
 
   const annotation = page.locator(".viewport__dimension-annotations");
   const defaultAnnotationGeometry = await selectedAnnotationGeometry(page);
-  await page.getByRole("button", { name: "拡大" }).click();
-  await page.getByRole("button", { name: "拡大" }).click();
+  await page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" }).hover();
+  await page.mouse.wheel(0, -480);
   await expect
     .poll(() => selectedAnnotationGeometry(page))
     .not.toEqual(defaultAnnotationGeometry);
@@ -539,9 +532,10 @@ test("opens the operation guide without changing CLP, history, or scene and rest
   for (const copy of [
     "3D上の積荷をクリックするか、画面下部の積荷選択から操作対象を選びます。",
     "積荷以外の3D領域を左ドラッグします。",
-    "積荷以外の3D領域をShift＋左ドラッグ、または右ドラッグします。",
-    "ホイールはページをスクロールします。",
+    "Ctrlを押しながら左ドラッグ、Shift＋左ドラッグ、または右ドラッグします。",
+    "3D上でホイールを回して拡大・縮小し",
     "立方体のボタンで荷室全体を表示します。",
+    "磁石ボタンで、荷室外の積荷を選択中コンテナの近くへ再整列し",
     "積荷を左ドラッグして移動できます。",
     "X／Zボタンは90°回転し、天地無用の積荷はX軸回転できません。",
     "Undo／Redoボタンを使います。",
@@ -1400,10 +1394,11 @@ test("keeps 1000-cargo search and selection usable without narrow horizontal ove
     expect(bounds.x).toBeGreaterThanOrEqual(viewport.x);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport.x + viewport.width);
   }
-  await expect(page.getByText("1000/1000件")).toBeVisible();
+  await expect(page.getByText("1000/1000件")).toHaveCount(0);
+  await expect(select.locator("option")).toHaveCount(1001);
   await expectNoHorizontalOverflow(page);
   await search.fill("積荷1000");
-  await expect(page.getByText("1/1000件")).toBeVisible();
+  await expect(page.getByText("1/1000件")).toHaveCount(0);
   await expect(select.locator("option")).toHaveCount(2);
   await select.selectOption("cargo-1000");
   await expect(page.locator(".viewport-context-actions")).toContainText("積荷1000");

@@ -241,7 +241,8 @@ test("recomputes after committed edits and undo while preserving real near and o
 
   await editCargoBX(page, "2000");
   const shiftedStyle = await page.locator(cargoMarker).getAttribute("style");
-  await page.getByRole("button", { name: "拡大" }).click();
+  await canvas.hover();
+  await page.mouse.wheel(0, -240);
   await expect.poll(() => page.locator(cargoMarker).getAttribute("style"))
     .not.toBe(shiftedStyle);
   await expect(page.locator(containerMarker)).toHaveAttribute("style", redBefore!);
@@ -438,7 +439,8 @@ test("renders a read-only unavailable recovery scene for a missing cargo referen
   await expect(harness).toHaveAttribute("data-history-past", "0");
   await expect(page.locator(cargoMarker)).toHaveCount(0);
 
-  await page.getByRole("button", { name: "拡大" }).click();
+  await page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" }).hover();
+  await page.mouse.wheel(0, -240);
   await expect.poll(() => witnesses.evaluateAll((lines) =>
     lines.map((line) => [
       line.getAttribute("x1"),
@@ -501,7 +503,8 @@ test.describe("device scale factor 2", () => {
 
     await editCargoBX(page, "2000");
     const shiftedStyle = await yellow.getAttribute("style");
-    await page.getByRole("button", { name: "拡大" }).click();
+    await page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" }).hover();
+    await page.mouse.wheel(0, -240);
     await expect.poll(() => yellow.getAttribute("style")).not.toBe(shiftedStyle);
     await expect(red).toHaveCSS("width", "10px");
     await expect(yellow).toHaveCSS("width", "10px");

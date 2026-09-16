@@ -4,6 +4,8 @@
 
 ### Changed
 
+- 仕様1.10.0・ADR 0039で、全未配置積荷の向きを維持して選択中コンテナ近傍へ再整列し、全体へcameraを合わせる非保存・非履歴の磁石buttonをUndo左へ追加した。積荷selectorは重量表示と右側の青・黄・緑・灰の選択状態dotへ変更し、検索結果件数を撤去した。重心凡例へ選択中コンテナの総重量／耐荷重と全CLPの積込済数／全積荷数を追加した。viewerのwheel zoomを復活して `＋` / `－` buttonを撤去し、Ctrl中は十字矢印相当cursorと積荷上からのcamera panを優先する。Schema `0.1.0`、CSV、JSON、端末保存、既存Projectの意味は変更しない。
+
 - 仕様1.9.0・ADR 0038で、アカウント・課金・クラウド保存を伴わないGitHub Pages技術試用版を承認した。Viteのbuild時base pathと、`main`へのpushまたは手動実行で固定SHAの公式Actionsを使って配信するworkflowを追加した。現行の静的・ローカルファースト境界とSchema `0.1.0`を維持し、Firebase Hosting・Authentication・backendは利用者、決済、権限、費用上限を確定した後の再評価候補として記録する。
 
 - 仕様1.8.1でNavigation Drawerを再構成し、CLP、積荷一括登録、コンテナ、保存、読込、ヘルプの目的別表示へ整理した。短いbutton名、指定の横・縦配置、全幅close button、保存欄内の直近結果と端末保存注意を採用し、可視タイトル、積荷件数、自動保存説明、旧 `このブラウザ内`・`JSONファイル` 区分を撤去した。保存・読込・削除・確認・履歴・Schema `0.1.0` の動作は変更しない。

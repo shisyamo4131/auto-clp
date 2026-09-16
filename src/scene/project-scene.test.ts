@@ -10,6 +10,7 @@ import {
 } from "../domain/model";
 import {
   classifyFloorFootprint,
+  compactSceneStagingOverrides,
   domainDimensionsToScene,
   domainPointToScene,
   encodeSceneStagingAnchor,
@@ -565,6 +566,56 @@ describe("project scene coordinate adapter", () => {
       expect(result.projection.cargoes[0]?.dimensions).toEqual(
         domainDimensionsToScene(orientedDimensions(cargo, "LHW")),
       );
+    }
+    expect(project).toEqual(original);
+  });
+
+  it("compacts remote staged positions while preserving their orientations", () => {
+    const base = projectFixture();
+    const cargoes = base.cargoes.map((cargo) => ({
+      ...cargo,
+      allowedOrientations: ["LWH", "WLH"] as const,
+    }));
+    const project: Project = {
+      ...base,
+      cargoes,
+      containers: [base.containers[0]!],
+      placements: [],
+    };
+    const original = structuredClone(project);
+    const overrides = {
+      [cargoes[0]!.id]: encodeAnchor(
+        project,
+        cargoes[0]!.id,
+        "container-1",
+        "WLH",
+        { xMm: -100_000, yMm: 0, zMm: 0 },
+      ),
+      [cargoes[1]!.id]: encodeAnchor(
+        project,
+        cargoes[1]!.id,
+        "container-1",
+        "LWH",
+        { xMm: -200_000, yMm: 0, zMm: 0 },
+      ),
+    };
+
+    const compacted = compactSceneStagingOverrides(
+      project,
+      "container-1",
+      overrides,
+    );
+    expect(compacted).toBeDefined();
+    const result = projectContainerToScene(project, "container-1", compacted);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.projection.cargoes.map((cargo) => cargo.orientation)).toEqual([
+        "WLH",
+        "LWH",
+      ]);
+      expect(
+        Math.max(...result.projection.cargoes.map((cargo) => Math.abs(cargo.positionMm.xMm))),
+      ).toBeLessThan(10_000);
     }
     expect(project).toEqual(original);
   });

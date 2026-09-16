@@ -748,6 +748,7 @@ function stagedCargoesToScene(
   project: Project,
   container: Container,
   overrides: Readonly<Record<string, SceneStagingOverride>>,
+  compact = false,
 ): SceneStagedCargoProjection[] {
   const placedCargoIds = new Set(
     project.placements.map((placement) => placement.cargoId),
@@ -808,7 +809,7 @@ function stagedCargoesToScene(
       zMm: 0,
     };
     const anchoredPosition =
-      override === undefined
+      compact || override === undefined
         ? undefined
         : projectSceneStagingAnchor(cargo, container, override);
     const positionMm = anchoredPosition ?? defaultPositionMm;
@@ -823,6 +824,38 @@ function stagedCargoesToScene(
       dimensionsMm: dimensions,
     };
   });
+}
+
+/**
+ * Rebuilds transient staging anchors into the deterministic grid beside the
+ * selected container while retaining current staged orientations.
+ */
+export function compactSceneStagingOverrides(
+  project: Project,
+  containerId: string,
+  overrides: Readonly<Record<string, SceneStagingOverride>>,
+): Readonly<Record<string, SceneStagingOverride>> | undefined {
+  const container = project.containers.find(
+    (candidate) => candidate.id === containerId,
+  );
+  if (container === undefined) return undefined;
+
+  const compacted: Record<string, SceneStagingOverride> = {};
+  for (const staged of stagedCargoesToScene(project, container, overrides, true)) {
+    const cargo = project.cargoes.find(
+      (candidate) => candidate.id === staged.cargoId,
+    );
+    if (cargo === undefined) return undefined;
+    const anchor = encodeSceneStagingAnchor(
+      cargo,
+      container,
+      staged.orientation,
+      staged.positionMm,
+    );
+    if (anchor === undefined) return undefined;
+    compacted[cargo.id] = anchor;
+  }
+  return compacted;
 }
 
 export function projectContainerToScene(

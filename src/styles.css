@@ -951,7 +951,7 @@ h1 {
 .viewport-control--cargo {
   display: grid;
   width: min(40rem, 100%);
-  grid-template-columns: minmax(7rem, 0.7fr) minmax(12rem, 1.5fr) auto;
+  grid-template-columns: minmax(7rem, 0.7fr) minmax(12rem, 1.5fr);
 }
 
 .viewport-control select,
@@ -967,10 +967,33 @@ h1 {
   text-overflow: ellipsis;
 }
 
-.viewport-control__count {
-  color: #b9c9d5;
-  font-size: 0.72rem;
-  white-space: nowrap;
+.viewport-control__cargo-selector {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 1.15rem;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.viewport-control__cargo-state {
+  display: block;
+  width: 0.78rem;
+  height: 0.78rem;
+  border-radius: 50%;
+  background: #81909d;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.viewport-control__cargo-state[data-state="current"] {
+  background: #42a5f5;
+}
+
+.viewport-control__cargo-state[data-state="unplaced"] {
+  background: #ffd600;
+}
+
+.viewport-control__cargo-state[data-state="other"] {
+  background: #66bb6a;
 }
 
 .viewport-control__empty {
@@ -1017,13 +1040,15 @@ h1 {
   font-size: 0.82rem;
 }
 
-.viewport__camera-controls button[aria-label="拡大"],
-.viewport__camera-controls button[aria-label="縮小"],
 .project-history--compact button {
   padding-inline: 0.6rem;
   font-size: 1.15rem;
   font-weight: 750;
   line-height: 1;
+}
+
+.viewport__compact-staging svg {
+  display: block;
 }
 
 .viewport__reset-view-icon {
@@ -1618,6 +1643,10 @@ h1 {
   width: 100%;
   height: calc(100% - var(--viewport-bottom-safe-area));
   cursor: grab;
+}
+
+.viewport canvas.viewport__canvas--ctrl-pan {
+  cursor: move;
 }
 
 .safety-note {
@@ -2349,6 +2378,10 @@ legend {
   }
 
   .viewport-control--cargo input {
+    grid-column: 1 / -1;
+  }
+
+  .viewport-control__cargo-selector {
     grid-column: 1 / -1;
   }
 

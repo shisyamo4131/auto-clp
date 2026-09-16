@@ -11,7 +11,7 @@
 | --- | ---: | ---: | --- | --- |
 | 基盤・データ契約 | 10 | 10 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly CLP型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
 | 積荷・コンテナ入力モデル | 10 | 10 | Complete | CLP・隙間・積荷・コンテナの入力、編集、明示削除、Drawer内コンテナ管理、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
-| 3D表示と手動配置 | 27 | 27 | Complete | 座標契約、全積荷検索select、Project→scene投影・描画、荷室外の非永続自由作業位置、未配置・配置済み共通のdrag三状態分類、床・支持可能上面へのZ snap、単一支持面内のX/Y制限、単一支持子孫の再帰的連動移動、条件未確認preview、dialog配置編集、完全drag-out位置保持、許可済みX/Z軸90°回転と天地無用、wheel page scrollとbutton zoom、同一候補camera保持、viewport内Undo/Redo、compactな選択積荷カードとCRUD入口を実装 |
+| 3D表示と手動配置 | 27 | 27 | Complete | 座標契約、重量付き全積荷検索selectと4状態dot、Project→scene投影・描画、荷室外の非永続自由作業位置と向きを維持する寄せ、未配置・配置済み共通のdrag三状態分類、床・支持可能上面へのZ snap、単一支持面内のX/Y制限、単一支持子孫の再帰的連動移動、条件未確認preview、dialog配置編集、完全drag-out位置保持、許可済みX/Z軸90°回転と天地無用、wheel zoom、Ctrl pan、同一候補camera保持、viewport内Undo/Redo、compactな選択積荷カードとCRUD入口を実装 |
 | 物理制約の判定 | 23 | 23 | Complete | 低レベルgeometry・耐荷重評価、高位集約、単独支持・支持条件未確認・支持接触不成立・支持不可専用理由、接触時の隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL 2利用可能時のUI、許可上限1,000配置の応答性を実装・検証。人間の派生床突き抜け観察で発見した境界違反由来の上段支持不足カスケード `HUT-01` は、診断上の床Z=0正規化、負例、複数支持、実Worker表示を追加して修正・回帰済み |
 | 保存・再読込・操作性 | 13 | 13 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、保存Navigation Drawer、操作単位Snackbar、modal focus・狭幅を実装・検証 |
 | 重量バランス可視化 | 5 | 4 | In progress | 正確なBigInt・有理数による純粋計算、scene/UIの同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、非clampの画面外status、4状態、内容版1.2.0の使用事項、単体・browser・保存回帰を実装し独立レビュー済み。人間による中心一致・近接・偏り・画面外・物理lampとの非混同・凡例理解の差分確認を残す |
@@ -35,8 +35,9 @@
 2. 単一支持グループの3D drag preview・取消・dropと、支持不可専用理由を内蔵ブラウザで差分確認する。
 3. Windows版Excelでtemplate download、匿名データ編集、CSV UTF-8保存、再読込、確認、Undo/Redoと非UTF-8拒否を人間確認する。
 4. [AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers)と[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)の匿名合成データで重心表示を人間確認する。
-5. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
-6. 第三者利用者の募集、実在CLPの取扱い、課金または本番運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
+5. 荷室外積荷の寄せ、重量付きselectorと4状態dot、総重量／積込済数、wheel zoom、Ctrl panを代表的な20〜30件データで人間確認する。
+6. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
+7. 第三者利用者の募集、実在CLPの取扱い、課金または本番運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
 
 ## Deliverables and Verification Evidence
 

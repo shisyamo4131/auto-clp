@@ -152,7 +152,8 @@ test("clears same-ID scene session state across CSV undo and redo without resett
   const picker = page.getByLabel("操作する積荷");
   await picker.selectOption("cargo-1");
   const unzoomedGeometry = await selectedWitnessGeometry(page);
-  await page.getByRole("button", { name: "拡大" }).click();
+  await page.getByRole("img", { name: "積荷を選択・床面移動できる3Dプレビュー" }).hover();
+  await page.mouse.wheel(0, -240);
   await expect.poll(() => selectedWitnessGeometry(page)).not.toEqual(unzoomedGeometry);
   const zoomedDefaultGeometry = await selectedWitnessGeometry(page);
 

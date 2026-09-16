@@ -33,6 +33,7 @@ export interface CargoDragPreviewResult {
 
 interface ThreeViewportProps {
   readonly bottomOverlay?: ReactNode;
+  readonly fitAllRevision: number;
   readonly forceInitialRenderError?: boolean;
   readonly interactionDisabled: boolean;
   readonly onCargoDragCancel: (message: string) => void;
@@ -52,6 +53,12 @@ interface ThreeViewportProps {
   readonly onRendererError: () => void;
   readonly onRendererReady: () => void;
   readonly projection: ProjectSceneProjection | null;
+  readonly loadSummary: {
+    readonly loadedCargoCount: number;
+    readonly totalCargoCount: number;
+    readonly totalMassGrams?: number;
+    readonly payloadCapacityGrams?: number;
+  };
   readonly historyControls: ReactNode;
   readonly validationControl?: ReactNode;
   readonly xRotationDisabled: boolean;
@@ -60,6 +67,12 @@ interface ThreeViewportProps {
   readonly zRotationExplanation: string;
   readonly selectedCargoId?: string;
   readonly statusDescriptionId: string;
+}
+
+function gramsToKilograms(grams: number): string {
+  const whole = Math.floor(grams / 1000);
+  const fraction = String(grams % 1000).padStart(3, "0").replace(/0+$/, "");
+  return fraction.length === 0 ? String(whole) : `${whole}.${fraction}`;
 }
 
 interface CameraViewState {
@@ -196,6 +209,33 @@ function fitCamera(
   camera.lookAt(target);
   camera.updateProjectionMatrix();
   return target;
+}
+
+function fitAllCamera(
+  camera: THREE.PerspectiveCamera,
+  controls: OrbitControls,
+  projection: ProjectSceneProjection | null,
+): void {
+  if (projection === null) {
+    controls.target.copy(fitCamera(camera, projection));
+    controls.update();
+    return;
+  }
+  const bounds = sceneProjectionBounds(projection);
+  const radius = Math.max(bounds.radius, 0.001);
+  const target = new THREE.Vector3(bounds.center.x, bounds.center.y, bounds.center.z);
+  const currentOffset = camera.position.clone().sub(controls.target);
+  const direction = currentOffset.lengthSq() > 0
+    ? currentOffset.normalize()
+    : new THREE.Vector3(-1, 0.72, 0.9).normalize();
+  const distance = cameraFramingDistance(camera, radius);
+  controls.target.copy(target);
+  camera.position.copy(target).addScaledVector(direction, distance);
+  camera.near = Math.max(radius / 1_000, 0.0001);
+  camera.far = Math.max(distance + radius * 3, 10);
+  camera.updateProjectionMatrix();
+  configureCameraDistanceLimits(controls, camera, projection);
+  controls.update();
 }
 
 function cameraFramingDistance(
@@ -380,6 +420,7 @@ function ResetViewIcon() {
 
 export function ThreeViewport({
   bottomOverlay,
+  fitAllRevision,
   forceInitialRenderError = false,
   interactionDisabled,
   onCargoDragCancel,
@@ -393,6 +434,7 @@ export function ThreeViewport({
   onRendererError,
   onRendererReady,
   projection,
+  loadSummary,
   historyControls,
   validationControl,
   xRotationDisabled,
@@ -407,14 +449,15 @@ export function ThreeViewport({
   const bottomOverlayRef = useRef<HTMLDivElement>(null);
   const interactionDisabledRef = useRef(interactionDisabled);
   const resetViewRef = useRef<() => void>(() => undefined);
-  const zoomInRef = useRef<() => void>(() => undefined);
-  const zoomOutRef = useRef<() => void>(() => undefined);
+  const fitAllRef = useRef<() => void>(() => undefined);
+  const appliedFitAllRevisionRef = useRef(fitAllRevision);
   const selectedCargoIdRef = useRef(selectedCargoId);
   const updateSelectionRef = useRef<(cargoId?: string) => void>(() => undefined);
   const cameraViewRef = useRef<CameraViewState | undefined>(undefined);
   const [dimensionAnnotations, setDimensionAnnotations] = useState<
     readonly DimensionAnnotationLine[]
   >([]);
+  const [ctrlPanActive, setCtrlPanActive] = useState(false);
   const [weightBalanceMarkers, setWeightBalanceMarkers] =
     useState<WeightBalanceMarkerState>({
       cargoCenterOffscreen: false,
@@ -941,6 +984,7 @@ export function ThreeViewport({
         if (!finePointer) event.stopImmediatePropagation();
         return;
       }
+      if (finePointer && event.ctrlKey) return;
       setPointerFromEvent(event);
       const intersections = raycaster.intersectObjects(
         [...cargoVisuals.values()].map((visual) => visual.mesh),
@@ -1073,14 +1117,18 @@ export function ThreeViewport({
       if (gesture?.pointerId === event.pointerId) rollbackGesture("ポインター操作が中断されたため、配置の移動を元に戻しました。");
     };
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Control") setCtrlPanActive(true);
       if (event.key === "Escape" && gesture !== undefined) {
         event.preventDefault();
         rollbackGesture("Escapeキーで配置の移動をキャンセルしました。");
       }
     };
-    const handleWindowBlur = () => rollbackGesture("ウィンドウの操作が中断されたため、配置の移動を元に戻しました。");
-    const handleWheel = (event: WheelEvent) => {
-      event.stopImmediatePropagation();
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.key === "Control") setCtrlPanActive(false);
+    };
+    const handleWindowBlur = () => {
+      setCtrlPanActive(false);
+      rollbackGesture("ウィンドウの操作が中断されたため、配置の移動を元に戻しました。");
     };
 
     const dispose = () => {
@@ -1093,8 +1141,8 @@ export function ThreeViewport({
       canvas.removeEventListener("pointercancel", handlePointerCancel, true);
       canvas.removeEventListener("lostpointercapture", handleLostPointerCapture, true);
       canvas.removeEventListener("webglcontextlost", handleContextLost);
-      container.removeEventListener("wheel", handleWheel, true);
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleWindowBlur);
       resizeObserver?.disconnect();
       controls?.dispose();
@@ -1120,8 +1168,8 @@ export function ThreeViewport({
     canvas.addEventListener("pointercancel", handlePointerCancel, true);
     canvas.addEventListener("lostpointercapture", handleLostPointerCapture, true);
     canvas.addEventListener("webglcontextlost", handleContextLost);
-    container.addEventListener("wheel", handleWheel, { capture: true, passive: true });
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
     window.addEventListener("blur", handleWindowBlur);
 
     try {
@@ -1195,7 +1243,7 @@ export function ThreeViewport({
         controls.target.copy(initialTarget);
       }
       configureCameraDistanceLimits(controls, camera, projection);
-      controls.enableZoom = false;
+      controls.enableZoom = true;
       controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
       controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
       controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
@@ -1216,28 +1264,12 @@ export function ThreeViewport({
         controls.update();
         renderScene();
       };
-      const zoomBy = (distanceScale: number) => {
+      resetViewRef.current = resetView;
+      fitAllRef.current = () => {
         if (disposed || controls === undefined) return;
-        const offset = camera.position.clone().sub(controls.target);
-        const currentDistance = offset.length();
-        if (!Number.isFinite(currentDistance) || currentDistance <= 0) {
-          resetView();
-          return;
-        }
-        const nextDistance = THREE.MathUtils.clamp(
-          currentDistance * distanceScale,
-          controls.minDistance,
-          controls.maxDistance,
-        );
-        camera.position
-          .copy(controls.target)
-          .addScaledVector(offset.normalize(), nextDistance);
-        controls.update();
+        fitAllCamera(camera, controls, projection);
         renderScene();
       };
-      resetViewRef.current = resetView;
-      zoomInRef.current = () => zoomBy(0.8);
-      zoomOutRef.current = () => zoomBy(1.25);
       if (!updateSelection(selectedCargoIdRef.current)) return dispose;
       resizeObserver = new ResizeObserver(resizeAndRender);
       resizeObserver.observe(container);
@@ -1250,12 +1282,17 @@ export function ThreeViewport({
 
     return () => {
       resetViewRef.current = () => undefined;
-      zoomInRef.current = () => undefined;
-      zoomOutRef.current = () => undefined;
+      fitAllRef.current = () => undefined;
       dispose();
       setDimensionAnnotations([]);
     };
   }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragPreview, onCargoDragStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
+
+  useEffect(() => {
+    if (fitAllRevision === appliedFitAllRevisionRef.current) return;
+    appliedFitAllRevisionRef.current = fitAllRevision;
+    fitAllRef.current();
+  }, [fitAllRevision, projection]);
 
   const weightBalanceKind = projection?.weightBalance.kind ?? "no-container";
   const currentWeightBalanceMarkers =
@@ -1310,12 +1347,6 @@ export function ThreeViewport({
           <span className="visually-hidden" id="viewport-x-rotation-reason">{xRotationExplanation}</span>
           <span className="visually-hidden" id="viewport-z-rotation-reason">{zRotationExplanation}</span>
           </div>
-          <button type="button" aria-label="拡大" onClick={() => zoomInRef.current()}>
-            ＋
-          </button>
-          <button type="button" aria-label="縮小" onClick={() => zoomOutRef.current()}>
-            －
-          </button>
           <button
             type="button"
             aria-label="荷室全体を表示"
@@ -1423,6 +1454,14 @@ export function ThreeViewport({
                 <span>現在重心を計算できません</span>
               ) : null}
               {cargoCenterOffscreen ? <span>現在重心は画面外</span> : null}
+              <span>
+                総重量: {loadSummary.totalMassGrams === undefined || loadSummary.payloadCapacityGrams === undefined
+                  ? "—"
+                  : `${gramsToKilograms(loadSummary.totalMassGrams)} kg/${gramsToKilograms(loadSummary.payloadCapacityGrams)} kg`}
+              </span>
+              <span>
+                積込済: {loadSummary.loadedCargoCount}個/{loadSummary.totalCargoCount}個
+              </span>
             </>
           )}
         </div>
@@ -1438,6 +1477,7 @@ export function ThreeViewport({
       <canvas
         id="scene-viewport-canvas"
         ref={canvasRef}
+        className={ctrlPanActive ? "viewport__canvas--ctrl-pan" : undefined}
         role="img"
         aria-label="積荷を選択・床面移動できる3Dプレビュー"
         aria-describedby={statusDescriptionId}

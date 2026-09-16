@@ -35,6 +35,7 @@ $cargoCsvDecisionPath = Join-Path $resolvedProject 'docs/decisions/0034-cargo-cs
 $supportGroupDecisionPath = Join-Path $resolvedProject 'docs/decisions/0035-recursive-single-support-group-movement.md'
 $cargoCsvCopyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0036-cargo-csv-destructive-confirmation-copy.md'
 $cargoConstraintDecisionPath = Join-Path $resolvedProject 'docs/decisions/0037-cargo-constraint-list-and-prohibition-wording.md'
+$stagingCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0039-staging-compact-load-summary-and-viewer-inputs.md'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
 $cargoConstraintsDialogPath = Join-Path $resolvedProject 'src/ui/CargoConstraintsDialog.tsx'
@@ -114,6 +115,7 @@ foreach ($path in @(
     $supportGroupDecisionPath,
     $cargoCsvCopyDecisionPath,
     $cargoConstraintDecisionPath,
+    $stagingCompactDecisionPath,
     $projectCommandPath,
     $projectCommandTestPath,
     $cargoConstraintsDialogPath,
@@ -297,7 +299,7 @@ foreach ($requiredText in @(
     '`partial` は修正途中の境界不適合配置',
     '面・辺・点の接触を含め一方でも共通長0',
     '一回の `placement.delete`',
-    'viewport上のwheel入力はページscroll',
+    '3D viewport上のwheel入力はcameraの拡大・縮小',
     '非永続の作業スペース',
     'X軸またはZ軸を中心に90度回転',
     '寸法prefix `大きさ:` を表示しない',
@@ -335,7 +337,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.9.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.10.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -455,6 +457,23 @@ $cargoConstraintDecision = [IO.File]::ReadAllText($cargoConstraintDecisionPath)
 if ($cargoConstraintDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0037 does not have Accepted status.'
 }
+$stagingCompactDecision = [IO.File]::ReadAllText($stagingCompactDecisionPath)
+if ($stagingCompactDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0039 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '全未配置積荷の現在向きを維持',
+    'Project、JSON、端末保存、Undo/Redo履歴へ含めない',
+    '現在コンテナへ配置済みは青、未配置は黄、別コンテナへ配置済みは緑、未選択は灰',
+    '総重量: 積込重量 kg/耐荷重 kg',
+    'viewer上のwheelはcamera zoomへ戻し',
+    'Ctrl押下中はviewer cursorを十字矢印相当',
+    'Schema `0.1.0`'
+)) {
+    if (-not $stagingCompactDecision.Contains($requiredText)) {
+        throw "ADR 0039 does not contain the approved staging and viewer contract text: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     '「上乗せ禁止」ONは保存値 `canSupportCargo=false`',
     '一回の `cargo.constraints-update` 履歴',
@@ -476,7 +495,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.9.0`',
+    '仕様版 `1.10.0`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -790,7 +809,7 @@ foreach ($implementationMarker in @(
     @{ Name = 'scene workspace deletion'; Text = $sceneWorkspace; Required = 'action: "placement.delete"' },
     @{ Name = 'rotation-stable staging grid'; Text = $projectScene; Required = 'layoutFootprint: cargo.allowedOrientations.reduce' },
     @{ Name = 'rotation-stable staging regression'; Text = $projectSceneTest; Required = 'keeps peer staging positions fixed when one cargo rotates on the floor' },
-    @{ Name = 'viewport wheel policy'; Text = $threeViewport; Required = 'controls.enableZoom = false' },
+    @{ Name = 'viewport wheel policy'; Text = $threeViewport; Required = 'controls.enableZoom = true' },
     @{ Name = 'viewport dotted focus'; Text = $threeViewport; Required = 'new THREE.LineDashedMaterial' },
     @{ Name = 'viewport drag de-emphasis'; Text = $threeViewport; Required = 'visual.mesh.material.opacity = 0.08' },
     @{ Name = 'viewport fixed rotation toolbar'; Text = $threeViewport; Required = 'className="viewport__rotation-controls"' },
@@ -1143,6 +1162,7 @@ foreach ($requiredText in @(
     support_group_decision_0035_accepted = $true
     cargo_csv_copy_decision_0036_accepted = $true
     cargo_constraint_decision_0037_accepted = $true
+    staging_compact_decision_0039_accepted = $true
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true
 }

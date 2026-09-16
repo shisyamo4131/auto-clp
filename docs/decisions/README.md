@@ -49,5 +49,6 @@
 | [0036](0036-cargo-csv-destructive-confirmation-copy.md) | CSV一括登録の破棄範囲を示す確認文 | Accepted | 2026-09-16 |
 | [0037](0037-cargo-constraint-list-and-prohibition-wording.md) | 積荷制約の一覧編集と「上乗せ禁止」表記 | Accepted | 2026-09-16 |
 | [0038](0038-github-pages-technical-preview-and-future-hosting.md) | GitHub Pages技術試用版と将来の配信基盤 | Accepted | 2026-09-16 |
+| [0039](0039-staging-compact-load-summary-and-viewer-inputs.md) | 荷室外積荷の寄せ・積載概要・viewer入力 | Accepted | 2026-09-16 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。
