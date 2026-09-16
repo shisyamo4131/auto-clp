@@ -34,6 +34,11 @@ $weightBalanceMarkerDecisionPath = Join-Path $resolvedProject 'docs/decisions/00
 $cargoCsvDecisionPath = Join-Path $resolvedProject 'docs/decisions/0034-cargo-csv-template-and-replacement-import.md'
 $supportGroupDecisionPath = Join-Path $resolvedProject 'docs/decisions/0035-recursive-single-support-group-movement.md'
 $cargoCsvCopyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0036-cargo-csv-destructive-confirmation-copy.md'
+$cargoConstraintDecisionPath = Join-Path $resolvedProject 'docs/decisions/0037-cargo-constraint-list-and-prohibition-wording.md'
+$projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
+$projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
+$cargoConstraintsDialogPath = Join-Path $resolvedProject 'src/ui/CargoConstraintsDialog.tsx'
+$inputBrowserTestPath = Join-Path $resolvedProject 'tests/browser/input.spec.ts'
 $inputPath = Join-Path $resolvedProject 'src/domain/input.ts'
 $cargoCsvPath = Join-Path $resolvedProject 'src/persistence/cargo-csv.ts'
 $cargoCsvFilePath = Join-Path $resolvedProject 'src/persistence/cargo-csv-file.ts'
@@ -108,6 +113,11 @@ foreach ($path in @(
     $cargoCsvDecisionPath,
     $supportGroupDecisionPath,
     $cargoCsvCopyDecisionPath,
+    $cargoConstraintDecisionPath,
+    $projectCommandPath,
+    $projectCommandTestPath,
+    $cargoConstraintsDialogPath,
+    $inputBrowserTestPath,
     $inputPath,
     $cargoCsvPath,
     $cargoCsvFilePath,
@@ -325,7 +335,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.7.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.8.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -441,6 +451,20 @@ $cargoCsvCopyDecision = [IO.File]::ReadAllText($cargoCsvCopyDecisionPath)
 if ($cargoCsvCopyDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0036 does not have Accepted status.'
 }
+$cargoConstraintDecision = [IO.File]::ReadAllText($cargoConstraintDecisionPath)
+if ($cargoConstraintDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0037 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '「上乗せ禁止」ONは保存値 `canSupportCargo=false`',
+    '一回の `cargo.constraints-update` 履歴',
+    'CSVは5列の現行形式を維持',
+    'Schema `0.1.0`'
+)) {
+    if (-not $cargoConstraintDecision.Contains($requiredText)) {
+        throw "ADR 0037 does not contain the approved cargo constraint contract text: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     '新規積荷N件を一括登録します。既存の積荷と配置情報は破棄されます。',
     'CLP名、隙間、コンテナは保持します。端末保存は自動更新しません。',
@@ -452,7 +476,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.7.0`',
+    '仕様版 `1.8.0`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -878,6 +902,7 @@ foreach ($requiredText in @(
     'AC-06 Cargo Center-of-Gravity Reference Markers',
     'AC-07 Cargo CSV Template and Atomic Replacement',
     'AC-08 Recursive Exact-Support Group Movement',
+    'AC-09 Cargo Constraint Batch Editing',
     'このケースは仕様1.7.0・ADR 0034・0036に従って実装済み',
     '`support-permission-denied`',
     '`input.kg-format` と `/rows/2/weight_kg`',
@@ -936,6 +961,23 @@ foreach ($sourceContract in @(
 )) {
     if (-not $sourceContract.Text.Contains($sourceContract.Marker)) {
         throw "Cargo CSV implementation does not contain the required marker: $($sourceContract.Marker)"
+    }
+}
+
+$projectCommand = [IO.File]::ReadAllText($projectCommandPath)
+$projectCommandTest = [IO.File]::ReadAllText($projectCommandTestPath)
+$cargoConstraintsDialog = [IO.File]::ReadAllText($cargoConstraintsDialogPath)
+$inputBrowserTest = [IO.File]::ReadAllText($inputBrowserTestPath)
+foreach ($sourceContract in @(
+    @{ Text = $projectCommand; Marker = 'updateCargoConstraints' },
+    @{ Text = $projectCommand; Marker = 'canSupportCargo: !draft.topLoadingProhibited' },
+    @{ Text = $projectCommandTest; Marker = 'updates cargo constraints together while preserving identity and placements' },
+    @{ Text = $cargoConstraintsDialog; Marker = '積荷の制約を一覧編集' },
+    @{ Text = $cargoConstraintsDialog; Marker = 'action: "cargo.constraints-update"' },
+    @{ Text = $inputBrowserTest; Marker = 'edits cargo constraints as one reversible batch with prohibition wording' }
+)) {
+    if (-not $sourceContract.Text.Contains($sourceContract.Marker)) {
+        throw "Cargo constraint implementation does not contain the required marker: $($sourceContract.Marker)"
     }
 }
 
@@ -1100,6 +1142,7 @@ foreach ($requiredText in @(
     cargo_csv_decision_0034_accepted = $true
     support_group_decision_0035_accepted = $true
     cargo_csv_copy_decision_0036_accepted = $true
+    cargo_constraint_decision_0037_accepted = $true
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true
 }

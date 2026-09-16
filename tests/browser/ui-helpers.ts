@@ -59,8 +59,8 @@ export async function addCargoFromDrawer(
   await page.getByLabel("重量").fill(input.massKg ?? "1");
   if (input.canSupportCargo !== undefined) {
     await page
-      .getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる")
-      .setChecked(input.canSupportCargo);
+      .getByLabel("この積荷の上に別の積荷を載せない")
+      .setChecked(!input.canSupportCargo);
   }
   if (input.uprightOnly !== undefined) {
     await page.getByLabel(/天地無用/).setChecked(input.uprightOnly);

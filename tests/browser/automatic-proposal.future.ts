@@ -58,8 +58,8 @@ async function addCargo(
   await page.getByLabel("重量").fill(options.massKg ?? "1");
   if (options.canSupportCargo === true) {
     await page
-      .getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる")
-      .check();
+      .getByLabel("この積荷の上に別の積荷を載せない")
+      .uncheck();
   }
   await page.getByRole("button", { name: "積荷を保存" }).click();
 }

@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-09-16
-- Specification version: 1.7.0
+- Specification version: 1.8.0
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -60,9 +60,9 @@
 
 ### Cargo
 
-- 各積荷は一意な識別子、表示名、長さ、幅、高さ、重量、段積み可否を持つ。
+- 各積荷は一意な識別子、表示名、長さ、幅、高さ、重量、上面支持可否を持つ。利用者向け設定名は否定形の「上乗せ禁止」とする。
 - 積荷は直方体として扱い、3軸方向を入れ替える回転を可能にする。
-- 各積荷は6種類の直交向きから非空の許可向き集合を持つ。手動追加とCSV一括作成による新規積荷の既定は、段積みOKの `canSupportCargo=true`、天地無用OFFに対応する全6向きとする。既存CLPの積荷は暗黙に変更せず、必要な例外だけを利用者が画面上で段積み不可または天地無用ONへ編集する。
+- 各積荷は6種類の直交向きから非空の許可向き集合を持つ。手動追加とCSV一括作成による新規積荷の既定は、上乗せ禁止OFFの `canSupportCargo=true`、天地無用OFFに対応する全6向きとする。既存CLPの積荷は暗黙に変更せず、必要な例外だけを利用者が画面上で上乗せ禁止ONまたは天地無用ONへ編集する。
 - 横倒しまたは天地反転を含む向きは利用者が明示的に許可し、手動回転、自動提案、開口部判定は同じ許可集合だけを使う。
 - 「天地無用」は独立した保存項目ではなく、元の高さ軸を荷室Zへ保つ `LWH` / `WLH` だけを許可する入力補助とする。orientation codeは面の表裏を区別しないため、天地無用は横倒し防止を意味し、上下反転そのものを識別または保証しない。
 - 複雑形状は、利用者が収まる外接直方体または組み合わせ後の直方体として入力する。
@@ -78,7 +78,8 @@
 - 3D viewportを通常画面の主作業面とし、最上部のApplication Barは左から `Auto CLP`、現在のCLP名、WebGL 2能力確認と初回描画結果を示す小さな3D能力Chip、Navigation Drawerを開くmenu buttonの順に置く。menu buttonはDOM上も視覚上も右端とし、現在のCLP名はCLP設定dialogの入口とする。通常画面のApplication Shellはbrowser viewport高以上とし、通常のデスクトップ高では上下padding、Application Bar高とその下余白を除いた残りを3D作業sectionへ、さらにコンテナtab高を除いた残りをviewportへ割り当てる。短い画面ではtoolbarと下段操作を失わない最低viewport高を優先し、ページscrollで到達可能にする。
 - 端末保存・読込・削除、JSON入出力、`新規CLP`、`CLP設定`、`積荷を追加`、CSVテンプレート取得・一括登録、`コンテナを追加`、選択中コンテナの編集・削除、`操作方法` は一つのNavigation Drawerへまとめる。Drawer最下部にはpackageのAuto CLPアプリ版とCLPデータ形式版を表示する。常設の保存card、CLP設定card、積荷card、コンテナcard、通常画面の追加buttonは置かない。コンテナの編集・削除対象は3Dの選択中コンテナとし、既存editor、Project command、履歴、busy/dirty gate、積荷の新規作成上限30件・コンテナ100件の上限、非cascade削除を再利用する。新規作成上限は一つの名前付き定数から手動追加とCSVへ適用し、将来の緩和を局所変更にする。Drawerとdialogは既存のbusy gate、背景inert、focus trap、Escape、`preventScroll`付きfocus復帰を維持する。
 - `auto-clp-cargo-template.csv` は、固定順・大文字小文字を区別する `name,length_mm,width_mm,height_mm,weight_kg` の見出しだけを持つUTF-8 BOM・CRLFのExcel向けテンプレートとしてダウンロードする。CSV読込はUTF-8のBOM有無、CRLFまたはLF、カンマ区切り、引用符付きfield、`""` による引用符escapeを受け付ける。見出しの不足、余分、重複、並べ替え、大小文字違い、列数不一致、不正な引用、不正UTF-8、データ0件または31件以上をファイル全体の失敗とする。decoded fieldがすべて空白のrecordだけは場所を問わず無視する。
-- CSVの各有効recordは1始まりの論理順で `cargo-1` から `cargo-N` のIDを持ち、重複名を許可する。名前は前後空白を除いた後に既存の1〜120文字・制御文字禁止を適用する。寸法は既存の整数mm範囲、重量はkgのASCII十進表記・小数第3位までを既存の正確なg変換で検証し、桁区切り、指数表記、全角数字、単位、式、丸めを受け付けない。CSVに段積み可否または天地無用の列は設けず、全recordを段積みOK・天地無用OFFの全6向きで作成する。
+- CSVの各有効recordは1始まりの論理順で `cargo-1` から `cargo-N` のIDを持ち、重複名を許可する。名前は前後空白を除いた後に既存の1〜120文字・制御文字禁止を適用する。寸法は既存の整数mm範囲、重量はkgのASCII十進表記・小数第3位までを既存の正確なg変換で検証し、桁区切り、指数表記、全角数字、単位、式、丸めを受け付けない。CSVに上乗せ禁止または天地無用の列は設けず、全recordを上乗せ禁止OFF・天地無用OFFの全6向きで作成する。
+- Drawerから全積荷の制約一覧を開き、各積荷の「天地無用」と「上乗せ禁止」だけをcheckboxで編集して「変更を適用」でまとめて更新できる。名前、寸法、重量、配置は一覧から変更しない。「上乗せ禁止」ONは `canSupportCargo=false`、OFFは `true` に対応し、個別積荷editorも同じ否定形表示へ統一する。変更全体を一回の `cargo.constraints-update` Undo/Redo対象とし、取消、失敗、stale、busy、no-opはProjectと履歴を変更しない。制約変更で現在配置が不適合になっても自動移動・配置解除をせず、物理判定を再計算して理由を表示する。横倒し配置中の積荷を天地無用ONへする変更は従来どおり原子的に拒否する。
 - CSVは申告サイズと読取後のUTF-8実サイズを5 MiB上限で確認してから全recordを一時解析・検証する。1件でも失敗すれば現在CLP、履歴、選択、scene一時状態と派生表示を変更せず、入力値、積荷名、ファイル名またはCSV全文をエラーやログへ反射しない。安定したcodeと論理record番号・列名のpathで修正箇所を示す。
 - CSV検証issueは次の固定code/pathだけを使う。template出力は `cargo-csv.download-unavailable` / `cargo-csv.download-failed` と `/template`、file入力能力不足は `cargo-csv.import-unavailable` と `/file`、サイズ超過・読取失敗・不正UTF-8・CSV構文不正は順に `cargo-csv.file-size` / `cargo-csv.read` / `cargo-csv.utf8` / `cargo-csv.syntax` と `/file`、見出し不一致は `cargo-csv.header` と `/header`、有効record件数不正は `cargo-csv.record-count` と `/rows`、列数不一致は `cargo-csv.column-count` と `/rows/{n}`、名前の空・長さ・制御文字は `cargo-csv.name-required` / `cargo-csv.name-length` / `cargo-csv.name-control` と `/rows/{n}/name`、寸法と重量は既存の `input.mm-length` / `input.mm-format` / `input.mm-range`、`input.kg-length` / `input.kg-format` / `input.kg-range` と `/rows/{n}/{column}`、防御的な置換後Project不正は `cargo-csv.candidate-invalid` と `/` を返す。`{n}` は見出しを除き、全空白recordだけを数えない非空の論理データrecordの1始まり順序で、field検証の合否を問わない。quoted field内の改行を含む物理行番号は使わない。issueはpath、codeのcode-unit順に並べて重複を除き、最大50件に切り詰める。
 - 有効なCSVを選択しても直ちに置換せず、「新規積荷N件を一括登録します。既存の積荷と配置情報は破棄されます。CLP名、隙間、コンテナは保持します。端末保存は自動更新しません。」と確認する。確定時だけCLP ID・名前、隙間、コンテナを保持し、積荷をCSV由来配列へ一括置換して全配置を空にする。成功全体を一回の `cargo.csv-replace` Undo/Redo対象とし、Undoは31件以上を含む従来積荷と全配置も完全に復元する。取消、失敗、stale、busyまたは同一状態へのno-opは履歴へ追加しない。成功時は旧積荷の選択、荷室外pose、drag preview、物理判定と重心表示を破棄または新Projectから再導出するが、コンテナ選択とcameraは対象コンテナが変わらないため維持できる。
@@ -136,7 +137,7 @@
 - システムは積荷ごとの段積み可否を考慮する。
 - 床より上の積荷は、支持可能な単一積荷の上面が対象底面とZで完全一致し、X/Y両軸で対象底面を完全包含する場合だけ「幾何学的な単独支持成立」とする。等値を含み、辺・点だけの接触は支持接触としない。
 - 移動開始時に単独支持成立している上段積荷は、下段の平行移動へ再帰的に連動し、同じX/Y/Z差分で移動する。3D dragと座標dialogへ適用し、回転、複数支持、張り出し、支持可否混在、不適合接触には適用しない。連動移動は全配置を一回だけ検証・commitし、一回のUndo/Redoで往復する。子孫の座標が保存範囲外になる場合は全体を変更せず、子孫がある根のdrag-outまたは配置解除は先に上段を外すよう拒否する。
-- 支持不可積荷だけと正面積でZ接触している上段積荷は、接触なし・Z不一致とは分けて `support-permission-denied` の不適合とし、関連積荷の段積み設定が原因であることを表示する。
+- 支持不可積荷だけと正面積でZ接触している上段積荷は、接触なし・Z不一致とは分けて `support-permission-denied` の不適合とし、関連積荷の「上乗せ禁止」設定が原因であることを表示する。
 - 支持可能面と正面積で接触するが、複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含む場合は、保存可能な「支持条件未確認」とする。構造剛性、支持位置、重心、許容支持間隔の確認を促す。
 - 接触する支持可能面がない、Zが一致しない、支持不可積荷だけに接触する、または立体重複する配置は不適合とする。支持成立・未確認・不適合のいずれも実積載の安全性を保証しない。
 - システムは積荷重量合計がコンテナ耐荷重を超える場合に不適合を示す。

@@ -46,6 +46,10 @@ import {
   type CargoCsvImportRequest,
 } from "./ui/CargoCsvImportDialog";
 import {
+  CargoConstraintsDialog,
+  type CargoConstraintsRequest,
+} from "./ui/CargoConstraintsDialog";
+import {
   ContainerEditorDialog,
   type ContainerEditorIntent,
   type ContainerEditorRequest,
@@ -156,6 +160,9 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   const cargoCsvSequence = useRef(0);
   const [cargoCsvRequest, setCargoCsvRequest] =
     useState<CargoCsvImportRequest>();
+  const cargoConstraintsSequence = useRef(0);
+  const [cargoConstraintsRequest, setCargoConstraintsRequest] =
+    useState<CargoConstraintsRequest>();
   const [sceneSessionResetRevision, setSceneSessionResetRevision] = useState(0);
   const containerEditorSequence = useRef(0);
   const [containerEditorRequest, setContainerEditorRequest] =
@@ -270,6 +277,19 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
   const handleCloseCargoCsv = useCallback(() => {
     setCargoCsvRequest(undefined);
     handleBusyChange("project", false);
+  }, [handleBusyChange]);
+  const handleOpenCargoConstraints = useCallback(() => {
+    if (busyRef.current) return;
+    handleBusyChange("cargoDialog", true);
+    cargoConstraintsSequence.current += 1;
+    setCargoConstraintsRequest({
+      key: cargoConstraintsSequence.current,
+      returnScrollPosition: { left: window.scrollX, top: window.scrollY },
+    });
+  }, [handleBusyChange]);
+  const handleCloseCargoConstraints = useCallback(() => {
+    setCargoConstraintsRequest(undefined);
+    handleBusyChange("cargoDialog", false);
   }, [handleBusyChange]);
   const handleOpenContainerEditor = useCallback(
     (intent: ContainerEditorIntent) => {
@@ -844,6 +864,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         onInteractionChange={handlePersistenceInteractionChange}
         onLoadDevice={handleLoadDevice}
         onOpenCargoEditor={() => handleOpenCargoEditor({ kind: "add" })}
+        onOpenCargoConstraints={handleOpenCargoConstraints}
         onOpenCargoCsv={handleOpenCargoCsv}
         onOpenContainerEditor={handleOpenContainerEditor}
         onOpenChange={setNavigationOpen}
@@ -886,6 +907,15 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
           onClose={handleCloseCargoCsv}
           onProjectCommit={handleProjectCommit}
           request={cargoCsvRequest}
+        />
+      )}
+      {cargoConstraintsRequest === undefined ? null : (
+        <CargoConstraintsDialog
+          key={cargoConstraintsRequest.key}
+          onClose={handleCloseCargoConstraints}
+          onProjectCommit={handleProjectCommit}
+          project={project}
+          request={cargoConstraintsRequest}
         />
       )}
       {containerEditorRequest === undefined ? null : (

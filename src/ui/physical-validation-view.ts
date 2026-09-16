@@ -53,7 +53,7 @@ const INVALID_REASON_COPY = {
   "opening-no-fitting-orientation":
     "許可されたどの向きでも矩形開口の幅と高さに収まりません。",
   "support-permission-denied":
-    "関連積荷は段積みが許可されていないため、その上の積荷を支持できません。段積み設定または配置を変更してください。",
+    "関連積荷は上乗せ禁止のため、その上の積荷を支持できません。上乗せ禁止設定または配置を変更してください。",
   "support-contact-invalid":
     "床より上の積荷が、支持可能な上面と同じ高さで正面積接触していません。Z座標と支持可否を確認してください。",
   "payload-capacity-exceeded":
@@ -135,7 +135,7 @@ function reasonView(
       reason.target.kind === "cargo"
         ? `${reason.relatedCargoIds
             .map((cargoId) => labels.cargoNames.get(cargoId) ?? "不明な積荷")
-            .join("、")}は段積みが許可されていないため、上にある${labels.cargoNames.get(reason.target.id) ?? "積荷"}を支持できません。段積み設定または配置を変更してください。`
+            .join("、")}は上乗せ禁止のため、上にある${labels.cargoNames.get(reason.target.id) ?? "積荷"}を支持できません。上乗せ禁止設定または配置を変更してください。`
         : INVALID_REASON_COPY[reason.code];
     return {
       ...shared,

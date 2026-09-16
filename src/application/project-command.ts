@@ -16,6 +16,7 @@ import {
 import type { ValidationIssue } from "../domain/validation";
 import { validateProjectReferences } from "../domain/validation";
 import { singleSupportDescendantCargoIds } from "../domain/geometry";
+import { orientationsForUprightPolicy } from "../domain/orientation-policy";
 import { validateProjectJsonSchema } from "../persistence/project-json-schema";
 import { nextCargoId, nextContainerId } from "./project-factory";
 
@@ -36,6 +37,12 @@ export interface CargoDraft {
   readonly massKg: string;
   readonly canSupportCargo: boolean;
   readonly allowedOrientations: readonly Orientation[];
+}
+
+export interface CargoConstraintDraft {
+  readonly cargoId: string;
+  readonly topLoadingProhibited: boolean;
+  readonly uprightOnly: boolean;
 }
 
 export interface ContainerDraft {
@@ -230,6 +237,36 @@ export function saveCargo(
     existingIndex < 0
       ? [...current.cargoes, cargo]
       : current.cargoes.map((existing, index) => (index === existingIndex ? cargo : existing));
+  return validateCandidate(current, { ...current, cargoes });
+}
+
+export function updateCargoConstraints(
+  current: Project,
+  drafts: readonly CargoConstraintDraft[],
+): ProjectCommandResult {
+  if (
+    drafts.length !== current.cargoes.length ||
+    new Set(drafts.map((draft) => draft.cargoId)).size !== drafts.length ||
+    drafts.some((draft) => !current.cargoes.some((cargo) => cargo.id === draft.cargoId))
+  ) {
+    return failure(current, {
+      code: "command.cargo-not-found",
+      path: "/cargoes",
+    });
+  }
+
+  const byCargoId = new Map(drafts.map((draft) => [draft.cargoId, draft]));
+  const cargoes = current.cargoes.map((cargo) => {
+    const draft = byCargoId.get(cargo.id)!;
+    return {
+      ...cargo,
+      canSupportCargo: !draft.topLoadingProhibited,
+      allowedOrientations: orientationsForUprightPolicy(draft.uprightOnly),
+    };
+  });
+  if (cargoes.every((cargo, index) => sameCargo(cargo, current.cargoes[index]!))) {
+    return validateUnchangedProject(current);
+  }
   return validateCandidate(current, { ...current, cargoes });
 }
 

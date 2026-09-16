@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { Cargo, Container, Placement, Project } from "../domain/model";
+import { ORIENTATIONS, type Cargo, type Container, type Placement, type Project } from "../domain/model";
 import {
   CARGO_CREATION_LIMIT,
   parseClearanceMm,
@@ -16,6 +16,7 @@ import {
   deleteContainer,
   saveCargo,
   saveContainer,
+  updateCargoConstraints,
   updatePlacement,
   updateProjectSettings,
   type CargoDraft,
@@ -352,6 +353,52 @@ describe("project commands", () => {
     expect(result.ok).toBe(false);
     expect(result.project).toBe(current);
     expect(result).toMatchObject({ issues: [{ code: "semantic.disallowed-orientation" }] });
+  });
+
+  it("updates cargo constraints together while preserving identity and placements", () => {
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [cargo("cargo-1"), { ...cargo("cargo-2"), canSupportCargo: true }],
+    };
+    const result = updateCargoConstraints(current, [
+      { cargoId: "cargo-1", uprightOnly: false, topLoadingProhibited: false },
+      { cargoId: "cargo-2", uprightOnly: true, topLoadingProhibited: true },
+    ]);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.project.cargoes).toEqual([
+      { ...current.cargoes[0], canSupportCargo: true, allowedOrientations: ORIENTATIONS },
+      { ...current.cargoes[1], canSupportCargo: false, allowedOrientations: ["LWH", "WLH"] },
+    ]);
+    expect(result.project.placements).toBe(current.placements);
+    const unchanged = updateCargoConstraints(result.project, [
+      { cargoId: "cargo-1", uprightOnly: false, topLoadingProhibited: false },
+      { cargoId: "cargo-2", uprightOnly: true, topLoadingProhibited: true },
+    ]);
+    expect(unchanged.ok).toBe(true);
+    if (unchanged.ok) expect(unchanged.project).toBe(result.project);
+  });
+
+  it("rejects an incomplete or orientation-invalid cargo constraint batch atomically", () => {
+    const current = placedProject();
+    expect(updateCargoConstraints(current, [])).toMatchObject({
+      ok: false,
+      project: current,
+      issues: [{ code: "command.cargo-not-found", path: "/cargoes" }],
+    });
+    const horizontal: Project = {
+      ...current,
+      placements: current.placements.map((existing) => ({ ...existing, orientation: "LHW" })),
+      cargoes: current.cargoes.map((existing) => ({ ...existing, allowedOrientations: ORIENTATIONS })),
+    };
+    expect(updateCargoConstraints(horizontal, [
+      { cargoId: "cargo-1", uprightOnly: true, topLoadingProhibited: true },
+    ])).toMatchObject({
+      ok: false,
+      project: horizontal,
+      issues: [{ code: "semantic.disallowed-orientation" }],
+    });
   });
 
   it("rejects empty orientations without changing current", () => {

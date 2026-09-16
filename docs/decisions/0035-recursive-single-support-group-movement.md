@@ -2,6 +2,7 @@
 
 - Date: 2026-09-16
 - Status: Accepted
+- Refined by: ADR 0037が支持不可設定の利用者向け表記を「上乗せ禁止」へ変更する
 - Related specification: Placement and Validation
 - Refines: ADR 0012、0015、0018、0019、0020
 

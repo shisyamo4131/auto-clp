@@ -6,6 +6,7 @@ export type ProjectHistoryAction =
   | "project-settings.update"
   | "cargo.add"
   | "cargo.update"
+  | "cargo.constraints-update"
   | "cargo.delete"
   | "cargo.csv-replace"
   | "container.add"

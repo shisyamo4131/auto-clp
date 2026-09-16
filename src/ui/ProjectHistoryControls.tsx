@@ -18,6 +18,7 @@ const actionCopy = {
   "project-settings.update": "CLP設定の更新",
   "cargo.add": "積荷の追加",
   "cargo.update": "積荷の更新",
+  "cargo.constraints-update": "積荷制約の一括更新",
   "cargo.delete": "積荷の削除",
   "cargo.csv-replace": "CSVによる積荷の一括置換",
   "container.add": "コンテナの追加",

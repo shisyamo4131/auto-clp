@@ -235,8 +235,8 @@ test("uses manual defaults and blocks only new cargo creation at 30 or legacy co
   await page.getByRole("button", { name: "積荷を追加", exact: true }).click();
   await expect(page.getByLabel(/天地無用/)).not.toBeChecked();
   await expect(
-    page.getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる"),
-  ).toBeChecked();
+    page.getByLabel("この積荷の上に別の積荷を載せない"),
+  ).not.toBeChecked();
   await page.getByLabel("積荷名").fill("匿名荷30");
   await page.getByLabel("長さ", { exact: true }).fill("1");
   await page.getByLabel("幅", { exact: true }).fill("1");

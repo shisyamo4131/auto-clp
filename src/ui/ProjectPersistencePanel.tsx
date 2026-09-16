@@ -56,6 +56,7 @@ interface ProjectPersistencePanelProps {
   readonly onLoadDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
   readonly onSaveDevice: (baseProject: Project) => Promise<ProjectPersistenceActionResult>;
   readonly onOpenCargoEditor: () => void;
+  readonly onOpenCargoConstraints: () => void;
   readonly onOpenCargoCsv: (file: File) => void;
   readonly onOpenChange: (open: boolean) => void;
   readonly onOpenProjectSettings: () => void;
@@ -151,6 +152,7 @@ export function ProjectPersistencePanel({
   onLoadDevice,
   onSaveDevice,
   onOpenCargoEditor,
+  onOpenCargoConstraints,
   onOpenCargoCsv,
   onOpenChange,
   onOpenProjectSettings,
@@ -554,6 +556,14 @@ export function ProjectPersistencePanel({
                   onClick={() => finishDrawerAction(onOpenCargoEditor)}
                 >
                   積荷を追加
+                </button>
+                <button
+                  id="cargo-constraints-button"
+                  type="button"
+                  disabled={controlsDisabled || project.cargoes.length === 0}
+                  onClick={() => finishDrawerAction(onOpenCargoConstraints)}
+                >
+                  積荷の制約を一覧編集
                 </button>
               </div>
               <p className="project-persistence__availability">

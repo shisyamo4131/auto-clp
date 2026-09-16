@@ -112,8 +112,8 @@ test("uses the approved support and all-orientation defaults for new cargo", asy
   await fillCargo(page, "天地無用合成積荷");
   await expect(page.getByLabel(/天地無用/)).not.toBeChecked();
   await expect(
-    page.getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる"),
-  ).toBeChecked();
+    page.getByLabel("この積荷の上に別の積荷を載せない"),
+  ).not.toBeChecked();
   await expect(page.getByLabel(/^LWH/)).toHaveCount(0);
   await expect(page.getByLabel(/^WLH/)).toHaveCount(0);
   await expect(page.getByLabel(/^LHW/)).toHaveCount(0);
@@ -121,6 +121,40 @@ test("uses the approved support and all-orientation defaults for new cargo", asy
   await page.getByRole("button", { name: "積荷を保存" }).click();
   await page.getByLabel("操作する積荷").selectOption("cargo-1");
   await expect(page.locator(".viewport-context-actions")).toContainText("天地無用合成積荷");
+});
+
+test("edits cargo constraints as one reversible batch with prohibition wording", async ({ page }) => {
+  await page.goto("/");
+  await addCargo(page, "制約積荷A");
+  await addCargo(page, "制約積荷B");
+
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "積荷の制約を一覧編集" }).click();
+  const dialog = page.getByRole("dialog", { name: "積荷の制約を一覧編集" });
+  const first = dialog.getByRole("group", { name: "制約積荷A" });
+  await expect(first.getByLabel("天地無用")).not.toBeChecked();
+  await expect(first.getByLabel("上乗せ禁止")).not.toBeChecked();
+  await first.getByLabel("天地無用").check();
+  await first.getByLabel("上乗せ禁止").check();
+  for (const width of [305, 320, 375]) {
+    await page.setViewportSize({ width, height: 640 });
+    expect(await page.evaluate<boolean>("document.documentElement.scrollWidth > document.documentElement.clientWidth")).toBe(false);
+  }
+  await dialog.getByRole("button", { name: "キャンセル" }).click();
+  await expect(dialog).toContainText("未保存の制約変更を破棄して閉じますか。");
+  await dialog.getByRole("button", { name: "編集を続ける" }).click();
+  await dialog.getByRole("button", { name: "変更を適用" }).click();
+
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await page.locator(".viewport-context-actions").getByRole("button", { name: "積荷情報を編集" }).click();
+  await expect(page.getByLabel(/天地無用/)).toBeChecked();
+  await expect(page.getByLabel("この積荷の上に別の積荷を載せない")).toBeChecked();
+  await page.getByRole("button", { name: "キャンセル" }).click();
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  await page.locator(".viewport-context-actions").getByRole("button", { name: "積荷情報を編集" }).click();
+  await expect(page.getByLabel(/天地無用/)).not.toBeChecked();
+  await expect(page.getByLabel("この積荷の上に別の積荷を載せない")).not.toBeChecked();
 });
 
 test("container CRUD remains transactional", async ({ page }) => {

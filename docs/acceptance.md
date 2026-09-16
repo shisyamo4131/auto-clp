@@ -150,13 +150,13 @@
 5. 一回のUndoで元の積荷2件と配置2件を完全に復元し、一回のRedoでCSV由来積荷3件・配置0件へ戻す。失敗、取消、stale、busy、同一状態no-opを履歴へ追加しない。
 6. 1件と30件は受け入れ、31件、0件、空file、header-only、不正UTF-8、5 MiB超過、見出し不足・余分・重複・並べ替え・大小文字違い、列不足・余分、不正引用、部分空欄、範囲外、丸めが必要な値をファイル全体として拒否する。どの失敗でも現在Project参照と対応する派生表示を保持し、cell値、積荷名、filename、CSV全文を表示またはログへ反射しない。
 7. 名前1 / 120文字、寸法1 / 100,000 mm、重量0.001 / 100,000 kgを受け入れ、名前0 / 121文字・制御文字、寸法0 / 100,001・小数、重量0 / 100,000.001・小数4桁、負数、指数、全角数字、桁区切り、単位、式を拒否する。
-8. 手動追加も段積みOK・天地無用OFFを既定とする。積荷数29件では1件追加でき、30件では手動追加を拒否する。Schema `0.1.0`の既存31〜1,000件Projectは読込、表示、編集、削除、書出しできるが追加できず、29件以下へ削除すると追加できる。配置上限1,000件は変更しない。Undoで31件以上を復元した場合も同じ追加制限を再適用する。
+8. 手動追加も上乗せ禁止OFF・天地無用OFFを既定とする。積荷数29件では1件追加でき、30件では手動追加を拒否する。Schema `0.1.0`の既存31〜1,000件Projectは読込、表示、編集、削除、書出しできるが追加できず、29件以下へ削除すると追加できる。配置上限1,000件は変更しない。Undoで31件以上を復元した場合も同じ追加制限を再適用する。
 9. 305 / 320 / 375 px、keyboard、focus trap、Escape、Drawer背景、busy、WebGL障害の全面停止を既存UI契約どおり維持する。CSV操作の出現またはstatusで3D canvasの寸法・位置を変えない。
 10. 見出し後に全空白recordを置き、その後の論理record 1のquoted name内に改行を含め、さらに全空白recordを挟んだ論理record 2の `weight_kg` を不正値にする。物理行数にかかわらず `input.kg-format` と `/rows/2/weight_kg` を返す。file・header・record件数・列数・名前・寸法・重量・置換後Projectの各失敗は仕様の固定code/pathだけを返し、path→codeの順、重複なし、最大50件、入力値非反射を維持する。
 
 ### Human Excel Gate
 
-Windows版Excelでテンプレートを開き、日本語、引用comma・quote、kg小数を含む匿名データを入力して「CSV UTF-8（コンマ区切り）」として保存し、再読込後の順序、値、段積みOK、全6向き、件数確認、Undo/Redoを確認する。通常の非UTF-8 CSVは状態を変えず拒否されることを確認する。この人間確認が完了するまでCSVマイルストーンの最終1点と実務受入を獲得しない。
+Windows版Excelでテンプレートを開き、日本語、引用comma・quote、kg小数を含む匿名データを入力して「CSV UTF-8（コンマ区切り）」として保存し、再読込後の順序、値、上乗せ禁止OFF、全6向き、件数確認、Undo/Redoを確認する。通常の非UTF-8 CSVは状態を変えず拒否されることを確認する。この人間確認が完了するまでCSVマイルストーンの最終1点と実務受入を獲得しない。
 
 ## AC-08 Recursive Exact-Support Group Movement
 
@@ -167,7 +167,17 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 3. Bだけを平行移動した場合はCだけが連動し、Aは動かない。根の回転、複数支持、張り出し、支持可否混在、支持不可接触、接触不成立では上段を連動させない。
 4. 3D previewでは連動対象も同じ差分で描画し、取消、pointer中断、commit失敗では根と全子孫を開始位置へ戻す。
 5. 子孫がある根の完全drag-outと配置解除は拒否し、「先に上の積荷を外す」旨を示してProjectと履歴を変更しない。
-6. 支持不可の積荷Aと、その上に正面積接触する積荷Bには `support-permission-denied` を返し、「積荷Aは段積みが許可されていないため、上にある積荷Bを支持できない」旨を表示する。接触なし、Z不一致、辺・点接触は `support-contact-invalid` のままとする。
+6. 支持不可の積荷Aと、その上に正面積接触する積荷Bには `support-permission-denied` を返し、「積荷Aは上乗せ禁止のため、上にある積荷Bを支持できない」旨を表示する。接触なし、Z不一致、辺・点接触は `support-contact-invalid` のままとする。
+
+## AC-09 Cargo Constraint Batch Editing
+
+このケースは仕様1.8.0・ADR 0037に従う。CSV形式とSchema `0.1.0` は変更しない。
+
+1. 積荷2件以上を持つCLPでDrawerから「積荷の制約を一覧編集」を開き、各積荷名と「天地無用」「上乗せ禁止」のcheckboxだけを表示する。名前、寸法、重量、配置の入力欄は置かない。
+2. 新規・CSV由来積荷は両checkboxがOFFである。「上乗せ禁止」ON/OFFは個別積荷editorでも同じ表記と状態になり、内部 `canSupportCargo=false/true` と正確に反転対応する。
+3. 複数行を変更しても「変更を適用」で一回だけProjectを更新し、一回のUndo/Redoで全件を往復する。no-opでは適用を無効にし、取消・破棄・stale・busy・失敗ではProjectと履歴を変更しない。
+4. 配置済み支持積荷を上乗せ禁止ONにしても配置を移動・解除せず、`support-permission-denied` と積荷名を含む「上乗せ禁止」理由を再計算する。横倒し配置中の積荷を天地無用ONにする一括変更は全件をrollbackする。
+5. focus trap、Escape、dirty破棄確認、keyboard、305 / 320 / 375 pxの水平overflowなし、WebGL障害時の操作停止を既存dialog契約どおり維持する。
 
 ## Evidence and Completion
 
@@ -183,6 +193,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - 仕様1.6.0 CSV積荷一括置換自動証拠: typecheck、lint、単体32ファイル1,006件、ブラウザ102件、buildに合格。固定template bytes、厳格なUTF-8・CSV・値検証、1 / 30 / 31件、共通新規作成上限、legacy 31〜1,000件互換、決定的ID・既定値、件数付き確認、取消・失敗・stale・busy・no-op保持、原子的置換、一回のUndo/Redo、同一IDを含むscene一時状態reset、派生再導出、305 / 320 / 375 px、focus、WebGL停止を回帰し、独立コードレビューは二つの指摘修正後に合格した。Windows版Excel往復と実務利用者受入の証拠ではない。
 - 2026-09-16の利用者試用では、20件のCSV一括登録と一回のUndoによる元状態復元を確認した。これはWindows版Excelでのtemplate往復、非UTF-8拒否、正式fixtureまたは実務利用者受入の証拠ではない。
 - 仕様1.7.0単一支持グループ移動自動証拠: typecheck、lint、単体32ファイル1,014件、ブラウザ103件、buildに合格。3段再帰移動、回転・支持不可・複数支持の非連動、子孫座標失敗のrollback、配置解除拒否、一回のUndo、支持不可専用理由と関連積荷名、CSV確認文を回帰した。3D dragの連動preview・取消・dropは実装され既存drag回帰に合格したが、積層fixtureでの人間差分確認は未実施である。
+- 仕様1.8.0積荷制約一覧編集の自動証拠: typecheck、lint、単体32ファイル1,016件、ブラウザ104件、build、データ契約・ガバナンス・プロジェクト検査に合格。保存値反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表記一致、一回のUndo、dirty確認、305 / 320 / 375 px、支持不可理由を回帰した。内蔵ブラウザでの人間差分確認は未実施である。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
 - canvas追加操作の判断: AC-01で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。
@@ -200,6 +211,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - AC-06: `src/domain/weight-balance.test.ts` と `src/scene/project-scene.test.ts` が正確な重量moment、全向き、上限・上限外、4状態、scene変換、計算不能回復投影を検証する。`tests/browser/weight-balance.spec.ts` が赤・黄点と凡例、画面投影中心一致・近接・画面外、非操作、camera、drag、履歴、DPR 1/2、読込成功・失敗、統合 `unavailable`、305 / 320 / 375 pxを実行し、既存永続化回帰が派生状態をJSON・端末保存・履歴へ含めない。匿名合成データによる人間視認性確認は未実施。
 - AC-07: `src/persistence/cargo-csv.test.ts`、`src/persistence/cargo-csv-file.test.ts`、`src/application/cargo-csv-import.test.ts`、`src/application/project-command.test.ts` と `tests/browser/cargo-csv.spec.ts` が、CSV parser/file、共通正規入力、全体置換、履歴、既存保存互換を検証する。全行検証、全空白recordとquoted改行を含む1始まり論理record path、全固定code/path、決定的sort・重複排除・50件上限・入力値非反射、件数確認、取消・失敗保持、成功、Undo/Redo、scene一時状態resetと派生再導出、30件上限、legacy 31〜1,000件、狭幅・focus・WebGL停止を実行する。Windows版Excel往復は別の人間証拠とする。
 - AC-08: `src/application/project-command.test.ts`、`src/domain/validation.test.ts`、`src/ui/physical-validation-view.test.ts`、`src/workers/physical-validation-worker-protocol.test.ts` と `tests/browser/placement.spec.ts` が、3段再帰移動、回転・支持不可・複数支持の非連動、座標失敗の原子的rollback、配置解除拒否、一回のUndo、専用理由と関連積荷名を含む表示を検証する。`src/scene/SceneWorkspace.tsx` と `src/scene/ThreeViewport.tsx` の連動preview・取消実装は既存の実pointer drag回帰を通すが、積層fixtureの実pointer差分確認は人間確認として残す。
+- AC-09: `src/application/project-command.test.ts` と `tests/browser/input.spec.ts` が、制約値の反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表示一致、一回のUndo、dirty破棄と狭幅を検証し、既存物理表示回帰が「上乗せ禁止」理由を検証する。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 - 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。

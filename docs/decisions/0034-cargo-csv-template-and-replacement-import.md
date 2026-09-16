@@ -2,6 +2,7 @@
 
 - Date: 2026-09-08
 - Status: Accepted
+- Refined by: ADR 0037がCSV 5列と既定値を維持し、例外制約の編集を画面上の一覧へ追加する
 - Related specification: Cargo; Application Shell and Primary Workflow; Persistence; Operation History; Data and State
 - Refines: 0009, 0013, 0022, 0025, 0029, 0030
 - Changes current specification default: 新規積荷の既定を、従来仕様の立置き2向きから天地無用OFFの全6向きへ変更する。ADR 0022のON/OFF対応自体は維持する

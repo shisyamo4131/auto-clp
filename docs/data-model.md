@@ -4,13 +4,13 @@
 - Project schema version: `0.1.0`
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
-- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](decisions/0033-equal-borderless-center-markers.md)、[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)、[ADR 0035](decisions/0035-recursive-single-support-group-movement.md)、[ADR 0036](decisions/0036-cargo-csv-destructive-confirmation-copy.md)
+- Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](decisions/0033-equal-borderless-center-markers.md)、[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)、[ADR 0035](decisions/0035-recursive-single-support-group-movement.md)、[ADR 0036](decisions/0036-cargo-csv-destructive-confirmation-copy.md)、[ADR 0037](decisions/0037-cargo-constraint-list-and-prohibition-wording.md)
 
 ## Contract Scope
 
-この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.1の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例、仕様1.6.0のCSVテンプレート、30件新規作成上限、既定値統一、積荷・配置の一括置換、および仕様1.7.0の単一支持グループ連動移動と支持不可専用理由は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
+この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.1の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例、仕様1.6.0のCSVテンプレート、30件新規作成上限、既定値統一、積荷・配置の一括置換、仕様1.7.0の単一支持グループ連動移動と支持不可専用理由、および仕様1.8.0の積荷制約一覧編集は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
 
-仕様版 `1.7.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog、保存しない重心派生表示、派生する単一支持グループ移動、およびSchema上限内の一時CSV入力と新規作成上限の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `1.8.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・荷室外anchor・表示annotation・操作方法dialog、保存しない重心派生表示、派生する単一支持グループ移動、積荷制約の一覧編集、およびSchema上限内の一時CSV入力と新規作成上限の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 
@@ -108,7 +108,7 @@ JSON Schemaが単独で表現できない一意性、参照整合性、許可向
 
 不適合な配置も、座標値と参照整合性が有効なら保存できる。これにより、利用者が途中状態を失わず修正できる。読込時に不適合を成功扱いせず、再計算した理由を表示する。
 
-undo/redoは検証済み `Project` 参照を最大100件、実行中メモリだけに保持する。履歴対象はCLP設定、積荷、候補、配置の成功した追加・更新・削除と、1回の3D dragにつき1件である。失敗、no-op、raw draft、削除確認、drag preview、候補・積荷選択、camera、Worker結果と理由ページは履歴へ入れない。undo後に別のCLP変更を確定した場合はredo側を破棄し、JSON書出し・読込へ履歴を含めない。
+undo/redoは検証済み `Project` 参照を最大100件、実行中メモリだけに保持する。履歴対象はCLP設定、積荷、候補、配置の成功した追加・更新・削除、積荷制約一覧の一括更新と、1回の3D dragにつき1件である。制約一覧は「天地無用」と「上乗せ禁止」だけを一時編集し、ONの「上乗せ禁止」を保存値 `canSupportCargo=false` へ反転して一回の履歴にする。失敗、no-op、raw draft、削除確認、drag preview、候補・積荷選択、camera、Worker結果と理由ページは履歴へ入れない。undo後に別のCLP変更を確定した場合はredo側を破棄し、JSON書出し・読込へ履歴を含めない。
 
 ## Import Transaction
 
@@ -129,7 +129,7 @@ JSON読込は次の順序で行い、すべて成功するまで現在CLPを変�
 
 CSVはProjectの永続形式またはbackupではなく、新しい積荷配列を作る一時入力である。固定名テンプレート `auto-clp-cargo-template.csv` はUTF-8 BOM、CRLF、見出し `name,length_mm,width_mm,height_mm,weight_kg` だけを持つ。読込はUTF-8のBOM有無、CRLF / LF、quoted fieldと二重引用符escapeを受け、見出し順・大小文字・列数を厳密に検証する。すべて空白のrecordだけを無視し、有効recordを1〜30件とする。
 
-各recordは論理順で `cargo-1`〜`cargo-N` を得る。重複名を許可し、既存の名前、寸法mm、重量kg→g変換を使い、`canSupportCargo=true`、`allowedOrientations`は全6向きとする。raw CSV、filename、cell値、parser状態はProject、JSON、IndexedDB、履歴へ保存しない。
+各recordは論理順で `cargo-1`〜`cargo-N` を得る。重複名を許可し、既存の名前、寸法mm、重量kg→g変換を使い、上乗せ禁止OFFに対応する `canSupportCargo=true`、`allowedOrientations`は天地無用OFFの全6向きとする。raw CSV、filename、cell値、parser状態はProject、JSON、IndexedDB、履歴へ保存しない。
 
 全recordと置換候補を一時検証した後、確認時だけ現在Projectの `schemaVersion`、`projectId`、`name`、`clearancesMm`、`containers`を保持し、`cargoes`を新しい配列へ置換して`placements=[]`とする。この一回のProject変更だけを履歴へ保存し、Undoは旧積荷・配置を完全復元する。取消、失敗、stale、busy、no-opではProjectと履歴を変更しない。
 

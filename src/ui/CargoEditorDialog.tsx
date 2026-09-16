@@ -286,10 +286,10 @@ export function CargoEditorDialog({
           <p className="field-help">床面上のZ軸回転は常に利用できます。天地無用を外すとX軸回転による横倒しも許可します。向きコードは面の上下反転を区別しません。</p>
         </fieldset>
         <fieldset>
-          <legend>段積み設定</legend>
+          <legend>上乗せ禁止</legend>
           <label className="check-row">
-            <input type="checkbox" checked={draft.canSupportCargo} onChange={(event) => setDraft({ ...draft, canSupportCargo: event.target.checked })} />
-            <span>この積荷の上面で別の積荷を幾何学的に支持できる</span>
+            <input type="checkbox" checked={!draft.canSupportCargo} onChange={(event) => setDraft({ ...draft, canSupportCargo: !event.target.checked })} />
+            <span>この積荷の上に別の積荷を載せない</span>
           </label>
         </fieldset>
         {placement === undefined ? null : (

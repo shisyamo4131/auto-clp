@@ -156,12 +156,12 @@ test("moves an exact three-level stack atomically and explains disabled support"
 
   await card.getByRole("button", { name: "積荷情報を編集" }).click();
   await page
-    .getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる")
-    .uncheck();
+    .getByLabel("この積荷の上に別の積荷を載せない")
+    .check();
   await page.getByRole("button", { name: "積荷情報を保存" }).click();
   await page.locator("#physical-validation-lamp").click();
   await expect(page.getByRole("dialog", { name: "物理判定" })).toContainText(
-    "基礎積荷は段積みが許可されていないため、上にある中段積荷を支持できません。段積み設定または配置を変更してください。",
+    "基礎積荷は上乗せ禁止のため、上にある中段積荷を支持できません。上乗せ禁止設定または配置を変更してください。",
   );
 });
 
