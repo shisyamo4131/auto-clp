@@ -318,7 +318,13 @@ function measureContainerFrame(image: Buffer) {
       }
     }
   }
-  return { count, height: maxY - minY + 1, width: maxX - minX + 1 };
+  return {
+    centerX: (minX + maxX) / 2,
+    centerY: (minY + maxY) / 2,
+    count,
+    height: maxY - minY + 1,
+    width: maxX - minX + 1,
+  };
 }
 
 function countTurquoisePixels(image: Buffer) {
@@ -343,6 +349,8 @@ function expectSameContainerFrame(
   expect(expected.count).toBeGreaterThan(100);
   expect(actual.count).toBeGreaterThanOrEqual(expected.count * 0.85);
   expect(actual.count).toBeLessThanOrEqual(expected.count * 1.15);
+  expect(Math.abs(actual.centerX - expected.centerX)).toBeLessThanOrEqual(2);
+  expect(Math.abs(actual.centerY - expected.centerY)).toBeLessThanOrEqual(2);
   expect(Math.abs(actual.width - expected.width)).toBeLessThanOrEqual(4);
   expect(Math.abs(actual.height - expected.height)).toBeLessThanOrEqual(4);
 }
@@ -401,15 +409,24 @@ test("shows cargo weight, four selection states, load totals, compact staging, a
     .getByRole("button", { name: "荷室から外す", exact: true })
     .click();
   const historyBefore = await page.locator(".project-history__summary").textContent();
-  const magnet = page.getByRole("button", { name: "荷室外の積荷をコンテナへ寄せる" });
-  await expect(magnet).toBeEnabled();
-  await magnet.click();
+  const compactStaging = page.getByRole("button", { name: "荷室外の積荷をコンテナへ寄せる" });
+  await expect(compactStaging.locator('svg[data-icon="arrow-collapse-all"]')).toBeVisible();
+  await expect(compactStaging).toBeEnabled();
+  const canvas = page.getByRole("img", { name: previewName });
+  await canvas.hover();
+  await page.mouse.wheel(0, -240);
+  await page.waitForTimeout(100);
+  const containerFrameBeforeCompact = measureContainerFrame(await canvas.screenshot());
+  await compactStaging.click();
   await expect(page.locator("#scene-workspace-action-status")).toContainText(
     "荷室外の積荷1件をコンテナの近くへ寄せました",
   );
   expect(await page.locator(".project-history__summary").textContent()).toBe(historyBefore);
+  expectSameContainerFrame(
+    measureContainerFrame(await canvas.screenshot()),
+    containerFrameBeforeCompact,
+  );
 
-  const canvas = page.getByRole("img", { name: previewName });
   await canvas.hover();
   await page.keyboard.down("Control");
   await expect(canvas).toHaveCSS("cursor", "move");

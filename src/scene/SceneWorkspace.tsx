@@ -61,12 +61,18 @@ function gramsToKilograms(grams: number): string {
   return fraction.length === 0 ? String(whole) : `${whole}.${fraction}`;
 }
 
-function MagnetIcon() {
+function ArrowCollapseAllIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22">
+    <svg
+      aria-hidden="true"
+      data-icon="arrow-collapse-all"
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+    >
       <path
         fill="currentColor"
-        d="M6 2h4v7a2 2 0 0 0 4 0V2h4v7a6 6 0 0 1-12 0V2Zm0 0h4v3H6V2Zm8 0h4v3h-4V2Z"
+        d="M19.5 3.09 15 7.59V4h-2v7h7V9h-3.59l4.5-4.5-1.41-1.41M4 13v2h3.59l-4.5 4.5 1.41 1.41 4.5-4.5V20h2v-7H4m9 0v7h2v-3.59l4.5 4.5 1.41-1.41-4.5-4.5H20v-2h-7m-2-2V4H9v3.59L4.5 3.09 3.09 4.5 7.59 9H4v2h7Z"
       />
     </svg>
   );
@@ -300,7 +306,6 @@ export function SceneWorkspace({
   const [selectedCargoId, setSelectedCargoId] = useState<string>();
   const [cargoQuery, setCargoQuery] = useState("");
   const [canvasStatus, setCanvasStatus] = useState("");
-  const [fitAllRevision, setFitAllRevision] = useState(0);
   const dragPreviewStatusRef = useRef("");
   const dragFollowerGroupRef = useRef<
     | {
@@ -643,7 +648,6 @@ export function SceneWorkspace({
       return;
     }
     setStagingOverrides({ ...compacted });
-    setFitAllRevision((current) => current + 1);
     setCanvasStatus(
       `荷室外の積荷${stagedCount}件をコンテナの近くへ寄せました。この整理はUndoと保存の対象外です。`,
     );
@@ -1314,7 +1318,6 @@ export function SceneWorkspace({
               </div>
             )}
             forceInitialRenderError={forceInitialRenderError}
-            fitAllRevision={fitAllRevision}
             historyControls={(
               <>
                 <button
@@ -1331,7 +1334,7 @@ export function SceneWorkspace({
                   }
                   onClick={handleCompactStaging}
                 >
-                  <MagnetIcon />
+                  <ArrowCollapseAllIcon />
                 </button>
                 <ProjectHistoryControls {...historyControls} compact />
               </>

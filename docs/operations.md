@@ -2,7 +2,7 @@
 
 ## Current Availability
 
-- Implemented scene workspace 1.10.0: Application Bar右端menu、3D欄外上部の一行scroll tab、cargo-global side-relative荷室外anchor、コンテナ間共有camera、`整数 mm` だけをcompactな外向き矢印で示す選択積荷の3軸寸法annotation、重量付きselectorと4状態dot、selector直下の固定context action rowと `現在の座標` copy、icon-only判定lampとdialog、Drawerから開く独立 `操作方法` dialog、版付き「使用上の重要事項」を実装した。操作方法dialogはCLP・履歴・保存・camera・判定を変更せず、左drag回転、Shift付き左drag・右drag・Ctrl付き左drag平行移動、wheel zoom、荷室外積荷の寄せを案内する。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
+- Implemented scene workspace 1.10.1: Application Bar右端menu、3D欄外上部の一行scroll tab、cargo-global side-relative荷室外anchor、コンテナ間共有camera、`整数 mm` だけをcompactな外向き矢印で示す選択積荷の3軸寸法annotation、重量付きselectorと4状態dot、selector直下の固定context action rowと `現在の座標` copy、icon-only判定lampとdialog、Drawerから開く独立 `操作方法` dialog、版付き「使用上の重要事項」を実装した。操作方法dialogはCLP・履歴・保存・camera・判定を変更せず、左drag回転、Shift付き左drag・右drag・Ctrl付き左drag平行移動、wheel zoom、荷室外積荷の寄せを案内する。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
 
 - Implemented viewer-first shell: Application Barにmenu、現在CLP名、小さな3D能力Chipを置き、CLP作成・設定、積荷追加・制約一括編集・一括登録、コンテナ管理、保存、読込、ヘルプを単一Navigation Drawerへ集約する。積荷cardとコンテナcardは通常画面に置かず、既存editor、履歴、busy/dirty gate、件数上限、非cascade削除を再利用する。Drawer外の背景相当領域、全幅close button、EscapeはDrawerだけを閉じ、背面操作を発火させずpage scrollを維持してmenuへfocusを戻す。CLP設定はdialog、コンテナtablistは3D viewport欄外上部、全CLP積荷の名前/ID検索・状態付きselectorはviewport下部overlayとし、3Dの寸法と位置を動かさない。未保存変更付きの新規CLPは破棄確認後、UUID付きの新 `projectId` と空履歴を作るbarrierとし、CLP設定dialogを開く。
 
@@ -27,7 +27,7 @@ ADR 0011で、軸別隙間を隣接表面間の実距離として扱い、配置
 
 Phase 1は、完全な搬入経路、積荷別上載荷重、実貨物の偏心、コンテナ自重、支持反力、軸重、床荷重、荷崩れ、固縛、動荷重を評価・保証しない。承認済みの合成重心は、入力重量と直方体中央の仮定による赤・黄点の参考可視化だけとし、数値、許容範囲、合否または実積載の安全性を示さない。完全な搬入経路は具体的な要望と入力契約が確定するまで積荷ごとの未確認理由にせず、恒常的な範囲説明だけを維持する。その他は実装済みの支持判定で必要な場合だけ未確認理由として区別する。
 
-配置座標はADR 0010のコンテナ局所右手座標を使い、`positionMm` は向き適用後の積荷直方体の最小角とする。正規値は整数mmを維持し、描画用中心、scene縮尺、camera、候補・積荷選択、荷室外の作業位置をCLPへ保存しない。Project→scene投影、フォーム配置、canvas選択、fine pointerのX/Y dragと床・支持可能上面への決定的Z snap、許可済みX/Z軸90°回転、視点回転・平行移動、wheel zoom、荷室基準の「荷室全体を表示」、向きを保持した未配置積荷の近接grid再整列を実装済みである。移動開始時に支持可の単一積荷へ完全支持される子孫は、3D dragと座標dialogの平行移動で再帰的に同じ差分だけ連動し、一回の履歴でUndo/Redoする。回転、複数支持、張り出し、支持不可接触は連動せず、子孫がある下段の荷室外移動・配置解除は先に上段を外すよう拒否する。viewport上のwheelはcamera zoomへ使い、Ctrl付き左dragは積荷上でもcamera panを優先する。寄せ、camera、荷室外poseはsession限定でUndo/Redo・保存対象外である。
+配置座標はADR 0010のコンテナ局所右手座標を使い、`positionMm` は向き適用後の積荷直方体の最小角とする。正規値は整数mmを維持し、描画用中心、scene縮尺、camera、候補・積荷選択、荷室外の作業位置をCLPへ保存しない。Project→scene投影、フォーム配置、canvas選択、fine pointerのX/Y dragと床・支持可能上面への決定的Z snap、許可済みX/Z軸90°回転、視点回転・平行移動、wheel zoom、荷室基準の「荷室全体を表示」、向きを保持してcamera位置・注視点・視点方向・縮尺を変えない未配置積荷の近接grid再整列を実装済みである。移動開始時に支持可の単一積荷へ完全支持される子孫は、3D dragと座標dialogの平行移動で再帰的に同じ差分だけ連動し、一回の履歴でUndo/Redoする。回転、複数支持、張り出し、支持不可接触は連動せず、子孫がある下段の荷室外移動・配置解除は先に上段を外すよう拒否する。viewport上のwheelはcamera zoomへ使い、Ctrl付き左dragは積荷上でもcamera panを優先する。寄せ、camera、荷室外poseはsession限定でUndo/Redo・保存対象外である。
 
 CLP全体で未配置の積荷だけを初回は先頭許可向き・Z=0の決定的な暖色gridへ派生し、他候補へ配置済みなら重複表示しない。grid間隔は各積荷の許可向き全体から得る最大X/Y footprintで固定し、一つを回転しても他の未配置積荷を動かさない。利用者が積荷全体を荷室外へdropした後はcargo IDごとの位置と向きをUI sessionだけに保持する。外側移動と回転はProject、物理判定、CLP履歴、保存へ含めない。fine-pointer dragは量子化後のno-opを先に除き、X/Y footprintを完全包含・正面積partial・面積0 outsideへ分類する。完全包含またはpartialでは、支持可能面がなければ床、あれば最も高い支持可能上面へZをsnapし、単一面が底面を収容できる場合だけX/Yをその面内へ制限する。未配置と配置済みの双方でsnap後位置を一回の配置追加・更新として保存し、partial・条件未確認・不適合も修正途中として再判定する。outsideは未配置ならsession poseだけ、配置済みなら一回の `placement.delete` とsession poseにする。Undoは元配置、Redoは同じ外側poseを表示する。
 

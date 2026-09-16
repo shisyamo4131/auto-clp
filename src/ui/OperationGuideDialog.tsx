@@ -32,7 +32,7 @@ export function OperationGuideDialog({ onClose }: OperationGuideDialogProps) {
           </div>
           <div>
             <dt>荷室外の積荷を寄せる</dt>
-            <dd>磁石ボタンで、荷室外の積荷を選択中コンテナの近くへ再整列し、全体が見える視点にします。この整理はUndoと保存の対象外です。</dd>
+            <dd>四方向の内向き矢印ボタンで、荷室外の積荷を選択中コンテナの近くへ再整列します。現在の視点と縮尺は変えず、この整理はUndoと保存の対象外です。</dd>
           </div>
           <div>
             <dt>積荷を移動・回転</dt>

@@ -337,7 +337,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.10.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.10.1' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -463,6 +463,8 @@ if ($stagingCompactDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
 }
 foreach ($requiredText in @(
     '全未配置積荷の現在向きを維持',
+    'Material Design Iconsの `arrow-collapse-all` 相当icon button',
+    'camera位置、注視点、視点方向、縮尺は変更しない',
     'Project、JSON、端末保存、Undo/Redo履歴へ含めない',
     '現在コンテナへ配置済みは青、未配置は黄、別コンテナへ配置済みは緑、未選択は灰',
     '総重量: 積込重量 kg/耐荷重 kg',
@@ -495,7 +497,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.10.0`',
+    '仕様版 `1.10.1`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -810,6 +812,7 @@ foreach ($implementationMarker in @(
     @{ Name = 'rotation-stable staging grid'; Text = $projectScene; Required = 'layoutFootprint: cargo.allowedOrientations.reduce' },
     @{ Name = 'rotation-stable staging regression'; Text = $projectSceneTest; Required = 'keeps peer staging positions fixed when one cargo rotates on the floor' },
     @{ Name = 'viewport wheel policy'; Text = $threeViewport; Required = 'controls.enableZoom = true' },
+    @{ Name = 'compact staging icon'; Text = $sceneWorkspace; Required = 'data-icon="arrow-collapse-all"' },
     @{ Name = 'viewport dotted focus'; Text = $threeViewport; Required = 'new THREE.LineDashedMaterial' },
     @{ Name = 'viewport drag de-emphasis'; Text = $threeViewport; Required = 'visual.mesh.material.opacity = 0.08' },
     @{ Name = 'viewport fixed rotation toolbar'; Text = $threeViewport; Required = 'className="viewport__rotation-controls"' },

@@ -33,7 +33,6 @@ export interface CargoDragPreviewResult {
 
 interface ThreeViewportProps {
   readonly bottomOverlay?: ReactNode;
-  readonly fitAllRevision: number;
   readonly forceInitialRenderError?: boolean;
   readonly interactionDisabled: boolean;
   readonly onCargoDragCancel: (message: string) => void;
@@ -209,33 +208,6 @@ function fitCamera(
   camera.lookAt(target);
   camera.updateProjectionMatrix();
   return target;
-}
-
-function fitAllCamera(
-  camera: THREE.PerspectiveCamera,
-  controls: OrbitControls,
-  projection: ProjectSceneProjection | null,
-): void {
-  if (projection === null) {
-    controls.target.copy(fitCamera(camera, projection));
-    controls.update();
-    return;
-  }
-  const bounds = sceneProjectionBounds(projection);
-  const radius = Math.max(bounds.radius, 0.001);
-  const target = new THREE.Vector3(bounds.center.x, bounds.center.y, bounds.center.z);
-  const currentOffset = camera.position.clone().sub(controls.target);
-  const direction = currentOffset.lengthSq() > 0
-    ? currentOffset.normalize()
-    : new THREE.Vector3(-1, 0.72, 0.9).normalize();
-  const distance = cameraFramingDistance(camera, radius);
-  controls.target.copy(target);
-  camera.position.copy(target).addScaledVector(direction, distance);
-  camera.near = Math.max(radius / 1_000, 0.0001);
-  camera.far = Math.max(distance + radius * 3, 10);
-  camera.updateProjectionMatrix();
-  configureCameraDistanceLimits(controls, camera, projection);
-  controls.update();
 }
 
 function cameraFramingDistance(
@@ -420,7 +392,6 @@ function ResetViewIcon() {
 
 export function ThreeViewport({
   bottomOverlay,
-  fitAllRevision,
   forceInitialRenderError = false,
   interactionDisabled,
   onCargoDragCancel,
@@ -449,8 +420,6 @@ export function ThreeViewport({
   const bottomOverlayRef = useRef<HTMLDivElement>(null);
   const interactionDisabledRef = useRef(interactionDisabled);
   const resetViewRef = useRef<() => void>(() => undefined);
-  const fitAllRef = useRef<() => void>(() => undefined);
-  const appliedFitAllRevisionRef = useRef(fitAllRevision);
   const selectedCargoIdRef = useRef(selectedCargoId);
   const updateSelectionRef = useRef<(cargoId?: string) => void>(() => undefined);
   const cameraViewRef = useRef<CameraViewState | undefined>(undefined);
@@ -1265,11 +1234,6 @@ export function ThreeViewport({
         renderScene();
       };
       resetViewRef.current = resetView;
-      fitAllRef.current = () => {
-        if (disposed || controls === undefined) return;
-        fitAllCamera(camera, controls, projection);
-        renderScene();
-      };
       if (!updateSelection(selectedCargoIdRef.current)) return dispose;
       resizeObserver = new ResizeObserver(resizeAndRender);
       resizeObserver.observe(container);
@@ -1282,17 +1246,10 @@ export function ThreeViewport({
 
     return () => {
       resetViewRef.current = () => undefined;
-      fitAllRef.current = () => undefined;
       dispose();
       setDimensionAnnotations([]);
     };
   }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragPreview, onCargoDragStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
-
-  useEffect(() => {
-    if (fitAllRevision === appliedFitAllRevisionRef.current) return;
-    appliedFitAllRevisionRef.current = fitAllRevision;
-    fitAllRef.current();
-  }, [fitAllRevision, projection]);
 
   const weightBalanceKind = projection?.weightBalance.kind ?? "no-container";
   const currentWeightBalanceMarkers =
