@@ -27,6 +27,7 @@ export type InvalidPhysicalReasonCode =
   | "positive-volume-overlap"
   | "axis-clearance-not-met"
   | "opening-no-fitting-orientation"
+  | "support-permission-denied"
   | "support-contact-invalid"
   | "payload-capacity-exceeded";
 
@@ -638,9 +639,15 @@ export function validatePlacementSet(
       floorNormalizedAssessment.kind === "invalid" &&
       selected.rawInside
     ) {
+      const permissionDenied =
+        assessment.kind === "invalid" &&
+        assessment.contactIds.length > 0 &&
+        assessment.eligibleContactIds.length === 0;
       appendReason({
         status: "invalid",
-        code: "support-contact-invalid",
+        code: permissionDenied
+          ? "support-permission-denied"
+          : "support-contact-invalid",
         target,
         relatedCargoIds: assessment.contactIds,
       });

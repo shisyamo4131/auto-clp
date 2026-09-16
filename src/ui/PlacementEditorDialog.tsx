@@ -65,6 +65,8 @@ function issueMessage(issue: ValidationIssue): string {
     "command.cargo-not-found": "対象の積荷が見つかりません。",
     "command.container-not-found": "選択したコンテナが見つかりません。",
     "command.placement-not-found": "対象の配置が見つかりません。",
+    "command.supported-cargo-present":
+      "上に積荷があるため荷室から外せません。先に上の積荷を外してください。",
   };
   return messages[issue.code] ?? "配置内容を確認してください。";
 }
@@ -336,6 +338,12 @@ export const PlacementEditorDialog = forwardRef<
         title="荷室から外す"
         onRequestClose={close}
       >
+        {issues.length === 0 ? null : (
+          <div className="error-summary" role="alert">
+            <strong>荷室から外せませんでした</strong>
+            <ul>{issues.map((issue, index) => <li key={`${issue.code}-${index}`}>{issueMessage(issue)}</li>)}</ul>
+          </div>
+        )}
         <div className="confirm-panel" role="alert">
           <p>{cargo?.name ?? "積荷"}を{container?.name ?? "現在のコンテナ"}の荷室から外します。積荷情報は残ります。</p>
           <div className="button-row">

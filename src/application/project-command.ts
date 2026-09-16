@@ -15,6 +15,7 @@ import {
 } from "../domain/input";
 import type { ValidationIssue } from "../domain/validation";
 import { validateProjectReferences } from "../domain/validation";
+import { singleSupportDescendantCargoIds } from "../domain/geometry";
 import { validateProjectJsonSchema } from "../persistence/project-json-schema";
 import { nextCargoId, nextContainerId } from "./project-factory";
 
@@ -373,13 +374,36 @@ export function updatePlacement(
   ) {
     return validateUnchangedProject(current);
   }
+  const translating = existingPlacement.orientation === parsed.placementData.orientation;
+  const translatedCargoIds = translating
+    ? new Set([
+        cargoId,
+        ...singleSupportDescendantCargoIds(current, expectedContainerId, cargoId),
+      ])
+    : new Set([cargoId]);
+  const delta = {
+    xMm: parsed.placementData.positionMm.xMm - existingPlacement.positionMm.xMm,
+    yMm: parsed.placementData.positionMm.yMm - existingPlacement.positionMm.yMm,
+    zMm: parsed.placementData.positionMm.zMm - existingPlacement.positionMm.zMm,
+  };
   const placements = current.placements.map((placement, index) =>
     index === placementIndex
       ? {
           ...placement,
           ...parsed.placementData,
         }
-      : placement,
+      : translating &&
+          placement.containerId === expectedContainerId &&
+          translatedCargoIds.has(placement.cargoId)
+        ? {
+            ...placement,
+            positionMm: {
+              xMm: placement.positionMm.xMm + delta.xMm,
+              yMm: placement.positionMm.yMm + delta.yMm,
+              zMm: placement.positionMm.zMm + delta.zMm,
+            },
+          }
+        : placement,
   );
   return validateCandidate(current, { ...current, placements });
 }
@@ -398,6 +422,15 @@ export function deletePlacement(
     return failure(current, {
       code: "command.placement-not-found",
       path: "/placements",
+    });
+  }
+  if (
+    singleSupportDescendantCargoIds(current, expectedContainerId, cargoId)
+      .length > 0
+  ) {
+    return failure(current, {
+      code: "command.supported-cargo-present",
+      path: `/placements/${placementIndex}`,
     });
   }
   return validateCandidate(current, {

@@ -86,6 +86,85 @@ test("keeps placement CRUD available with the required 3D view", async ({ page }
   await expect(card).toContainText("荷室外（未配置）");
 });
 
+test("moves an exact three-level stack atomically and explains disabled support", async ({ page }) => {
+  await page.goto("/");
+  for (const [name, canSupportCargo] of [
+    ["基礎積荷", true],
+    ["中段積荷", true],
+    ["上段積荷", false],
+  ] as const) {
+    await addCargoFromDrawer(page, name, {
+      lengthMm: "500",
+      widthMm: "400",
+      heightMm: "300",
+      massKg: "1",
+      canSupportCargo,
+    });
+  }
+  await addContainerFromDrawer(page, "積層候補", {
+    lengthMm: "6000",
+    widthMm: "2400",
+    heightMm: "2600",
+    openingWidthMm: "2400",
+    openingHeightMm: "2500",
+    payloadKg: "100000",
+  });
+
+  const card = page.locator(".viewport-context-actions");
+  for (const [cargoId, zMm] of [
+    ["cargo-1", "0"],
+    ["cargo-2", "300"],
+    ["cargo-3", "600"],
+  ] as const) {
+    await page.getByLabel("操作する積荷").selectOption(cargoId);
+    await card.getByRole("button", { name: "座標を入力して配置" }).click();
+    await page.getByLabel("X最小角").fill("100");
+    await page.getByLabel("Y最小角").fill("100");
+    await page.getByLabel("Z最小角").fill(zMm);
+    await page.getByRole("button", { name: "配置を保存" }).click();
+  }
+
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await card.getByRole("button", { name: "座標を微調整" }).click();
+  await page.getByLabel("X最小角").fill("150");
+  await page.getByRole("button", { name: "配置を保存" }).click();
+  await expect(page.locator(".project-history__summary")).toContainText("配置の更新");
+
+  for (const cargoId of ["cargo-1", "cargo-2", "cargo-3"]) {
+    await page.getByLabel("操作する積荷").selectOption(cargoId);
+    await card.getByRole("button", { name: "座標を微調整" }).click();
+    await expect(page.getByLabel("X最小角")).toHaveValue("150");
+    await page.getByRole("button", { name: "キャンセル" }).click();
+  }
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  for (const cargoId of ["cargo-1", "cargo-2", "cargo-3"]) {
+    await page.getByLabel("操作する積荷").selectOption(cargoId);
+    await card.getByRole("button", { name: "座標を微調整" }).click();
+    await expect(page.getByLabel("X最小角")).toHaveValue("100");
+    await page.getByRole("button", { name: "キャンセル" }).click();
+  }
+
+  await page.getByLabel("操作する積荷").selectOption("cargo-1");
+  await card.getByRole("button", { name: "荷室から外す" }).click();
+  const removeDialog = page.getByRole("dialog", { name: "荷室から外す" });
+  await removeDialog.getByRole("button", { name: "荷室から外す", exact: true }).click();
+  await expect(removeDialog).toContainText(
+    "上に積荷があるため荷室から外せません。先に上の積荷を外してください。",
+  );
+  await removeDialog.getByRole("button", { name: "キャンセル" }).click();
+
+  await card.getByRole("button", { name: "積荷情報を編集" }).click();
+  await page
+    .getByLabel("この積荷の上面で別の積荷を幾何学的に支持できる")
+    .uncheck();
+  await page.getByRole("button", { name: "積荷情報を保存" }).click();
+  await page.locator("#physical-validation-lamp").click();
+  await expect(page.getByRole("dialog", { name: "物理判定" })).toContainText(
+    "基礎積荷は段積みが許可されていないため、上にある中段積荷を支持できません。段積み設定または配置を変更してください。",
+  );
+});
+
 test("confirms dirty close and restores the opener without scrolling", async ({ page }) => {
   await page.goto("/");
   await addCargo(page, "focus配置積荷");

@@ -115,9 +115,12 @@ test("downloads exact template bytes and atomically replaces cargoes with one un
     buffer: csvFixture(),
   });
   const dialog = page.getByRole("dialog", { name: "CSVで積荷を一括登録" });
-  await expect(dialog).toContainText("新規積荷3件");
-  await expect(dialog).toContainText("既存積荷2件");
-  await expect(dialog).toContainText("配置2件");
+  await expect(dialog).toContainText(
+    "新規積荷3件を一括登録します。既存の積荷と配置情報は破棄されます。",
+  );
+  await expect(dialog).toContainText(
+    "CLP名、隙間、コンテナは保持します。端末保存は自動更新しません。",
+  );
   await dialog.getByRole("button", { name: "置換をやめる" }).click();
   await expect(page.getByLabel("操作する積荷")).toHaveValue("cargo-a");
   await expect(page.locator('.viewport__weight-balance[data-state="available"]')).toBeVisible();

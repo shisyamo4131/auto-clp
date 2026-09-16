@@ -14,6 +14,7 @@ import {
 } from "../application/project-command";
 import type { ProjectHistoryCommitHandler } from "../application/project-history";
 import type { Project } from "../domain/model";
+import { singleSupportDescendantCargoIds } from "../domain/geometry";
 import { isUprightOnlyOrientationPolicy } from "../domain/orientation-policy";
 import {
   PhysicalValidationLamp,
@@ -281,6 +282,15 @@ export function SceneWorkspace({
   const [cargoQuery, setCargoQuery] = useState("");
   const [canvasStatus, setCanvasStatus] = useState("");
   const dragPreviewStatusRef = useRef("");
+  const dragFollowerGroupRef = useRef<
+    | {
+        readonly cargoId: string;
+        readonly containerId: string;
+        readonly project: Project;
+        readonly followerCargoIds: readonly string[];
+      }
+    | undefined
+  >(undefined);
   const appliedSessionResetRevisionRef = useRef(0);
   const [stagingOverrides, setStagingOverrides] = useState<
     Record<string, SceneStagingOverride>
@@ -308,6 +318,7 @@ export function SceneWorkspace({
       setCanvasDragActive(false);
       setStagingOverrides({});
       dragPreviewStatusRef.current = "";
+      dragFollowerGroupRef.current = undefined;
     });
     return () => {
       cancelled = true;
@@ -575,6 +586,7 @@ export function SceneWorkspace({
       setCanvasStatus("床面に平行な配置移動をプレビュー中です。離すと1 mm単位で保存します。");
     } else {
       dragPreviewStatusRef.current = "";
+      dragFollowerGroupRef.current = undefined;
     }
   }, []);
 
@@ -603,6 +615,7 @@ export function SceneWorkspace({
           sceneDelta: { x: 0, y: 0, z: 0 },
           state: "invalid",
           supporterIds: [],
+          followerCargoIds: [],
         };
       }
       const rawPositionMm = sceneFloorDragPositionMm(
@@ -634,9 +647,38 @@ export function SceneWorkspace({
               : resolved?.disposition === "floor"
                 ? "荷室床面にスナップ中です。"
                 : "荷室外の作業スペースを移動中です。";
-      if (dragPreviewStatusRef.current !== message) {
-        dragPreviewStatusRef.current = message;
-        setCanvasStatus(message);
+      const followerCargoIds =
+        projectedCargo.kind === "placed"
+          ? (() => {
+              const cached = dragFollowerGroupRef.current;
+              if (
+                cached?.project === project &&
+                cached.containerId === effectiveContainerId &&
+                cached.cargoId === cargoId
+              ) {
+                return cached.followerCargoIds;
+              }
+              const derived = singleSupportDescendantCargoIds(
+                project,
+                effectiveContainerId,
+                cargoId,
+              );
+              dragFollowerGroupRef.current = {
+                project,
+                containerId: effectiveContainerId,
+                cargoId,
+                followerCargoIds: derived,
+              };
+              return derived;
+            })()
+          : [];
+      const groupMessage =
+        followerCargoIds.length === 0
+          ? message
+          : `${message} 上段積荷${followerCargoIds.length}件も連動します。`;
+      if (dragPreviewStatusRef.current !== groupMessage) {
+        dragPreviewStatusRef.current = groupMessage;
+        setCanvasStatus(groupMessage);
       }
       return {
         positionMm,
@@ -649,6 +691,7 @@ export function SceneWorkspace({
             ? "invalid"
             : (resolved?.disposition ?? "outside"),
         supporterIds: resolved?.supporterIds ?? [],
+        followerCargoIds,
       };
     },
     [effectiveContainerId, project, projection],
@@ -802,12 +845,27 @@ export function SceneWorkspace({
         return { ok: true, message: "" };
       }
       if (dragDisposition === "delete") {
+        const followerCargoIds = singleSupportDescendantCargoIds(
+          project,
+          effectiveContainerId,
+          cargoId,
+        );
+        if (followerCargoIds.length > 0) {
+          return {
+            ok: false,
+            message: `上に積荷が${followerCargoIds.length}件あるため荷室外へ移動できません。先に上の積荷を外してください。`,
+          };
+        }
         const result = deletePlacement(project, cargoId, effectiveContainerId);
         if (!result.ok) {
           return {
             ok: false,
             message:
-              "対象の配置が最新のCLPに見つからないため、荷室外の作業スペースへ戻せず元の配置を保持しました。",
+              result.issues.some(
+                (issue) => issue.code === "command.supported-cargo-present",
+              )
+                ? "上に積荷があるため荷室外へ移動できません。先に上の積荷を外してください。"
+                : "対象の配置が最新のCLPに見つからないため、荷室外の作業スペースへ戻せず元の配置を保持しました。",
           };
         }
         const transition = onProjectCommit({

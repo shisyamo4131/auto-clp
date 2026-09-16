@@ -32,6 +32,8 @@ $containerOnlyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0030-con
 $weightBalanceDecisionPath = Join-Path $resolvedProject 'docs/decisions/0032-cargo-center-of-gravity-visualization.md'
 $weightBalanceMarkerDecisionPath = Join-Path $resolvedProject 'docs/decisions/0033-equal-borderless-center-markers.md'
 $cargoCsvDecisionPath = Join-Path $resolvedProject 'docs/decisions/0034-cargo-csv-template-and-replacement-import.md'
+$supportGroupDecisionPath = Join-Path $resolvedProject 'docs/decisions/0035-recursive-single-support-group-movement.md'
+$cargoCsvCopyDecisionPath = Join-Path $resolvedProject 'docs/decisions/0036-cargo-csv-destructive-confirmation-copy.md'
 $inputPath = Join-Path $resolvedProject 'src/domain/input.ts'
 $cargoCsvPath = Join-Path $resolvedProject 'src/persistence/cargo-csv.ts'
 $cargoCsvFilePath = Join-Path $resolvedProject 'src/persistence/cargo-csv-file.ts'
@@ -104,6 +106,8 @@ foreach ($path in @(
     $weightBalanceDecisionPath,
     $weightBalanceMarkerDecisionPath,
     $cargoCsvDecisionPath,
+    $supportGroupDecisionPath,
+    $cargoCsvCopyDecisionPath,
     $inputPath,
     $cargoCsvPath,
     $cargoCsvFilePath,
@@ -321,7 +325,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.6.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.7.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -419,10 +423,37 @@ foreach ($requiredText in @(
         throw "ADR 0034 does not contain the approved cargo CSV contract text: $requiredText"
     }
 }
+$supportGroupDecision = [IO.File]::ReadAllText($supportGroupDecisionPath)
+if ($supportGroupDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0035 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '単一積荷上面が対象底面をX/Y両軸で完全包含',
+    '一回のUndo/Redo',
+    '`support-permission-denied`',
+    'Schema `0.1.0`'
+)) {
+    if (-not $supportGroupDecision.Contains($requiredText)) {
+        throw "ADR 0035 does not contain the approved support-group contract text: $requiredText"
+    }
+}
+$cargoCsvCopyDecision = [IO.File]::ReadAllText($cargoCsvCopyDecisionPath)
+if ($cargoCsvCopyDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0036 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '新規積荷N件を一括登録します。既存の積荷と配置情報は破棄されます。',
+    'CLP名、隙間、コンテナは保持します。端末保存は自動更新しません。',
+    'Schema `0.1.0`'
+)) {
+    if (-not $cargoCsvCopyDecision.Contains($requiredText)) {
+        throw "ADR 0036 does not contain the approved CSV confirmation contract text: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.6.0`',
-    '積荷・配置の一括置換は実装済み',
+    '仕様版 `1.7.0`',
+    '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
     '`cargoes`を新しい配列へ置換して`placements=[]`',
@@ -846,7 +877,9 @@ foreach ($requiredText in @(
     'AC-04 Recovery, Portability, and Required-WebGL Failure Gate',
     'AC-06 Cargo Center-of-Gravity Reference Markers',
     'AC-07 Cargo CSV Template and Atomic Replacement',
-    'このケースは仕様1.6.0・ADR 0034に従って実装済み',
+    'AC-08 Recursive Exact-Support Group Movement',
+    'このケースは仕様1.7.0・ADR 0034・0036に従って実装済み',
+    '`support-permission-denied`',
     '`input.kg-format` と `/rows/2/weight_kg`',
     'legacy 31〜1,000件',
     'AP-01 Candidate objective',
@@ -887,6 +920,7 @@ foreach ($sourceContract in @(
     @{ Text = $cargoCsvFileSource; Marker = 'new TextDecoder("utf-8", { fatal: true })' },
     @{ Text = $cargoCsvImportSource; Marker = 'placements: []' },
     @{ Text = $cargoCsvDialogSource; Marker = 'action: "cargo.csv-replace"' },
+    @{ Text = $cargoCsvDialogSource; Marker = '既存の積荷と配置情報は破棄されます。' },
     @{ Text = $cargoCsvAppSource; Marker = 'transition.action === "cargo.csv-replace"' },
     @{ Text = $cargoCsvAppSource; Marker = '<CargoCsvImportDialog' },
     @{ Text = $cargoCsvAppSource; Marker = 'onApplied={() => setSceneSessionResetRevision' },
@@ -908,7 +942,7 @@ foreach ($sourceContract in @(
 foreach ($requiredText in @(
     'auto-clp-cargo-template.csv',
     'name,length_mm,width_mm,height_mm,weight_kg',
-    '新規積荷件数',
+    '新規積荷N件を一括登録します。既存の積荷と配置情報は破棄されます。',
     '一回の `cargo.csv-replace` Undo/Redo対象',
     '31〜1,000件の既存JSON・端末保存',
     '`cargo-csv.record-count`',
@@ -1064,6 +1098,8 @@ foreach ($requiredText in @(
     weight_balance_decision_0032_accepted = $true
     weight_balance_marker_decision_0033_accepted = $true
     cargo_csv_decision_0034_accepted = $true
+    support_group_decision_0035_accepted = $true
+    cargo_csv_copy_decision_0036_accepted = $true
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true
 }

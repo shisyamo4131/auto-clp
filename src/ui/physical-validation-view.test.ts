@@ -94,6 +94,10 @@ const invalidCopies = [
     "許可されたどの向きでも矩形開口の幅と高さに収まりません。",
   ],
   [
+    "support-permission-denied",
+    "関連積荷は段積みが許可されていないため、その上の積荷を支持できません。段積み設定または配置を変更してください。",
+  ],
+  [
     "support-contact-invalid",
     "床より上の積荷が、支持可能な上面と同じ高さで正面積接触していません。Z座標と支持可否を確認してください。",
   ],
@@ -125,6 +129,24 @@ describe("toPhysicalValidationView", () => {
         invalidReasons: [{ statusLabel: "不適合", message }],
         unverifiedReasons: [],
       });
+  });
+
+  it("names the support-disabled cargo and the cargo above it", () => {
+    const view = toPhysicalValidationView(
+      projectFixture(),
+      evaluated("invalid", [
+        {
+          status: "invalid",
+          code: "support-permission-denied",
+          target: { kind: "cargo", id: "cargo-known" },
+          relatedCargoIds: ["cargo-related-a"],
+        },
+      ]),
+    );
+
+    expect(view.invalidReasons[0]?.message).toBe(
+      "関連積荷Aは段積みが許可されていないため、上にある既知積荷を支持できません。段積み設定または配置を変更してください。",
+    );
   });
 
   it("keeps floor penetration copy actionable without reflecting names, ids, or coordinates", () => {

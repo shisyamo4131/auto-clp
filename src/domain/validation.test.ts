@@ -660,7 +660,7 @@ describe("validatePlacementSet", () => {
       status: "invalid",
       reasons: [
         invalidCargoReason("axis-clearance-not-met", "cargo-a", ["cargo-b"]),
-        invalidCargoReason("support-contact-invalid", "cargo-b", ["cargo-a"]),
+        invalidCargoReason("support-permission-denied", "cargo-b", ["cargo-a"]),
       ],
     });
   });

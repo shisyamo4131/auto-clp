@@ -133,7 +133,7 @@
 
 ## AC-07 Cargo CSV Template and Atomic Replacement
 
-このケースは仕様1.6.0・ADR 0034に従って実装済みであり、単体・ブラウザ自動証拠を持つ。Windows版Excel往復と人間による実務受入は未実施である。
+このケースは仕様1.7.0・ADR 0034・0036に従って実装済みであり、単体・ブラウザ自動証拠を持つ。Windows版Excel往復と人間による実務受入は未実施である。
 
 ### Initial State and CSV
 
@@ -145,7 +145,7 @@
 
 1. Drawerからテンプレートを取得し、固定名、BOM、CRLF、固定順・大小文字を区別する5列、データrecordなしを確認する。テンプレート自体をそのまま読み込むと0件として拒否し、現在CLPと履歴を変更しない。
 2. BOM有無、CRLF / LF、quoted commaとescaped quoteを正しく解析し、全空白recordだけを無視する。重複名を保持し、有効record順に `cargo-1`、`cargo-2`、`cargo-3` を割り当てる。各積荷は `canSupportCargo=true`、天地無用OFFの全6向きを持つ。名前の制御文字は既存契約に従い拒否する。
-3. 適用前に「新規積荷3件、既存積荷2件を削除、配置2件を解除」に相当する件数を表示する。取消ではProject、履歴、選択、scene一時状態、物理判定、合成重心を変更しない。
+3. 適用前に「新規積荷3件を一括登録します。既存の積荷と配置情報は破棄されます。」「CLP名、隙間、コンテナは保持します。端末保存は自動更新しません。」と表示する。取消ではProject、履歴、選択、scene一時状態、物理判定、合成重心を変更しない。
 4. 確定すると、CLP ID・名前、隙間、コンテナ2件を同値で保持し、積荷をCSV由来3件へ置換し、配置を0件にする。旧積荷の選択、荷室外pose、drag previewを残さず、物理判定と合成重心を新Projectから再導出する。端末保存を自動上書きしない。
 5. 一回のUndoで元の積荷2件と配置2件を完全に復元し、一回のRedoでCSV由来積荷3件・配置0件へ戻す。失敗、取消、stale、busy、同一状態no-opを履歴へ追加しない。
 6. 1件と30件は受け入れ、31件、0件、空file、header-only、不正UTF-8、5 MiB超過、見出し不足・余分・重複・並べ替え・大小文字違い、列不足・余分、不正引用、部分空欄、範囲外、丸めが必要な値をファイル全体として拒否する。どの失敗でも現在Project参照と対応する派生表示を保持し、cell値、積荷名、filename、CSV全文を表示またはログへ反射しない。
@@ -157,6 +157,17 @@
 ### Human Excel Gate
 
 Windows版Excelでテンプレートを開き、日本語、引用comma・quote、kg小数を含む匿名データを入力して「CSV UTF-8（コンマ区切り）」として保存し、再読込後の順序、値、段積みOK、全6向き、件数確認、Undo/Redoを確認する。通常の非UTF-8 CSVは状態を変えず拒否されることを確認する。この人間確認が完了するまでCSVマイルストーンの最終1点と実務受入を獲得しない。
+
+## AC-08 Recursive Exact-Support Group Movement
+
+このケースは仕様1.7.0・ADR 0035に従う。保存形式を変更せず、現在Projectの配置から移動開始時の連動対象を派生する。
+
+1. 支持可の積荷A上面が積荷B底面をX/Y両軸で完全包含し、Bも同様に積荷Cを単独支持する3段配置で、Aを座標dialogまたは3DのX/Y dragにより平行移動すると、B・Cも同じX/Y/Z差分で移動し、相対位置と向きを維持する。
+2. 連動移動は一回のProject commitとし、一回のUndo/RedoでA・B・Cをまとめて往復する。子孫の一つでも保存可能座標範囲外になる場合は全配置を変更しない。
+3. Bだけを平行移動した場合はCだけが連動し、Aは動かない。根の回転、複数支持、張り出し、支持可否混在、支持不可接触、接触不成立では上段を連動させない。
+4. 3D previewでは連動対象も同じ差分で描画し、取消、pointer中断、commit失敗では根と全子孫を開始位置へ戻す。
+5. 子孫がある根の完全drag-outと配置解除は拒否し、「先に上の積荷を外す」旨を示してProjectと履歴を変更しない。
+6. 支持不可の積荷Aと、その上に正面積接触する積荷Bには `support-permission-denied` を返し、「積荷Aは段積みが許可されていないため、上にある積荷Bを支持できない」旨を表示する。接触なし、Z不一致、辺・点接触は `support-contact-invalid` のままとする。
 
 ## Evidence and Completion
 
@@ -170,6 +181,8 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - 仕様1.4.2自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ85件、buildに合格。通常デスクトップ高でApplication Shellとbrowser viewport高が一致し、残り高を3D viewportが使用すること、通常時の操作案内帯を表示しないこと、必要な操作statusが浮動表示されてもcanvas寸法・位置を変えないことを回帰した。これは人間または実務利用者受入の証拠ではない。
 - 仕様1.5.1重心可視化自動証拠: typecheck、lint、単体29ファイル975件、ブラウザ97件、build、データ契約・ガバナンス・プロジェクト検査に合格。正確なBigInt・有理数domain計算、scene投影、4状態、同径10 CSS px・白い外枠なし、完全一致・近接時の黄前面表示、画面外、非操作、camera、drag、履歴、DPR 1/2、305 / 320 / 375 px、使用事項内容版1.2.0、JSON・端末保存への派生状態非保存と読込再計算・失敗保持を回帰し、独立コードレビューは指摘修正後に合格した。人間による差分視認性と凡例理解は未確認であり、実務利用者受入の証拠ではない。
 - 仕様1.6.0 CSV積荷一括置換自動証拠: typecheck、lint、単体32ファイル1,006件、ブラウザ102件、buildに合格。固定template bytes、厳格なUTF-8・CSV・値検証、1 / 30 / 31件、共通新規作成上限、legacy 31〜1,000件互換、決定的ID・既定値、件数付き確認、取消・失敗・stale・busy・no-op保持、原子的置換、一回のUndo/Redo、同一IDを含むscene一時状態reset、派生再導出、305 / 320 / 375 px、focus、WebGL停止を回帰し、独立コードレビューは二つの指摘修正後に合格した。Windows版Excel往復と実務利用者受入の証拠ではない。
+- 2026-09-16の利用者試用では、20件のCSV一括登録と一回のUndoによる元状態復元を確認した。これはWindows版Excelでのtemplate往復、非UTF-8拒否、正式fixtureまたは実務利用者受入の証拠ではない。
+- 仕様1.7.0単一支持グループ移動自動証拠: typecheck、lint、単体32ファイル1,014件、ブラウザ103件、buildに合格。3段再帰移動、回転・支持不可・複数支持の非連動、子孫座標失敗のrollback、配置解除拒否、一回のUndo、支持不可専用理由と関連積荷名、CSV確認文を回帰した。3D dragの連動preview・取消・dropは実装され既存drag回帰に合格したが、積層fixtureでの人間差分確認は未実施である。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
 - 実務利用者試用: 評価担当、日程、事前説明、観察結果、合否、改善点を匿名で記録する。未実施中は「実務受入済み」としない。
 - canvas追加操作の判断: AC-01で、利用者がZ・向き・取り外しを補助なしで完了できなかった観察証拠がある場合だけ、既存commandを使う最小のコンテキスト操作を設計する。自由なZ dragは正確な支持高さを保証できないため既定案にしない。
@@ -186,6 +199,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` がWebGL利用可能時の履歴、IndexedDB、固定JSON往復を実行し、`tests/browser/capability.spec.ts` が非対応・初期描画失敗・context lossの全面停止と2種類の読み取り専用救出を実行する。
 - AC-06: `src/domain/weight-balance.test.ts` と `src/scene/project-scene.test.ts` が正確な重量moment、全向き、上限・上限外、4状態、scene変換、計算不能回復投影を検証する。`tests/browser/weight-balance.spec.ts` が赤・黄点と凡例、画面投影中心一致・近接・画面外、非操作、camera、drag、履歴、DPR 1/2、読込成功・失敗、統合 `unavailable`、305 / 320 / 375 pxを実行し、既存永続化回帰が派生状態をJSON・端末保存・履歴へ含めない。匿名合成データによる人間視認性確認は未実施。
 - AC-07: `src/persistence/cargo-csv.test.ts`、`src/persistence/cargo-csv-file.test.ts`、`src/application/cargo-csv-import.test.ts`、`src/application/project-command.test.ts` と `tests/browser/cargo-csv.spec.ts` が、CSV parser/file、共通正規入力、全体置換、履歴、既存保存互換を検証する。全行検証、全空白recordとquoted改行を含む1始まり論理record path、全固定code/path、決定的sort・重複排除・50件上限・入力値非反射、件数確認、取消・失敗保持、成功、Undo/Redo、scene一時状態resetと派生再導出、30件上限、legacy 31〜1,000件、狭幅・focus・WebGL停止を実行する。Windows版Excel往復は別の人間証拠とする。
+- AC-08: `src/application/project-command.test.ts`、`src/domain/validation.test.ts`、`src/ui/physical-validation-view.test.ts`、`src/workers/physical-validation-worker-protocol.test.ts` と `tests/browser/placement.spec.ts` が、3段再帰移動、回転・支持不可・複数支持の非連動、座標失敗の原子的rollback、配置解除拒否、一回のUndo、専用理由と関連積荷名を含む表示を検証する。`src/scene/SceneWorkspace.tsx` と `src/scene/ThreeViewport.tsx` の連動preview・取消実装は既存の実pointer drag回帰を通すが、積層fixtureの実pointer差分確認は人間確認として残す。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 - 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。

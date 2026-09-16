@@ -7,6 +7,7 @@ import type {
   OrientedDimensionsMm,
   Placement,
   PositionMm,
+  Project,
 } from "./model";
 
 export interface PlacementBoundsMm {
@@ -542,4 +543,56 @@ export function placementBounds(
       zMm: min.zMm + dimensions.zMm,
     },
   };
+}
+
+/**
+ * Returns every recursively stacked descendant whose current placement has one
+ * exact, eligible single supporter. The root itself is not included.
+ */
+export function singleSupportDescendantCargoIds(
+  project: Project,
+  containerId: string,
+  rootCargoId: string,
+): readonly string[] {
+  const cargoById = new Map(project.cargoes.map((cargo) => [cargo.id, cargo]));
+  const placed = project.placements
+    .filter((placement) => placement.containerId === containerId)
+    .flatMap((placement) => {
+      const cargo = cargoById.get(placement.cargoId);
+      return cargo === undefined
+        ? []
+        : [{ cargo, placement, bounds: placementBounds(cargo, placement) }];
+    });
+  if (!placed.some(({ cargo }) => cargo.id === rootCargoId)) return [];
+
+  const childrenBySupporter = new Map<string, string[]>();
+  for (const target of placed) {
+    if (target.bounds.min.zMm <= 0) continue;
+    const candidates = placed
+      .filter(({ cargo }) => cargo.id !== target.cargo.id)
+      .map(({ cargo, bounds }) => ({
+        id: cargo.id,
+        bounds,
+        canSupportCargo: cargo.canSupportCargo,
+      }));
+    const assessment = assessGeometricSupport(target.bounds, candidates);
+    if (assessment.kind !== "single") continue;
+    const supporterId = assessment.eligibleContactIds[0];
+    if (supporterId === undefined) continue;
+    const children = childrenBySupporter.get(supporterId) ?? [];
+    children.push(target.cargo.id);
+    childrenBySupporter.set(supporterId, children);
+  }
+
+  const descendants: string[] = [];
+  const visited = new Set([rootCargoId]);
+  const queue = [...(childrenBySupporter.get(rootCargoId) ?? [])].sort();
+  while (queue.length > 0) {
+    const cargoId = queue.shift()!;
+    if (visited.has(cargoId)) continue;
+    visited.add(cargoId);
+    descendants.push(cargoId);
+    queue.push(...[...(childrenBySupporter.get(cargoId) ?? [])].sort());
+  }
+  return descendants;
 }

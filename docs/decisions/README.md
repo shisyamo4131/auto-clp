@@ -45,5 +45,7 @@
 | [0032](0032-cargo-center-of-gravity-visualization.md) | 積荷合成重心の参考可視化 | Accepted | 2026-09-08 |
 | [0033](0033-equal-borderless-center-markers.md) | 同径・外枠なしの重心ドット | Accepted | 2026-09-08 |
 | [0034](0034-cargo-csv-template-and-replacement-import.md) | CSVテンプレートによる積荷一括置換 | Accepted | 2026-09-08 |
+| [0035](0035-recursive-single-support-group-movement.md) | 単一支持グループの再帰的連動移動 | Accepted | 2026-09-16 |
+| [0036](0036-cargo-csv-destructive-confirmation-copy.md) | CSV一括登録の破棄範囲を示す確認文 | Accepted | 2026-09-16 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

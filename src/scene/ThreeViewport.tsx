@@ -24,6 +24,7 @@ export type CargoDragPreviewState =
   | "invalid";
 
 export interface CargoDragPreviewResult {
+  readonly followerCargoIds: readonly string[];
   readonly positionMm: PositionMm;
   readonly sceneDelta: SceneVector3;
   readonly state: CargoDragPreviewState;
@@ -152,6 +153,7 @@ interface CargoPointerGesture {
   readonly startMeshPosition: THREE.Vector3;
   readonly startPlanePoint: THREE.Vector3;
   dragActive: boolean;
+  followerStartPositions?: ReadonlyMap<string, THREE.Vector3>;
   lastPreview?: CargoDragPreviewResult;
 }
 
@@ -862,11 +864,13 @@ export function ThreeViewport({
     };
     const applyDragFocusVisuals = (
       draggedCargoId: string,
+      followerCargoIds: readonly string[],
       supporterIds: readonly string[],
       supporterColor: number,
     ): void => {
+      const movingCargoIds = new Set([draggedCargoId, ...followerCargoIds]);
       for (const [candidateId, visual] of cargoVisuals) {
-        if (candidateId === draggedCargoId) continue;
+        if (movingCargoIds.has(candidateId)) continue;
         visual.mesh.material.color.setHex(0xb9c1ca);
         visual.mesh.material.opacity = 0.08;
         visual.mesh.material.emissive.setHex(0x000000);
@@ -900,6 +904,9 @@ export function ThreeViewport({
     const restoreGesturePreview = () => {
       if (gesture !== undefined) {
         gesture.mesh.position.copy(gesture.startMeshPosition);
+        for (const [cargoId, position] of gesture.followerStartPositions ?? []) {
+          cargoVisuals.get(cargoId)?.mesh.position.copy(position);
+        }
         applySelectionVisuals(selectedCargoIdRef.current);
         renderScene();
       }
@@ -993,9 +1000,18 @@ export function ThreeViewport({
         z: rawDelta.z,
       });
       gesture.lastPreview = preview;
+      gesture.followerStartPositions ??= new Map(
+        preview.followerCargoIds.flatMap((cargoId) => {
+          const follower = cargoVisuals.get(cargoId);
+          return follower === undefined
+            ? []
+            : [[cargoId, follower.mesh.position.clone()] as const];
+        }),
+      );
       applySelectionVisuals(selectedCargoIdRef.current);
       applyDragFocusVisuals(
         gesture.cargoId,
+        preview.followerCargoIds,
         preview.supporterIds,
         preview.state === "single-support" ? 0x55d68b : 0xedb852,
       );
@@ -1003,6 +1019,14 @@ export function ThreeViewport({
       gesture.mesh.position.x += preview.sceneDelta.x;
       gesture.mesh.position.y += preview.sceneDelta.y;
       gesture.mesh.position.z += preview.sceneDelta.z;
+      for (const [cargoId, startPosition] of gesture.followerStartPositions) {
+        const follower = cargoVisuals.get(cargoId);
+        if (follower === undefined) continue;
+        follower.mesh.position.copy(startPosition);
+        follower.mesh.position.x += preview.sceneDelta.x;
+        follower.mesh.position.y += preview.sceneDelta.y;
+        follower.mesh.position.z += preview.sceneDelta.z;
+      }
       const draggedVisual = cargoVisuals.get(gesture.cargoId);
       if (draggedVisual !== undefined) {
         const stateColor =

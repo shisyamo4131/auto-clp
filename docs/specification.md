@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
-- Last updated: 2026-09-08
-- Specification version: 1.6.0
+- Last updated: 2026-09-16
+- Specification version: 1.7.0
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -81,7 +81,7 @@
 - CSVの各有効recordは1始まりの論理順で `cargo-1` から `cargo-N` のIDを持ち、重複名を許可する。名前は前後空白を除いた後に既存の1〜120文字・制御文字禁止を適用する。寸法は既存の整数mm範囲、重量はkgのASCII十進表記・小数第3位までを既存の正確なg変換で検証し、桁区切り、指数表記、全角数字、単位、式、丸めを受け付けない。CSVに段積み可否または天地無用の列は設けず、全recordを段積みOK・天地無用OFFの全6向きで作成する。
 - CSVは申告サイズと読取後のUTF-8実サイズを5 MiB上限で確認してから全recordを一時解析・検証する。1件でも失敗すれば現在CLP、履歴、選択、scene一時状態と派生表示を変更せず、入力値、積荷名、ファイル名またはCSV全文をエラーやログへ反射しない。安定したcodeと論理record番号・列名のpathで修正箇所を示す。
 - CSV検証issueは次の固定code/pathだけを使う。template出力は `cargo-csv.download-unavailable` / `cargo-csv.download-failed` と `/template`、file入力能力不足は `cargo-csv.import-unavailable` と `/file`、サイズ超過・読取失敗・不正UTF-8・CSV構文不正は順に `cargo-csv.file-size` / `cargo-csv.read` / `cargo-csv.utf8` / `cargo-csv.syntax` と `/file`、見出し不一致は `cargo-csv.header` と `/header`、有効record件数不正は `cargo-csv.record-count` と `/rows`、列数不一致は `cargo-csv.column-count` と `/rows/{n}`、名前の空・長さ・制御文字は `cargo-csv.name-required` / `cargo-csv.name-length` / `cargo-csv.name-control` と `/rows/{n}/name`、寸法と重量は既存の `input.mm-length` / `input.mm-format` / `input.mm-range`、`input.kg-length` / `input.kg-format` / `input.kg-range` と `/rows/{n}/{column}`、防御的な置換後Project不正は `cargo-csv.candidate-invalid` と `/` を返す。`{n}` は見出しを除き、全空白recordだけを数えない非空の論理データrecordの1始まり順序で、field検証の合否を問わない。quoted field内の改行を含む物理行番号は使わない。issueはpath、codeのcode-unit順に並べて重複を除き、最大50件に切り詰める。
-- 有効なCSVを選択しても直ちに置換せず、新規積荷件数、削除する既存積荷件数、解除する配置件数を示して確認する。確定時だけCLP ID・名前、隙間、コンテナを保持し、積荷をCSV由来配列へ一括置換して全配置を空にする。成功全体を一回の `cargo.csv-replace` Undo/Redo対象とし、Undoは31件以上を含む従来積荷と全配置も完全に復元する。取消、失敗、stale、busyまたは同一状態へのno-opは履歴へ追加しない。成功時は旧積荷の選択、荷室外pose、drag preview、物理判定と重心表示を破棄または新Projectから再導出するが、コンテナ選択とcameraは対象コンテナが変わらないため維持できる。
+- 有効なCSVを選択しても直ちに置換せず、「新規積荷N件を一括登録します。既存の積荷と配置情報は破棄されます。CLP名、隙間、コンテナは保持します。端末保存は自動更新しません。」と確認する。確定時だけCLP ID・名前、隙間、コンテナを保持し、積荷をCSV由来配列へ一括置換して全配置を空にする。成功全体を一回の `cargo.csv-replace` Undo/Redo対象とし、Undoは31件以上を含む従来積荷と全配置も完全に復元する。取消、失敗、stale、busyまたは同一状態へのno-opは履歴へ追加しない。成功時は旧積荷の選択、荷室外pose、drag preview、物理判定と重心表示を破棄または新Projectから再導出するが、コンテナ選択とcameraは対象コンテナが変わらないため維持できる。
 - Drawer外の背景相当領域をクリックするとDrawerだけを閉じ、同じclickで背面のbutton、履歴またはscene操作を発火させない。close buttonおよびEscapeと同様、未実行の端末保存削除確認と新規CLP確認を取り消し、page scrollを変えずApplication Barのmenu buttonへfocusを戻す。進行中の永続化処理はDrawerを閉じても中断しない。
 - `操作方法` はDrawerを閉じてから独立した読み取り専用dialogを開き、3Dの積荷選択、空いた領域の左dragによる視点回転、Shift付き左dragまたは右dragによる平行移動、wheelのpage scroll、zoom・全体表示、積荷移動・回転、履歴、判定、座標・積荷編集の入口を簡潔に示す。touchは積荷選択とpage scrollを主とし、正確な座標・情報編集は下段button/dialogを案内する。版確認の `使用上の重要事項` とは分離し、CLP、履歴、保存、camera、判定状態を変更しない。
 - 旧3Dコンテナcardの外枠と見出しは置かない。コンテナtablistは3D viewportの直前、canvasおよびviewport overlayの外側上部へ一行で置き、コンテナ数または名前が幅を超える場合はExcelのsheet tab相当の左右buttonと横scrollで表示範囲だけを移動する。tabは折り返さず、active tabを表示範囲へ入れ、左右矢印・Home・End・Enter・Space、touch・trackpadを提供する。tabの選択だけがコンテナを切り替え、scroll buttonはコンテナを切り替えない。tablistはcanvasを覆わず、その表示・scrollでcanvasの寸法またはpage位置を変えない。
@@ -135,6 +135,8 @@
 - システムは積載空間外へのはみ出しと積荷同士の重なりを検出する。
 - システムは積荷ごとの段積み可否を考慮する。
 - 床より上の積荷は、支持可能な単一積荷の上面が対象底面とZで完全一致し、X/Y両軸で対象底面を完全包含する場合だけ「幾何学的な単独支持成立」とする。等値を含み、辺・点だけの接触は支持接触としない。
+- 移動開始時に単独支持成立している上段積荷は、下段の平行移動へ再帰的に連動し、同じX/Y/Z差分で移動する。3D dragと座標dialogへ適用し、回転、複数支持、張り出し、支持可否混在、不適合接触には適用しない。連動移動は全配置を一回だけ検証・commitし、一回のUndo/Redoで往復する。子孫の座標が保存範囲外になる場合は全体を変更せず、子孫がある根のdrag-outまたは配置解除は先に上段を外すよう拒否する。
+- 支持不可積荷だけと正面積でZ接触している上段積荷は、接触なし・Z不一致とは分けて `support-permission-denied` の不適合とし、関連積荷の段積み設定が原因であることを表示する。
 - 支持可能面と正面積で接触するが、複数支持、支持台間の隙間、張り出し、または支持不可面との混在を含む場合は、保存可能な「支持条件未確認」とする。構造剛性、支持位置、重心、許容支持間隔の確認を促す。
 - 接触する支持可能面がない、Zが一致しない、支持不可積荷だけに接触する、または立体重複する配置は不適合とする。支持成立・未確認・不適合のいずれも実積載の安全性を保証しない。
 - システムは積荷重量合計がコンテナ耐荷重を超える場合に不適合を示す。
@@ -230,7 +232,7 @@
 
 - 入力不正、配置不適合、ファイル読込失敗、未対応データ版、WebGL 2非対応、初期描画失敗、描画中障害、探索打切りを区別する。
 - JSON読込は、解析前サイズ、構文、対応版、JSON Schema、意味整合性の順に一時値を検証し、すべて成功した場合だけ現在CLPを一括置換する。
-- CSV読込は、解析前後のサイズ、UTF-8、CSV構文、固定見出し、record数、各field、生成した積荷配列、置換後Projectの順に一時検証し、利用者が件数付き確認を確定した場合だけ積荷と配置を一回の履歴操作として置換する。
+- CSV読込は、解析前後のサイズ、UTF-8、CSV構文、固定見出し、record数、各field、生成した積荷配列、置換後Projectの順に一時検証し、利用者が破棄・保持範囲を示す確認を確定した場合だけ積荷と配置を一回の履歴操作として置換する。確認文は「新規積荷N件を一括登録します。既存の積荷と配置情報は破棄されます。」「CLP名、隙間、コンテナは保持します。端末保存は自動更新しません。」とする。
 - 読込失敗時は現在のCLP状態を保持し、上書きしない。入力全体や秘密情報をログへ出さず、修正可能な理由を表示する。
 - WebGL 2非対応、初期描画失敗または描画中障害を黙って無視せず、Auto CLP全体を操作不能にして、人が対象・結果・次行動を理解できる読み取り専用の作業データ退避と復旧案内だけを表示する。現在メモリ内のProjectを保持し、再読込前に操作可能へ戻さない。
 - CLPの参照整合性、対象コンテナ解決、または安全な整数計算に失敗した場合は、物理的不適合と混同せず判定不能として扱う。

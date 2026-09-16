@@ -772,6 +772,195 @@ describe("placement commands", () => {
     }
   });
 
+  it("translates an exact single-support branch recursively as one atomic update", () => {
+    const base = { ...cargo("cargo-a"), canSupportCargo: true };
+    const middle = { ...cargo("cargo-b"), canSupportCargo: true };
+    const top = cargo("cargo-c");
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [base, middle, top],
+      placements: [
+        placement("cargo-a"),
+        {
+          ...placement("cargo-b"),
+          positionMm: { xMm: 0, yMm: 0, zMm: 900 },
+        },
+        {
+          ...placement("cargo-c"),
+          positionMm: { xMm: 0, yMm: 0, zMm: 1800 },
+        },
+      ],
+    };
+
+    const result = updatePlacement(current, "cargo-a", "container-1", {
+      xMm: "10",
+      yMm: "20",
+      zMm: "30",
+      orientation: "LWH",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.placements.map(({ positionMm }) => positionMm)).toEqual([
+        { xMm: 10, yMm: 20, zMm: 30 },
+        { xMm: 10, yMm: 20, zMm: 930 },
+        { xMm: 10, yMm: 20, zMm: 1830 },
+      ]);
+    }
+    expect(current.placements[0]?.positionMm).toEqual({ xMm: 0, yMm: 0, zMm: 0 });
+  });
+
+  it("does not translate descendants when the selected placement is rotated", () => {
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [{ ...cargo("cargo-a"), canSupportCargo: true }, cargo("cargo-b")],
+      placements: [
+        placement("cargo-a"),
+        {
+          ...placement("cargo-b"),
+          positionMm: { xMm: 0, yMm: 0, zMm: 900 },
+        },
+      ],
+    };
+
+    const result = updatePlacement(current, "cargo-a", "container-1", {
+      xMm: "10",
+      yMm: "20",
+      zMm: "30",
+      orientation: "WLH",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.placements[0]).toMatchObject({
+        positionMm: { xMm: 10, yMm: 20, zMm: 30 },
+        orientation: "WLH",
+      });
+      expect(result.project.placements[1]).toBe(current.placements[1]);
+    }
+  });
+
+  it("does not translate a contact whose supporter permission is disabled", () => {
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [cargo("cargo-a"), cargo("cargo-b")],
+      placements: [
+        placement("cargo-a"),
+        {
+          ...placement("cargo-b"),
+          positionMm: { xMm: 0, yMm: 0, zMm: 900 },
+        },
+      ],
+    };
+
+    const result = updatePlacement(current, "cargo-a", "container-1", {
+      xMm: "10",
+      yMm: "0",
+      zMm: "0",
+      orientation: "LWH",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.placements[0]?.positionMm.xMm).toBe(10);
+      expect(result.project.placements[1]).toBe(current.placements[1]);
+    }
+  });
+
+  it("does not translate a cargo shared by multiple supporters", () => {
+    const halfBase = {
+      ...cargo("cargo-a"),
+      dimensionsMm: { lengthMm: 600, widthMm: 800, heightMm: 900 },
+      canSupportCargo: true,
+    };
+    const secondBase = { ...halfBase, id: "cargo-b" };
+    const upper = cargo("cargo-c");
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [halfBase, secondBase, upper],
+      placements: [
+        placement("cargo-a"),
+        {
+          ...placement("cargo-b"),
+          positionMm: { xMm: 600, yMm: 0, zMm: 0 },
+        },
+        {
+          ...placement("cargo-c"),
+          positionMm: { xMm: 0, yMm: 0, zMm: 900 },
+        },
+      ],
+    };
+
+    const result = updatePlacement(current, "cargo-a", "container-1", {
+      xMm: "10",
+      yMm: "0",
+      zMm: "0",
+      orientation: "LWH",
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.project.placements[0]?.positionMm.xMm).toBe(10);
+      expect(result.project.placements[1]).toBe(current.placements[1]);
+      expect(result.project.placements[2]).toBe(current.placements[2]);
+    }
+  });
+
+  it("rolls back the whole translation when a descendant coordinate is invalid", () => {
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [
+        { ...cargo("cargo-a"), canSupportCargo: true },
+        {
+          ...cargo("cargo-b"),
+          dimensionsMm: { lengthMm: 100, widthMm: 100, heightMm: 100 },
+        },
+      ],
+      placements: [
+        {
+          ...placement("cargo-a"),
+          positionMm: { xMm: 999_000, yMm: 0, zMm: 0 },
+        },
+        {
+          ...placement("cargo-b"),
+          positionMm: { xMm: 999_999, yMm: 0, zMm: 900 },
+        },
+      ],
+    };
+
+    const result = updatePlacement(current, "cargo-a", "container-1", {
+      xMm: "999002",
+      yMm: "0",
+      zMm: "0",
+      orientation: "LWH",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.project).toBe(current);
+  });
+
+  it("rejects removing a placement that has exact single-support descendants", () => {
+    const current: Project = {
+      ...placedProject(),
+      cargoes: [{ ...cargo("cargo-a"), canSupportCargo: true }, cargo("cargo-b")],
+      placements: [
+        placement("cargo-a"),
+        {
+          ...placement("cargo-b"),
+          positionMm: { xMm: 0, yMm: 0, zMm: 900 },
+        },
+      ],
+    };
+
+    expect(deletePlacement(current, "cargo-a", "container-1")).toEqual({
+      ok: false,
+      project: current,
+      issues: [
+        { code: "command.supported-cargo-present", path: "/placements/0" },
+      ],
+    });
+  });
+
   it("deletes exactly one placement and preserves all other state", () => {
     const otherPlacement = placement("cargo-2", "container-2");
     const current: Project = {

@@ -122,9 +122,8 @@ export function CargoCsvImportDialog({
         <>
           <div className="confirm-panel" role="alert">
             <p>
-              新規積荷<strong>{result.summary.newCargoCount}件</strong>、既存積荷
-              <strong>{result.summary.removedCargoCount}件</strong>を削除、配置
-              <strong>{result.summary.clearedPlacementCount}件</strong>を解除します。
+              新規積荷<strong>{result.summary.newCargoCount}件</strong>を一括登録します。
+              {"既存の積荷と配置情報は破棄されます。"}
             </p>
             <p>CLP名、隙間、コンテナは保持します。端末保存は自動更新しません。</p>
           </div>
