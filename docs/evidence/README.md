@@ -7,6 +7,7 @@
 
 | Area | Record | Classification |
 | --- | --- | --- |
+| 3D操作 | [客観的な3D操作検証](objective-3d-operation-verification-2026-09-17.md) | 積層実pointer、荷室外drag、2面fit、50 / 75 / 76 mm、床／上面、切替、矢印、衝突、Undoを自動試験と公開Chromeで確認。操作感・理解度・実務安全性の人間評価ではない |
 | 公開Chrome受入 | [Codex UI-assisted公開環境観察](public-chrome-acceptance-18dcfb0.md) | GitHub Pages上の匿名合成データで、1・20・30件、積層、複数支持、提案不能、制約一括編集、重心、30件selectorを確認。人間・実務利用者受入、download済みPDF binaryの精読ではない |
 | 自動提案 AP-08 | [v2・20積荷の実Worker性能・取消記録](automatic-proposal-ap08-733b250.md) | Windows/headless Chromiumの匿名合成技術証拠。一般端末SLA、実務受入、安全保証ではない |
 | 自動提案 AP-08（履歴） | [v1記録](automatic-proposal-ap08-1226b082.md) | 単独支持reason廃止前のhistorical result hash。現行判定には使わない |

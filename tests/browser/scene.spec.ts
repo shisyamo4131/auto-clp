@@ -40,11 +40,18 @@ async function addContainer(
   });
 }
 
-async function place(page: Page, cargoId = "cargo-1", x = "100", y = "100") {
+async function place(
+  page: Page,
+  cargoId = "cargo-1",
+  x = "100",
+  y = "100",
+  z = "0",
+) {
   await page.getByLabel("操作する積荷").selectOption(cargoId);
   await page.getByRole("button", { name: "座標を入力して配置" }).click();
   await page.getByLabel("X最小角").fill(x);
   await page.getByLabel("Y最小角").fill(y);
+  await page.getByLabel("Z最小角").fill(z);
   await page.getByRole("button", { name: "配置を保存" }).click();
 }
 
@@ -657,6 +664,95 @@ test("snaps a staged cargo onto a containing support surface and keeps the drop 
   await expect(card).toContainText("荷室外（未配置）");
   await page.getByRole("button", { name: "やり直す" }).click();
   await expect(card).toContainText("500 mm");
+});
+
+test("moves a three-level stack by its base pointer without seeing the old group and blocks full drag-out", async ({ page }) => {
+  await page.goto("/");
+  await addCargo(
+    page,
+    "実ポインター基礎積荷",
+    false,
+    { length: "800", width: "600", height: "300" },
+    true,
+  );
+  await addCargo(
+    page,
+    "実ポインター中段積荷",
+    false,
+    { length: "800", width: "600", height: "250" },
+    true,
+  );
+  await addCargo(page, "実ポインター上段積荷", false, {
+    length: "800",
+    width: "600",
+    height: "200",
+  });
+  await addContainer(page, "実ポインター積層候補");
+  await place(page, "cargo-1", "2200", "800", "0");
+  await place(page, "cargo-2", "2200", "800", "300");
+  await place(page, "cargo-3", "2200", "800", "550");
+  await page.getByRole("button", { name: "側面・内壁スナップをOFFにする" }).click();
+
+  const canvas = page.getByRole("img", { name: previewName });
+  const selector = page.getByLabel("操作する積荷");
+  const card = page.locator(".viewport-context-actions");
+  const status = page.locator("#scene-workspace-action-status");
+  const readPosition = async (cargoId: string) => {
+    await selector.selectOption(cargoId);
+    await card.getByRole("button", { name: "座標を微調整" }).click();
+    const position = {
+      xMm: Number(await page.getByLabel("X最小角").inputValue()),
+      yMm: Number(await page.getByLabel("Y最小角").inputValue()),
+      zMm: Number(await page.getByLabel("Z最小角").inputValue()),
+    };
+    await page.getByRole("button", { name: "キャンセル" }).click();
+    return position;
+  };
+  const readAllPositions = async () => {
+    const positions = [];
+    for (const cargoId of ["cargo-1", "cargo-2", "cargo-3"]) {
+      positions.push(await readPosition(cargoId));
+    }
+    return positions;
+  };
+  const before = await readAllPositions();
+
+  await selector.selectOption("cargo-1");
+  const base = await locateStagedCargoOnCanvas(page, canvas);
+  await page.mouse.move(base.point.x, base.point.y);
+  await page.mouse.down();
+  await page.mouse.move(base.point.x + 36, base.point.y + 12, { steps: 12 });
+  await expect(status).toContainText("上段積荷2件も連動します");
+  await page.mouse.up();
+
+  const moved = await readAllPositions();
+  const delta = {
+    xMm: moved[0]!.xMm - before[0]!.xMm,
+    yMm: moved[0]!.yMm - before[0]!.yMm,
+  };
+  expect(Math.abs(delta.xMm) + Math.abs(delta.yMm)).toBeGreaterThan(0);
+  for (let index = 0; index < moved.length; index += 1) {
+    expect(moved[index]!.xMm - before[index]!.xMm).toBe(delta.xMm);
+    expect(moved[index]!.yMm - before[index]!.yMm).toBe(delta.yMm);
+    expect(moved[index]!.zMm).toBe(before[index]!.zMm);
+  }
+  await expect(page.locator(".project-history__summary")).toContainText("3Dでの配置移動");
+
+  await page.getByRole("button", { name: "元に戻す" }).click();
+  for (let index = 0; index < before.length; index += 1) {
+    expect(await readPosition(`cargo-${index + 1}`)).toEqual(before[index]);
+  }
+
+  await selector.selectOption("cargo-1");
+  const restoredBase = await locateStagedCargoOnCanvas(page, canvas);
+  await page.mouse.move(restoredBase.point.x, restoredBase.point.y);
+  await page.mouse.down();
+  await page.mouse.move(1, restoredBase.point.y, { steps: 12 });
+  await page.mouse.up();
+  await expect(status).toContainText("上に積荷が2件あるため荷室外へ移動できません");
+  for (let index = 0; index < before.length; index += 1) {
+    expect(await readPosition(`cargo-${index + 1}`)).toEqual(before[index]);
+  }
 });
 
 test("renders drag focus and restores normal cargo rendering after cancel", async ({
