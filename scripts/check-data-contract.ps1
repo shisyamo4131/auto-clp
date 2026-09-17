@@ -39,6 +39,7 @@ $stagingCompactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0039-st
 $emptyContainerDecisionPath = Join-Path $resolvedProject 'docs/decisions/0040-empty-container-guidance-and-csv-import-gate.md'
 $movingGroupNudgeDecisionPath = Join-Path $resolvedProject 'docs/decisions/0041-moving-group-face-fit-and-view-relative-nudge.md'
 $groundedWallSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0042-grounded-staging-wall-snap-toggle-and-validation-icon.md'
+$multiFaceSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0043-detachable-multi-face-snap-and-pointer-surface-target.md'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
 $cargoConstraintsDialogPath = Join-Path $resolvedProject 'src/ui/CargoConstraintsDialog.tsx'
@@ -122,6 +123,7 @@ foreach ($path in @(
     $emptyContainerDecisionPath,
     $movingGroupNudgeDecisionPath,
     $groundedWallSnapDecisionPath,
+    $multiFaceSnapDecisionPath,
     $projectCommandPath,
     $projectCommandTestPath,
     $cargoConstraintsDialogPath,
@@ -348,7 +350,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.12.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.13.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -484,6 +486,21 @@ $groundedWallSnapDecision = [IO.File]::ReadAllText($groundedWallSnapDecisionPath
 if ($groundedWallSnapDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
     throw 'ADR 0042 does not have Accepted status.'
 }
+$multiFaceSnapDecision = [IO.File]::ReadAllText($multiFaceSnapDecisionPath)
+if ($multiFaceSnapDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0043 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '最大2面へ同時にfit',
+    '75 mm以内では同じ対象を候補に残す',
+    'カーソル直下の可視面',
+    'スナップ固有の計算、drag-session保持、表示、buttonを除去',
+    'Schema `0.1.0`'
+)) {
+    if (-not $multiFaceSnapDecision.Contains($requiredText)) {
+        throw "ADR 0043 does not contain the approved multi-face snap contract text: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     'Zを0 mmへ正規化',
     '距離が50 mm以内',
@@ -551,7 +568,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.12.0`',
+    '仕様版 `1.13.0`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -1227,6 +1244,7 @@ foreach ($requiredText in @(
     empty_container_decision_0040_accepted = $true
     moving_group_nudge_decision_0041_accepted = $true
     grounded_wall_snap_decision_0042_accepted = $true
+    multi_face_snap_decision_0043_accepted = $true
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true
 }

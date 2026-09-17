@@ -53,5 +53,6 @@
 | [0040](0040-empty-container-guidance-and-csv-import-gate.md) | コンテナ未登録時の案内とCSVインポート制限 | Accepted | 2026-09-16 |
 | [0041](0041-moving-group-face-fit-and-view-relative-nudge.md) | 移動グループ判定・側面fit・視点基準矢印調整 | Accepted | 2026-09-16 |
 | [0042](0042-grounded-staging-wall-snap-toggle-and-validation-icon.md) | 荷室外床面化・内壁スナップ切替・判定アイコン | Accepted | 2026-09-16 |
+| [0043](0043-detachable-multi-face-snap-and-pointer-surface-target.md) | 分離可能な2面スナップとカーソル配置面選択 | Accepted | 2026-09-17 |
 
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

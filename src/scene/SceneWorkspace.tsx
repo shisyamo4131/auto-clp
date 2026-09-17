@@ -53,6 +53,7 @@ import {
 import {
   ThreeViewport,
   type CargoDragCommitResult,
+  type CargoDragIntent,
   type CargoDragPreviewResult,
   type CargoNudgePreviewResult,
 } from "./ThreeViewport";
@@ -695,6 +696,7 @@ export function SceneWorkspace({
     (
       cargoId: string,
       deltaScene: Pick<SceneVector3, "x" | "z">,
+      intent: CargoDragIntent,
     ): CargoDragPreviewResult => {
       const projectedCargo = projection?.cargoes.find(
         (candidate) => candidate.cargoId === cargoId,
@@ -706,6 +708,7 @@ export function SceneWorkspace({
           zMm: 0,
         };
         return {
+          faceSnaps: [],
           positionMm,
           sceneDelta: { x: 0, y: 0, z: 0 },
           state: "invalid",
@@ -750,6 +753,7 @@ export function SceneWorkspace({
         rawPositionMm,
         [cargoId, ...followerCargoIds],
         faceSnapEnabled,
+        intent,
       );
       const positionMm = resolved?.positionMm ?? rawPositionMm;
       const supporterNames = (resolved?.supporterIds ?? [])
@@ -769,12 +773,15 @@ export function SceneWorkspace({
               : resolved?.disposition === "floor"
                 ? "荷室床面にスナップ中です。"
                 : "荷室外の作業スペースを移動中です。";
-      const faceSnap = resolved?.faceSnap;
-      const faceSnapMessage = faceSnap === undefined
+      const faceSnaps = resolved?.faceSnaps ?? [];
+      const firstFaceSnap = faceSnaps[0];
+      const faceSnapMessage = faceSnaps.length === 0
         ? undefined
-        : faceSnap.kind === "container-wall"
-          ? "コンテナ内壁にフィットしています。"
-          : `${project.cargoes.find((candidate) => candidate.id === faceSnap.cargoId)?.name ?? faceSnap.cargoId}の側面にフィットしています。`;
+        : faceSnaps.length === 2
+          ? "2面にフィットしています。"
+          : firstFaceSnap?.kind === "container-wall"
+            ? "コンテナ内壁にフィットしています。"
+            : `${project.cargoes.find((candidate) => candidate.id === firstFaceSnap?.cargoId)?.name ?? firstFaceSnap?.cargoId}の側面にフィットしています。`;
       const message = faceSnapMessage === undefined
         ? baseMessage
         : `${baseMessage} ${faceSnapMessage}`;
@@ -787,6 +794,7 @@ export function SceneWorkspace({
         setCanvasStatus(groupMessage);
       }
       return {
+        faceSnaps,
         positionMm,
         sceneDelta: domainPositionDeltaToScene(
           projectedCargo.positionMm,
@@ -797,6 +805,7 @@ export function SceneWorkspace({
             ? "invalid"
             : (resolved?.disposition ?? "outside"),
         supporterIds: resolved?.supporterIds ?? [],
+        surfaceTargetCargoId: resolved?.surfaceTargetCargoId,
         followerCargoIds,
       };
     },

@@ -8,6 +8,8 @@ import {
   sceneContainerBounds,
   sceneProjectionBounds,
   viewRelativeArrowDeltaMm,
+  type DragSurfaceTarget,
+  type FaceSnap,
   type ProjectSceneProjection,
   type SceneVector3,
   type ViewRelativeArrowKey,
@@ -26,11 +28,19 @@ export type CargoDragPreviewState =
   | "invalid";
 
 export interface CargoDragPreviewResult {
+  readonly faceSnaps: readonly FaceSnap[];
   readonly followerCargoIds: readonly string[];
   readonly positionMm: PositionMm;
   readonly sceneDelta: SceneVector3;
   readonly state: CargoDragPreviewState;
+  readonly surfaceTargetCargoId?: string;
   readonly supporterIds: readonly string[];
+}
+
+export interface CargoDragIntent {
+  readonly lockedFaceSnaps: readonly FaceSnap[];
+  readonly retainedSupportCargoId?: string;
+  readonly surfaceTarget: DragSurfaceTarget;
 }
 
 export interface CargoNudgePreviewResult {
@@ -53,6 +63,7 @@ interface ThreeViewportProps {
   readonly onCargoDragPreview: (
     cargoId: string,
     deltaScene: Pick<SceneVector3, "x" | "z">,
+    intent: CargoDragIntent,
   ) => CargoDragPreviewResult;
   readonly onCargoDragStateChange: (active: boolean) => void;
   readonly onCargoNudgeCommit: (
@@ -944,6 +955,28 @@ export function ThreeViewport({
       raycaster.setFromCamera(pointerNdc, camera);
     };
 
+    const pointerSurfaceTarget = (): DragSurfaceTarget => {
+      if (gesture === undefined) return { kind: "floor" };
+      const movingCargoIds = new Set([
+        gesture.cargoId,
+        ...(gesture.lastPreview?.followerCargoIds ?? []),
+      ]);
+      const fixedMeshes = [...cargoVisuals.entries()]
+        .filter(([cargoId]) => !movingCargoIds.has(cargoId))
+        .map(([, visual]) => visual.mesh);
+      const firstHit = raycaster.intersectObjects(fixedMeshes, false)[0];
+      if (firstHit?.face === null || firstHit?.face === undefined) {
+        return { kind: "floor" };
+      }
+      const worldNormal = firstHit.face.normal
+        .clone()
+        .transformDirection(firstHit.object.matrixWorld);
+      const cargoId = firstHit.object.userData.cargoId as string | undefined;
+      return worldNormal.y > 0.5 && cargoId !== undefined
+        ? { kind: "cargo-top", cargoId }
+        : { kind: "floor" };
+    };
+
     const restoreGesturePreview = () => {
       if (gesture !== undefined) {
         gesture.mesh.position.copy(gesture.startMeshPosition);
@@ -1126,13 +1159,22 @@ export function ThreeViewport({
         onCargoDragStateChange(true);
       }
       setPointerFromEvent(event);
+      const surfaceTarget = pointerSurfaceTarget();
       const currentPoint = new THREE.Vector3();
       if (raycaster.ray.intersectPlane(gesture.plane, currentPoint) === null) return;
       const rawDelta = currentPoint.sub(gesture.startPlanePoint);
-      const preview = onCargoDragPreview(gesture.cargoId, {
-        x: rawDelta.x,
-        z: rawDelta.z,
-      });
+      const preview = onCargoDragPreview(
+        gesture.cargoId,
+        {
+          x: rawDelta.x,
+          z: rawDelta.z,
+        },
+        {
+          lockedFaceSnaps: gesture.lastPreview?.faceSnaps ?? [],
+          retainedSupportCargoId: gesture.lastPreview?.surfaceTargetCargoId,
+          surfaceTarget,
+        },
+      );
       gesture.lastPreview = preview;
       gesture.followerStartPositions ??= new Map(
         preview.followerCargoIds.flatMap((cargoId) => {

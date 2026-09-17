@@ -210,6 +210,16 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 4. 切替はUI sessionだけに保持し、Project、JSON、端末保存、Undo/Redo履歴へ含めない。ページ再読込または新しい実行セッションでは既定ONへ戻る。
 5. 物理判定buttonはMaterial Design Icons `information-box-outline` 相当iconへ統一し、状態別の色、accessible name、title、件数、dialogを維持する。
 
+## AC-13 Multi-Face Fit and Pointer Surface Selection
+
+このケースは仕様1.13.0・ADR 0043に従い、X/Y整列とZ配置面選択を分離する。Project、Schema `0.1.0`、保存形式は変更しない。
+
+1. コンテナ内壁＋内壁、内壁＋積荷、異なる積荷＋積荷について、X軸最大1面とY軸最大1面の最終位置を一括検証し、安全な場合は「2面にフィット」と表示する。合成位置だけが立体重複する場合は安全な単一軸へfallbackする。
+2. 新規X/Y fitは50 mm以内、取得済みの同じ軸・対象は75 mm以内で保持し、76 mmで解除する。保持はdrag sessionだけで、cancel、終了、OFF、Project更新後に残さない。
+3. 床面から固定積荷の側面へ近づけ、カーソルが上面を指していない場合は、浅い正面積重なりだけで上面へ移らず床面で側面fitする。
+4. カーソル直下の最前面が支持可能な積荷の上向き面で、移動積荷底面と正面積がある場合はその上面を取得する。取得後は正面積が残る間だけ保持し、完全離脱または荷室外ではZ=0へ戻す。移動グループ自身はraycast、支持、fit、衝突候補から除外する。
+5. `adjust` OFFはX/Y fitだけを停止し、床面／上面選択、支持・衝突検証、矢印調整を維持する。X/Yスナップ固有部分を撤去してもこれらの基礎配置機能が残るモジュール境界とする。
+
 ## Evidence and Completion
 
 - 自動証拠: domainと表示の単体試験、Worker経由のブラウザ試験、履歴、IndexedDB、JSON往復、WebGL必須能力ゲートと読み取り専用救出回帰を個別の終了コードで記録する。
@@ -226,6 +236,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - 仕様1.10.2の自動証拠: typecheck、lint、単体32ファイル1,017件、ブラウザ106件、build、データ契約、ガバナンス、プロジェクト検査に合格した。コンテナ0件のviewport中央案内、`登録` からの既存dialog表示、busy時無効化、テンプレートインポートだけの理由付き無効化、テンプレートダウンロード・JSON読込互換、コンテナ登録後のCSV既存回帰を確認した。
 - 仕様1.11.0の自動証拠: typecheck、lint、単体32ファイル1,024件、ブラウザ107件、build、データ契約に合格した。移動グループ旧位置の候補除外、床・支持上面の20 / 21 mm側面fit、支持喪失・境界外を許容する1 mm矢印調整、固定積荷との衝突停止、視点軸対応、3回repeatの一回履歴、Escape取消、Undo/Redo、操作方法copyを回帰した。積層fixtureの実pointer差分確認は人間確認として残す。
 - 仕様1.12.0の自動証拠: typecheck、lint、単体32ファイル1,030件、ブラウザ107件、build、データ契約、ガバナンス、プロジェクト検査に合格した。荷室外Z=0、内壁4面の50 mm境界、51 mm非fit、積荷側面との同距離時の内壁優先、OFF時のX/Y非fitとZ snap継続、`adjust` buttonの既定ON・切替・非履歴、操作方法copy、`information-box-outline` 相当SVGと状態表示を回帰した。積層fixtureを使う実pointerの荷室外dragとUndo/Redoは人間確認として残す。
+- 仕様1.13.0の自動証拠: typecheck、lint、単体32ファイル1,036件、ブラウザ107件、build、データ契約、ガバナンス、プロジェクト検査に合格した。内壁2面、異なる積荷2面、二軸合成衝突時の単軸fallback、50 mm取得、75 / 76 mm保持解除、床指定時の浅い重なり、上面取得・保持・完全離脱、実pointerの支持上面取得、操作ガイドを回帰した。コンテナ角、2つの積荷、床側面接近の体感はローカル人間確認として残す。
 - 仕様1.7.0単一支持グループ移動自動証拠: typecheck、lint、単体32ファイル1,014件、ブラウザ103件、buildに合格。3段再帰移動、回転・支持不可・複数支持の非連動、子孫座標失敗のrollback、配置解除拒否、一回のUndo、支持不可専用理由と関連積荷名、CSV確認文を回帰した。3D dragの連動preview・取消・dropは実装され既存drag回帰に合格したが、積層fixtureでの人間差分確認は未実施である。
 - 仕様1.8.0積荷制約一覧編集の自動証拠: typecheck、lint、単体32ファイル1,016件、ブラウザ104件、build、データ契約・ガバナンス・プロジェクト検査に合格。保存値反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表記一致、一回のUndo、dirty確認、305 / 320 / 375 px、支持不可理由を回帰した。内蔵ブラウザでの人間差分確認は未実施である。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
@@ -248,6 +259,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - AC-09: `src/application/project-command.test.ts` と `tests/browser/input.spec.ts` が、制約値の反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表示一致、一回のUndo、dirty破棄と狭幅を検証し、既存物理表示回帰が「上乗せ禁止」理由を検証する。
 - AC-11: `src/scene/project-scene.test.ts` が移動グループ除外、20 / 21 mm境界、床・支持上面fit、支持喪失・境界外、面接触と正体積衝突、screen投影から一軸1 mmへの対応を検証する。`tests/browser/scene.spec.ts` がcanvas focus、3回repeatの一回履歴、Escape取消、Undo/Redoを実行し、`tests/browser/persistence.spec.ts` が操作方法copyを検証する。積層fixtureでの短距離実pointer dragと視点変更後の方向理解は人間確認として残す。
 - AC-12: `src/scene/project-scene.test.ts` が荷室外Z=0、内壁4面、50 / 51 mm境界、OFF時のX/Y非fitとZ snap継続を検証する。`tests/browser/scene.spec.ts` が `adjust` buttonの既定ON、OFF / ON、非履歴を実行し、`tests/browser/persistence.spec.ts` が操作方法copy、`tests/browser/scene-workspace-v12.spec.ts` と `tests/browser/physical-validation-worker.spec.ts` が `information-box-outline` 相当SVGと状態表示を検証する。積層fixtureを使う実pointerの荷室外dragとUndo/Redoは人間確認として残す。
+- AC-13: `src/scene/project-scene.test.ts` が内壁2面、異なる積荷2面、50 mm取得、75 / 76 mm保持解除、床指定時の浅い重なり、上面取得・保持・完全離脱を検証する。`tests/browser/scene.spec.ts` の実pointer支持面取得と既定ON・OFF回帰を維持し、コンテナ角、2つの積荷、床側面接近の体感はローカル人間確認として残す。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 - 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。

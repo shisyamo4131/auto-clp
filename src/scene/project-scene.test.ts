@@ -1059,6 +1059,7 @@ describe("support-surface drag snapping", () => {
 
     expect(result).toEqual({
       disposition: "single-support",
+      faceSnaps: [],
       positionMm: { xMm: 700, yMm: 600, zMm: 500 },
       supporterIds: ["support"],
     });
@@ -1076,6 +1077,7 @@ describe("support-surface drag snapping", () => {
 
     expect(result).toEqual({
       disposition: "support-conditions-unverified",
+      faceSnaps: [],
       positionMm: { xMm: 200, yMm: 150, zMm: 500 },
       supporterIds: ["support"],
     });
@@ -1096,6 +1098,7 @@ describe("support-surface drag snapping", () => {
 
     expect(result).toEqual({
       disposition: "invalid-overlap",
+      faceSnaps: [],
       positionMm: { xMm: 200, yMm: 200, zMm: 0 },
       supporterIds: [],
     });
@@ -1113,6 +1116,7 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "floor",
+      faceSnaps: [],
       positionMm: { xMm: 1_500, yMm: 1_000, zMm: 0 },
       supporterIds: [],
     });
@@ -1126,6 +1130,7 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "outside",
+      faceSnaps: [],
       positionMm: { xMm: -500, yMm: 100, zMm: 0 },
       supporterIds: [],
     });
@@ -1160,6 +1165,7 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "floor",
+      faceSnaps: [],
       positionMm: { xMm: 110, yMm: 100, zMm: 0 },
       supporterIds: [],
     });
@@ -1178,7 +1184,7 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "floor",
-      faceSnap: { axis: "x", kind: "cargo", cargoId: "support" },
+      faceSnaps: [{ axis: "x", kind: "cargo", cargoId: "support" }],
       positionMm: { xMm: 1_100, yMm: 200, zMm: 0 },
       supporterIds: [],
     });
@@ -1197,6 +1203,7 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "floor",
+      faceSnaps: [],
       positionMm: { xMm: 1_151, yMm: 200, zMm: 0 },
       supporterIds: [],
     });
@@ -1234,7 +1241,7 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "single-support",
-      faceSnap: { axis: "x", kind: "cargo", cargoId: "neighbor" },
+      faceSnaps: [{ axis: "x", kind: "cargo", cargoId: "neighbor" }],
       positionMm: { xMm: 300, yMm: 100, zMm: 500 },
       supporterIds: ["support"],
     });
@@ -1274,11 +1281,11 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "floor",
-      faceSnap: {
+      faceSnaps: [{
         axis: wall.startsWith("x") ? "x" : "y",
         kind: "container-wall",
         wall,
-      },
+      }],
       positionMm: snapped,
       supporterIds: [],
     });
@@ -1297,6 +1304,7 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "floor",
+      faceSnaps: [],
       positionMm: { xMm: 51, yMm: 1_500, zMm: 0 },
       supporterIds: [],
     });
@@ -1312,6 +1320,7 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "floor",
+      faceSnaps: [],
       positionMm: { xMm: 45, yMm: 1_500, zMm: 0 },
       supporterIds: [],
     });
@@ -1348,9 +1357,302 @@ describe("support-surface drag snapping", () => {
       ),
     ).toEqual({
       disposition: "floor",
-      faceSnap: { axis: "x", kind: "container-wall", wall: "x-min" },
+      faceSnaps: [{ axis: "x", kind: "container-wall", wall: "x-min" }],
       positionMm: { xMm: 0, yMm: 1_200, zMm: 0 },
       supporterIds: [],
+    });
+  });
+
+  it("fits both axes to a container inner corner in one validated position", () => {
+    const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 40, yMm: 1_660, zMm: 0 },
+      ),
+    ).toEqual({
+      disposition: "floor",
+      faceSnaps: [
+        { axis: "x", kind: "container-wall", wall: "x-min" },
+        { axis: "y", kind: "container-wall", wall: "y-max" },
+      ],
+      positionMm: { xMm: 0, yMm: 1_700, zMm: 0 },
+      supporterIds: [],
+    });
+  });
+
+  it("fits two axes against two different cargo sides", () => {
+    const project: Project = {
+      schemaVersion: PROJECT_SCHEMA_VERSION,
+      projectId: "two-cargo-face-snap",
+      name: "匿名二面フィット試験",
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
+      cargoes: [
+        {
+          id: "moving",
+          name: "移動荷",
+          dimensionsMm: { lengthMm: 200, widthMm: 200, heightMm: 200 },
+          massGrams: 1_000,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH"],
+        },
+        {
+          id: "x-target",
+          name: "X面対象",
+          dimensionsMm: { lengthMm: 300, widthMm: 300, heightMm: 200 },
+          massGrams: 1_000,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH"],
+        },
+        {
+          id: "y-target",
+          name: "Y面対象",
+          dimensionsMm: { lengthMm: 300, widthMm: 300, heightMm: 200 },
+          massGrams: 1_000,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH"],
+        },
+      ],
+      containers: [
+        {
+          id: "container",
+          name: "匿名候補",
+          internalDimensionsMm: {
+            lengthMm: 2_000,
+            widthMm: 2_000,
+            heightMm: 2_000,
+          },
+          openingMm: { widthMm: 2_000, heightMm: 2_000 },
+          payloadCapacityGrams: 10_000,
+        },
+      ],
+      placements: [
+        {
+          cargoId: "x-target",
+          containerId: "container",
+          positionMm: { xMm: 0, yMm: 300, zMm: 0 },
+          orientation: "LWH",
+        },
+        {
+          cargoId: "y-target",
+          containerId: "container",
+          positionMm: { xMm: 300, yMm: 0, zMm: 0 },
+          orientation: "LWH",
+        },
+      ],
+    };
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "moving",
+        "LWH",
+        { xMm: 340, yMm: 340, zMm: 0 },
+      ),
+    ).toEqual({
+      disposition: "floor",
+      faceSnaps: [
+        { axis: "x", kind: "cargo", cargoId: "x-target" },
+        { axis: "y", kind: "cargo", cargoId: "y-target" },
+      ],
+      positionMm: { xMm: 300, yMm: 300, zMm: 0 },
+      supporterIds: [],
+    });
+  });
+
+  it("falls back to one axis when only the combined two-face position collides", () => {
+    const base: Project = {
+      schemaVersion: PROJECT_SCHEMA_VERSION,
+      projectId: "combined-face-collision",
+      name: "匿名二面衝突試験",
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
+      cargoes: [
+        {
+          id: "moving",
+          name: "移動荷",
+          dimensionsMm: { lengthMm: 200, widthMm: 200, heightMm: 200 },
+          massGrams: 1_000,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH"],
+        },
+        ...["x-target", "y-target"].map((id) => ({
+          id,
+          name: id,
+          dimensionsMm: { lengthMm: 300, widthMm: 300, heightMm: 200 },
+          massGrams: 1_000,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH" as const],
+        })),
+        {
+          id: "corner-blocker",
+          name: "組合せ位置だけを塞ぐ荷",
+          dimensionsMm: { lengthMm: 20, widthMm: 20, heightMm: 200 },
+          massGrams: 1_000,
+          canSupportCargo: false,
+          allowedOrientations: ["LWH"],
+        },
+      ],
+      containers: [
+        {
+          id: "container",
+          name: "匿名候補",
+          internalDimensionsMm: {
+            lengthMm: 2_000,
+            widthMm: 2_000,
+            heightMm: 2_000,
+          },
+          openingMm: { widthMm: 2_000, heightMm: 2_000 },
+          payloadCapacityGrams: 10_000,
+        },
+      ],
+      placements: [
+        {
+          cargoId: "x-target",
+          containerId: "container",
+          positionMm: { xMm: 0, yMm: 300, zMm: 0 },
+          orientation: "LWH",
+        },
+        {
+          cargoId: "y-target",
+          containerId: "container",
+          positionMm: { xMm: 300, yMm: 0, zMm: 0 },
+          orientation: "LWH",
+        },
+        {
+          cargoId: "corner-blocker",
+          containerId: "container",
+          positionMm: { xMm: 310, yMm: 310, zMm: 0 },
+          orientation: "LWH",
+        },
+      ],
+    };
+
+    expect(
+      resolveSupportSnapPosition(
+        base,
+        "container",
+        "moving",
+        "LWH",
+        { xMm: 340, yMm: 340, zMm: 0 },
+      ),
+    ).toEqual({
+      disposition: "floor",
+      faceSnaps: [{ axis: "x", kind: "cargo", cargoId: "x-target" }],
+      positionMm: { xMm: 300, yMm: 340, zMm: 0 },
+      supporterIds: [],
+    });
+  });
+
+  it("retains a locked face through 75 mm and releases it beyond that distance", () => {
+    const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+    const lockedFaceSnaps = [
+      { axis: "x", kind: "container-wall", wall: "x-min" },
+    ] as const;
+
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 75, yMm: 1_500, zMm: 0 },
+        ["upper"],
+        true,
+        { lockedFaceSnaps },
+      )?.positionMm.xMm,
+    ).toBe(0);
+    expect(
+      resolveSupportSnapPosition(
+        project,
+        "container",
+        "upper",
+        "LWH",
+        { xMm: 76, yMm: 1_500, zMm: 0 },
+        ["upper"],
+        true,
+        { lockedFaceSnaps },
+      )?.positionMm.xMm,
+    ).toBe(76);
+  });
+
+  it("keeps a floor-targeted shallow overlap beside cargo instead of stacking", () => {
+    const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+
+    const result = resolveSupportSnapPosition(
+      project,
+      "container",
+      "upper",
+      "LWH",
+      { xMm: 1_050, yMm: 200, zMm: 0 },
+      ["upper"],
+      true,
+      { surfaceTarget: { kind: "floor" } },
+    );
+
+    expect(result).toMatchObject({
+      disposition: "floor",
+      positionMm: { xMm: 1_100, yMm: 200, zMm: 0 },
+    });
+  });
+
+  it("acquires a pointed cargo top and retains it until the footprint leaves", () => {
+    const project = supportProject({ supportLengthMm: 1_000, supportWidthMm: 800 });
+    const acquired = resolveSupportSnapPosition(
+      project,
+      "container",
+      "upper",
+      "LWH",
+      { xMm: 200, yMm: 200, zMm: 0 },
+      ["upper"],
+      true,
+      { surfaceTarget: { kind: "cargo-top", cargoId: "support" } },
+    );
+    expect(acquired).toMatchObject({
+      disposition: "single-support",
+      positionMm: { zMm: 500 },
+      surfaceTargetCargoId: "support",
+    });
+
+    const retained = resolveSupportSnapPosition(
+      project,
+      "container",
+      "upper",
+      "LWH",
+      { xMm: 1_050, yMm: 200, zMm: 0 },
+      ["upper"],
+      true,
+      {
+        retainedSupportCargoId: "support",
+        surfaceTarget: { kind: "floor" },
+      },
+    );
+    expect(retained).toMatchObject({
+      disposition: "single-support",
+      positionMm: { zMm: 500 },
+      surfaceTargetCargoId: "support",
+    });
+
+    const released = resolveSupportSnapPosition(
+      project,
+      "container",
+      "upper",
+      "LWH",
+      { xMm: 1_100, yMm: 200, zMm: 0 },
+      ["upper"],
+      true,
+      {
+        retainedSupportCargoId: "support",
+        surfaceTarget: { kind: "floor" },
+      },
+    );
+    expect(released).toMatchObject({
+      disposition: "floor",
+      positionMm: { xMm: 1_100, yMm: 200, zMm: 0 },
     });
   });
 });
