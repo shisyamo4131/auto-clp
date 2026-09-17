@@ -316,6 +316,16 @@ AをZ=0へ修正すると床貫通が消え、A上面Z=600とB下面Z=600の単�
 - 正式fixture、評価者区分、実務利用者試用の評価担当・日程・合否記録。
 - JSONファイル名変更候補の承認、sanitization、互換性、browser差、試験。
 
+### CSV Template Import Follow-up
+
+- Date: 2026-09-17
+- Evaluator: 人間のプロジェクト評価者
+- Result: テンプレート由来CSVの実利用確認はpass
+
+評価者は、取得済みテンプレートから作成したCSVによる積荷一括登録を複数回実行し、20件取込と一回のUndoによる元状態復元を含め、現時点で問題がないと確認した。ここでの処理はテンプレート取得・Excel編集・CSV保存・インポートであり、既存積荷をCSVへエクスポートする機能は存在しない。
+
+引用comma・quote、不正UTF-8、1 / 30 / 31件等の厳格境界を評価者が個別に目視したとは扱わず、対応する単体・browser自動証拠で補完する。この組み合わせでCSV積荷一括置換マイルストーンを完了するが、正式fixtureによる実務利用者受入または実積載の安全性評価ではない。
+
 ## Repository and Local Side Effects
 
 - 試用開始時のbranchは `main`、product commitは `4e6c6808d0376317ef125ef8983b1f1dabae1dc2`、リポジトリ差分は0件だった。

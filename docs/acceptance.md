@@ -133,7 +133,7 @@
 
 ## AC-07 Cargo CSV Template and Atomic Replacement
 
-このケースは仕様1.7.0・ADR 0034・0036に従って実装済みであり、単体・ブラウザ自動証拠を持つ。Windows版Excel往復と人間による実務受入は未実施である。
+このケースは仕様1.7.0・ADR 0034・0036に従って実装済みであり、単体・ブラウザ自動証拠を持つ。利用者はテンプレート由来CSVの一括登録を複数回実行し、20件取込とUndoを含め問題なしと確認した。これは既存積荷のエクスポート／再インポートではなく、テンプレート取得・Excel編集・CSV保存・インポートの確認である。正式な実務利用者受入は未実施である。
 
 ### Initial State and CSV
 
@@ -155,9 +155,9 @@
 10. コンテナ0件ではviewport中央に「コンテナを登録してください」と `登録` buttonを表示し、既存のコンテナ追加dialogを開く。Drawerではテンプレートインポートだけを理由付きで無効にし、テンプレートダウンロードとJSON読込は利用可能なままとする。積荷だけのJSON読込後も同じ案内を表示し、コンテナ登録後に積荷を3D表示する。
 10. 見出し後に全空白recordを置き、その後の論理record 1のquoted name内に改行を含め、さらに全空白recordを挟んだ論理record 2の `weight_kg` を不正値にする。物理行数にかかわらず `input.kg-format` と `/rows/2/weight_kg` を返す。file・header・record件数・列数・名前・寸法・重量・置換後Projectの各失敗は仕様の固定code/pathだけを返し、path→codeの順、重複なし、最大50件、入力値非反射を維持する。
 
-### Human Excel Gate
+### Excel Compatibility Gate — Complete
 
-Windows版Excelでテンプレートを開き、日本語、引用comma・quote、kg小数を含む匿名データを入力して「CSV UTF-8（コンマ区切り）」として保存し、再読込後の順序、値、上乗せ禁止OFF、全6向き、件数確認、Undo/Redoを確認する。通常の非UTF-8 CSVは状態を変えず拒否されることを確認する。この人間確認が完了するまでCSVマイルストーンの最終1点と実務受入を獲得しない。
+利用者は、取得済みテンプレートから作成したCSVによる一括登録を複数回実行し、20件取込と一回のUndoを含め、現時点で問題がないことを確認した。既存積荷をCSVへエクスポートする機能は存在せず、本ゲートの対象でもない。日本語、引用comma・quote、kg小数、順序、既定制約、Undo/Redo、不正UTF-8拒否などの厳格境界は単体・ブラウザ自動試験で補完する。利用者の確認では各境界値を個別に目視したとは扱わない。この組み合わせでCSVマイルストーンの最終1点を獲得するが、正式な実務利用者受入の証拠にはしない。
 
 ## AC-08 Recursive Exact-Support Group Movement
 
@@ -247,8 +247,8 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - 仕様1.4.1自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ84件、buildに合格。主ページの入力データ注意撤去、内容版1.1.0の「使用上の重要事項」への集約、確認版更新、Drawer最下部のアプリ版・CLPデータ形式版表示を回帰した。これは人間または実務利用者受入の証拠ではない。
 - 仕様1.4.2自動証拠: typecheck、lint、単体28ファイル952件、現行ブラウザ85件、buildに合格。通常デスクトップ高でApplication Shellとbrowser viewport高が一致し、残り高を3D viewportが使用すること、通常時の操作案内帯を表示しないこと、必要な操作statusが浮動表示されてもcanvas寸法・位置を変えないことを回帰した。これは人間または実務利用者受入の証拠ではない。
 - 仕様1.5.1重心可視化自動証拠: typecheck、lint、単体29ファイル975件、ブラウザ97件、build、データ契約・ガバナンス・プロジェクト検査に合格。正確なBigInt・有理数domain計算、scene投影、4状態、同径10 CSS px・白い外枠なし、完全一致・近接時の黄前面表示、画面外、非操作、camera、drag、履歴、DPR 1/2、305 / 320 / 375 px、使用事項内容版1.2.0、JSON・端末保存への派生状態非保存と読込再計算・失敗保持を回帰し、独立コードレビューは指摘修正後に合格した。人間による差分視認性と凡例理解は未確認であり、実務利用者受入の証拠ではない。
-- 仕様1.6.0 CSV積荷一括置換自動証拠: typecheck、lint、単体32ファイル1,006件、ブラウザ102件、buildに合格。固定template bytes、厳格なUTF-8・CSV・値検証、1 / 30 / 31件、共通新規作成上限、legacy 31〜1,000件互換、決定的ID・既定値、件数付き確認、取消・失敗・stale・busy・no-op保持、原子的置換、一回のUndo/Redo、同一IDを含むscene一時状態reset、派生再導出、305 / 320 / 375 px、focus、WebGL停止を回帰し、独立コードレビューは二つの指摘修正後に合格した。Windows版Excel往復と実務利用者受入の証拠ではない。
-- 2026-09-16の利用者試用では、20件のCSV一括登録と一回のUndoによる元状態復元を確認した。これはWindows版Excelでのtemplate往復、非UTF-8拒否、正式fixtureまたは実務利用者受入の証拠ではない。
+- 仕様1.6.0 CSV積荷一括置換自動証拠: typecheck、lint、単体32ファイル1,006件、ブラウザ102件、buildに合格。固定template bytes、厳格なUTF-8・CSV・値検証、1 / 30 / 31件、共通新規作成上限、legacy 31〜1,000件互換、決定的ID・既定値、件数付き確認、取消・失敗・stale・busy・no-op保持、原子的置換、一回のUndo/Redo、同一IDを含むscene一時状態reset、派生再導出、305 / 320 / 375 px、focus、WebGL停止を回帰し、独立コードレビューは二つの指摘修正後に合格した。
+- 2026-09-16の利用者試用では20件のCSV一括登録と一回のUndoによる元状態復元を確認し、2026-09-17にはテンプレート由来CSVを複数回インポートして現時点で問題がないと確認した。確認対象はテンプレート取得・Excel編集・CSV保存・インポートであり、存在しないCSVエクスポート機能ではない。引用や不正UTF-8等の個別境界は自動証拠で補完し、正式fixtureまたは実務利用者受入の証拠とはしない。
 - 仕様1.10.2の自動証拠: typecheck、lint、単体32ファイル1,017件、ブラウザ106件、build、データ契約、ガバナンス、プロジェクト検査に合格した。コンテナ0件のviewport中央案内、`登録` からの既存dialog表示、busy時無効化、テンプレートインポートだけの理由付き無効化、テンプレートダウンロード・JSON読込互換、コンテナ登録後のCSV既存回帰を確認した。
 - 仕様1.11.0の自動証拠: typecheck、lint、単体32ファイル1,024件、ブラウザ107件、build、データ契約に合格した。移動グループ旧位置の候補除外、床・支持上面の20 / 21 mm側面fit、支持喪失・境界外を許容する1 mm矢印調整、固定積荷との衝突停止、視点軸対応、3回repeatの一回履歴、Escape取消、Undo/Redo、操作方法copyを回帰した。後続の[3D操作の客観検証](evidence/objective-3d-operation-verification-2026-09-17.md)で、3段積層fixtureの実pointer短距離drag、同量移動、Z維持、一回Undoを追加確認した。
 - 仕様1.12.0の自動証拠: typecheck、lint、単体32ファイル1,030件、ブラウザ107件、build、データ契約、ガバナンス、プロジェクト検査に合格した。荷室外Z=0、内壁4面の50 mm境界、51 mm非fit、積荷側面との同距離時の内壁優先、OFF時のX/Y非fitとZ snap継続、`adjust` buttonの既定ON・切替・非履歴、操作方法copy、`information-box-outline` 相当SVGと状態表示を回帰した。後続検証では、単独積荷の実pointer完全drag-outとUndo/Redo、および上段を持つ最下段の実pointer完全drag-out拒否・元配置保持を確認した。
@@ -276,7 +276,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - AC-03: domain、表示、Worker protocolの単体試験と `tests/browser/acceptance.spec.ts` が、床突き抜け、開口、耐荷重の順序とカスケード抑制を実行する。
 - AC-04: `tests/browser/history.spec.ts`、`tests/browser/persistence.spec.ts`、`tests/browser/placement.spec.ts`、`tests/browser/scene.spec.ts` がWebGL利用可能時の履歴、IndexedDB、固定JSON往復を実行し、`tests/browser/capability.spec.ts` が非対応・初期描画失敗・context lossの全面停止と2種類の読み取り専用救出を実行する。
 - AC-06: `src/domain/weight-balance.test.ts` と `src/scene/project-scene.test.ts` が正確な重量moment、全向き、上限・上限外、4状態、scene変換、計算不能回復投影を検証する。`tests/browser/weight-balance.spec.ts` が赤・黄点と凡例、画面投影中心一致・近接・画面外、非操作、camera、drag、履歴、DPR 1/2、読込成功・失敗、統合 `unavailable`、305 / 320 / 375 pxを実行し、既存永続化回帰が派生状態をJSON・端末保存・履歴へ含めない。公開Chromeの匿名合成fixtureでは赤・黄点の分離、凡例、重量と件数をCodexがUI観察したが、人間の視認性・理解度確認は未実施。
-- AC-07: `src/persistence/cargo-csv.test.ts`、`src/persistence/cargo-csv-file.test.ts`、`src/application/cargo-csv-import.test.ts`、`src/application/project-command.test.ts` と `tests/browser/cargo-csv.spec.ts` が、CSV parser/file、共通正規入力、全体置換、履歴、既存保存互換を検証する。全行検証、全空白recordとquoted改行を含む1始まり論理record path、全固定code/path、決定的sort・重複排除・50件上限・入力値非反射、件数確認、取消・失敗保持、成功、Undo/Redo、scene一時状態resetと派生再導出、30件上限、legacy 31〜1,000件、狭幅・focus・WebGL停止を実行する。Windows版Excel往復は別の人間証拠とする。
+- AC-07: `src/persistence/cargo-csv.test.ts`、`src/persistence/cargo-csv-file.test.ts`、`src/application/cargo-csv-import.test.ts`、`src/application/project-command.test.ts` と `tests/browser/cargo-csv.spec.ts` が、CSV parser/file、共通正規入力、全体置換、履歴、既存保存互換を検証する。全行検証、全空白recordとquoted改行を含む1始まり論理record path、全固定code/path、決定的sort・重複排除・50件上限・入力値非反射、件数確認、取消・失敗保持、成功、Undo/Redo、scene一時状態resetと派生再導出、30件上限、legacy 31〜1,000件、狭幅・focus・WebGL停止を実行する。利用者によるテンプレート由来CSVの複数回インポート確認と組み合わせ、Excel互換ゲートを完了する。
 - AC-08: `src/application/project-command.test.ts`、`src/domain/validation.test.ts`、`src/ui/physical-validation-view.test.ts`、`src/workers/physical-validation-worker-protocol.test.ts` と `tests/browser/placement.spec.ts` が、3段再帰移動、回転・支持不可・複数支持の非連動、座標失敗の原子的rollback、配置解除拒否、一回のUndo、専用理由と関連積荷名を含む表示を検証する。`tests/browser/scene.spec.ts` は3段積層fixtureの最下段を実pointerで短距離dragし、旧位置を候補にしないこと、全段同量移動、Z維持、一回Undo、完全drag-out拒否と元配置保持を検証する。
 - AC-09: `src/application/project-command.test.ts`、`src/domain/validation.test.ts` と `tests/browser/input.spec.ts` が、制約値の反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表示一致、一回のUndo、dirty破棄と狭幅を検証する。単一支持と、複数支持で一つだけ上乗せ禁止の両方について、不適合理由が禁止された支持荷だけを示し、後者では複数支持の未確認理由も併記することを検証する。
 - AC-11: `src/scene/project-scene.test.ts` が移動グループ除外、20 / 21 mm境界、床・支持上面fit、支持喪失・境界外、面接触と正体積衝突、screen投影から一軸1 mmへの対応を検証する。`tests/browser/scene.spec.ts` が積層fixtureでの短距離実pointer drag、canvas focus、3回repeatの一回履歴、Escape取消、Undo/Redoを実行し、`tests/browser/persistence.spec.ts` が操作方法copyを検証する。視点変更後の方向が人の直感に合うかは実務利用者評価へ残す。

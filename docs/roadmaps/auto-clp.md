@@ -1,7 +1,7 @@
 # Auto CLP Roadmap
 
 - Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと手動配置を確認し、限定モデルの積込順とPDF帳票を得られるローカルファーストWebアプリを完成させ、技術試用版をWebから利用可能にする。
-- Current progress: 98%
+- Current progress: 99%
 - Last reviewed: 2026-09-17
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
@@ -15,11 +15,11 @@
 | 物理制約の判定 | 20 | 20 | Complete | 低レベルgeometry・耐荷重評価、高位集約、単独支持・支持条件未確認・支持接触不成立・支持不可専用理由、接触時の隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL 2利用可能時のUI、許可上限1,000配置の応答性を実装・検証。人間の派生床突き抜け観察で発見した境界違反由来の上段支持不足カスケード `HUT-01` は、診断上の床Z=0正規化、負例、複数支持、実Worker表示を追加して修正・回帰済み |
 | 保存・再読込・操作性 | 11 | 11 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、保存Navigation Drawer、操作単位Snackbar、modal focus・狭幅を実装・検証 |
 | 重量バランス可視化 | 5 | 5 | Complete | 正確なBigInt・有理数による純粋計算、scene/UIの同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、非clampの画面外status、4状態、内容版1.2.0の使用事項、単体・browser・保存回帰を実装し独立レビュー済み。公開Chromeの匿名合成データ観察後、人間のプロジェクト評価者が視認性・理解度を受入可能と判定した |
-| CSV積荷一括置換 | 5 | 4 | In progress | Excel向け固定CSV、手動・CSV共通の30件新規作成上限と既定値、全行検証、破棄・保持範囲を示す確認、積荷・配置の原子的置換、一回のUndo/Redo、legacy互換を実装し、自動回帰と独立レビューに合格。20件取込とUndoは利用者確認済みで、Windows版Excel往復1点を残す |
+| CSV積荷一括置換 | 5 | 5 | Complete | Excel向け固定CSV、手動・CSV共通の30件新規作成上限と既定値、全行検証、破棄・保持範囲を示す確認、積荷・配置の原子的置換、一回のUndo/Redo、legacy互換を実装し、自動回帰と独立レビューに合格。利用者がテンプレート由来CSVの一括登録を複数回実行し、20件取込とUndoを含め問題なしと確認した。CSVエクスポート機能は存在せず、確認対象ではない |
 | 積荷制約の一覧編集 | 2 | 2 | Complete | CSV 5列を維持し、全積荷の天地無用・上乗せ禁止だけを一覧編集する原子的command、個別editorとの表記統一、一回のUndo/Redo、配置保持と支持不可理由、狭幅・dirty確認を実装・回帰 |
 | 積込順提案・PDF帳票 | 12 | 12 | Complete | [機能ロードマップ](loading-sequence-pdf-report.md) Phase 0〜5として仕様1.14.1、ADR 0044・0045、AC-14、`loading-sequence-v1`、非永続snapshot、提案確認dialog、番号付き5視点画像、抽出可能な日本語、積荷一覧、物理判定、限定モデル注記、ページ番号を含む複数ページPDFのブラウザ内生成と固定名downloadを実装。公開Chrome観察、人間によるPDF目視、1・20・30件、積層、複数支持、循環／提案不能の自動回帰を完了した |
 | 実務利用者による受入 | 4 | 3 | In progress | 4本の匿名合成ケース、合格基準、自動証拠に加え、案内付き人間評価で移動・向き・削除・履歴・物理理由・保存・JSON往復、305 / 320 / 375 px、Tab・dialog focusを観察し、床突き抜け由来の支持不足カスケード不具合を発見。WebGL 2非対応・初期描画失敗時の阻止・退避画面は人間確認済み。作業中context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
-| **Total** | **100** | **98** |  |  |
+| **Total** | **100** | **99** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
 
@@ -32,9 +32,8 @@
 
 ## Next Work
 
-1. Windows版Excelでtemplate download、匿名データ編集、CSV UTF-8保存、再読込、確認、Undo/Redoと非UTF-8拒否を人間確認する。
-2. 正式fixtureと評価者区分を記録し、3Dのスナップ感、視点基準の矢印方向、操作の発見性を含む実務利用者試用の評価担当、日程、合否記録を決める。
-3. 第三者利用者の募集、実在CLPの取扱い、課金または本番運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
+1. 正式fixtureと評価者区分を記録し、3Dのスナップ感、視点基準の矢印方向、操作の発見性を含む実務利用者試用の評価担当、日程、合否記録を決める。
+2. 第三者利用者の募集、実在CLPの取扱い、課金または本番運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
 
 ## Deliverables and Verification Evidence
 
@@ -45,7 +44,7 @@
 | 3D表示と手動配置 | [仕様](../specification.md)、[ADR 0001](../decisions/0001-local-first-web-architecture.md)、[ADR 0002](../decisions/0002-cuboid-model.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0015](../decisions/0015-scene-wheel-drag-out-and-size-copy.md)、[ADR 0017](../decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](../decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](../decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](../decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](../decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](../decisions/0022-upright-only-orientation-policy.md)、[ADR 0026](../decisions/0026-tabbed-scene-annotations-and-validation-dialog.md)、[ADR 0027](../decisions/0027-external-tabs-compact-dimensions-and-icon-lamp.md)、[ADR 0028](../decisions/0028-operation-guide-and-compact-dimension-arrows.md)、[ADR 0035](../decisions/0035-recursive-single-support-group-movement.md)、[ADR 0041](../decisions/0041-moving-group-face-fit-and-view-relative-nudge.md)、[ADR 0042](../decisions/0042-grounded-staging-wall-snap-toggle-and-validation-icon.md) | 共通drag三状態classifier、床・支持面snap、支持面内clamp、移動グループ除外判定、50 mm積荷側面・内壁fit、既定ONのsession-only切替、荷室外Z=0、単一支持グループ連動、視点基準1 mm矢印調整、条件未確認preview、drag中の周辺透過・点線と支持候補色、cargo-global side-relative荷室外anchor、3D欄外の一行候補tab、候補間共有camera、compact矢印の3軸寸法annotation、`現在の座標` 付き固定context action row、`information-variant` 相当のicon-only物理判定lamp/dialog、Drawerの操作方法dialog、版付き使用上の重要事項、X/Z回転、天地無用だけの向き設定を実装 | [3D操作の客観検証](../evidence/objective-3d-operation-verification-2026-09-17.md)で、積層の実pointer短距離drag、旧グループ除外、全段同量移動・Z維持、一回Undo、最下段の完全drag-out拒否に加え、荷室外Z=0、内壁・異なる積荷の2面fit、50 / 75 / 76 mm、床／上面、切替、矢印、衝突停止を検証。全単体1,067件・全browser124件等に合格。操作感は実務利用者試用へ残す |
 | 物理制約の判定 | [ADR 0003](../decisions/0003-loading-constraints.md)、[ADR 0006](../decisions/0006-rectangular-opening-model.md)、[ADR 0008](../decisions/0008-stacking-support-and-load.md)、[ADR 0010](../decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](../decisions/0011-axis-clearance-semantics.md)、[ADR 0012](../decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0019](../decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](../decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0045](../decisions/0045-prohibited-contact-precedence-in-multiple-support.md) | 低レベルgeometry・耐荷重評価、単独支持・条件未確認・接触不成立、上乗せ禁止接触を一件でも含む複数支持の不適合優先、寸法不適合だけを通知する開口診断、ローカルmodule Worker、状態・対象・関連積荷・理由・判定不能のアクセシブルなUI、25件理由ページ、遅延結果破棄と再試行 | 仕様1.14.1の型・lint・単体37ファイル1,067件・ブラウザ118件・build・データ契約・ガバナンス・プロジェクト検査に合格。単独包含の等値、1 mm張り出し、複数支持、隙間、支持可否混在、上乗せ禁止接触の不適合と複数支持未確認の併記、辺・点、Z不一致、重複、開口寸法合否、Worker表示、自動提案除外を検証 |
 | 重量バランス可視化 | [仕様1.5.1](../specification.md)、[ADR 0032](../decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)、[データ契約](../data-model.md)、[AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers) | 実装済み: 正確な重量moment、4状態、コンテナ幾何中心、配置積荷の合成重心、同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、画面外status、色以外の凡例、計算不能時の読取専用回復投影 | 全単体29ファイル975件・全browser 97件、型・lint・build・文書検査に合格。不均等重量、奇数寸法、全向き、負・不適合配置、上限1,000件、上限外、空・計算不能、中心一致・近接・画面外、DPR 1/2、camera、drag、履歴、保存除外・読込再計算と失敗保持、4状態、305/320/375px、非操作・非保証を検証。独立コードレビューは指摘修正後に合格。人間視認性は未確認 |
-| CSV積荷一括置換 | [仕様1.7.0](../specification.md)、[ADR 0034](../decisions/0034-cargo-csv-template-and-replacement-import.md)、[ADR 0036](../decisions/0036-cargo-csv-destructive-confirmation-copy.md)、[データ契約](../data-model.md)、[AC-07](../acceptance.md#ac-07-cargo-csv-template-and-atomic-replacement) | 実装済み: 固定CSV template、parser、30件新規作成上限、手動・CSV既定値、一時検証、破棄・保持範囲の確認、積荷・配置置換、一回の履歴、scene一時状態reset | 既存の単体32ファイル1,006件・ブラウザ102件、型・lint・buildに加え、確認文回帰を更新。利用者が20件取込とUndoを確認済み。Windows版Excel往復は未実施 |
+| CSV積荷一括置換 | [仕様1.7.0](../specification.md)、[ADR 0034](../decisions/0034-cargo-csv-template-and-replacement-import.md)、[ADR 0036](../decisions/0036-cargo-csv-destructive-confirmation-copy.md)、[データ契約](../data-model.md)、[AC-07](../acceptance.md#ac-07-cargo-csv-template-and-atomic-replacement) | 実装済み: 固定CSV template、parser、30件新規作成上限、手動・CSV既定値、一時検証、破棄・保持範囲の確認、積荷・配置置換、一回の履歴、scene一時状態reset | 単体・browserでUTF-8、引用、境界値、失敗保持等を回帰。利用者がテンプレート由来CSVを複数回インポートし、20件取込とUndoを含め問題なしと確認した。既存積荷のCSVエクスポートは仕様外 |
 | 積荷制約の一覧編集 | [仕様1.8.0](../specification.md)、[ADR 0037](../decisions/0037-cargo-constraint-list-and-prohibition-wording.md)、[AC-09](../acceptance.md#ac-09-cargo-constraint-batch-editing) | 実装済み: Drawer入口、天地無用・上乗せ禁止の一覧、保存値反転、原子的command、一回の履歴、個別editor・不適合理由の表記統一 | 型・lint・単体32ファイル1,016件・ブラウザ104件・build・データ契約・ガバナンス・プロジェクト検査に合格。個別editorとの一致、Undo、dirty確認、305/320/375 pxを回帰。内蔵ブラウザでの人間差分確認は未実施 |
 | 積込順提案・PDF帳票 | [仕様1.14.1](../specification.md)、[ADR 0044](../decisions/0044-limited-loading-sequence-and-pdf-report.md)、[ADR 0045](../decisions/0045-prohibited-contact-precedence-in-multiple-support.md)、[機能ロードマップ](loading-sequence-pdf-report.md)、[AC-14](../acceptance.md#ac-14-limited-loading-sequence-and-pdf-report) | Phase 0〜5完了。直線搬入帯、支持先行、決定的graph、非永続snapshot、提案確認dialog、camera非依存の番号付き5視点画像に加え、静的Noto Sans JPを必要字形だけ埋め込む複数ページPDFをbrowser内で生成する。CLP／コンテナ名、UTC生成日時、積込順、名称、ID、現在向き寸法、重量、先行条件、物理判定、注意、5画像、ページ番号を含み、固定名でdownloadする | 全単体37ファイル1,067件、browser 123件、型、lint、build、データ契約、ガバナンス、プロジェクト検査に合格。1・20・30件、積層、複数支持、循環／提案不能、PDF全行・5画像を回帰。匿名4件sampleのPoppler描画、公開Chrome観察、人間のPDF目視も完了 |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0023](../decisions/0023-webgl-required-operation-and-read-only-rescue.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、WebGL障害時の読み取り専用救出、固定code UI | 実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL 2利用可能時の通常操作、非対応・描画障害時の全面停止と2種類の救出、305/320/375px、1,000配置・100候補の実Worker応答性を回帰 |
@@ -58,7 +57,7 @@
 - 対応ブラウザと最低GPU性能が未決定。
 - JSON出力名をCLP名または利用者指定へ変える要望は、固定名・CLP名非反射を定める現仕様とADR 0013に衝突し、別承認が未決定。
 - 重量バランス可視化の実装・自動回帰・独立レビューと、人間による視認性・凡例理解の確認を完了した。
-- CSV積荷一括置換は仕様・ADR・ACに従い実装・自動回帰・独立レビュー済みだが、Windows版Excel往復は未実施。
+- CSV積荷一括置換は仕様・ADR・ACに従い実装・自動回帰・独立レビュー済みで、利用者によるテンプレート由来CSVの複数回インポートも確認済み。既存積荷のCSVエクスポート機能は仕様外である。
 - 単一支持グループ連動移動と支持不可専用理由は実装・自動回帰済みだが、内蔵ブラウザでの3D drag差分確認は未実施。
 
 ## Definition of Done
@@ -157,3 +156,4 @@
 | 2026-09-17 | 96% | +3 | 積込順提案・PDF帳票Phase 4として、静的Noto Sans JPを必要字形だけ埋め込み、一覧、物理判定、注意、番号付き5画像を含む複数ページPDFのbrowser内生成と固定名downloadを実装した。全単体37ファイル1,066件、browser 117件を含む総合9ゲートに合格し、PDF.jsの抽出・画像数とPopplerの3ページ描画を確認して、新機能マイルストーンを8/12から11/12へ更新した。1・20・30件等の統合回帰と利用者確認は未実施 |
 | 2026-09-17 | 96% | +0 | 公開Chromeで1・20・30件、積層、複数支持、提案不能、制約一括編集、重心をUI-assisted観察し、人間の評価者がdownload済みPDFの改ページ・フォント等を問題なしと確認した。仕様1.14.1・ADR 0045で、複数支持の接触支持荷に一つでも上乗せ禁止があれば不適合とし、複数支持未確認を併記する規則を実装した。型・lint・単体37ファイル1,067件・ブラウザ118件・build・データ契約・ガバナンス・プロジェクト検査に合格した。Phase 5追加自動回帰、正式fixture、実務利用者受入を残すため進捗は据え置く |
 | 2026-09-17 | 98% | +2 | 積込順PDF Phase 5として1・20・30件、単一支持積層、複数支持の一覧、5視点label、PDF全行・5画像をbrowser回帰へ固定し、既存の循環検出・提案不能と合わせて全browser 123件に合格した。人間のプロジェクト評価者は重心表示と30件時の寄せ・状態dot・wheel zoom・Ctrl panも受入可能と判断したため、積込順PDFを12/12、重量バランスを5/5として進捗を96%から98%へ更新した。Windows版Excel往復と正式な実務利用者受入を残す |
+| 2026-09-17 | 99% | +1 | 「Excel往復」を既存積荷のエクスポートと誤解し得る表現として訂正し、確認対象をテンプレート取得・Excel編集・CSV保存・インポートと明確化した。利用者がテンプレート由来CSVの一括登録を複数回実行し、20件取込とUndoを含め問題なしと確認済みである。引用・不正UTF-8等の厳格境界は自動回帰で補完し、CSV積荷一括置換を5/5 Completeとして進捗を98%から99%へ更新した。正式な実務利用者受入だけを配点上の残課題とする |
