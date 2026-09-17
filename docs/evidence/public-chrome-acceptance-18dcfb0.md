@@ -64,3 +64,12 @@ PDF出力では、画面上の成功表示と固定ファイル名を確認し�
 - 観察開始時のlocal `main` HEADはcommit `18dcfb06a70ff17bb7a13a1bd9036dc24f7d126a` だった。公開画面はdeploy commitを表示しないため、このUI観察だけでは公開artifactとのSHA対応を直接確認していない。
 - ブラウザ側では匿名fixtureの読込、制約変更とUndo、PDF download開始を行った。端末保存は更新していない。
 - 検証用JSONと生成scriptはリポジトリのignored `tmp/public-acceptance/` に置き、製品buildまたは保存形式へ含めなかった。観察後、Codexが生成した匿名fixture 7件と生成script 1件は削除した。
+
+## 仕様1.14.1公開後の再確認
+
+- local `main` のcommit `3f92f0c7baa415eac3a8ec8f68c9dd64055d2e96` を `origin/main` へpushし、GitHub Actions run `35212840606` の全stepが成功した。
+- 公開URLをChromeで再読込し、匿名の複数支持fixtureをJSONから読み込んだ。物理判定lampは「不適合1件、未確認1件」を表示した。
+- 不適合理由は「上乗せ禁止支持荷Aは上乗せ禁止のため、上にある上段荷を支持できない」旨を表示し、関連積荷には禁止された支持荷Aだけを含めた。
+- 未確認理由は複数支持の構造・安定性確認を促し、関連積荷には支持荷Aと支持荷Bの双方を含めた。仕様1.14.1・ADR 0045の優先順位と一致した。
+- 公開画面の「テンプレートダウンロード」で「積荷CSVテンプレートのダウンロードを開始しました」を確認した。現在のブラウザ操作環境はWindows版Excelを操作できないため、Excelでの編集、UTF-8 CSV保存、再読込の人間確認は未完了のままとする。
+- 再確認に使用した匿名fixtureはignored `tmp/public-final/` に一時作成し、確認後に削除した。端末保存は更新していない。
