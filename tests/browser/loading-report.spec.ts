@@ -4,14 +4,133 @@ import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { expect, test, type Page } from "./fixtures";
 import { activateContainer, openPersistenceDrawer } from "./ui-helpers";
 
-function cargo(id: string, name: string) {
+function cargo(
+  id: string,
+  name: string,
+  options: {
+    dimensionsMm?: { lengthMm: number; widthMm: number; heightMm: number };
+    massGrams?: number;
+    canSupportCargo?: boolean;
+  } = {},
+) {
   return {
     id,
     name,
-    dimensionsMm: { lengthMm: 200, widthMm: 100, heightMm: 50 },
-    massGrams: 1_250,
-    canSupportCargo: true,
+    dimensionsMm: options.dimensionsMm ?? {
+      lengthMm: 200,
+      widthMm: 100,
+      heightMm: 50,
+    },
+    massGrams: options.massGrams ?? 1_250,
+    canSupportCargo: options.canSupportCargo ?? true,
     allowedOrientations: ["LWH", "WLH", "LHW", "HLW", "WHL", "HWL"],
+  };
+}
+
+function phase5CountProject(count: 1 | 20 | 30) {
+  const cargoes = Array.from({ length: count }, (_, index) =>
+    cargo(
+      `cargo-${String(index + 1).padStart(2, "0")}`,
+      `匿名積荷${String(index + 1).padStart(2, "0")}`,
+    ),
+  );
+  return {
+    schemaVersion: "0.1.0",
+    projectId: `phase5-count-${count}`,
+    name: `Phase 5 匿名${count}件CLP`,
+    clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
+    cargoes,
+    containers: [
+      {
+        id: "container-main",
+        name: `Phase 5 ${count}件コンテナ`,
+        internalDimensionsMm: {
+          lengthMm: 2_000,
+          widthMm: 1_000,
+          heightMm: 1_000,
+        },
+        openingMm: { widthMm: 1_000, heightMm: 1_000 },
+        payloadCapacityGrams: 100_000,
+      },
+    ],
+    placements: cargoes.map((item, index) => ({
+      cargoId: item.id,
+      containerId: "container-main",
+      positionMm: {
+        xMm: (index % 5) * 250,
+        yMm: Math.floor(index / 5) * 150,
+        zMm: 0,
+      },
+      orientation: "LWH",
+    })),
+  };
+}
+
+function phase5SupportProject(multiple: boolean) {
+  const supportDimensions = multiple
+    ? { lengthMm: 100, widthMm: 100, heightMm: 50 }
+    : { lengthMm: 200, widthMm: 100, heightMm: 50 };
+  const cargoes = multiple
+    ? [
+        cargo("support-left", "左支持荷", { dimensionsMm: supportDimensions }),
+        cargo("support-right", "右支持荷", { dimensionsMm: supportDimensions }),
+        cargo("upper", "上段荷"),
+      ]
+    : [cargo("support", "下段荷"), cargo("upper", "上段荷")];
+  return {
+    schemaVersion: "0.1.0",
+    projectId: multiple ? "phase5-multiple-support" : "phase5-single-support",
+    name: multiple ? "Phase 5 複数支持CLP" : "Phase 5 積層CLP",
+    clearancesMm: { xMm: 0, yMm: 0, zMm: 0 },
+    cargoes,
+    containers: [
+      {
+        id: "container-main",
+        name: "Phase 5 支持コンテナ",
+        internalDimensionsMm: {
+          lengthMm: 1_000,
+          widthMm: 1_000,
+          heightMm: 1_000,
+        },
+        openingMm: { widthMm: 1_000, heightMm: 1_000 },
+        payloadCapacityGrams: 100_000,
+      },
+    ],
+    placements: multiple
+      ? [
+          {
+            cargoId: "support-left",
+            containerId: "container-main",
+            positionMm: { xMm: 300, yMm: 0, zMm: 0 },
+            orientation: "LWH",
+          },
+          {
+            cargoId: "support-right",
+            containerId: "container-main",
+            positionMm: { xMm: 400, yMm: 0, zMm: 0 },
+            orientation: "LWH",
+          },
+          {
+            cargoId: "upper",
+            containerId: "container-main",
+            positionMm: { xMm: 300, yMm: 0, zMm: 50 },
+            orientation: "LWH",
+          },
+        ]
+      : [
+          {
+            cargoId: "support",
+            containerId: "container-main",
+            positionMm: { xMm: 300, yMm: 0, zMm: 0 },
+            orientation: "LWH",
+          },
+          {
+            cargoId: "upper",
+            containerId: "container-main",
+            positionMm: { xMm: 300, yMm: 0, zMm: 50 },
+            orientation: "LWH",
+          },
+        ],
   };
 }
 
@@ -92,6 +211,104 @@ async function downloadBytes(download: Download): Promise<Buffer> {
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   return Buffer.concat(chunks);
 }
+
+async function generatePhase5Report(
+  page: Page,
+  project: ReturnType<typeof phase5CountProject> | ReturnType<typeof phase5SupportProject>,
+  expectedCargoCount: number,
+) {
+  await page.goto("/");
+  await importProject(page, project);
+  const { dialog } = await openReport(page);
+  await expect(dialog.locator(".loading-report__sequence > ol > li")).toHaveCount(
+    expectedCargoCount,
+  );
+  await dialog.getByRole("button", { name: "5視点画像を生成" }).click();
+  const figures = dialog.locator(".loading-report__image-grid figure");
+  await expect(figures).toHaveCount(5);
+  for (const figure of await figures.all()) {
+    await expect(figure).toHaveAttribute(
+      "data-label-count",
+      String(expectedCargoCount),
+    );
+  }
+
+  const downloadPromise = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "PDFを出力" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("auto-clp-loading-report.pdf");
+  const bytes = await downloadBytes(download);
+  expect(bytes.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+
+  const loadingTask = getDocument({ data: new Uint8Array(bytes) });
+  const pdf = await loadingTask.promise;
+  const textParts: string[] = [];
+  let imagePaintCount = 0;
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const pdfPage = await pdf.getPage(pageNumber);
+    const text = await pdfPage.getTextContent();
+    textParts.push(
+      text.items.map((item) => ("str" in item ? item.str : "")).join(""),
+    );
+    const operators = await pdfPage.getOperatorList();
+    imagePaintCount += operators.fnArray.filter(
+      (operation) =>
+        operation === OPS.paintImageXObject ||
+        operation === OPS.paintImageMaskXObject,
+    ).length;
+  }
+  const extractedText = textParts.join("").replace(/\s+/g, "");
+  expect(imagePaintCount).toBe(5);
+  await loadingTask.destroy();
+  return { dialog, extractedText };
+}
+
+for (const count of [1, 20, 30] as const) {
+  test(`exports the Phase 5 ${count}-cargo report with every row and numbered view`, async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const project = phase5CountProject(count);
+    const { extractedText } = await generatePhase5Report(page, project, count);
+    expect(extractedText).toContain(`Phase5匿名${count}件CLP`);
+    expect(extractedText).toContain("匿名積荷01");
+    expect(extractedText).toContain(
+      `匿名積荷${String(count).padStart(2, "0")}`,
+    );
+  });
+}
+
+test("exports the Phase 5 single-support stack in support-first order", async ({ page }) => {
+  test.setTimeout(120_000);
+  const { dialog, extractedText } = await generatePhase5Report(
+    page,
+    phase5SupportProject(false),
+    2,
+  );
+  const rows = dialog.locator(".loading-report__sequence > ol > li");
+  await expect(rows.nth(0)).toContainText("下段荷");
+  await expect(rows.nth(1)).toContainText("上段荷");
+  expect(extractedText).toContain("下段荷");
+  expect(extractedText).toContain("上段荷");
+});
+
+test("exports the Phase 5 multiple-support report with its unverified warning", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const { dialog, extractedText } = await generatePhase5Report(
+    page,
+    phase5SupportProject(true),
+    3,
+  );
+  const rows = dialog.locator(".loading-report__sequence > ol > li");
+  await expect(rows.nth(2)).toContainText("上段荷");
+  await expect(dialog).toContainText("未確認事項");
+  await expect(dialog).toContainText("複数の接触支持物");
+  expect(extractedText).toContain("左支持荷");
+  expect(extractedText).toContain("右支持荷");
+  expect(extractedText).toContain("上段荷");
+});
 
 test("shows the selected container sequence, reasons, notes, and restores focus", async ({ page }) => {
   await page.goto("/");

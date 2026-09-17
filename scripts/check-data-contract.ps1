@@ -656,7 +656,10 @@ foreach ($requiredText in @(
     'generates five numbered views and keeps fixed views independent from the current camera',
     'rejects an incomplete image set after canvas export failure and allows retry',
     'downloads a multi-page Japanese PDF with the complete cargo list and five images',
-    'does not download an incomplete PDF after a font load failure and allows retry'
+    'does not download an incomplete PDF after a font load failure and allows retry',
+    'exports the Phase 5 ${count}-cargo report with every row and numbered view',
+    'exports the Phase 5 single-support stack in support-first order',
+    'exports the Phase 5 multiple-support report with its unverified warning'
 )) {
     if (-not $loadingReportBrowserTest.Contains($requiredText)) {
         throw "Loading-report browser tests do not contain the approved Phase 2 regression: $requiredText"
