@@ -185,6 +185,8 @@ interface CargoVisual {
   >;
 }
 
+type ContainerWall = Extract<FaceSnap, { readonly kind: "container-wall" }>["wall"];
+
 interface CargoPointerGesture {
   readonly cargoId: string;
   readonly mesh: THREE.Mesh;
@@ -294,6 +296,7 @@ function addProjection(
   projection: ProjectSceneProjection,
   geometries: THREE.BufferGeometry[],
   materials: THREE.Material[],
+  wallHighlights: Map<ContainerWall, THREE.LineSegments>,
 ): Map<string, CargoVisual> {
   const cargoVisuals = new Map<string, CargoVisual>();
   const containerBox = new THREE.BoxGeometry(
@@ -308,6 +311,70 @@ function addProjection(
   scene.add(containerLines);
   geometries.push(containerBox, containerEdges);
   materials.push(containerMaterial);
+
+  const halfLength = projection.container.dimensions.x / 2;
+  const containerHalfHeight = projection.container.dimensions.y / 2;
+  const halfDepth = projection.container.dimensions.z / 2;
+  const wallDefinitions: readonly {
+    readonly wall: ContainerWall;
+    readonly points: readonly THREE.Vector3[];
+  }[] = [
+    {
+      wall: "x-min",
+      points: [
+        new THREE.Vector3(-halfLength, -containerHalfHeight, -halfDepth),
+        new THREE.Vector3(-halfLength, containerHalfHeight, -halfDepth),
+        new THREE.Vector3(-halfLength, containerHalfHeight, halfDepth),
+        new THREE.Vector3(-halfLength, -containerHalfHeight, halfDepth),
+      ],
+    },
+    {
+      wall: "x-max",
+      points: [
+        new THREE.Vector3(halfLength, -containerHalfHeight, -halfDepth),
+        new THREE.Vector3(halfLength, containerHalfHeight, -halfDepth),
+        new THREE.Vector3(halfLength, containerHalfHeight, halfDepth),
+        new THREE.Vector3(halfLength, -containerHalfHeight, halfDepth),
+      ],
+    },
+    {
+      wall: "y-min",
+      points: [
+        new THREE.Vector3(-halfLength, -containerHalfHeight, halfDepth),
+        new THREE.Vector3(-halfLength, containerHalfHeight, halfDepth),
+        new THREE.Vector3(halfLength, containerHalfHeight, halfDepth),
+        new THREE.Vector3(halfLength, -containerHalfHeight, halfDepth),
+      ],
+    },
+    {
+      wall: "y-max",
+      points: [
+        new THREE.Vector3(-halfLength, -containerHalfHeight, -halfDepth),
+        new THREE.Vector3(-halfLength, containerHalfHeight, -halfDepth),
+        new THREE.Vector3(halfLength, containerHalfHeight, -halfDepth),
+        new THREE.Vector3(halfLength, -containerHalfHeight, -halfDepth),
+      ],
+    },
+  ];
+  for (const definition of wallDefinitions) {
+    const [first, second, third, fourth] = definition.points;
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      first!, second!, second!, third!, third!, fourth!, fourth!, first!,
+    ]);
+    const material = new THREE.LineBasicMaterial({
+      color: 0x72eadc,
+      depthTest: false,
+      transparent: true,
+    });
+    const highlight = new THREE.LineSegments(geometry, material);
+    highlight.position.copy(containerLines.position);
+    highlight.renderOrder = 4;
+    highlight.visible = false;
+    scene.add(highlight);
+    geometries.push(geometry);
+    materials.push(material);
+    wallHighlights.set(definition.wall, highlight);
+  }
 
   const opening = projection.container.opening;
   const halfWidth = opening.width / 2;
@@ -540,10 +607,11 @@ export function ThreeViewport({
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
     const raycaster = new THREE.Raycaster();
     const pointerNdc = new THREE.Vector2();
+    const wallHighlights = new Map<ContainerWall, THREE.LineSegments>();
     const cargoVisuals =
       projection === null
         ? new Map<string, CargoVisual>()
-        : addProjection(scene, projection, geometries, materials);
+        : addProjection(scene, projection, geometries, materials, wallHighlights);
     scene.add(new THREE.HemisphereLight(0xc8f8ff, 0x1d2b44, 2.2));
 
     let reportRendererError: () => void = () => undefined;
@@ -887,6 +955,7 @@ export function ThreeViewport({
     };
 
     const applySelectionVisuals = (cargoId?: string): void => {
+      for (const highlight of wallHighlights.values()) highlight.visible = false;
       for (const [candidateId, visual] of cargoVisuals) {
         const selected = candidateId === cargoId;
         const staged = visual.kind === "staged";
@@ -921,6 +990,7 @@ export function ThreeViewport({
       followerCargoIds: readonly string[],
       supporterIds: readonly string[],
       supporterColor: number,
+      faceSnaps: readonly FaceSnap[],
     ): void => {
       const movingCargoIds = new Set([draggedCargoId, ...followerCargoIds]);
       for (const [candidateId, visual] of cargoVisuals) {
@@ -938,6 +1008,17 @@ export function ThreeViewport({
         if (supporter === undefined || supporterId === draggedCargoId) continue;
         supporter.focusOutline.visible = true;
         supporter.focusOutline.material.color.setHex(supporterColor);
+      }
+      for (const faceSnap of faceSnaps) {
+        if (faceSnap.kind === "container-wall") {
+          const highlight = wallHighlights.get(faceSnap.wall);
+          if (highlight !== undefined) highlight.visible = true;
+          continue;
+        }
+        const target = cargoVisuals.get(faceSnap.cargoId);
+        if (target === undefined || movingCargoIds.has(faceSnap.cargoId)) continue;
+        target.focusOutline.visible = true;
+        target.focusOutline.material.color.setHex(0x72eadc);
       }
     };
     const updateSelection = (cargoId?: string): boolean => {
@@ -1190,6 +1271,7 @@ export function ThreeViewport({
         preview.followerCargoIds,
         preview.supporterIds,
         preview.state === "single-support" ? 0x55d68b : 0xedb852,
+        preview.faceSnaps,
       );
       gesture.mesh.position.copy(gesture.startMeshPosition);
       gesture.mesh.position.x += preview.sceneDelta.x;
