@@ -162,6 +162,7 @@ CSV issueの正規形は次のとおりとする。
 | `domain/geometry` | 実装済み: 向き適用、最小角からの配置範囲、コンテナ内部への包含、XY矩形の正面積重なり、正体積AABB重なり、隙間込みコンテナ境界、非支持ペアの軸別隙間、矩形開口寸法と許可向き抽出、単独支持・条件未確認・接触不成立の幾何区分。旧XY矩形和集合100%被覆helperは回帰用に保持 | UI、描画、永続化 |
 | `domain/validation` | 実装済み: ID・参照・許可向き・開口関係・安全整数合計、計算可否を区別する総質量・耐荷重評価、対象コンテナへの配置抽出、境界、隙間、開口、支持、耐荷重の独立理由と集約状態、計算不能結果 | React、Three.js、I/O |
 | `domain/weight-balance` | 実装済み: 選択中コンテナの幾何中心、配置済み積荷の重量付き合成重心、空・計算不能を区別するBigInt・有理数による決定的な純粋計算 | React、Three.js、I/O、物理合否、永続化、表示丸め |
+| `domain/loading-sequence` | 実装済み: 選択中コンテナの現在配置から、最終Y/Zでの直線搬入帯による遮蔽と接触支持物の先行関係を合成し、決定的トポロジカルソートまたは固定提案不能理由を返す `loading-sequence-v1` | React、Three.js、I/O、搬送機器・作業空間・旋回の評価、Project・履歴・保存の変更 |
 | `domain/automatic-proposal` | 実装済み: Schema・意味検証済みProjectだけを受ける、一候補完全案の決定的DFS、目的関数順位、向き重複排除、最大2,048点の遅延列挙、候補10,000・要求1,000,000 attempt境界、cutoff/no-complete-plan、未確認理由付き完全案。現在配置を入力anchorにせず変更もしない | Schema検証、Worker、取消、stale、UI、Projectへの適用、外部通信 |
 | `application/project-import`、`application/project-command`、`application/automatic-proposal-apply` | 実装済み: 検証と派生計算が成功した場合だけ新状態を返す読込境界、入力draftから検証済み候補・配置だけを原子的に反映する不変コマンド、自動提案をSchema・意味・正本物理判定で再検証して配置だけを深いcopyで一括置換する適用境界 | DOM、Three.jsオブジェクトの所有、探索の再実装 |
 | `domain/input`、`persistence/cargo-csv`、`persistence/cargo-csv-file`、`application/cargo-csv-import` | 実装済み: 手動・CSV共通の正規入力と30件上限、UTF-8 CSVと固定template bytes、全recordの一時解析・正規化、決定的ID・既定値、置換後Project検証、破棄・保持範囲の確認後の一回の積荷・配置置換 | JSON互換境界の変更、部分適用、式評価、DOM、Three.js、外部通信 |
@@ -194,6 +195,7 @@ CSV issueの正規形は次のとおりとする。
 - `safeIntegerSum(values)` — 実装済み。各値と加算結果が安全な整数であることを確認する。
 - `evaluatePayloadCapacity(massesGrams, payloadCapacityGrams)` — 実装済み。非負safe integerの質量だけをoverflowなく合計し、計算可能なら総質量と耐荷重以内かを返す。等値は合格、超過は不合格とし、CLP内の配置・参照選択と理由は扱わない。
 - `calculateCargoCenterOfGravity(project, containerId)` — 実装済み。選択中コンテナの保存済み配置だけを参照解決し、各積荷の向き適用後中心と `massGrams` から倍座標の重量momentを正確に集計する。コンテナ幾何中心、積荷合成重心、配置0件、計算不能を区別し、入力を変更せず、物理合否または許容範囲を返さない。
+- `proposeLoadingSequence(project, containerId)` — 実装済み。現在向きAABB、開口面0から最終最大Xまでの直線搬入帯、正面積の接触支持物を使い、`access`・`support` 先行関係、決定的積込順、支持条件未確認、または参照・幾何・正体積重複・支持接触不明・循環の固定理由を返す。配置操作履歴、物理適合の保証、搬送機器または完全な経路は扱わない。
 - `compactSceneStagingOverrides(project, containerId, overrides)` — 実装済み。全未配置積荷の現在session向きを保持し、選択中コンテナの負X側へ重ならない決定的gridのside-relative anchorを新しく返す。Project、入力override、配置、履歴を変更しない。
 - `isRectangleFullyCoveredByUnion(target, coveringRectangles)` — 実装済み。safe integerの正面積XY矩形だけを受け、対象外をclipした支持矩形の和集合が対象矩形を100%覆うかを整数端点の走査で決定的に判定する。Z接触、段積み可否、対象ID、理由、隙間例外は扱わない。
 - `hasFullGeometricSupport(target, candidates)` — 旧和集合100%被覆の低レベル回帰用helperとして実装を保持するが、仕様1.0.1でも現行支持区分には使用しない。
@@ -211,5 +213,6 @@ CSV issueの正規形は次のとおりとする。
 - CSVのBOM・改行・quoted field・固定見出し・UTF-8・サイズ・1/30/31件、値域、決定的ID、既定値、全体rollback、確認、Undo/Redo、旧31〜1,000件互換を単体・ブラウザ回帰で検証する。Windows版Excelとの往復は別の人間確認として残す。
 - JSON書出しと再読込で正規データが一致し、派生状態を保存しないことを確認する。
 - 合成重心は単一・不均等重量、奇数寸法、全6向き、負座標、最大値、入力順、空、参照不整合で決定的かつ非変異に計算し、赤・黄ドットと凡例は非操作、色以外の同値、狭幅、camera、コンテナ切替、Undo/Redo、保存・読込後の再計算を満たす。ドット、凡例、計算状態がJSONまたは端末保存へ入らないことを確認する。
+- 積込順は空、参照不整合、不許可向き・safe integer不成立、正体積重複、面接触、Y/Z非交差、前後遮蔽、単一・部分・複数・支持不可接触、支持接触不明、決定的tie-break、循環、入力配列順、別コンテナ除外、30件を純粋単体試験で確認する。
 
 [データ契約チェック](../scripts/check-data-contract.ps1)と文書・ガバナンス検証に加え、型検査、lint、単体テスト、ブラウザテスト、ビルドをそれぞれ独立して実行する。単体テストは構造・意味境界、5 MiB上限、失敗時状態保持、検証済み書出し、往復、mm・kg境界、入力・配置コマンドの原子性、6向きの配置範囲、コンテナ包含、正体積AABB重なりと接触・±1 mm境界、隙間込み5面境界・床例外、非支持ペアの正負側c±1・共有距離・複数分離軸、開口の2Y・1Z等値と±1 mm・全6向き・許可集合、単独支持の等値、1 mm張り出し、複数支持、支持台間隙、支持可否混在、辺・点、Z不一致、重複、床・支持面snap、自動提案除外、総質量の空・等値・1 g超過・safe integer・overflow、対象コンテナ抽出、境界違反のカスケード抑制、支持接触時の隙間例外、独立理由保持、安定した理由順・ID、幾何・耐荷重の計算不能、Worker集約・25件理由ページ・遅延応答破棄・手動再試行、非変異、scene軸変換、drag差分量子化、奇数mm中心、外側配置を含む投影範囲、履歴の参照同一性・非変異・stale/no-op拒否・100件上限・分岐、File size/readと固定名、preflight応答・終了、IndexedDB未対応・open・blocked・abort・error・not-found・破損・delete・往復を含む。ブラウザテストは入力・編集・削除確認、キーボードとフォーカス、候補sceneの切替・編集反映・保存前draft非反映、負・候補外座標、向き変更、stale編集復旧、canvas選択・床・支持面snap・条件未確認preview・drag・取消・視点操作、タッチ時のフォーム操作、物理理由の優先・併記・ページ表示・狭幅表示、1,000配置の実Worker応答性、CLPCRUD・3D dragのundo/redo、入力中lock、native入力履歴の保護、実IndexedDB reload/delete、download/reimport、全JSON失敗段階、履歴barrier、遅延競合、削除focus、305/320/375px、1,000配置・100候補の実preflight Worker応答性に加え、WebGL非対応・初期描画失敗・context loss時の全面停止と現在CLP・端末保存の読み取り専用JSON救出を含む。

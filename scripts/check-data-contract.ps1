@@ -41,6 +41,8 @@ $movingGroupNudgeDecisionPath = Join-Path $resolvedProject 'docs/decisions/0041-
 $groundedWallSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0042-grounded-staging-wall-snap-toggle-and-validation-icon.md'
 $multiFaceSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0043-detachable-multi-face-snap-and-pointer-surface-target.md'
 $loadingSequenceReportDecisionPath = Join-Path $resolvedProject 'docs/decisions/0044-limited-loading-sequence-and-pdf-report.md'
+$loadingSequencePath = Join-Path $resolvedProject 'src/domain/loading-sequence.ts'
+$loadingSequenceTestPath = Join-Path $resolvedProject 'src/domain/loading-sequence.test.ts'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
 $cargoConstraintsDialogPath = Join-Path $resolvedProject 'src/ui/CargoConstraintsDialog.tsx'
@@ -515,6 +517,30 @@ foreach ($requiredText in @(
 )) {
     if (-not $loadingSequenceReportDecision.Contains($requiredText)) {
         throw "ADR 0044 does not contain the approved loading-sequence report contract text: $requiredText"
+    }
+}
+$loadingSequence = [IO.File]::ReadAllText($loadingSequencePath)
+$loadingSequenceTest = [IO.File]::ReadAllText($loadingSequenceTestPath)
+foreach ($requiredText in @(
+    'LOADING_SEQUENCE_ALGORITHM_VERSION = "loading-sequence-v1"',
+    'export function proposeLoadingSequence(',
+    'loading-sequence.positive-volume-overlap',
+    'loading-sequence.support-contact-missing',
+    'loading-sequence.precedence-cycle',
+    'orderLoadingSequenceGraph('
+)) {
+    if (-not $loadingSequence.Contains($requiredText)) {
+        throw "Loading-sequence domain does not contain the approved Phase 1 contract text: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    'loads a deeper cargo before a front blocker',
+    'loads all multiple supports first',
+    'returns the deterministic cargo set participating in a cycle',
+    'orders a deterministic 30-cargo synthetic case'
+)) {
+    if (-not $loadingSequenceTest.Contains($requiredText)) {
+        throw "Loading-sequence tests do not contain the approved Phase 1 regression: $requiredText"
     }
 }
 foreach ($requiredText in @(
@@ -1261,6 +1287,8 @@ foreach ($requiredText in @(
     moving_group_nudge_decision_0041_accepted = $true
     grounded_wall_snap_decision_0042_accepted = $true
     multi_face_snap_decision_0043_accepted = $true
+    loading_sequence_report_decision_0044_accepted = $true
+    loading_sequence_phase1_implemented = $true
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true
 }

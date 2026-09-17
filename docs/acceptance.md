@@ -277,6 +277,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - AC-11: `src/scene/project-scene.test.ts` が移動グループ除外、20 / 21 mm境界、床・支持上面fit、支持喪失・境界外、面接触と正体積衝突、screen投影から一軸1 mmへの対応を検証する。`tests/browser/scene.spec.ts` がcanvas focus、3回repeatの一回履歴、Escape取消、Undo/Redoを実行し、`tests/browser/persistence.spec.ts` が操作方法copyを検証する。積層fixtureでの短距離実pointer dragと視点変更後の方向理解は人間確認として残す。
 - AC-12: `src/scene/project-scene.test.ts` が荷室外Z=0、内壁4面、50 / 51 mm境界、OFF時のX/Y非fitとZ snap継続を検証する。`tests/browser/scene.spec.ts` が `adjust` buttonの既定ON、OFF / ON、非履歴を実行し、`tests/browser/persistence.spec.ts` が操作方法copy、`tests/browser/scene-workspace-v12.spec.ts` と `tests/browser/physical-validation-worker.spec.ts` が `information-variant` 相当SVG、状態表示、toolbar iconの中央配置を検証する。積層fixtureを使う実pointerの荷室外dragとUndo/Redoは人間確認として残す。
 - AC-13: `src/scene/project-scene.test.ts` が内壁2面、異なる積荷2面、50 mm取得、75 / 76 mm保持解除、床指定時の浅い重なり、上面取得・保持・完全離脱を検証する。`tests/browser/scene.spec.ts` の実pointer支持面取得と既定ON・OFF回帰を維持し、コンテナ角、2つの積荷、床側面接近の体感はローカル人間確認として残す。
+- AC-14 Phase 1: `src/domain/loading-sequence.test.ts` が直線搬入帯、Y/Z非交差・境界接触、単一・部分・複数・支持不可接触、参照・幾何・正体積重複・支持接触不明、決定的tie-break、明示graph循環、入力順不変、別コンテナ除外、30件を検証する。帳票dialog、番号付き5視点画像、日本語PDFとローカル人間確認はPhase 2〜5で追加する。
 - 仕様0.16.0は、仕様0.15.0の支持面snapに加え、寸法適合時の積荷別搬入経路理由を廃止し、drag対象以外の透過・点線表示と支持候補の緑・黄点線を全単体939件・全browser71件の統合回帰へ含める。自動試験は開発チーム内試用と実務利用者試用の証拠ではない。
 - 仕様0.17.0は、X/Z回転を固定toolbarへ常設し、一本の軸線へ矢印が回り込む同一SVG glyphの90度差、未選択・天地無用・busy時のfocus可能な無効状態、連続回転後のbutton位置、向き更新とUndo/Redoを回帰する。自動試験は人間によるicon理解や実務利用者受入の証拠ではない。
 - 仕様0.17.1の紫色による塗り分けは仕様0.18.0で置換した。

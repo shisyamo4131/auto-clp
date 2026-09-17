@@ -17,5 +17,5 @@
 
 | Product or task | Progress | Last reviewed | Roadmap |
 | --- | ---: | --- | --- |
-| Auto CLP | 86% | 2026-09-17 | [Auto CLP roadmap](auto-clp.md) |
-| 積込順提案・PDF帳票 | 10% | 2026-09-17 | [機能ロードマップ](loading-sequence-pdf-report.md) |
+| Auto CLP | 89% | 2026-09-17 | [Auto CLP roadmap](auto-clp.md) |
+| 積込順提案・PDF帳票 | 35% | 2026-09-17 | [機能ロードマップ](loading-sequence-pdf-report.md) |
