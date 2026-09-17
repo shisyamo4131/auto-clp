@@ -1,24 +1,25 @@
 # Auto CLP Roadmap
 
-- Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと手動配置を確認できるローカルファーストWebアプリを完成させ、技術試用版をWebから利用可能にする。
-- Current progress: 96%
-- Last reviewed: 2026-09-16
+- Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと手動配置を確認し、限定モデルの積込順とPDF帳票を得られるローカルファーストWebアプリを完成させ、技術試用版をWebから利用可能にする。
+- Current progress: 86%
+- Last reviewed: 2026-09-17
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
 ## Milestones
 
 | Milestone | Weight | Earned | Status | Completion evidence and remaining work |
 | --- | ---: | ---: | --- | --- |
-| 基盤・データ契約 | 10 | 10 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly CLP型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
-| 積荷・コンテナ入力モデル | 10 | 10 | Complete | CLP・隙間・積荷・コンテナの入力、編集、明示削除、Drawer内コンテナ管理、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
-| 3D表示と手動配置 | 27 | 27 | Complete | 座標契約、重量付き全積荷検索selectと4状態dot、Project→scene投影・描画、荷室外の非永続床面作業位置と向きを維持する寄せ、未配置・配置済み共通のdrag三状態分類、カーソルで選ぶ床・支持可能上面、50 mm取得・75 mm保持の最大2面積荷側面／コンテナ内壁fit、既定ONのsession-only `adjust` 切替、移動グループを除外する支持・衝突判定、単一支持子孫の再帰的連動移動、視点基準1 mm矢印調整、条件未確認preview、dialog配置編集、完全drag-out位置保持、許可済みX/Z軸90°回転と天地無用、wheel zoom、Ctrl pan、同一候補camera保持、viewport内Undo/Redo、compactな選択積荷カードとCRUD入口を実装 |
-| 物理制約の判定 | 23 | 23 | Complete | 低レベルgeometry・耐荷重評価、高位集約、単独支持・支持条件未確認・支持接触不成立・支持不可専用理由、接触時の隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL 2利用可能時のUI、許可上限1,000配置の応答性を実装・検証。人間の派生床突き抜け観察で発見した境界違反由来の上段支持不足カスケード `HUT-01` は、診断上の床Z=0正規化、負例、複数支持、実Worker表示を追加して修正・回帰済み |
-| 保存・再読込・操作性 | 13 | 13 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、保存Navigation Drawer、操作単位Snackbar、modal focus・狭幅を実装・検証 |
+| 基盤・データ契約 | 9 | 9 | Complete | ガバナンス、仕様、主要制約ADR、版付きJSON Schema、完全なreadonly CLP型、構造・意味検証、検証済み書出し、取引的読込基盤、最小アプリ骨格、WebGL 2能力ゲート、向き適用関数と検証を作成 |
+| 積荷・コンテナ入力モデル | 9 | 9 | Complete | CLP・隙間・積荷・コンテナの入力、編集、明示削除、Drawer内コンテナ管理、mm・kg変換、許可向き、原子的検証、アクセシビリティ、狭幅表示を実装し検証 |
+| 3D表示と手動配置 | 23 | 23 | Complete | 座標契約、重量付き全積荷検索selectと4状態dot、Project→scene投影・描画、荷室外の非永続床面作業位置と向きを維持する寄せ、未配置・配置済み共通のdrag三状態分類、カーソルで選ぶ床・支持可能上面、50 mm取得・75 mm保持の最大2面積荷側面／コンテナ内壁fit、既定ONのsession-only `adjust` 切替、移動グループを除外する支持・衝突判定、単一支持子孫の再帰的連動移動、視点基準1 mm矢印調整、条件未確認preview、dialog配置編集、完全drag-out位置保持、許可済みX/Z軸90°回転と天地無用、wheel zoom、Ctrl pan、同一候補camera保持、viewport内Undo/Redo、compactな選択積荷カードとCRUD入口を実装 |
+| 物理制約の判定 | 20 | 20 | Complete | 低レベルgeometry・耐荷重評価、高位集約、単独支持・支持条件未確認・支持接触不成立・支持不可専用理由、接触時の隙間例外、独立理由、計算不能、ローカルWorker評価、理由ページ、WebGL 2利用可能時のUI、許可上限1,000配置の応答性を実装・検証。人間の派生床突き抜け観察で発見した境界違反由来の上段支持不足カスケード `HUT-01` は、診断上の床Z=0正規化、負例、複数支持、実Worker表示を追加して修正・回帰済み |
+| 保存・再読込・操作性 | 11 | 11 | Complete | IndexedDB単一手動枠の保存・読込・確認削除、固定名JSON入出力、全候補Worker事前判定、履歴barrier、失敗・競合復旧、保存Navigation Drawer、操作単位Snackbar、modal focus・狭幅を実装・検証 |
 | 重量バランス可視化 | 5 | 4 | In progress | 正確なBigInt・有理数による純粋計算、scene/UIの同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、非clampの画面外status、4状態、内容版1.2.0の使用事項、単体・browser・保存回帰を実装し独立レビュー済み。人間による中心一致・近接・偏り・画面外・物理lampとの非混同・凡例理解の差分確認を残す |
 | CSV積荷一括置換 | 5 | 4 | In progress | Excel向け固定CSV、手動・CSV共通の30件新規作成上限と既定値、全行検証、破棄・保持範囲を示す確認、積荷・配置の原子的置換、一回のUndo/Redo、legacy互換を実装し、自動回帰と独立レビューに合格。20件取込とUndoは利用者確認済みで、Windows版Excel往復1点を残す |
 | 積荷制約の一覧編集 | 2 | 2 | Complete | CSV 5列を維持し、全積荷の天地無用・上乗せ禁止だけを一覧編集する原子的command、個別editorとの表記統一、一回のUndo/Redo、配置保持と支持不可理由、狭幅・dirty確認を実装・回帰 |
-| 実務利用者による受入 | 5 | 3 | In progress | 4本の匿名合成ケース、合格基準、自動証拠に加え、案内付き人間評価で移動・向き・削除・履歴・物理理由・保存・JSON往復、305 / 320 / 375 px、Tab・dialog focusを観察し、床突き抜け由来の支持不足カスケード不具合を発見。WebGL 2非対応・初期描画失敗時の阻止・退避画面は人間確認済み。作業中context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
-| **Total** | **100** | **96** |  |  |
+| 積込順提案・PDF帳票 | 12 | 1 | In progress | [機能ロードマップ](loading-sequence-pdf-report.md) Phase 0として仕様1.14.0、ADR 0044、AC-14、判定境界、5視点帳票、rollbackを確定。domain、UI、画像、PDF、ローカル受入は未着手 |
+| 実務利用者による受入 | 4 | 3 | In progress | 4本の匿名合成ケース、合格基準、自動証拠に加え、案内付き人間評価で移動・向き・削除・履歴・物理理由・保存・JSON往復、305 / 320 / 375 px、Tab・dialog focusを観察し、床突き抜け由来の支持不足カスケード不具合を発見。WebGL 2非対応・初期描画失敗時の阻止・退避画面は人間確認済み。作業中context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
+| **Total** | **100** | **86** |  |  |
 
 部分点は、上表または下表で独立した完了サブゲートと証拠が示された場合だけ認める。
 
@@ -31,13 +32,14 @@
 
 ## Next Work
 
-1. 積荷制約一覧の複数行更新、取消、Undo/Redo、配置保持と「上乗せ禁止」理由を内蔵ブラウザで差分確認する。
-2. 単一支持グループの短距離dragで旧位置を支持物と誤認しないこと、完全drag-out時の荷室外Z=0、コンテナ角・異なる積荷2面へのfit、50 mm取得・75 mm保持、カーソルによる床／上面選択、既定ONの切替、視点基準の1 mm矢印調整、衝突停止、長押し一回Undoを内蔵ブラウザで差分確認する。
-3. Windows版Excelでtemplate download、匿名データ編集、CSV UTF-8保存、再読込、確認、Undo/Redoと非UTF-8拒否を人間確認する。
-4. [AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers)と[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)の匿名合成データで重心表示を人間確認する。
-5. 荷室外積荷の寄せ、重量付きselectorと4状態dot、総重量／積込済数、wheel zoom、Ctrl panを代表的な20〜30件データで人間確認する。
-6. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
-7. 第三者利用者の募集、実在CLPの取扱い、課金または本番運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
+1. [積込順提案・PDF帳票ロードマップ](loading-sequence-pdf-report.md) Phase 1として、直線搬入帯、支持先行、有向グラフ、決定的sort、提案不能理由を純粋domainと単体試験で実装する。
+2. 積荷制約一覧の複数行更新、取消、Undo/Redo、配置保持と「上乗せ禁止」理由を内蔵ブラウザで差分確認する。
+3. 単一支持グループの短距離dragで旧位置を支持物と誤認しないこと、完全drag-out時の荷室外Z=0、コンテナ角・異なる積荷2面へのfit、50 mm取得・75 mm保持、カーソルによる床／上面選択、既定ONの切替、視点基準の1 mm矢印調整、衝突停止、長押し一回Undoを内蔵ブラウザで差分確認する。
+4. Windows版Excelでtemplate download、匿名データ編集、CSV UTF-8保存、再読込、確認、Undo/Redoと非UTF-8拒否を人間確認する。
+5. [AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers)と[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)の匿名合成データで重心表示を人間確認する。
+6. 荷室外積荷の寄せ、重量付きselectorと4状態dot、総重量／積込済数、wheel zoom、Ctrl panを代表的な20〜30件データで人間確認する。
+7. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
+8. 第三者利用者の募集、実在CLPの取扱い、課金または本番運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
 
 ## Deliverables and Verification Evidence
 
@@ -50,6 +52,7 @@
 | 重量バランス可視化 | [仕様1.5.1](../specification.md)、[ADR 0032](../decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)、[データ契約](../data-model.md)、[AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers) | 実装済み: 正確な重量moment、4状態、コンテナ幾何中心、配置積荷の合成重心、同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、画面外status、色以外の凡例、計算不能時の読取専用回復投影 | 全単体29ファイル975件・全browser 97件、型・lint・build・文書検査に合格。不均等重量、奇数寸法、全向き、負・不適合配置、上限1,000件、上限外、空・計算不能、中心一致・近接・画面外、DPR 1/2、camera、drag、履歴、保存除外・読込再計算と失敗保持、4状態、305/320/375px、非操作・非保証を検証。独立コードレビューは指摘修正後に合格。人間視認性は未確認 |
 | CSV積荷一括置換 | [仕様1.7.0](../specification.md)、[ADR 0034](../decisions/0034-cargo-csv-template-and-replacement-import.md)、[ADR 0036](../decisions/0036-cargo-csv-destructive-confirmation-copy.md)、[データ契約](../data-model.md)、[AC-07](../acceptance.md#ac-07-cargo-csv-template-and-atomic-replacement) | 実装済み: 固定CSV template、parser、30件新規作成上限、手動・CSV既定値、一時検証、破棄・保持範囲の確認、積荷・配置置換、一回の履歴、scene一時状態reset | 既存の単体32ファイル1,006件・ブラウザ102件、型・lint・buildに加え、確認文回帰を更新。利用者が20件取込とUndoを確認済み。Windows版Excel往復は未実施 |
 | 積荷制約の一覧編集 | [仕様1.8.0](../specification.md)、[ADR 0037](../decisions/0037-cargo-constraint-list-and-prohibition-wording.md)、[AC-09](../acceptance.md#ac-09-cargo-constraint-batch-editing) | 実装済み: Drawer入口、天地無用・上乗せ禁止の一覧、保存値反転、原子的command、一回の履歴、個別editor・不適合理由の表記統一 | 型・lint・単体32ファイル1,016件・ブラウザ104件・build・データ契約・ガバナンス・プロジェクト検査に合格。個別editorとの一致、Undo、dirty確認、305/320/375 pxを回帰。内蔵ブラウザでの人間差分確認は未実施 |
+| 積込順提案・PDF帳票 | [仕様1.14.0](../specification.md)、[ADR 0044](../decisions/0044-limited-loading-sequence-and-pdf-report.md)、[機能ロードマップ](loading-sequence-pdf-report.md)、[AC-14](../acceptance.md#ac-14-limited-loading-sequence-and-pdf-report) | Phase 0完了。Phase 1以降の積込順domain、帳票dialog、番号付き5視点scene、PDF生成は未実装 | 文書・データ契約・プロジェクト検査。domain、browser、PDF構造とローカル人間確認は各Phaseで追加する |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0023](../decisions/0023-webgl-required-operation-and-read-only-rescue.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、WebGL障害時の読み取り専用救出、固定code UI | 実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL 2利用可能時の通常操作、非対応・描画障害時の全面停止と2種類の救出、305/320/375px、1,000配置・100候補の実Worker応答性を回帰 |
 | 自動配置提案の将来技術資産（非加重点） | [ADR 0004](../decisions/0004-optimization-objective.md)、[ADR 0029](../decisions/0029-phase1-drawer-entry-and-automatic-proposal-deferral.md)、[将来合成ケースAP-01〜08](../acceptance.md#future-automatic-proposal-retained-technical-cases) | 純粋探索・Worker・session/view・React panel・適用境界を将来再利用候補として保持。Phase 1の通常UIには表示せずWorkerを開始しない | `automatic-proposal-v2` の単体資産、非実行browser snapshot、[AP-08技術証拠](../evidence/automatic-proposal-ap08-733b250.md)を履歴資産として保持。再公開には仕様再承認、現行shellまたは専用harnessへの再接続、収集設定、全回帰と実務受入が必要 |
 | 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | [Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)に加え、[案内付き人間評価](../evidence/phase1-human-ui-trial-4e6c680.md)で派生ケースの移動・向き・削除・履歴・理由理解・端末保存・JSON往復、狭幅・Tab・focus、viewer-first shell 1.3.0までの変更差分、WebGL非対応・初期描画失敗時の阻止・退避画面を確認し、`HUT-01` とUI改善根拠を記録。context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
@@ -68,6 +71,7 @@
 - `../specification.md` の現行範囲とPhase 1完了条件を満たす。
 - 代表ケースで利用者が入力、3D確認、適合性確認、保存・再読込を完了できる。
 - 選択中コンテナの幾何中心と配置積荷の合成重心を赤・黄の非操作ドットと凡例で比較でき、数値・許容範囲・合否・安全保証と誤認しない。
+- 選択中コンテナの現在配置から限定モデルの積込順を提案し、一覧と番号付き5視点画像を含む日本語PDFをローカル取得できる。提案不能と非保証を明確に区別する。
 - 必須検証がすべて個別に成功し、レビューで重大な未解決事項がない。
 - 仕様、ADR、ロードマップ、運用、変更履歴、利用者向け文書が実装と一致する。
 
@@ -151,3 +155,4 @@
 | 2026-09-16 | 96% | +0 | 仕様1.7.0・ADR 0035・0036で、完全な単一支持子孫の再帰的連動移動、配置解除拒否、支持不可専用理由、CSV破棄範囲確認文を実装。型・lint・単体32ファイル1,014件・ブラウザ103件・buildに合格した。既完了の3D・物理範囲内の改善であり、積層fixtureの実pointer人間確認を残すため進捗は据え置き |
 | 2026-09-16 | 96% | +0 | 仕様1.8.0・ADR 0037で、CSVを変更せず積荷制約一覧、上乗せ禁止表記、原子的な一括更新と一回のUndo/Redoを追加した。入力モデル12点から2点を新機能へ再配分して同じ2点を獲得し、型・lint・単体32ファイル1,016件・ブラウザ104件・build・文書検査に合格したため進捗は据え置き。内蔵ブラウザでの人間差分確認は未実施 |
 | 2026-09-17 | 96% | +0 | 仕様1.13.0・ADR 0043で、50 mm取得・75 mm保持の最大2面X/Y fitとカーソルによる床／上面選択を追加し、X/Yスナップを基礎配置・支持・衝突検証から分離した。型・lint・単体32ファイル1,036件・ブラウザ107件・build・データ契約・ガバナンス・プロジェクト検査に合格した。既完了の3D手動配置範囲内の操作改善で、ローカル人間差分確認を残すため進捗は据え置く |
+| 2026-09-17 | 86% | -10 | 仕様1.14.0・ADR 0044で、限定モデルの積込順提案と番号付き5視点PDF帳票を現行目標へ追加した。既存配点を88点へ再配分し、新機能12点のうちPhase 0の仕様・設計・受入契約1点を獲得したため、獲得点を96/100から86/100へ補正した。Schema 0.1.0は変更しない |

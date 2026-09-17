@@ -40,6 +40,7 @@ $emptyContainerDecisionPath = Join-Path $resolvedProject 'docs/decisions/0040-em
 $movingGroupNudgeDecisionPath = Join-Path $resolvedProject 'docs/decisions/0041-moving-group-face-fit-and-view-relative-nudge.md'
 $groundedWallSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0042-grounded-staging-wall-snap-toggle-and-validation-icon.md'
 $multiFaceSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0043-detachable-multi-face-snap-and-pointer-surface-target.md'
+$loadingSequenceReportDecisionPath = Join-Path $resolvedProject 'docs/decisions/0044-limited-loading-sequence-and-pdf-report.md'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
 $cargoConstraintsDialogPath = Join-Path $resolvedProject 'src/ui/CargoConstraintsDialog.tsx'
@@ -350,7 +351,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.13.1' 'Approved specification version'
+Assert-Equal $specificationVersion '1.14.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -501,6 +502,21 @@ foreach ($requiredText in @(
         throw "ADR 0043 does not contain the approved multi-face snap contract text: $requiredText"
     }
 }
+$loadingSequenceReportDecision = [IO.File]::ReadAllText($loadingSequenceReportDecisionPath)
+if ($loadingSequenceReportDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0044 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '最終Y/Zを保って直線搬入',
+    '有向グラフ',
+    'トポロジカルソート',
+    '現在視点と正面・背面・左面・右面',
+    'Schema `0.1.0`'
+)) {
+    if (-not $loadingSequenceReportDecision.Contains($requiredText)) {
+        throw "ADR 0044 does not contain the approved loading-sequence report contract text: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     'Zを0 mmへ正規化',
     '距離が50 mm以内',
@@ -568,7 +584,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.13.1`',
+    '仕様版 `1.14.0`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
