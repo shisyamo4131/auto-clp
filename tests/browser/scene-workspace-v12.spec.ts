@@ -389,7 +389,7 @@ test("keeps the physical controller fresh while its dialog is closed", async ({ 
     "title",
     /実装済み確認項目内で問題なし.*不適合0件.*未確認0件.*詳細を開く/,
   );
-  await expect(lamp.locator('svg[data-icon="information-box-outline"]')).toBeVisible();
+  await expect(lamp.locator('svg[data-icon="information-variant"]')).toBeVisible();
   expect((await lamp.textContent())?.trim()).toBe("");
   await expect(lamp.getByText("実装済み確認項目内で問題なし", { exact: true })).toHaveCount(0);
   await openPhysicalValidation(page);
@@ -403,10 +403,34 @@ test("keeps the physical controller fresh while its dialog is closed", async ({ 
   await expect(lamp).toHaveAttribute("data-status", "invalid");
   await expect(lamp).toHaveAttribute("aria-label", /不適合1件、未確認0件/);
   await expect(lamp).toHaveAttribute("title", /不適合.*不適合1件.*未確認0件.*詳細を開く/);
-  await expect(lamp.locator('svg[data-icon="information-box-outline"]')).toBeVisible();
+  await expect(lamp.locator('svg[data-icon="information-variant"]')).toBeVisible();
   expect((await lamp.textContent())?.trim()).toBe("");
   await openPhysicalValidation(page);
   await expect(page.getByRole("dialog", { name: "物理判定" })).toContainText("不適合理由（1件）");
+});
+
+test("centers every viewport toolbar icon inside its button", async ({ page }) => {
+  await page.goto("/");
+  const buttons = page.locator(".viewport__camera-controls button");
+  await expect(buttons).toHaveCount(8);
+  const offsets = await buttons.evaluateAll((elements) =>
+    elements.map((element) => {
+      const icon = element.querySelector(":scope > svg, :scope > span");
+      if (icon === null) return null;
+      const buttonBox = element.getBoundingClientRect();
+      const iconBox = icon.getBoundingClientRect();
+      return {
+        x: iconBox.left + iconBox.width / 2 - (buttonBox.left + buttonBox.width / 2),
+        y: iconBox.top + iconBox.height / 2 - (buttonBox.top + buttonBox.height / 2),
+      };
+    }),
+  );
+  expect(offsets).toHaveLength(8);
+  for (const offset of offsets) {
+    expect(offset).not.toBeNull();
+    expect(Math.abs(offset?.x ?? Number.POSITIVE_INFINITY)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(offset?.y ?? Number.POSITIVE_INFINITY)).toBeLessThanOrEqual(0.5);
+  }
 });
 
 test("gates a new usage-requirements version and persists successful confirmation separately", async ({

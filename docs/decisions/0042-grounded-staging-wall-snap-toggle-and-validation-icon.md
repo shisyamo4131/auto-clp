@@ -14,7 +14,7 @@ ADR 0018・0019では荷室外の作業位置でZを維持していたため、�
 - 候補は移動量、X軸、コンテナ内壁、積荷ID・面方向の順で決定する。移動グループ外の積荷と正体積重複する候補は採用しない。
 - Material Design Iconsの `adjust` 相当icon-only buttonをviewport toolbarへ置く。既定ONとし、積荷側面・内壁のX/Y fitだけを切り替える。床・支持上面へのZ snapと単一支持面内clampは常時有効とする。
 - 切替は現在のブラウザ実行中だけのUI session状態とし、Project、Schema、JSON、端末保存、Undo/Redo履歴へ含めない。
-- 物理判定buttonは状態別の色、accessible name、title、件数、dialogを維持し、可視glyphをMaterial Design Iconsの `information-box-outline` 相当iconへ統一する。
+- 物理判定buttonは状態別の色、accessible name、title、件数、dialogを維持する。可視glyphは当初Material Design Iconsの `information-box-outline` 相当iconへ統一し、仕様1.13.1で `information-variant` 相当iconへ変更した。
 
 ## Impact
 

@@ -4,6 +4,8 @@
 
 ### Changed
 
+- 仕様1.13.1で、viewport上段toolbarの全iconをbuttonの上下左右中央へ揃え、物理判定buttonの可視glyphをMaterial Design Iconsの `information-variant` 相当iconへ変更した。状態色、accessible name、title、件数、dialog、Schema `0.1.0`、JSON、端末保存は変更しない。
+
 - 仕様1.13.0・ADR 0043で、コンテナ内壁または積荷側面をX/Y各1面、最大2面へ同時にfitできるよう変更した。二軸の最終位置で接触と移動グループ全体の衝突を一括検証し、取得50 mm・drag中保持75 mmとする。床面／支持上面は移動対象を除いたカーソル直下の可視面から選び、既存または取得済み上面は底面正面積が残る間だけ保持する。浅い重なりだけでは床から段積みへ切り替えず、`adjust` は分離可能なX/Yスナップだけを制御する。Schema `0.1.0`、JSON、端末保存、Undo/Redoの意味は変更しない。
 
 - 仕様1.12.0・ADR 0042で、段積み上段を荷室外へdragした時の作業位置をZ=0へ正規化し、空中に残らないよう変更した。積荷側面fitを20 mmから50 mmへ広げ、コンテナ内壁4面を候補へ追加し、既定ON・非永続・非履歴の `adjust` icon buttonで側面・内壁fitだけを切り替えられる。床・支持上面のZ snapは常時維持する。物理判定buttonは状態色と説明を維持して `information-box-outline` iconへ統一し、Schema `0.1.0` と既存JSON互換を維持する。

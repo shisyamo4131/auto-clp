@@ -318,7 +318,7 @@ foreach ($requiredText in @(
     '移動グループ自身の移動前配置を支持・fit・衝突候補に含めない'
     'コンテナ内壁4面までの距離が50 mm以内'
     'スナップ切替はMaterial Design Iconsの `adjust` 相当icon-only button、既定ON、session限定'
-    '物理判定lampの常設表示はMaterial Design Iconsの `information-box-outline` 相当icon'
+    '物理判定lampの常設表示はMaterial Design Iconsの `information-variant` 相当icon'
     '一回の `placement.keyboard-nudge` Undo/Redo対象'
     '操作対象以外の積荷は面をほぼ透明な中立色、辺を灰色の点線'
     '寸法上通る場合は積荷ごとの理由を生成せず'
@@ -350,7 +350,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.13.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.13.1' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -568,7 +568,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.13.0`',
+    '仕様版 `1.13.1`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',

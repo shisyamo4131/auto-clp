@@ -1,7 +1,7 @@
 # Auto CLP Specification
 
 - Last updated: 2026-09-17
-- Specification version: 1.13.0
+- Specification version: 1.13.1
 - Status: Active
 - Current phase: Phase 1 — ローカル3D手動配置試作
 
@@ -91,7 +91,7 @@
 - Drawer外の背景相当領域をクリックするとDrawerだけを閉じ、同じclickで背面のbutton、履歴またはscene操作を発火させない。close buttonおよびEscapeと同様、未実行の端末保存削除確認と新規CLP確認を取り消し、page scrollを変えずApplication Barのmenu buttonへfocusを戻す。進行中の永続化処理はDrawerを閉じても中断しない。
 - `操作方法` はDrawerを閉じてから独立した読み取り専用dialogを開き、3Dの積荷選択、空いた領域の左dragによる視点回転、Shift付き左drag・右drag・Ctrl付き左dragによる平行移動、wheel zoom、全体表示、荷室外積荷の寄せ、積荷drag・視点基準の矢印キー調整・回転、履歴、判定、座標・積荷編集の入口を簡潔に示す。Ctrl中は積荷上から開始した左dragも積荷移動ではなくcamera平行移動を優先し、cursorを十字矢印相当へ変える。touchは積荷選択とpage scrollを主とし、正確な座標・情報編集は下段button/dialogを案内する。版確認の `使用上の重要事項` とは分離し、CLP、履歴、保存、camera、判定状態を変更しない。
 - 旧3Dコンテナcardの外枠と見出しは置かない。コンテナtablistは3D viewportの直前、canvasおよびviewport overlayの外側上部へ一行で置き、コンテナ数または名前が幅を超える場合はExcelのsheet tab相当の左右buttonと横scrollで表示範囲だけを移動する。tabは折り返さず、active tabを表示範囲へ入れ、左右矢印・Home・End・Enter・Space、touch・trackpadを提供する。tabの選択だけがコンテナを切り替え、scroll buttonはコンテナを切り替えない。tablistはcanvasを覆わず、その表示・scrollでcanvasの寸法またはpage位置を変えない。
-- 荷室外積荷の寄せ、側面・内壁スナップ切替、Undo/Redo、物理判定lamp、X/Z回転、全体表示toolbarはviewport内上段の固定rowへ置く。寄せbuttonはUndoの左にMaterial Design Iconsの `arrow-collapse-all` 相当iconで置き、全未配置積荷の現在向きを保持したまま、選択中コンテナの負X側へ重ならない決定的gridで再整列する。寄せ実行前後でcamera位置、注視点、視点方向、縮尺を変えない。寄せはsession内の荷室外位置だけを変え、Project、保存、Undo/Redo履歴へ含めない。スナップ切替はMaterial Design Iconsの `adjust` 相当icon-only button、既定ON、session限定とし、積荷側面・内壁のX/Y fitだけを切り替える。物理判定lampの常設表示はMaterial Design Iconsの `information-box-outline` 相当iconを全状態で使い、判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とするicon-only buttonとし、色だけに依存しない。accessible nameとtitleに状態名、不適合・未確認件数、詳細を開く操作を持たせる。クリックすると現在のコンテナの理由をmodal dialogで開き、閉じても判定を継続する。
+- 荷室外積荷の寄せ、側面・内壁スナップ切替、Undo/Redo、物理判定lamp、X/Z回転、全体表示toolbarはviewport内上段の固定rowへ置き、各iconをbuttonの上下左右中央へ配置する。寄せbuttonはUndoの左にMaterial Design Iconsの `arrow-collapse-all` 相当iconで置き、全未配置積荷の現在向きを保持したまま、選択中コンテナの負X側へ重ならない決定的gridで再整列する。寄せ実行前後でcamera位置、注視点、視点方向、縮尺を変えない。寄せはsession内の荷室外位置だけを変え、Project、保存、Undo/Redo履歴へ含めない。スナップ切替はMaterial Design Iconsの `adjust` 相当icon-only button、既定ON、session限定とし、積荷側面・内壁のX/Y fitだけを切り替える。物理判定lampの常設表示はMaterial Design Iconsの `information-variant` 相当iconを全状態で使い、判定対象なし・計算中を灰、実装済み確認項目内で問題なしを青、未確認を黄、不適合または判定不能を赤とするicon-only buttonとし、色だけに依存しない。accessible nameとtitleに状態名、不適合・未確認件数、詳細を開く操作を持たせる。クリックすると現在のコンテナの理由をmodal dialogで開き、閉じても判定を継続する。
 - 選択中コンテナの内寸から求めた幾何中心を赤い10 CSS pxのドット、同コンテナへ配置済みの積荷だけから求めた合成重心を黄色い10 CSS pxのドットとして3D viewportへ重ねる。両ドットと凡例swatchには白い外枠を付けない。viewport内へ投影できる点は積荷より前面に表示し、pointer hit、focus、積荷選択、drag、camera、履歴、dirty状態を変えない。黄色を赤より上に重ね、二点の画面上の中心が完全一致する場合は座標をずらしたり赤を露出させたりせず、黄色が赤を完全に覆うことを許容する。近接して表示領域が重なる場合も各投影中心を維持し、重なった部分では黄色を前面にする。色だけに依存しない凡例と読み上げ用の同値を一度だけ併設し、赤は異常または不適合、黄は警告または未確認を意味しない。X/Y/Z差または距離の数値は表示しない。
 - 合成重心の正規3D位置がcameraの表示範囲外なら、黄色いドットを画面端へ移動またはclampせず、cameraも自動変更しない。黄色いドットは画面外のままとし、凡例へ非数値の `現在重心は画面外` を示す。orbit、pan、zoomまたは荷室全体表示で表示範囲が変わった時は同じ正規位置から再投影する。
 - 全CLP積荷を名前またはIDで検索する入力、積荷selector、その右側の選択状態dot、その下の固定context action rowをviewport下部へoverlayする。検索結果件数は表示しない。selectorの各積荷は `積荷名 — 長さ×幅×高さ mm／重量 kg` とし、kgは正規g値を最大小数第3位・不要な末尾0なしで表示する。選択状態dotは現在のコンテナへ配置済みを青、未配置を黄、別のコンテナへ配置済みを緑、未選択を灰とし、読み上げ名とtitleで色以外の同値を持つ。未選択でもrowの高さを予約し、選択積荷名、配置状態、配置済みなら正確な最小角X/Y/Zをcompactに示す。未配置では座標入力・積荷編集・積荷削除、現在のコンテナへ配置済みでは座標微調整・積荷編集・荷室から外す、別のコンテナへ配置済みでは配置先コンテナの表示・積荷編集を提供する。配置取り外しと積荷定義削除は別button、別確認、別履歴とする。

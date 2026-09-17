@@ -1063,12 +1063,17 @@ h1 {
 }
 
 .viewport__camera-controls button {
+  display: grid;
+  width: 2.75rem;
   min-width: 2.75rem;
+  height: 2.75rem;
   min-height: 2.75rem;
-  padding: 0.5rem 0.7rem;
+  padding: 0.45rem;
   border-color: rgba(114, 234, 220, 0.75);
   background: rgba(7, 17, 31, 0.9);
   font-size: 0.82rem;
+  line-height: 1;
+  place-items: center;
 }
 
 .project-history--compact button {

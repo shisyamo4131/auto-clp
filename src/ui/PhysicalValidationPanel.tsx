@@ -47,17 +47,17 @@ interface PageSelection {
   readonly unverifiedOffset: number;
 }
 
-function InformationBoxOutlineIcon() {
+function InformationVariantIcon() {
   return (
     <svg
       aria-hidden="true"
       className="physical-validation-lamp__icon"
-      data-icon="information-box-outline"
+      data-icon="information-variant"
       viewBox="0 0 24 24"
     >
       <path
         fill="currentColor"
-        d="M13 9H11V7H13V9M13 17H11V11H13V17M5 3H19C20.1 3 21 3.89 21 5V19C21 19.53 20.79 20.04 20.41 20.41C20.04 20.79 19.53 21 19 21H5C4.47 21 3.96 20.79 3.59 20.41C3.21 20.04 3 19.53 3 19V5C3 3.89 3.89 3 5 3M19 19V5H5V19H19Z"
+        d="M13.5,4A1.5,1.5 0 0,0 12,5.5A1.5,1.5 0 0,0 13.5,7A1.5,1.5 0 0,0 15,5.5A1.5,1.5 0 0,0 13.5,4M13.14,8.77C11.95,8.87 8.7,11.46 8.7,11.46C8.5,11.61 8.56,11.6 8.72,11.88C8.88,12.15 8.86,12.17 9.05,12.04C9.25,11.91 9.58,11.7 10.13,11.36C12.25,10 10.47,13.14 9.56,18.43C9.2,21.05 11.56,19.7 12.17,19.3C12.77,18.91 14.38,17.8 14.54,17.69C14.76,17.54 14.6,17.42 14.43,17.17C14.31,17 14.19,17.12 14.19,17.12C13.54,17.55 12.35,18.45 12.19,17.88C12,17.31 13.22,13.4 13.89,10.71C14,10.07 14.3,8.67 13.14,8.77Z"
       />
     </svg>
   );
@@ -138,7 +138,7 @@ export function PhysicalValidationLamp({
         if (!disabled) onOpen();
       }}
     >
-      <InformationBoxOutlineIcon />
+      <InformationVariantIcon />
     </button>
   );
 }
