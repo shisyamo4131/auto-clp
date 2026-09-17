@@ -60,6 +60,7 @@ import {
   type CargoDragIntent,
   type CargoDragPreviewResult,
   type CargoNudgePreviewResult,
+  type ThreeViewportHandle,
 } from "./ThreeViewport";
 
 function gramsToKilograms(grams: number): string {
@@ -349,6 +350,7 @@ export function SceneWorkspace({
     Record<string, SceneStagingOverride>
   >({});
   const placementPanelRef = useRef<PlacementEditorDialogHandle>(null);
+  const threeViewportRef = useRef<ThreeViewportHandle>(null);
   const selectedContainer = project.containers.find(
     (container) => container.id === selectedContainerId,
   );
@@ -1311,6 +1313,7 @@ export function SceneWorkspace({
             />
           </div>
           <ThreeViewport
+            ref={threeViewportRef}
             centerOverlay={
               project.containers.length === 0 ? (
                 <div className="viewport-empty-container">
@@ -1691,6 +1694,12 @@ export function SceneWorkspace({
         <LoadingReportDialog
           containerId={effectiveContainerId}
           onClose={() => setLoadingReportDialogOpen(false)}
+          onGenerateImages={(labels) =>
+            threeViewportRef.current?.captureLoadingReportImages(labels) ?? {
+              code: "report-image.renderer-unavailable",
+              ok: false,
+            }
+          }
           open={loadingReportDialogOpen}
           project={project}
         />

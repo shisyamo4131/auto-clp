@@ -99,7 +99,7 @@ test("shows the selected container sequence, reasons, notes, and restores focus"
   await expect(dialog).toContainText("現在配置の物理判定");
   await expect(dialog).toContainText("搬送機器、作業空間");
   await expect(dialog.getByRole("button", { name: "PDFを出力" })).toBeDisabled();
-  await expect(dialog).toContainText("次の実装フェーズで有効になります");
+  await expect(dialog).toContainText("次のPDF実装フェーズへ渡す内容を確認できます");
   await expect(page.locator(".app-shell")).toHaveAttribute("inert", "");
 
   await dialog.getByRole("button", { name: "積込順・PDF帳票を閉じる" }).click();
@@ -123,6 +123,67 @@ test("shows a fixed reason and related cargoes when sequence generation is unava
   await expect(dialog).toContainText("手前の積荷（ID: cargo-front）");
   await expect(dialog).toContainText("奥の積荷（ID: cargo-back）");
   await expect(dialog.locator(".loading-report__sequence")).toHaveCount(0);
+});
+
+test("generates five numbered views and keeps fixed views independent from the current camera", async ({ page }) => {
+  await page.goto("/");
+  await importProject(page, reportProject());
+  const first = await openReport(page);
+  await first.dialog.getByRole("button", { name: "5視点画像を生成" }).click();
+  const firstFigures = first.dialog.locator(".loading-report__image-grid figure");
+  await expect(firstFigures).toHaveCount(5);
+  await expect(first.dialog.getByRole("button", { name: "5視点画像を再生成" })).toBeEnabled();
+  for (const figure of await firstFigures.all()) {
+    await expect(figure).toHaveAttribute("data-label-count", "2");
+  }
+  await expect(firstFigures.locator("img")).toHaveCount(5);
+  for (const title of ["現在視点", "正面（開口側）", "背面", "左面", "右面"]) {
+    await expect(first.dialog.getByText(title, { exact: true })).toBeVisible();
+  }
+  for (const image of await firstFigures.locator("img").all()) {
+    await expect(image).toHaveAttribute("src", /^data:image\/png;base64,/);
+    await expect(image).toHaveJSProperty("naturalWidth", 1200);
+    await expect(image).toHaveJSProperty("naturalHeight", 800);
+  }
+  const firstSources = await firstFigures.locator("img").evaluateAll((images) =>
+    images.map((image) => image.getAttribute("src")),
+  );
+  await first.dialog.getByRole("button", { name: "積込順・PDF帳票を閉じる" }).click();
+
+  const canvas = page.locator("#scene-viewport-canvas");
+  await canvas.hover();
+  await page.mouse.wheel(0, -520);
+
+  const second = await openReport(page);
+  await second.dialog.getByRole("button", { name: "5視点画像を生成" }).click();
+  const secondFigures = second.dialog.locator(".loading-report__image-grid figure");
+  await expect(secondFigures).toHaveCount(5);
+  const secondSources = await secondFigures.locator("img").evaluateAll((images) =>
+    images.map((image) => image.getAttribute("src")),
+  );
+  expect(secondSources[0]).not.toBe(firstSources[0]);
+  expect(secondSources.slice(1)).toEqual(firstSources.slice(1));
+});
+
+test("rejects an incomplete image set after canvas export failure and allows retry", async ({ page }) => {
+  await page.addInitScript(`(() => {
+    const original = HTMLCanvasElement.prototype.toDataURL;
+    globalThis.__failReportImageCapture = true;
+    HTMLCanvasElement.prototype.toDataURL = function(...args) {
+      if (globalThis.__failReportImageCapture) throw new Error("anonymous capture failure");
+      return original.apply(this, args);
+    };
+  })()`);
+  await page.goto("/");
+  await importProject(page, reportProject());
+  const { dialog } = await openReport(page);
+  await dialog.getByRole("button", { name: "5視点画像を生成" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("不完全な画像は使用せず");
+  await expect(dialog.locator(".loading-report__image-grid")).toHaveCount(0);
+
+  await page.evaluate("globalThis.__failReportImageCapture = false");
+  await dialog.getByRole("button", { name: "5視点画像を生成" }).click();
+  await expect(dialog.locator(".loading-report__image-grid figure")).toHaveCount(5);
 });
 
 for (const width of [305, 320, 375] as const) {

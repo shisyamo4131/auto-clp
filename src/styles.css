@@ -2333,6 +2333,7 @@ legend {
 .loading-report__empty,
 .loading-report__unavailable,
 .loading-report__physical,
+.loading-report__images,
 .loading-report__limitations,
 .loading-report__warnings {
   margin-top: 1rem;
@@ -2370,6 +2371,7 @@ legend {
 .loading-report__sequence,
 .loading-report__warnings,
 .loading-report__physical,
+.loading-report__images,
 .loading-report__limitations {
   min-width: 0;
 }
@@ -2435,8 +2437,73 @@ legend {
 
 .loading-report__warnings h3,
 .loading-report__physical h3,
+.loading-report__images h3,
 .loading-report__limitations h3 {
   margin-top: 0;
+}
+
+.loading-report__images-heading {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.loading-report__images-heading > div {
+  min-width: min(100%, 14rem);
+  flex: 1 1 18rem;
+}
+
+.loading-report__images-heading p {
+  margin-top: 0.4rem;
+  color: #a8bdcf;
+  line-height: 1.5;
+}
+
+.loading-report__images-heading button {
+  flex: 0 1 auto;
+}
+
+.loading-report__image-error {
+  margin-top: 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid #ff8c84;
+  color: #ffd0cd;
+  line-height: 1.5;
+}
+
+.loading-report__image-grid {
+  display: grid;
+  min-width: 0;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
+
+.loading-report__image-grid figure {
+  min-width: 0;
+  margin: 0;
+  padding: 0.45rem;
+  border: 1px solid rgba(132, 172, 195, 0.28);
+  border-radius: 0.55rem;
+  background: #07111f;
+}
+
+.loading-report__image-grid img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.3rem;
+}
+
+.loading-report__image-grid figcaption {
+  padding: 0.45rem 0.2rem 0.1rem;
+  color: #d9e8f4;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
 }
 
 .loading-report__warnings ul,

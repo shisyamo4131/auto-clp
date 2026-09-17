@@ -45,6 +45,8 @@ $loadingSequencePath = Join-Path $resolvedProject 'src/domain/loading-sequence.t
 $loadingSequenceTestPath = Join-Path $resolvedProject 'src/domain/loading-sequence.test.ts'
 $loadingReportPath = Join-Path $resolvedProject 'src/application/loading-report.ts'
 $loadingReportDialogPath = Join-Path $resolvedProject 'src/ui/LoadingReportDialog.tsx'
+$loadingReportImagesPath = Join-Path $resolvedProject 'src/scene/loading-report-images.ts'
+$loadingReportImagesTestPath = Join-Path $resolvedProject 'src/scene/loading-report-images.test.ts'
 $loadingReportBrowserTestPath = Join-Path $resolvedProject 'tests/browser/loading-report.spec.ts'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
@@ -562,16 +564,38 @@ foreach ($requiredText in @(
     '積込順を提案できません',
     '限定モデルによる一提案です',
     'PDFを出力',
-    '次の実装フェーズで有効になります'
+    'PDF生成は次の実装フェーズで有効になります'
 )) {
     if (-not $loadingReportDialog.Contains($requiredText)) {
         throw "Loading-report dialog does not contain the approved Phase 2 contract text: $requiredText"
     }
 }
+$loadingReportImages = [IO.File]::ReadAllText($loadingReportImagesPath)
+$loadingReportImagesTest = [IO.File]::ReadAllText($loadingReportImagesTestPath)
+foreach ($requiredText in @(
+    'LOADING_REPORT_FIXED_VIEWS',
+    'export function captureLoadingReportImages(',
+    'report-image.label-mismatch',
+    'cargo.kind !== "placed"'
+)) {
+    if (-not $loadingReportImages.Contains($requiredText)) {
+        throw "Loading-report images do not contain the approved Phase 3 contract text: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    'defines front, rear, left, and right from the approved user-relative directions',
+    'frames the container in every orthographic view without including staged cargo'
+)) {
+    if (-not $loadingReportImagesTest.Contains($requiredText)) {
+        throw "Loading-report image tests do not contain the approved Phase 3 regression: $requiredText"
+    }
+}
 foreach ($requiredText in @(
     'shows the selected container sequence, reasons, notes, and restores focus',
     'shows a fixed reason and related cargoes when sequence generation is unavailable',
-    'keeps the loading report usable without horizontal page overflow'
+    'keeps the loading report usable without horizontal page overflow',
+    'generates five numbered views and keeps fixed views independent from the current camera',
+    'rejects an incomplete image set after canvas export failure and allows retry'
 )) {
     if (-not $loadingReportBrowserTest.Contains($requiredText)) {
         throw "Loading-report browser tests do not contain the approved Phase 2 regression: $requiredText"

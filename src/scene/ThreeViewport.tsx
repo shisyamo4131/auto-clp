@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
@@ -14,6 +21,11 @@ import {
   type SceneVector3,
   type ViewRelativeArrowKey,
 } from "./project-scene";
+import {
+  captureLoadingReportImages,
+  type LoadingReportImageCaptureResult,
+  type LoadingReportImageLabel,
+} from "./loading-report-images";
 
 export interface CargoDragCommitResult {
   readonly message: string;
@@ -96,6 +108,12 @@ interface ThreeViewportProps {
   readonly zRotationExplanation: string;
   readonly selectedCargoId?: string;
   readonly statusDescriptionId: string;
+}
+
+export interface ThreeViewportHandle {
+  readonly captureLoadingReportImages: (
+    labels: readonly LoadingReportImageLabel[],
+  ) => LoadingReportImageCaptureResult;
 }
 
 function gramsToKilograms(grams: number): string {
@@ -494,7 +512,7 @@ function ResetViewIcon() {
   );
 }
 
-export function ThreeViewport({
+export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>(function ThreeViewport({
   bottomOverlay,
   centerOverlay,
   forceInitialRenderError = false,
@@ -522,12 +540,15 @@ export function ThreeViewport({
   zRotationExplanation,
   selectedCargoId,
   statusDescriptionId,
-}: ThreeViewportProps) {
+}: ThreeViewportProps, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bottomOverlayRef = useRef<HTMLDivElement>(null);
   const interactionDisabledRef = useRef(interactionDisabled);
   const resetViewRef = useRef<() => void>(() => undefined);
+  const captureLoadingReportImagesRef = useRef<
+    ThreeViewportHandle["captureLoadingReportImages"]
+  >(() => ({ code: "report-image.renderer-unavailable", ok: false }));
   const selectedCargoIdRef = useRef(selectedCargoId);
   const updateSelectionRef = useRef<(cargoId?: string) => void>(() => undefined);
   const cameraViewRef = useRef<CameraViewState | undefined>(undefined);
@@ -541,6 +562,15 @@ export function ThreeViewport({
       centersCoincide: false,
       source: null,
     });
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      captureLoadingReportImages: (labels) =>
+        captureLoadingReportImagesRef.current(labels),
+    }),
+    [],
+  );
 
   useEffect(() => {
     interactionDisabledRef.current = interactionDisabled;
@@ -1385,6 +1415,10 @@ export function ThreeViewport({
     const dispose = () => {
       if (disposed) return;
       disposed = true;
+      captureLoadingReportImagesRef.current = () => ({
+        code: "report-image.renderer-unavailable",
+        ok: false,
+      });
       finishKeyboardGesture(false);
       rollbackGesture("3D表示が更新されたため、未確定の配置移動を元に戻しました。");
       canvas.removeEventListener("pointerdown", handlePointerDown, true);
@@ -1448,6 +1482,31 @@ export function ThreeViewport({
           target: [controls.target.x, controls.target.y, controls.target.z],
         };
       };
+
+      const captureReportImages: ThreeViewportHandle["captureLoadingReportImages"] =
+        (labels) => {
+          const result = captureLoadingReportImages(
+            renderer,
+            projection,
+            {
+              far: camera.far,
+              fov: camera.fov,
+              near: camera.near,
+              position: [camera.position.x, camera.position.y, camera.position.z],
+              quaternion: [
+                camera.quaternion.x,
+                camera.quaternion.y,
+                camera.quaternion.z,
+                camera.quaternion.w,
+              ],
+              up: [camera.up.x, camera.up.y, camera.up.z],
+            },
+            labels,
+          );
+          renderScene();
+          return result;
+        };
+      captureLoadingReportImagesRef.current = captureReportImages;
 
       const resizeAndRender = () => {
         if (disposed || renderer === undefined) return;
@@ -1529,6 +1588,10 @@ export function ThreeViewport({
 
     return () => {
       resetViewRef.current = () => undefined;
+      captureLoadingReportImagesRef.current = () => ({
+        code: "report-image.renderer-unavailable",
+        ok: false,
+      });
       dispose();
       setDimensionAnnotations([]);
     };
@@ -1730,4 +1793,4 @@ export function ThreeViewport({
       />
     </div>
   );
-}
+});

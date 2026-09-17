@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createLoadingReportSnapshot,
@@ -9,15 +9,40 @@ import type {
   LoadingSequenceUnavailableReason,
 } from "../domain/loading-sequence";
 import type { Project } from "../domain/model";
+import type {
+  LoadingReportImage,
+  LoadingReportImageCaptureResult,
+  LoadingReportImageLabel,
+} from "../scene/loading-report-images";
 import { toPhysicalValidationView } from "./physical-validation-view";
 import { ModalShell } from "./ModalShell";
 
 interface LoadingReportDialogProps {
   readonly containerId?: string;
   readonly onClose: () => void;
+  readonly onGenerateImages: (
+    labels: readonly LoadingReportImageLabel[],
+  ) => LoadingReportImageCaptureResult;
   readonly open: boolean;
   readonly project: Project;
 }
+
+type ReportImageState =
+  | { readonly phase: "idle" }
+  | { readonly phase: "generating" }
+  | { readonly phase: "ready"; readonly images: readonly LoadingReportImage[] }
+  | { readonly phase: "error"; readonly message: string };
+
+const IMAGE_ERROR_COPY = {
+  "report-image.renderer-unavailable":
+    "3D描画を利用できないため画像を生成できません。3D表示を確認して再試行してください。",
+  "report-image.projection-unavailable":
+    "選択中コンテナの3D表示を作成できないため画像を生成できません。",
+  "report-image.label-mismatch":
+    "積込順と3D表示の積荷が一致しないため画像を生成しませんでした。帳票を閉じて配置を確認してください。",
+  "report-image.capture-failed":
+    "5視点画像の生成に失敗しました。不完全な画像は使用せず、再試行してください。",
+} satisfies Record<Exclude<LoadingReportImageCaptureResult, { readonly ok: true }>["code"], string>;
 
 const UNAVAILABLE_REASON_COPY = {
   "loading-sequence.container-reference-invalid":
@@ -103,9 +128,12 @@ export function LoadingReportButton({
 export function LoadingReportDialog({
   containerId,
   onClose,
+  onGenerateImages,
   open,
   project,
 }: LoadingReportDialogProps) {
+  const [imageState, setImageState] = useState<ReportImageState>({ phase: "idle" });
+  const imageGenerationRef = useRef(0);
   const snapshot = useMemo(
     () =>
       open && containerId !== undefined
@@ -121,12 +149,47 @@ export function LoadingReportDialog({
     [project, snapshot],
   );
 
+  useEffect(
+    () => () => {
+      imageGenerationRef.current += 1;
+    },
+    [],
+  );
+
   if (!open) return null;
+
+  const handleClose = () => {
+    imageGenerationRef.current += 1;
+    setImageState({ phase: "idle" });
+    onClose();
+  };
+
+  const handleGenerateImages = () => {
+    if (snapshot?.status !== "available" || imageState.phase === "generating") return;
+    const generation = imageGenerationRef.current + 1;
+    imageGenerationRef.current = generation;
+    setImageState({ phase: "generating" });
+    window.requestAnimationFrame(() => {
+      if (imageGenerationRef.current !== generation) return;
+      const result = onGenerateImages(
+        snapshot.cargoes.map((cargo) => ({
+          cargoId: cargo.cargoId,
+          sequenceNumber: cargo.sequenceNumber,
+        })),
+      );
+      if (imageGenerationRef.current !== generation) return;
+      setImageState(
+        result.ok
+          ? { images: result.images, phase: "ready" }
+          : { message: IMAGE_ERROR_COPY[result.code], phase: "error" },
+      );
+    });
+  };
 
   return (
     <ModalShell
       fallbackFocusIds={["loading-report-button"]}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
       title="積込順・PDF帳票"
     >
       <section className="loading-report" aria-label="積込順提案とPDF帳票">
@@ -227,6 +290,54 @@ export function LoadingReportDialog({
               </section>
             )}
 
+            <section className="loading-report__images" aria-labelledby="loading-report-images-title">
+              <div className="loading-report__images-heading">
+                <div>
+                  <h3 id="loading-report-images-title">番号付き5視点画像</h3>
+                  <p>現在視点と、帳票用に固定した正面・背面・左面・右面を生成します。</p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={
+                    snapshot.status !== "available" ||
+                    imageState.phase === "generating"
+                  }
+                  onClick={handleGenerateImages}
+                >
+                  {imageState.phase === "generating"
+                    ? "画像を生成中…"
+                    : imageState.phase === "ready"
+                      ? "5視点画像を再生成"
+                      : "5視点画像を生成"}
+                </button>
+              </div>
+              {imageState.phase === "error" ? (
+                <p className="loading-report__image-error" role="alert">
+                  {imageState.message}
+                </p>
+              ) : null}
+              {imageState.phase === "ready" ? (
+                <div className="loading-report__image-grid">
+                  {imageState.images.map((image) => (
+                    <figure
+                      key={image.kind}
+                      data-label-count={image.labelCount}
+                      data-view-kind={image.kind}
+                    >
+                      <img
+                        alt={`${image.title}の積込順番号付き配置画像`}
+                        height={image.height}
+                        src={image.dataUrl}
+                        width={image.width}
+                      />
+                      <figcaption>{image.title}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+
             <section className="loading-report__limitations" aria-label="提案で評価しない事項">
               <h3>評価しない事項</h3>
               <p>
@@ -240,7 +351,11 @@ export function LoadingReportDialog({
           <button type="button" className="primary-button" disabled>
             PDFを出力
           </button>
-          <p>番号付き5視点画像とPDF生成は次の実装フェーズで有効になります。</p>
+          <p>
+            {imageState.phase === "ready"
+              ? "PDF生成は次の実装フェーズで有効になります。"
+              : "番号付き5視点画像を生成すると、次のPDF実装フェーズへ渡す内容を確認できます。"}
+          </p>
         </div>
       </section>
     </ModalShell>
