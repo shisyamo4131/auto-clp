@@ -47,6 +47,9 @@ $loadingReportPath = Join-Path $resolvedProject 'src/application/loading-report.
 $loadingReportDialogPath = Join-Path $resolvedProject 'src/ui/LoadingReportDialog.tsx'
 $loadingReportImagesPath = Join-Path $resolvedProject 'src/scene/loading-report-images.ts'
 $loadingReportImagesTestPath = Join-Path $resolvedProject 'src/scene/loading-report-images.test.ts'
+$loadingReportPdfPath = Join-Path $resolvedProject 'src/application/loading-report-pdf.ts'
+$loadingReportFontPath = Join-Path $resolvedProject 'src/platform/loading-report-font.ts'
+$loadingReportFilePath = Join-Path $resolvedProject 'src/persistence/loading-report-file.ts'
 $loadingReportBrowserTestPath = Join-Path $resolvedProject 'tests/browser/loading-report.spec.ts'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
@@ -564,10 +567,44 @@ foreach ($requiredText in @(
     '積込順を提案できません',
     '限定モデルによる一提案です',
     'PDFを出力',
-    'PDF生成は次の実装フェーズで有効になります'
+    '5視点画像を含む日本語PDFを端末へ出力できます'
 )) {
     if (-not $loadingReportDialog.Contains($requiredText)) {
         throw "Loading-report dialog does not contain the approved Phase 2 contract text: $requiredText"
+    }
+}
+$loadingReportPdf = [IO.File]::ReadAllText($loadingReportPdfPath)
+$loadingReportFont = [IO.File]::ReadAllText($loadingReportFontPath)
+$loadingReportFile = [IO.File]::ReadAllText($loadingReportFilePath)
+foreach ($requiredText in @(
+    'export async function createLoadingReportPdf(',
+    'PDFDocument.create()',
+    'document.embedFont(bytes, { subset: true })',
+    'document.embedPng(',
+    'Container Loading Plan - 積込順帳票',
+    'report-pdf.unsupported-character',
+    '実作業の安全性は評価・保証しません'
+)) {
+    if (-not $loadingReportPdf.Contains($requiredText)) {
+        throw "Loading-report PDF does not contain the approved Phase 4 contract text: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    '@fontsource/noto-sans-jp/unicode.json',
+    '*-400-normal.woff',
+    'fetch(shard.url)'
+)) {
+    if (-not $loadingReportFont.Contains($requiredText)) {
+        throw "Loading-report font adapter does not contain the approved Phase 4 contract text: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    'auto-clp-loading-report.pdf',
+    'application/pdf',
+    'report-pdf.download-failed'
+)) {
+    if (-not $loadingReportFile.Contains($requiredText)) {
+        throw "Loading-report file adapter does not contain the approved Phase 4 contract text: $requiredText"
     }
 }
 $loadingReportImages = [IO.File]::ReadAllText($loadingReportImagesPath)
@@ -595,7 +632,9 @@ foreach ($requiredText in @(
     'shows a fixed reason and related cargoes when sequence generation is unavailable',
     'keeps the loading report usable without horizontal page overflow',
     'generates five numbered views and keeps fixed views independent from the current camera',
-    'rejects an incomplete image set after canvas export failure and allows retry'
+    'rejects an incomplete image set after canvas export failure and allows retry',
+    'downloads a multi-page Japanese PDF with the complete cargo list and five images',
+    'does not download an incomplete PDF after a font load failure and allows retry'
 )) {
     if (-not $loadingReportBrowserTest.Contains($requiredText)) {
         throw "Loading-report browser tests do not contain the approved Phase 2 regression: $requiredText"

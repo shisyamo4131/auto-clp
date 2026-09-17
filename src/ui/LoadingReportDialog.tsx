@@ -14,6 +14,10 @@ import type {
   LoadingReportImageCaptureResult,
   LoadingReportImageLabel,
 } from "../scene/loading-report-images";
+import {
+  downloadLoadingReportPdf,
+  LOADING_REPORT_PDF_FILENAME,
+} from "../persistence/loading-report-file";
 import { toPhysicalValidationView } from "./physical-validation-view";
 import { ModalShell } from "./ModalShell";
 
@@ -33,6 +37,12 @@ type ReportImageState =
   | { readonly phase: "ready"; readonly images: readonly LoadingReportImage[] }
   | { readonly phase: "error"; readonly message: string };
 
+type ReportPdfState =
+  | { readonly phase: "idle" }
+  | { readonly phase: "generating" }
+  | { readonly phase: "success"; readonly message: string }
+  | { readonly phase: "error"; readonly message: string };
+
 const IMAGE_ERROR_COPY = {
   "report-image.renderer-unavailable":
     "3D描画を利用できないため画像を生成できません。3D表示を確認して再試行してください。",
@@ -43,6 +53,23 @@ const IMAGE_ERROR_COPY = {
   "report-image.capture-failed":
     "5視点画像の生成に失敗しました。不完全な画像は使用せず、再試行してください。",
 } satisfies Record<Exclude<LoadingReportImageCaptureResult, { readonly ok: true }>["code"], string>;
+
+const PDF_ERROR_COPY = {
+  "report-pdf.input-invalid":
+    "積込順または5視点画像が揃っていないためPDFを生成できません。画像を再生成してください。",
+  "report-pdf.font-load-failed":
+    "帳票用の日本語フォントを読み込めませんでした。ページを再読み込みして再試行してください。",
+  "report-pdf.unsupported-character":
+    "帳票用フォントで表示できない文字が含まれるためPDFを生成しませんでした。CLP名、コンテナ名、積荷名、IDを確認してください。",
+  "report-pdf.image-invalid":
+    "5視点画像をPDFへ取り込めませんでした。画像を再生成して再試行してください。",
+  "report-pdf.generation-failed":
+    "PDFの生成に失敗しました。不完全なファイルは使用せず、再試行してください。",
+  "report-pdf.download-unavailable":
+    "このブラウザではPDFのダウンロードを開始できません。対応ブラウザで再試行してください。",
+  "report-pdf.download-failed":
+    "PDFのダウンロード開始に失敗しました。ブラウザの設定を確認して再試行してください。",
+} as const;
 
 const UNAVAILABLE_REASON_COPY = {
   "loading-sequence.container-reference-invalid":
@@ -133,7 +160,9 @@ export function LoadingReportDialog({
   project,
 }: LoadingReportDialogProps) {
   const [imageState, setImageState] = useState<ReportImageState>({ phase: "idle" });
+  const [pdfState, setPdfState] = useState<ReportPdfState>({ phase: "idle" });
   const imageGenerationRef = useRef(0);
+  const pdfGenerationRef = useRef(0);
   const snapshot = useMemo(
     () =>
       open && containerId !== undefined
@@ -152,6 +181,7 @@ export function LoadingReportDialog({
   useEffect(
     () => () => {
       imageGenerationRef.current += 1;
+      pdfGenerationRef.current += 1;
     },
     [],
   );
@@ -160,7 +190,9 @@ export function LoadingReportDialog({
 
   const handleClose = () => {
     imageGenerationRef.current += 1;
+    pdfGenerationRef.current += 1;
     setImageState({ phase: "idle" });
+    setPdfState({ phase: "idle" });
     onClose();
   };
 
@@ -169,6 +201,7 @@ export function LoadingReportDialog({
     const generation = imageGenerationRef.current + 1;
     imageGenerationRef.current = generation;
     setImageState({ phase: "generating" });
+    setPdfState({ phase: "idle" });
     window.requestAnimationFrame(() => {
       if (imageGenerationRef.current !== generation) return;
       const result = onGenerateImages(
@@ -184,6 +217,61 @@ export function LoadingReportDialog({
           : { message: IMAGE_ERROR_COPY[result.code], phase: "error" },
       );
     });
+  };
+
+  const handleGeneratePdf = async () => {
+    if (
+      snapshot?.status !== "available" ||
+      imageState.phase !== "ready" ||
+      physicalView === undefined ||
+      pdfState.phase === "generating"
+    ) {
+      return;
+    }
+    const generation = pdfGenerationRef.current + 1;
+    pdfGenerationRef.current = generation;
+    setPdfState({ phase: "generating" });
+    try {
+      const { createLoadingReportPdf } = await import(
+        "../application/loading-report-pdf"
+      );
+      const result = await createLoadingReportPdf({
+        generatedAtIso: new Date().toISOString(),
+        images: imageState.images,
+        physical: {
+          reasons: [
+            ...physicalView.invalidReasons,
+            ...physicalView.unverifiedReasons,
+          ].map(
+            (reason) =>
+              `${reason.statusLabel}: ${reason.targetLabel} - ${reason.message}`,
+          ),
+          statusLabel: physicalView.statusLabel,
+          summary: physicalView.summary,
+        },
+        snapshot,
+      });
+      if (pdfGenerationRef.current !== generation) return;
+      if (!result.ok) {
+        setPdfState({ message: PDF_ERROR_COPY[result.code], phase: "error" });
+        return;
+      }
+      const downloaded = downloadLoadingReportPdf(result.bytes);
+      if (!downloaded.ok) {
+        setPdfState({ message: PDF_ERROR_COPY[downloaded.code], phase: "error" });
+        return;
+      }
+      setPdfState({
+        message: `PDFのダウンロードを開始しました。ブラウザのダウンロード一覧または保存先を確認してください。ファイル名: ${LOADING_REPORT_PDF_FILENAME}`,
+        phase: "success",
+      });
+    } catch {
+      if (pdfGenerationRef.current !== generation) return;
+      setPdfState({
+        message: PDF_ERROR_COPY["report-pdf.generation-failed"],
+        phase: "error",
+      });
+    }
   };
 
   return (
@@ -348,14 +436,33 @@ export function LoadingReportDialog({
         )}
 
         <div className="modal-shell__actions loading-report__actions">
-          <button type="button" className="primary-button" disabled>
-            PDFを出力
+          <button
+            type="button"
+            className="primary-button"
+            disabled={
+              snapshot?.status !== "available" ||
+              imageState.phase !== "ready" ||
+              pdfState.phase === "generating"
+            }
+            onClick={() => void handleGeneratePdf()}
+          >
+            {pdfState.phase === "generating" ? "PDFを生成中…" : "PDFを出力"}
           </button>
-          <p>
-            {imageState.phase === "ready"
-              ? "PDF生成は次の実装フェーズで有効になります。"
-              : "番号付き5視点画像を生成すると、次のPDF実装フェーズへ渡す内容を確認できます。"}
-          </p>
+          {pdfState.phase === "error" ? (
+            <p className="loading-report__pdf-error" role="alert">
+              {pdfState.message}
+            </p>
+          ) : pdfState.phase === "success" ? (
+            <p className="loading-report__pdf-success" role="status">
+              {pdfState.message}
+            </p>
+          ) : (
+            <p>
+              {imageState.phase === "ready"
+                ? "5視点画像を含む日本語PDFを端末へ出力できます。"
+                : "番号付き5視点画像を生成するとPDFを出力できます。"}
+            </p>
+          )}
         </div>
       </section>
     </ModalShell>

@@ -1,3 +1,6 @@
+import type { Download } from "@playwright/test";
+import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
+
 import { expect, test, type Page } from "./fixtures";
 import { activateContainer, openPersistenceDrawer } from "./ui-helpers";
 
@@ -83,6 +86,13 @@ async function openReport(page: Page) {
   return { dialog, opener };
 }
 
+async function downloadBytes(download: Download): Promise<Buffer> {
+  const stream = await download.createReadStream();
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks);
+}
+
 test("shows the selected container sequence, reasons, notes, and restores focus", async ({ page }) => {
   await page.goto("/");
   await importProject(page, reportProject());
@@ -99,7 +109,7 @@ test("shows the selected container sequence, reasons, notes, and restores focus"
   await expect(dialog).toContainText("現在配置の物理判定");
   await expect(dialog).toContainText("搬送機器、作業空間");
   await expect(dialog.getByRole("button", { name: "PDFを出力" })).toBeDisabled();
-  await expect(dialog).toContainText("次のPDF実装フェーズへ渡す内容を確認できます");
+  await expect(dialog).toContainText("番号付き5視点画像を生成するとPDFを出力できます");
   await expect(page.locator(".app-shell")).toHaveAttribute("inert", "");
 
   await dialog.getByRole("button", { name: "積込順・PDF帳票を閉じる" }).click();
@@ -133,6 +143,7 @@ test("generates five numbered views and keeps fixed views independent from the c
   const firstFigures = first.dialog.locator(".loading-report__image-grid figure");
   await expect(firstFigures).toHaveCount(5);
   await expect(first.dialog.getByRole("button", { name: "5視点画像を再生成" })).toBeEnabled();
+  await expect(first.dialog.getByRole("button", { name: "PDFを出力" })).toBeEnabled();
   for (const figure of await firstFigures.all()) {
     await expect(figure).toHaveAttribute("data-label-count", "2");
   }
@@ -184,6 +195,86 @@ test("rejects an incomplete image set after canvas export failure and allows ret
   await page.evaluate("globalThis.__failReportImageCapture = false");
   await dialog.getByRole("button", { name: "5視点画像を生成" }).click();
   await expect(dialog.locator(".loading-report__image-grid figure")).toHaveCount(5);
+});
+
+test("downloads a multi-page Japanese PDF with the complete cargo list and five images", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await importProject(page, reportProject());
+  const { dialog } = await openReport(page);
+  await dialog.getByRole("button", { name: "5視点画像を生成" }).click();
+  await expect(dialog.locator(".loading-report__image-grid figure")).toHaveCount(5);
+
+  const downloadPromise = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "PDFを出力" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("auto-clp-loading-report.pdf");
+  const bytes = await downloadBytes(download);
+  expect(bytes.subarray(0, 5).toString("ascii")).toBe("%PDF-");
+
+  const loadingTask = getDocument({ data: new Uint8Array(bytes) });
+  const pdf = await loadingTask.promise;
+  expect(pdf.numPages).toBeGreaterThanOrEqual(3);
+  const textParts: string[] = [];
+  let imagePaintCount = 0;
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const pdfPage = await pdf.getPage(pageNumber);
+    const text = await pdfPage.getTextContent();
+    textParts.push(
+      text.items
+        .map((item) => ("str" in item ? item.str : ""))
+        .join(""),
+    );
+    const operators = await pdfPage.getOperatorList();
+    imagePaintCount += operators.fnArray.filter(
+      (operation) =>
+        operation === OPS.paintImageXObject ||
+        operation === OPS.paintImageMaskXObject,
+    ).length;
+  }
+  const extractedText = textParts.join("").replace(/\s+/g, "");
+  expect(extractedText).toContain("積込順帳票");
+  expect(extractedText).toContain("匿名帳票CLP");
+  expect(extractedText).toContain("帳票対象コンテナ");
+  expect(extractedText).toContain("奥の積荷");
+  expect(extractedText).toContain("手前の積荷");
+  expect(extractedText).toContain("100×200×50mm");
+  expect(extractedText).toContain("1.25kg");
+  expect(extractedText).toContain("実作業の安全性は評価・保証しません");
+  expect(imagePaintCount).toBe(5);
+  await loadingTask.destroy();
+  await expect(dialog.getByRole("status")).toContainText(
+    "PDFのダウンロードを開始しました",
+  );
+});
+
+test("does not download an incomplete PDF after a font load failure and allows retry", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await importProject(page, reportProject());
+  const { dialog } = await openReport(page);
+  await dialog.getByRole("button", { name: "5視点画像を生成" }).click();
+  await expect(dialog.locator(".loading-report__image-grid figure")).toHaveCount(5);
+
+  let downloadCount = 0;
+  page.on("download", () => {
+    downloadCount += 1;
+  });
+  await page.route("**/*.woff", (route) => route.abort("failed"));
+  await dialog.getByRole("button", { name: "PDFを出力" }).click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "帳票用の日本語フォントを読み込めませんでした",
+  );
+  expect(downloadCount).toBe(0);
+
+  await page.unroute("**/*.woff");
+  const downloadPromise = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "PDFを出力" }).click();
+  expect((await downloadPromise).suggestedFilename()).toBe(
+    "auto-clp-loading-report.pdf",
+  );
 });
 
 for (const width of [305, 320, 375] as const) {

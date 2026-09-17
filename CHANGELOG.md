@@ -4,7 +4,7 @@
 
 ### Changed
 
-- 仕様1.14.0・ADR 0044で、選択中コンテナの現在配置から、支持先行と開口からの直線搬入帯の遮蔽を有向グラフとして合成する積込順提案、および一覧と番号付き5視点画像を含むPDF帳票を現行目標へ追加した。Phase 1〜3として `loading-sequence-v1` の純粋domain、決定的sort、固定失敗理由、非永続帳票snapshot、提案内容を確認するdialog、出力開始時cameraの現在視点とcamera非依存の正面・背面・左面・右面を専用render targetで生成して全配置積荷へ一覧対応番号を表示する帳票sceneを実装した。不完全画像setは成功扱いせず再試行できる。PDF生成は未実装である。提案は搬送機器、作業空間、旋回、斜路、固縛、荷崩れ、荷下ろし順、目的地順または実作業の安全性を評価・保証しない。Schema `0.1.0`、JSON、端末保存、Undo/Redoは変更しない。
+- 仕様1.14.0・ADR 0044で、選択中コンテナの現在配置から、支持先行と開口からの直線搬入帯の遮蔽を有向グラフとして合成する積込順提案、および一覧と番号付き5視点画像を含むPDF帳票を現行目標へ追加した。Phase 1〜4として `loading-sequence-v1`、非永続snapshot、提案確認dialog、出力開始時cameraの現在視点とcamera非依存の固定4面、全配置積荷の一覧対応番号、抽出可能な日本語、積荷一覧、先行条件、物理判定、限定モデル注記、ページ番号を含む複数ページPDFのbrowser内生成と固定名downloadを実装した。不完全画像set、フォント読込またはPDF生成に失敗した場合はdownloadを開始せず再試行できる。提案は搬送機器、作業空間、旋回、斜路、固縛、荷崩れ、荷下ろし順、目的地順または実作業の安全性を評価・保証しない。Schema `0.1.0`、JSON、端末保存、Undo/Redoは変更しない。
 
 - 仕様1.13.1で、viewport上段toolbarの全iconをbuttonの上下左右中央へ揃え、物理判定buttonの可視glyphをMaterial Design Iconsの `information-variant` 相当iconへ変更した。状態色、accessible name、title、件数、dialog、Schema `0.1.0`、JSON、端末保存は変更しない。
 

@@ -2518,6 +2518,14 @@ legend {
   font-size: 0.85rem;
 }
 
+.loading-report__actions .loading-report__pdf-error {
+  color: #ffd0cd;
+}
+
+.loading-report__actions .loading-report__pdf-success {
+  color: #a9f5d0;
+}
+
 @media (max-width: 374px) {
   .loading-report__identity > div,
   .loading-report__sequence dl > div {
