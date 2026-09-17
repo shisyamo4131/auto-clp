@@ -32,12 +32,12 @@
 
 ## Next Work
 
-1. [積込順提案・PDF帳票ロードマップ](loading-sequence-pdf-report.md) Phase 5として、1件、20件、30件、積層、複数支持、循環／提案不能を統合回帰し、ローカルブラウザでPDFの文字、改ページ、画像、番号対応を人間確認する。
-2. 積荷制約一覧の複数行更新、取消、Undo/Redo、配置保持と「上乗せ禁止」理由を内蔵ブラウザで差分確認する。
+1. [積込順提案・PDF帳票ロードマップ](loading-sequence-pdf-report.md) Phase 5として、[公開Chrome UI-assisted観察](../evidence/public-chrome-acceptance-18dcfb0.md)済みの1件、20件、30件、積層、複数支持、提案不能を追加自動回帰へ固定し、download済みPDFの文字、改ページ、画像、番号対応を人間確認する。循環fixtureも追加する。
+2. 積荷制約一覧は公開Chromeで複数行更新、取消、単一Undo、配置保持と、単一支持fixtureの「上乗せ禁止」専用理由をUI-assisted確認済み。人間の最終差分確認と、複数支持の片方だけが上乗せ禁止である境界の期待仕様確定を残す。
 3. 単一支持グループの短距離dragで旧位置を支持物と誤認しないこと、完全drag-out時の荷室外Z=0、コンテナ角・異なる積荷2面へのfit、50 mm取得・75 mm保持、カーソルによる床／上面選択、既定ONの切替、視点基準の1 mm矢印調整、衝突停止、長押し一回Undoを内蔵ブラウザで差分確認する。
 4. Windows版Excelでtemplate download、匿名データ編集、CSV UTF-8保存、再読込、確認、Undo/Redoと非UTF-8拒否を人間確認する。
-5. [AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers)と[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)の匿名合成データで重心表示を人間確認する。
-6. 荷室外積荷の寄せ、重量付きselectorと4状態dot、総重量／積込済数、wheel zoom、Ctrl panを代表的な20〜30件データで人間確認する。
+5. [AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers)と[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)の匿名合成データは公開ChromeでCodexが赤・黄点の分離、凡例、総重量／積込済数をUI-assisted確認済み。人間の視認性・理解度を確認する。
+6. 代表的な30件データでは重量付きselector、青い配置済みdot、検索、総重量／積込済数を公開ChromeでUI-assisted確認済み。荷室外積荷の寄せ、残る3状態dot、wheel zoom、Ctrl panを人間確認する。
 7. 正式fixtureと評価者区分を記録し、実務利用者試用の評価担当、日程、合否記録を決める。
 8. 第三者利用者の募集、実在CLPの取扱い、課金または本番運用へ進む前に、版付き「使用上の重要事項」とは別に、表示・同意・版管理を含む法的な利用規約を法務確認付きの別checkpointで整備する。
 
