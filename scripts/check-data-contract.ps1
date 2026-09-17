@@ -43,6 +43,9 @@ $multiFaceSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0043-det
 $loadingSequenceReportDecisionPath = Join-Path $resolvedProject 'docs/decisions/0044-limited-loading-sequence-and-pdf-report.md'
 $loadingSequencePath = Join-Path $resolvedProject 'src/domain/loading-sequence.ts'
 $loadingSequenceTestPath = Join-Path $resolvedProject 'src/domain/loading-sequence.test.ts'
+$loadingReportPath = Join-Path $resolvedProject 'src/application/loading-report.ts'
+$loadingReportDialogPath = Join-Path $resolvedProject 'src/ui/LoadingReportDialog.tsx'
+$loadingReportBrowserTestPath = Join-Path $resolvedProject 'tests/browser/loading-report.spec.ts'
 $projectCommandPath = Join-Path $resolvedProject 'src/application/project-command.ts'
 $projectCommandTestPath = Join-Path $resolvedProject 'src/application/project-command.test.ts'
 $cargoConstraintsDialogPath = Join-Path $resolvedProject 'src/ui/CargoConstraintsDialog.tsx'
@@ -541,6 +544,37 @@ foreach ($requiredText in @(
 )) {
     if (-not $loadingSequenceTest.Contains($requiredText)) {
         throw "Loading-sequence tests do not contain the approved Phase 1 regression: $requiredText"
+    }
+}
+$loadingReport = [IO.File]::ReadAllText($loadingReportPath)
+$loadingReportDialog = [IO.File]::ReadAllText($loadingReportDialogPath)
+$loadingReportBrowserTest = [IO.File]::ReadAllText($loadingReportBrowserTestPath)
+foreach ($requiredText in @(
+    'export function createLoadingReportSnapshot(',
+    'validatePlacementSet(project, containerId)',
+    'orientedDimensions(cargo, placement.orientation)'
+)) {
+    if (-not $loadingReport.Contains($requiredText)) {
+        throw "Loading-report snapshot does not contain the approved Phase 2 contract text: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    '積込順を提案できません',
+    '限定モデルによる一提案です',
+    'PDFを出力',
+    '次の実装フェーズで有効になります'
+)) {
+    if (-not $loadingReportDialog.Contains($requiredText)) {
+        throw "Loading-report dialog does not contain the approved Phase 2 contract text: $requiredText"
+    }
+}
+foreach ($requiredText in @(
+    'shows the selected container sequence, reasons, notes, and restores focus',
+    'shows a fixed reason and related cargoes when sequence generation is unavailable',
+    'keeps the loading report usable without horizontal page overflow'
+)) {
+    if (-not $loadingReportBrowserTest.Contains($requiredText)) {
+        throw "Loading-report browser tests do not contain the approved Phase 2 regression: $requiredText"
     }
 }
 foreach ($requiredText in @(

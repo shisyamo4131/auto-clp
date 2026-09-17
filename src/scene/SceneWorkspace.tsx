@@ -21,6 +21,10 @@ import {
   PhysicalValidationLamp,
   PhysicalValidationPanel,
 } from "../ui/PhysicalValidationPanel";
+import {
+  LoadingReportButton,
+  LoadingReportDialog,
+} from "../ui/LoadingReportDialog";
 import { usePhysicalValidationWorker } from "../ui/usePhysicalValidationWorker";
 import type { CargoEditorIntent } from "../ui/CargoEditorDialog";
 import {
@@ -325,6 +329,7 @@ export function SceneWorkspace({
   const [placementInteractionActive, setPlacementInteractionActive] = useState(false);
   const [canvasDragActive, setCanvasDragActive] = useState(false);
   const [physicalDialogOpen, setPhysicalDialogOpen] = useState(false);
+  const [loadingReportDialogOpen, setLoadingReportDialogOpen] = useState(false);
   const [selectedCargoId, setSelectedCargoId] = useState<string>();
   const [cargoQuery, setCargoQuery] = useState("");
   const [canvasStatus, setCanvasStatus] = useState("");
@@ -570,7 +575,10 @@ export function SceneWorkspace({
     selectedCargo !== undefined &&
     !isUprightOnlyOrientationPolicy(selectedCargo.allowedOrientations);
   const interactionActive =
-    placementInteractionActive || canvasDragActive || physicalDialogOpen;
+    placementInteractionActive ||
+    canvasDragActive ||
+    physicalDialogOpen ||
+    loadingReportDialogOpen;
   const coordinateActionDisabled =
     externalInteractionActive ||
     interactionActive ||
@@ -1539,12 +1547,22 @@ export function SceneWorkspace({
               </>
             )}
             validationControl={(
-              <PhysicalValidationLamp
-                controller={physicalValidationController}
-                disabled={externalInteractionActive || interactionActive}
-                onOpen={() => setPhysicalDialogOpen(true)}
-                project={project}
-              />
+              <>
+                <LoadingReportButton
+                  disabled={
+                    effectiveContainerId === undefined ||
+                    externalInteractionActive ||
+                    interactionActive
+                  }
+                  onOpen={() => setLoadingReportDialogOpen(true)}
+                />
+                <PhysicalValidationLamp
+                  controller={physicalValidationController}
+                  disabled={externalInteractionActive || interactionActive}
+                  onOpen={() => setPhysicalDialogOpen(true)}
+                  project={project}
+                />
+              </>
             )}
             interactionDisabled={
               externalInteractionActive ||
@@ -1667,6 +1685,13 @@ export function SceneWorkspace({
             });
           }}
           open={physicalDialogOpen}
+          project={project}
+        />
+
+        <LoadingReportDialog
+          containerId={effectiveContainerId}
+          onClose={() => setLoadingReportDialogOpen(false)}
+          open={loadingReportDialogOpen}
           project={project}
         />
       </div>

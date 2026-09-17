@@ -412,7 +412,7 @@ test("keeps the physical controller fresh while its dialog is closed", async ({ 
 test("centers every viewport toolbar icon inside its button", async ({ page }) => {
   await page.goto("/");
   const buttons = page.locator(".viewport__camera-controls button");
-  await expect(buttons).toHaveCount(8);
+  await expect(buttons).toHaveCount(9);
   const offsets = await buttons.evaluateAll((elements) =>
     elements.map((element) => {
       const icon = element.querySelector(":scope > svg, :scope > span");
@@ -425,7 +425,7 @@ test("centers every viewport toolbar icon inside its button", async ({ page }) =
       };
     }),
   );
-  expect(offsets).toHaveLength(8);
+  expect(offsets).toHaveLength(9);
   for (const offset of offsets) {
     expect(offset).not.toBeNull();
     expect(Math.abs(offset?.x ?? Number.POSITIVE_INFINITY)).toBeLessThanOrEqual(0.5);

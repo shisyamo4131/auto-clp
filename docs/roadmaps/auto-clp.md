@@ -1,7 +1,7 @@
 # Auto CLP Roadmap
 
 - Goal: 初期利用者が代表的な精密機器輸送ケースを3Dで検討し、適合するコンテナと手動配置を確認し、限定モデルの積込順とPDF帳票を得られるローカルファーストWebアプリを完成させ、技術試用版をWebから利用可能にする。
-- Current progress: 89%
+- Current progress: 91%
 - Last reviewed: 2026-09-17
 - Approval boundary: 重要仕様変更、外部通信、デプロイ、実データ利用、破壊的操作、Git履歴書き換えは明示承認を要する。
 
@@ -17,7 +17,7 @@
 | 重量バランス可視化 | 5 | 4 | In progress | 正確なBigInt・有理数による純粋計算、scene/UIの同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、非clampの画面外status、4状態、内容版1.2.0の使用事項、単体・browser・保存回帰を実装し独立レビュー済み。人間による中心一致・近接・偏り・画面外・物理lampとの非混同・凡例理解の差分確認を残す |
 | CSV積荷一括置換 | 5 | 4 | In progress | Excel向け固定CSV、手動・CSV共通の30件新規作成上限と既定値、全行検証、破棄・保持範囲を示す確認、積荷・配置の原子的置換、一回のUndo/Redo、legacy互換を実装し、自動回帰と独立レビューに合格。20件取込とUndoは利用者確認済みで、Windows版Excel往復1点を残す |
 | 積荷制約の一覧編集 | 2 | 2 | Complete | CSV 5列を維持し、全積荷の天地無用・上乗せ禁止だけを一覧編集する原子的command、個別editorとの表記統一、一回のUndo/Redo、配置保持と支持不可理由、狭幅・dirty確認を実装・回帰 |
-| 積込順提案・PDF帳票 | 12 | 4 | In progress | [機能ロードマップ](loading-sequence-pdf-report.md) Phase 0・1として仕様1.14.0、ADR 0044、AC-14と、`loading-sequence-v1` の直線搬入帯・支持先行・決定的graph・固定失敗理由を実装。UI、画像、PDF、ローカル受入は未着手 |
+| 積込順提案・PDF帳票 | 12 | 6 | In progress | [機能ロードマップ](loading-sequence-pdf-report.md) Phase 0〜2として仕様1.14.0、ADR 0044、AC-14、`loading-sequence-v1` の直線搬入帯・支持先行・決定的graph・固定失敗理由、非永続の帳票snapshot、選択中コンテナの提案順・根拠・注意・提案不能理由を確認するdialogとPDF出力入口を実装。番号付き画像、PDF生成、ローカル受入は未着手 |
 | 実務利用者による受入 | 4 | 3 | In progress | 4本の匿名合成ケース、合格基準、自動証拠に加え、案内付き人間評価で移動・向き・削除・履歴・物理理由・保存・JSON往復、305 / 320 / 375 px、Tab・dialog focusを観察し、床突き抜け由来の支持不足カスケード不具合を発見。WebGL 2非対応・初期描画失敗時の阻止・退避画面は人間確認済み。作業中context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
 | **Total** | **100** | **89** |  |  |
 
@@ -32,7 +32,7 @@
 
 ## Next Work
 
-1. [積込順提案・PDF帳票ロードマップ](loading-sequence-pdf-report.md) Phase 2として、帳票用snapshot、提案順・根拠・注意・生成不可理由を確認するdialog、PDF出力入口を実装する。
+1. [積込順提案・PDF帳票ロードマップ](loading-sequence-pdf-report.md) Phase 3として、同じ帳票snapshotから現在視点・正面・背面・左面・右面の番号付き画像を生成する。
 2. 積荷制約一覧の複数行更新、取消、Undo/Redo、配置保持と「上乗せ禁止」理由を内蔵ブラウザで差分確認する。
 3. 単一支持グループの短距離dragで旧位置を支持物と誤認しないこと、完全drag-out時の荷室外Z=0、コンテナ角・異なる積荷2面へのfit、50 mm取得・75 mm保持、カーソルによる床／上面選択、既定ONの切替、視点基準の1 mm矢印調整、衝突停止、長押し一回Undoを内蔵ブラウザで差分確認する。
 4. Windows版Excelでtemplate download、匿名データ編集、CSV UTF-8保存、再読込、確認、Undo/Redoと非UTF-8拒否を人間確認する。
@@ -52,7 +52,7 @@
 | 重量バランス可視化 | [仕様1.5.1](../specification.md)、[ADR 0032](../decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](../decisions/0033-equal-borderless-center-markers.md)、[データ契約](../data-model.md)、[AC-06](../acceptance.md#ac-06-cargo-center-of-gravity-reference-markers) | 実装済み: 正確な重量moment、4状態、コンテナ幾何中心、配置積荷の合成重心、同径10 CSS px・白い外枠なしの赤・黄非操作ドット、完全一致・近接時の黄前面表示、画面外status、色以外の凡例、計算不能時の読取専用回復投影 | 全単体29ファイル975件・全browser 97件、型・lint・build・文書検査に合格。不均等重量、奇数寸法、全向き、負・不適合配置、上限1,000件、上限外、空・計算不能、中心一致・近接・画面外、DPR 1/2、camera、drag、履歴、保存除外・読込再計算と失敗保持、4状態、305/320/375px、非操作・非保証を検証。独立コードレビューは指摘修正後に合格。人間視認性は未確認 |
 | CSV積荷一括置換 | [仕様1.7.0](../specification.md)、[ADR 0034](../decisions/0034-cargo-csv-template-and-replacement-import.md)、[ADR 0036](../decisions/0036-cargo-csv-destructive-confirmation-copy.md)、[データ契約](../data-model.md)、[AC-07](../acceptance.md#ac-07-cargo-csv-template-and-atomic-replacement) | 実装済み: 固定CSV template、parser、30件新規作成上限、手動・CSV既定値、一時検証、破棄・保持範囲の確認、積荷・配置置換、一回の履歴、scene一時状態reset | 既存の単体32ファイル1,006件・ブラウザ102件、型・lint・buildに加え、確認文回帰を更新。利用者が20件取込とUndoを確認済み。Windows版Excel往復は未実施 |
 | 積荷制約の一覧編集 | [仕様1.8.0](../specification.md)、[ADR 0037](../decisions/0037-cargo-constraint-list-and-prohibition-wording.md)、[AC-09](../acceptance.md#ac-09-cargo-constraint-batch-editing) | 実装済み: Drawer入口、天地無用・上乗せ禁止の一覧、保存値反転、原子的command、一回の履歴、個別editor・不適合理由の表記統一 | 型・lint・単体32ファイル1,016件・ブラウザ104件・build・データ契約・ガバナンス・プロジェクト検査に合格。個別editorとの一致、Undo、dirty確認、305/320/375 pxを回帰。内蔵ブラウザでの人間差分確認は未実施 |
-| 積込順提案・PDF帳票 | [仕様1.14.0](../specification.md)、[ADR 0044](../decisions/0044-limited-loading-sequence-and-pdf-report.md)、[機能ロードマップ](loading-sequence-pdf-report.md)、[AC-14](../acceptance.md#ac-14-limited-loading-sequence-and-pdf-report) | Phase 0・1完了。直線搬入帯、支持先行、決定的graph、固定失敗理由を純粋domainとして実装。帳票dialog、番号付き5視点scene、PDF生成は未実装 | 直接20件、全単体33ファイル1,056件、browser 108件、型、lint、build、データ契約、ガバナンス、プロジェクト検査に合格。UI・PDFとローカル人間確認は後続Phaseで追加する |
+| 積込順提案・PDF帳票 | [仕様1.14.0](../specification.md)、[ADR 0044](../decisions/0044-limited-loading-sequence-and-pdf-report.md)、[機能ロードマップ](loading-sequence-pdf-report.md)、[AC-14](../acceptance.md#ac-14-limited-loading-sequence-and-pdf-report) | Phase 0〜2完了。直線搬入帯、支持先行、決定的graph、固定失敗理由を純粋domainとして実装し、選択中コンテナから非永続帳票snapshotを作るapplication境界、積込順・先行理由・注意・物理判定・提案不能理由を示すdialog、後続PDF出力入口を追加。番号付き5視点sceneとPDF生成は未実装 | 全単体34ファイル1,059件、browser 113件、型、lint、build、データ契約、ガバナンス、プロジェクト検査に合格。選択コンテナ切替、提案不能、focus、305 / 320 / 375 pxを回帰。画像・PDFとローカル人間確認は後続Phaseで追加する |
 | 保存・再読込・操作性 | [仕様](../specification.md)、[ADR 0009](../decisions/0009-versioned-project-data-contract.md)、[ADR 0013](../decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0023](../decisions/0023-webgl-required-operation-and-read-only-rescue.md) | IndexedDB単一手動枠、transaction完了後save、読込・確認削除、固定名JSON file adapter、全候補one-shot preflight Worker、履歴barrier、WebGL障害時の読み取り専用救出、固定code UI | 実IndexedDB reload/delete、download/reimport、JSON全失敗段階、blocked/abort/破損、遅延競合、focus、WebGL 2利用可能時の通常操作、非対応・描画障害時の全面停止と2種類の救出、305/320/375px、1,000配置・100候補の実Worker応答性を回帰 |
 | 自動配置提案の将来技術資産（非加重点） | [ADR 0004](../decisions/0004-optimization-objective.md)、[ADR 0029](../decisions/0029-phase1-drawer-entry-and-automatic-proposal-deferral.md)、[将来合成ケースAP-01〜08](../acceptance.md#future-automatic-proposal-retained-technical-cases) | 純粋探索・Worker・session/view・React panel・適用境界を将来再利用候補として保持。Phase 1の通常UIには表示せずWorkerを開始しない | `automatic-proposal-v2` の単体資産、非実行browser snapshot、[AP-08技術証拠](../evidence/automatic-proposal-ap08-733b250.md)を履歴資産として保持。再公開には仕様再承認、現行shellまたは専用harnessへの再接続、収集設定、全回帰と実務受入が必要 |
 | 実務利用者による受入 | [仕様の完了条件](../specification.md#current-phase-completion-criteria)、[Phase 1合成受入契約](../acceptance.md) | 4本の匿名合成ケース、共通合格基準、観察様式、床突き抜け専用診断を確定 | [Codex UI-assisted部分観察](../evidence/phase1-development-ui-trial-8c8ece2.md)に加え、[案内付き人間評価](../evidence/phase1-human-ui-trial-4e6c680.md)で派生ケースの移動・向き・削除・履歴・理由理解・端末保存・JSON往復、狭幅・Tab・focus、viewer-first shell 1.3.0までの変更差分、WebGL非対応・初期描画失敗時の阻止・退避画面を確認し、`HUT-01` とUI改善根拠を記録。context loss遷移は自動回帰で確認し、人間試用では未再現。正式fixture、評価者区分、実務利用者試用は未完了 |
@@ -157,3 +157,4 @@
 | 2026-09-17 | 96% | +0 | 仕様1.13.0・ADR 0043で、50 mm取得・75 mm保持の最大2面X/Y fitとカーソルによる床／上面選択を追加し、X/Yスナップを基礎配置・支持・衝突検証から分離した。型・lint・単体32ファイル1,036件・ブラウザ107件・build・データ契約・ガバナンス・プロジェクト検査に合格した。既完了の3D手動配置範囲内の操作改善で、ローカル人間差分確認を残すため進捗は据え置く |
 | 2026-09-17 | 86% | -10 | 仕様1.14.0・ADR 0044で、限定モデルの積込順提案と番号付き5視点PDF帳票を現行目標へ追加した。既存配点を88点へ再配分し、新機能12点のうちPhase 0の仕様・設計・受入契約1点を獲得したため、獲得点を96/100から86/100へ補正した。Schema 0.1.0は変更しない |
 | 2026-09-17 | 89% | +3 | 積込順提案・PDF帳票Phase 1として、`loading-sequence-v1` の直線搬入帯、接触支持先行、決定的トポロジカルソート、循環・参照・重複・支持不明の固定理由を純粋domainに実装した。直接20件、全単体33ファイル1,056件、browser 108件を含む総合9ゲートに合格し、新機能マイルストーンを1/12から4/12へ更新した。UI、画像、PDFは未実装 |
+| 2026-09-17 | 91% | +2 | 積込順提案・PDF帳票Phase 2として、選択中コンテナの非永続帳票snapshot、提案順・先行理由・注意・物理判定・提案不能理由を確認するdialogとPDF出力入口を実装した。全単体34ファイル1,059件、browser 113件を含む総合9ゲートに合格し、新機能マイルストーンを4/12から6/12へ更新した。番号付き画像とPDF生成は未実装 |
