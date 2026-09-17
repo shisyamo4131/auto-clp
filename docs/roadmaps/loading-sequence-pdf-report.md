@@ -51,4 +51,4 @@
 - Phase 3: 固定視点の座標向き、camera非依存、番号と積荷対応、WebGL失敗時の中止を検証する。
 - Phase 4: PDF signature、ページ数、抽出可能な日本語text、積荷一覧、画像数、失敗時に不完全fileを成功扱いしないことを検証する。
 - Phase 5: final worktreeで検証policyにより選ばれた全completion gateと、匿名合成データによるローカル人間確認を記録する。
-- Phase 5 development observation: [公開Chrome UI-assisted観察](../evidence/public-chrome-acceptance-18dcfb0.md)で1・20・30件、積層、複数支持、提案不能、5視点label数とPDF開始成功表示を確認した。download済みPDF binaryの人間精読とPhase 5追加自動回帰は未完了のため、Phase 5 earnedは0のままとする。
+- Phase 5 observation: [公開Chrome UI-assisted観察](../evidence/public-chrome-acceptance-18dcfb0.md)で1・20・30件、積層、複数支持、提案不能、5視点label数とPDF開始成功表示を確認し、人間のプロジェクト評価者がdownload済みPDFの改ページ、フォント等を問題なしと判定した。Phase 5追加自動回帰は未完了のため、Phase 5 earnedは0のままとする。

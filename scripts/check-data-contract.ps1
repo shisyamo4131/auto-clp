@@ -41,6 +41,7 @@ $movingGroupNudgeDecisionPath = Join-Path $resolvedProject 'docs/decisions/0041-
 $groundedWallSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0042-grounded-staging-wall-snap-toggle-and-validation-icon.md'
 $multiFaceSnapDecisionPath = Join-Path $resolvedProject 'docs/decisions/0043-detachable-multi-face-snap-and-pointer-surface-target.md'
 $loadingSequenceReportDecisionPath = Join-Path $resolvedProject 'docs/decisions/0044-limited-loading-sequence-and-pdf-report.md'
+$prohibitedContactDecisionPath = Join-Path $resolvedProject 'docs/decisions/0045-prohibited-contact-precedence-in-multiple-support.md'
 $loadingSequencePath = Join-Path $resolvedProject 'src/domain/loading-sequence.ts'
 $loadingSequenceTestPath = Join-Path $resolvedProject 'src/domain/loading-sequence.test.ts'
 $loadingReportPath = Join-Path $resolvedProject 'src/application/loading-report.ts'
@@ -85,6 +86,7 @@ $automaticProposalEvidencePath = Join-Path $resolvedProject 'docs/evidence/autom
 $appPath = Join-Path $resolvedProject 'src/App.tsx'
 $geometryPath = Join-Path $resolvedProject 'src/domain/geometry.ts'
 $placementValidationPath = Join-Path $resolvedProject 'src/domain/validation.ts'
+$placementValidationTestPath = Join-Path $resolvedProject 'src/domain/validation.test.ts'
 $sceneWorkspacePath = Join-Path $resolvedProject 'src/scene/SceneWorkspace.tsx'
 $projectScenePath = Join-Path $resolvedProject 'src/scene/project-scene.ts'
 $projectSceneTestPath = Join-Path $resolvedProject 'src/scene/project-scene.test.ts'
@@ -135,6 +137,7 @@ foreach ($path in @(
     $movingGroupNudgeDecisionPath,
     $groundedWallSnapDecisionPath,
     $multiFaceSnapDecisionPath,
+    $prohibitedContactDecisionPath,
     $projectCommandPath,
     $projectCommandTestPath,
     $cargoConstraintsDialogPath,
@@ -169,6 +172,7 @@ foreach ($path in @(
     $appPath,
     $geometryPath,
     $placementValidationPath,
+    $placementValidationTestPath,
     $sceneWorkspacePath,
     $projectScenePath,
     $projectSceneTestPath,
@@ -361,7 +365,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.14.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.14.1' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -526,6 +530,24 @@ foreach ($requiredText in @(
     if (-not $loadingSequenceReportDecision.Contains($requiredText)) {
         throw "ADR 0044 does not contain the approved loading-sequence report contract text: $requiredText"
     }
+}
+$prohibitedContactDecision = [IO.File]::ReadAllText($prohibitedContactDecisionPath)
+if ($prohibitedContactDecision -notmatch '(?m)^- Status:\s*Accepted\s*$') {
+    throw 'ADR 0045 does not have Accepted status.'
+}
+foreach ($requiredText in @(
+    '一つでも `canSupportCargo=false`',
+    '`support-permission-denied`',
+    '`support-conditions-unverified` は独立理由として維持',
+    'Schema `0.1.0`'
+)) {
+    if (-not $prohibitedContactDecision.Contains($requiredText)) {
+        throw "ADR 0045 does not contain the approved prohibited-contact contract text: $requiredText"
+    }
+}
+$placementValidationTest = [IO.File]::ReadAllText($placementValidationTestPath)
+if (-not $placementValidationTest.Contains('rejects a multiple-support arrangement when any contact prohibits top loading')) {
+    throw 'Physical validation tests do not contain the approved mixed support-permission regression.'
 }
 $loadingSequence = [IO.File]::ReadAllText($loadingSequencePath)
 $loadingSequenceTest = [IO.File]::ReadAllText($loadingSequenceTestPath)
@@ -707,7 +729,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.14.0`',
+    '仕様版 `1.14.1`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -1385,6 +1407,7 @@ foreach ($requiredText in @(
     grounded_wall_snap_decision_0042_accepted = $true
     multi_face_snap_decision_0043_accepted = $true
     loading_sequence_report_decision_0044_accepted = $true
+    prohibited_contact_decision_0045_accepted = $true
     loading_sequence_phase1_implemented = $true
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true

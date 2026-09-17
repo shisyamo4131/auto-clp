@@ -726,6 +726,47 @@ describe("validatePlacementSet", () => {
     });
   });
 
+  it("rejects a multiple-support arrangement when any contact prohibits top loading", () => {
+    const cargoUpper = physicalCargo("cargo-u", {
+      dimensionsMm: { lengthMm: 20, widthMm: 10, heightMm: 10 },
+    });
+    const project = physicalProject({
+      clearancesMm: { xMm: 0, yMm: 0, zMm: 5 },
+      cargoes: [
+        physicalCargo("cargo-a", { canSupportCargo: false }),
+        physicalCargo("cargo-b"),
+        cargoUpper,
+      ],
+      placements: [
+        physicalPlacement("cargo-a"),
+        physicalPlacement("cargo-b", {
+          positionMm: { xMm: 10, yMm: 0, zMm: 0 },
+        }),
+        physicalPlacement("cargo-u", {
+          positionMm: { xMm: 0, yMm: 0, zMm: 10 },
+        }),
+      ],
+    });
+
+    expect(validatePlacementSet(project, "container-1")).toEqual({
+      kind: "evaluated",
+      containerId: "container-1",
+      status: "invalid",
+      reasons: [
+        invalidCargoReason(
+          "support-permission-denied",
+          "cargo-u",
+          ["cargo-a"],
+        ),
+        unverifiedCargoReason(
+          "support-conditions-unverified",
+          "cargo-u",
+          ["cargo-a", "cargo-b"],
+        ),
+      ],
+    });
+  });
+
   it("keeps a representative 1 mm support gap as a conditional arrangement", () => {
     const cargoUpper = physicalCargo("cargo-u", {
       dimensionsMm: { lengthMm: 21, widthMm: 10, heightMm: 10 },

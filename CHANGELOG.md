@@ -4,6 +4,8 @@
 
 ### Changed
 
+- 仕様1.14.1・ADR 0045で、複数支持の接触支持荷に一つでも上乗せ禁止があれば `support-permission-denied` の不適合とし、禁止された支持荷だけを原因として表示するよう変更した。複数支持の `support-conditions-unverified` は独立理由として併記し、配置、Schema `0.1.0`、JSON、端末保存、Undo/Redoは変更しない。型・lint・単体37ファイル1,067件・ブラウザ118件・build・データ契約・ガバナンス・プロジェクト検査に合格した。
+
 - 仕様1.14.0・ADR 0044で、選択中コンテナの現在配置から、支持先行と開口からの直線搬入帯の遮蔽を有向グラフとして合成する積込順提案、および一覧と番号付き5視点画像を含むPDF帳票を現行目標へ追加した。Phase 1〜4として `loading-sequence-v1`、非永続snapshot、提案確認dialog、出力開始時cameraの現在視点とcamera非依存の固定4面、全配置積荷の一覧対応番号、抽出可能な日本語、積荷一覧、先行条件、物理判定、限定モデル注記、ページ番号を含む複数ページPDFのbrowser内生成と固定名downloadを実装した。不完全画像set、フォント読込またはPDF生成に失敗した場合はdownloadを開始せず再試行できる。提案は搬送機器、作業空間、旋回、斜路、固縛、荷崩れ、荷下ろし順、目的地順または実作業の安全性を評価・保証しない。Schema `0.1.0`、JSON、端末保存、Undo/Redoは変更しない。
 
 - 仕様1.13.1で、viewport上段toolbarの全iconをbuttonの上下左右中央へ揃え、物理判定buttonの可視glyphをMaterial Design Iconsの `information-variant` 相当iconへ変更した。状態色、accessible name、title、件数、dialog、Schema `0.1.0`、JSON、端末保存は変更しない。

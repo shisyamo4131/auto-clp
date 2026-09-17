@@ -627,6 +627,19 @@ export function validatePlacementSet(
       selected.cargo.id,
     )!;
     const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
+    const eligibleContactIds = new Set(assessment.eligibleContactIds);
+    const prohibitedContactIds = assessment.contactIds.filter(
+      (cargoId) => !eligibleContactIds.has(cargoId),
+    );
+
+    if (prohibitedContactIds.length > 0 && selected.rawInside) {
+      appendReason({
+        status: "invalid",
+        code: "support-permission-denied",
+        target,
+        relatedCargoIds: prohibitedContactIds,
+      });
+    }
 
     if (assessment.kind === "conditional") {
       appendReason({
@@ -639,18 +652,14 @@ export function validatePlacementSet(
       floorNormalizedAssessment.kind === "invalid" &&
       selected.rawInside
     ) {
-      const permissionDenied =
-        assessment.kind === "invalid" &&
-        assessment.contactIds.length > 0 &&
-        assessment.eligibleContactIds.length === 0;
-      appendReason({
-        status: "invalid",
-        code: permissionDenied
-          ? "support-permission-denied"
-          : "support-contact-invalid",
-        target,
-        relatedCargoIds: assessment.contactIds,
-      });
+      if (prohibitedContactIds.length === 0) {
+        appendReason({
+          status: "invalid",
+          code: "support-contact-invalid",
+          target,
+          relatedCargoIds: assessment.contactIds,
+        });
+      }
     }
   }
 

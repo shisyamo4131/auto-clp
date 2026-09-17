@@ -168,7 +168,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 3. Bだけを平行移動した場合はCだけが連動し、Aは動かない。根の回転、複数支持、張り出し、支持可否混在、支持不可接触、接触不成立では上段を連動させない。
 4. 3D previewでは連動対象も同じ差分で描画し、取消、pointer中断、commit失敗では根と全子孫を開始位置へ戻す。
 5. 子孫がある根の完全drag-outと配置解除は拒否し、「先に上の積荷を外す」旨を示してProjectと履歴を変更しない。
-6. 支持不可の積荷Aと、その上に正面積接触する積荷Bには `support-permission-denied` を返し、「積荷Aは上乗せ禁止のため、上にある積荷Bを支持できない」旨を表示する。接触なし、Z不一致、辺・点接触は `support-contact-invalid` のままとする。
+6. 上段積荷へ正面積でZ接触する支持荷のうち一つでも上乗せ禁止なら `support-permission-denied` を返し、禁止された支持荷だけを関連積荷として「積荷Aは上乗せ禁止のため、上にある積荷Bを支持できない」旨を表示する。支持可能な別積荷との複数支持では `support-conditions-unverified` も併記する。接触なし、Z不一致、辺・点接触は `support-contact-invalid` のままとする。
 
 ## AC-09 Cargo Constraint Batch Editing
 
@@ -177,7 +177,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 1. 積荷2件以上を持つCLPでDrawerから「積荷の制約を一覧編集」を開き、各積荷名と「天地無用」「上乗せ禁止」のcheckboxだけを表示する。名前、寸法、重量、配置の入力欄は置かない。
 2. 新規・CSV由来積荷は両checkboxがOFFである。「上乗せ禁止」ON/OFFは個別積荷editorでも同じ表記と状態になり、内部 `canSupportCargo=false/true` と正確に反転対応する。
 3. 複数行を変更しても「変更を適用」で一回だけProjectを更新し、一回のUndo/Redoで全件を往復する。no-opでは適用を無効にし、取消・破棄・stale・busy・失敗ではProjectと履歴を変更しない。
-4. 配置済み支持積荷を上乗せ禁止ONにしても配置を移動・解除せず、`support-permission-denied` と積荷名を含む「上乗せ禁止」理由を再計算する。横倒し配置中の積荷を天地無用ONにする一括変更は全件をrollbackする。
+4. 配置済み支持積荷を上乗せ禁止ONにしても配置を移動・解除せず、単一支持と複数支持のどちらでも接触支持荷が一つ以上禁止なら `support-permission-denied` と禁止積荷名を含む「上乗せ禁止」理由を再計算する。複数支持の未確認理由は独立して保持する。横倒し配置中の積荷を天地無用ONにする一括変更は全件をrollbackする。
 5. focus trap、Escape、dirty破棄確認、keyboard、305 / 320 / 375 pxの水平overflowなし、WebGL障害時の操作停止を既存dialog契約どおり維持する。
 
 ## AC-10 Staging Compact, Cargo Status, and Viewer Inputs
@@ -223,7 +223,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 
 ## AC-14 Limited Loading Sequence and PDF Report
 
-このケースは仕様1.14.0・ADR 0044に従い、現在配置から導く限定的な積込順とコンテナ単位PDF帳票を検証する。Project、Schema `0.1.0`、保存形式は変更しない。
+このケースは仕様1.14.1・ADR 0044・0045に従い、現在配置から導く限定的な積込順とコンテナ単位PDF帳票を検証する。Project、Schema `0.1.0`、保存形式は変更しない。
 
 1. 床上で同じY/Z搬入帯にある2積荷は奥側が先になり、YまたはZに正体積の交差がない積荷は遮蔽関係を作らない。面・辺・点の接触だけでも遮蔽関係を作らない。
 2. 単一支持物は上段積荷より先になり、複数の接触支持物はすべて上段より先になる。複数支持には「支持条件未確認」が付く。
@@ -254,7 +254,8 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - 仕様1.12.0の自動証拠: typecheck、lint、単体32ファイル1,030件、ブラウザ107件、build、データ契約、ガバナンス、プロジェクト検査に合格した。荷室外Z=0、内壁4面の50 mm境界、51 mm非fit、積荷側面との同距離時の内壁優先、OFF時のX/Y非fitとZ snap継続、`adjust` buttonの既定ON・切替・非履歴、操作方法copy、`information-box-outline` 相当SVGと状態表示を回帰した。積層fixtureを使う実pointerの荷室外dragとUndo/Redoは人間確認として残す。
 - 仕様1.13.0の自動証拠: typecheck、lint、単体32ファイル1,036件、ブラウザ107件、build、データ契約、ガバナンス、プロジェクト検査に合格した。内壁2面、異なる積荷2面、二軸合成衝突時の単軸fallback、50 mm取得、75 / 76 mm保持解除、床指定時の浅い重なり、上面取得・保持・完全離脱、実pointerの支持上面取得、操作ガイドを回帰した。コンテナ角、2つの積荷、床側面接近の体感はローカル人間確認として残す。
 - 仕様1.13.1の自動証拠: typecheck、lint、単体32ファイル1,036件、ブラウザ108件、build、データ契約、ガバナンス、プロジェクト検査に合格した。viewport上段toolbarの8 buttonについてicon中心とbutton中心のX/Y差が各0.5 px以内であること、物理判定lampが全状態で `information-variant` 相当SVGを維持することを回帰した。見た目の最終受入はローカル人間確認として残す。
-- 2026-09-17の[公開Chrome UI-assisted観察](evidence/public-chrome-acceptance-18dcfb0.md)では、公開GitHub Pagesへ匿名fixtureを読み込み、1・20・30件の一覧と5視点label数、PDF開始成功表示、積層・複数支持の先行理由と未確認表示、重複時の提案不能と出力抑止、制約一括編集の破棄・適用・一回Undo、偏った重心、30件selector・検索、console 0件を確認した。人間・実務利用者受入、download済みPDF binaryの文字・改ページ・画像・番号対応の精読ではない。
+- 2026-09-17の[公開Chrome UI-assisted観察](evidence/public-chrome-acceptance-18dcfb0.md)では、公開GitHub Pagesへ匿名fixtureを読み込み、1・20・30件の一覧と5視点label数、PDF開始成功表示、積層・複数支持の先行理由と未確認表示、重複時の提案不能と出力抑止、制約一括編集の破棄・適用・一回Undo、偏った重心、30件selector・検索、console 0件を確認した。後続の人間による目視では、download済みPDFの改ページとフォント等を問題なしと判定した。実務利用者による正式受入や全項目の精読ではない。
+- 仕様1.14.1・ADR 0045の自動証拠: typecheck、lint、単体37ファイル1,067件、ブラウザ118件、build、データ契約、ガバナンス、プロジェクト検査に合格した。複数支持で接触支持荷の一つだけが上乗せ禁止の場合も不適合とし、禁止された支持荷だけを `support-permission-denied` の関連積荷に含め、複数支持の `support-conditions-unverified` を独立理由として併記することをdomainとbrowserで回帰した。Schema `0.1.0` は変更していない。
 - 仕様1.7.0単一支持グループ移動自動証拠: typecheck、lint、単体32ファイル1,014件、ブラウザ103件、buildに合格。3段再帰移動、回転・支持不可・複数支持の非連動、子孫座標失敗のrollback、配置解除拒否、一回のUndo、支持不可専用理由と関連積荷名、CSV確認文を回帰した。3D dragの連動preview・取消・dropは実装され既存drag回帰に合格したが、積層fixtureでの人間差分確認は未実施である。
 - 仕様1.8.0積荷制約一覧編集の自動証拠: typecheck、lint、単体32ファイル1,016件、ブラウザ104件、build、データ契約・ガバナンス・プロジェクト検査に合格。保存値反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表記一致、一回のUndo、dirty確認、305 / 320 / 375 px、支持不可理由を回帰した。内蔵ブラウザでの人間差分確認は未実施である。
 - 開発チーム内試用: 4ケースの完了可否、console、狭幅、キーボード、focus、誤認し得る表示を記録する。
@@ -274,7 +275,7 @@ Windows版Excelでテンプレートを開き、日本語、引用comma・quote�
 - AC-06: `src/domain/weight-balance.test.ts` と `src/scene/project-scene.test.ts` が正確な重量moment、全向き、上限・上限外、4状態、scene変換、計算不能回復投影を検証する。`tests/browser/weight-balance.spec.ts` が赤・黄点と凡例、画面投影中心一致・近接・画面外、非操作、camera、drag、履歴、DPR 1/2、読込成功・失敗、統合 `unavailable`、305 / 320 / 375 pxを実行し、既存永続化回帰が派生状態をJSON・端末保存・履歴へ含めない。公開Chromeの匿名合成fixtureでは赤・黄点の分離、凡例、重量と件数をCodexがUI観察したが、人間の視認性・理解度確認は未実施。
 - AC-07: `src/persistence/cargo-csv.test.ts`、`src/persistence/cargo-csv-file.test.ts`、`src/application/cargo-csv-import.test.ts`、`src/application/project-command.test.ts` と `tests/browser/cargo-csv.spec.ts` が、CSV parser/file、共通正規入力、全体置換、履歴、既存保存互換を検証する。全行検証、全空白recordとquoted改行を含む1始まり論理record path、全固定code/path、決定的sort・重複排除・50件上限・入力値非反射、件数確認、取消・失敗保持、成功、Undo/Redo、scene一時状態resetと派生再導出、30件上限、legacy 31〜1,000件、狭幅・focus・WebGL停止を実行する。Windows版Excel往復は別の人間証拠とする。
 - AC-08: `src/application/project-command.test.ts`、`src/domain/validation.test.ts`、`src/ui/physical-validation-view.test.ts`、`src/workers/physical-validation-worker-protocol.test.ts` と `tests/browser/placement.spec.ts` が、3段再帰移動、回転・支持不可・複数支持の非連動、座標失敗の原子的rollback、配置解除拒否、一回のUndo、専用理由と関連積荷名を含む表示を検証する。`src/scene/SceneWorkspace.tsx` と `src/scene/ThreeViewport.tsx` の連動preview・取消実装は既存の実pointer drag回帰を通すが、積層fixtureの実pointer差分確認は人間確認として残す。
-- AC-09: `src/application/project-command.test.ts` と `tests/browser/input.spec.ts` が、制約値の反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表示一致、一回のUndo、dirty破棄と狭幅を検証し、既存物理表示回帰が「上乗せ禁止」理由を検証する。
+- AC-09: `src/application/project-command.test.ts`、`src/domain/validation.test.ts` と `tests/browser/input.spec.ts` が、制約値の反転、複数積荷の原子的更新、向き不整合rollback、個別editorとの表示一致、一回のUndo、dirty破棄と狭幅を検証する。単一支持と、複数支持で一つだけ上乗せ禁止の両方について、不適合理由が禁止された支持荷だけを示し、後者では複数支持の未確認理由も併記することを検証する。
 - AC-11: `src/scene/project-scene.test.ts` が移動グループ除外、20 / 21 mm境界、床・支持上面fit、支持喪失・境界外、面接触と正体積衝突、screen投影から一軸1 mmへの対応を検証する。`tests/browser/scene.spec.ts` がcanvas focus、3回repeatの一回履歴、Escape取消、Undo/Redoを実行し、`tests/browser/persistence.spec.ts` が操作方法copyを検証する。積層fixtureでの短距離実pointer dragと視点変更後の方向理解は人間確認として残す。
 - AC-12: `src/scene/project-scene.test.ts` が荷室外Z=0、内壁4面、50 / 51 mm境界、OFF時のX/Y非fitとZ snap継続を検証する。`tests/browser/scene.spec.ts` が `adjust` buttonの既定ON、OFF / ON、非履歴を実行し、`tests/browser/persistence.spec.ts` が操作方法copy、`tests/browser/scene-workspace-v12.spec.ts` と `tests/browser/physical-validation-worker.spec.ts` が `information-variant` 相当SVG、状態表示、toolbar iconの中央配置を検証する。積層fixtureを使う実pointerの荷室外dragとUndo/Redoは人間確認として残す。
 - AC-13: `src/scene/project-scene.test.ts` が内壁2面、異なる積荷2面、50 mm取得、75 / 76 mm保持解除、床指定時の浅い重なり、上面取得・保持・完全離脱を検証する。`tests/browser/scene.spec.ts` の実pointer支持面取得と既定ON・OFF回帰を維持し、コンテナ角、2つの積荷、床側面接近の体感はローカル人間確認として残す。

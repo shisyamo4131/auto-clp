@@ -4,6 +4,7 @@ import {
   addContainerFromDrawer,
   openCargoAddEditor,
   openContainerAddEditor,
+  openPhysicalValidation,
   openPersistenceDrawer,
   openProjectSettings,
 } from "./ui-helpers";
@@ -155,6 +156,65 @@ test("edits cargo constraints as one reversible batch with prohibition wording",
   await page.locator(".viewport-context-actions").getByRole("button", { name: "積荷情報を編集" }).click();
   await expect(page.getByLabel(/天地無用/)).not.toBeChecked();
   await expect(page.getByLabel("この積荷の上に別の積荷を載せない")).not.toBeChecked();
+});
+
+test("treats any prohibited contact in multiple support as invalid", async ({ page }) => {
+  await page.goto("/");
+  for (const [name, lengthMm] of [
+    ["支持荷A", "10"],
+    ["支持荷B", "10"],
+    ["上段荷", "20"],
+  ] as const) {
+    await addCargoFromDrawer(page, name, {
+      lengthMm,
+      widthMm: "10",
+      heightMm: "10",
+      canSupportCargo: true,
+    });
+  }
+  await addContainerFromDrawer(page, "複数支持コンテナ", {
+    lengthMm: "100",
+    widthMm: "100",
+    heightMm: "100",
+    openingWidthMm: "100",
+    openingHeightMm: "100",
+    payloadKg: "100",
+  });
+
+  const picker = page.getByLabel("操作する積荷");
+  const actions = page.locator(".viewport-context-actions");
+  for (const [cargoId, xMm, zMm] of [
+    ["cargo-1", "0", "0"],
+    ["cargo-2", "10", "0"],
+    ["cargo-3", "0", "10"],
+  ] as const) {
+    await picker.selectOption(cargoId);
+    await actions.getByRole("button", { name: "座標を入力して配置" }).click();
+    await page.getByLabel("X最小角").fill(xMm);
+    await page.getByLabel("Y最小角").fill("0");
+    await page.getByLabel("Z最小角").fill(zMm);
+    await page.getByRole("button", { name: "配置を保存" }).click();
+  }
+
+  await openPersistenceDrawer(page);
+  await page.getByRole("button", { name: "制約一括編集" }).click();
+  const constraints = page.getByRole("dialog", { name: "積荷の制約を一覧編集" });
+  await constraints
+    .getByRole("group", { name: "支持荷A" })
+    .getByLabel("上乗せ禁止")
+    .check();
+  await constraints.getByRole("button", { name: "変更を適用" }).click();
+
+  await expect(page.locator("#physical-validation-lamp")).toHaveAttribute(
+    "data-status",
+    "invalid",
+  );
+  await openPhysicalValidation(page);
+  const validation = page.getByRole("dialog", { name: "物理判定" });
+  await expect(validation).toContainText(
+    "支持荷Aは上乗せ禁止のため、上にある上段荷を支持できません。",
+  );
+  await expect(validation).toContainText("未確認理由（1件）");
 });
 
 test("container CRUD remains transactional", async ({ page }) => {
