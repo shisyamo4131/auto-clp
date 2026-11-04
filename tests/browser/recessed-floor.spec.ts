@@ -146,4 +146,3 @@ async function locateStagedCargoOnCanvas(page: Page, canvas: Locator) {
     `Selected cargo did not accept a pointer hit inside its projected annotation: ${diagnostics.join("; ")}`,
   );
 }
-
