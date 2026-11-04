@@ -1,3 +1,5 @@
+import { floorHeightMm, recessedPlacementIssues } from "../domain/recessed-floor";
+import { placementBounds } from "../domain/geometry";
 import type {
   Cargo,
   Container,
@@ -46,6 +48,7 @@ export interface CargoConstraintDraft {
 }
 
 export interface ContainerDraft {
+  readonly recessedFloor?: { readonly xMm: string; readonly yMm: string; readonly lengthMm: string; readonly widthMm: string; readonly depthMm: string };
   readonly name: string;
   readonly internalLengthMm: string;
   readonly internalWidthMm: string;
@@ -76,11 +79,19 @@ function failure(
 }
 
 function validateCandidate(current: Project, candidate: Project): ProjectCommandResult {
+  if (candidate.schemaVersion === "0.2.0") {
+    let nextCargoNo = current.nextCargoNo ?? 1;
+    const cargoes = candidate.cargoes.map((cargo) => {
+      const cargoNo = cargo.cargoNo ?? current.cargoes.find((c) => c.id === cargo.id)?.cargoNo ?? nextCargoNo++;
+      return { ...cargo, cargoNo };
+    });
+    candidate = { ...candidate, cargoes, nextCargoNo };
+  }
   const schema = validateProjectJsonSchema(candidate);
   if (!schema.valid) {
     return { ok: false, project: current, issues: schema.issues };
   }
-  const semanticIssues = validateProjectReferences(schema.project);
+  const semanticIssues = [...validateProjectReferences(schema.project), ...recessedPlacementIssues(schema.project)];
   if (semanticIssues.length > 0) {
     return { ok: false, project: current, issues: semanticIssues };
   }
@@ -120,6 +131,7 @@ function sameContainer(first: Container, second: Container): boolean {
     sameDimensions(first.internalDimensionsMm, second.internalDimensionsMm) &&
     first.openingMm.widthMm === second.openingMm.widthMm &&
     first.openingMm.heightMm === second.openingMm.heightMm &&
+    JSON.stringify(first.recessedFloorMm) === JSON.stringify(second.recessedFloorMm) &&
     first.payloadCapacityGrams === second.payloadCapacityGrams
   );
 }
@@ -305,9 +317,24 @@ export function saveContainer(
     openingHeightMm = 0,
     payloadCapacityGrams = 0,
   ] = parsed.values;
+  let recessedFloorMm: Container["recessedFloorMm"];
+  if (draft.recessedFloor !== undefined) {
+    const f = draft.recessedFloor;
+    const result = parsedValues(current, [
+      parsePositionMm(f.xMm, "/containers/recessedFloorMm/xMm"),
+      parsePositionMm(f.yMm, "/containers/recessedFloorMm/yMm"),
+      parseDimensionMm(f.lengthMm, "/containers/recessedFloorMm/lengthMm"),
+      parseDimensionMm(f.widthMm, "/containers/recessedFloorMm/widthMm"),
+      parseDimensionMm(f.depthMm, "/containers/recessedFloorMm/depthMm"),
+    ]);
+    if (!result.ok) return result;
+    const [xMm = 0, yMm = 0, lengthMm = 0, widthMm = 0, depthMm = 0] = result.values;
+    recessedFloorMm = { xMm, yMm, lengthMm, widthMm, depthMm };
+  }
   const id = containerId ?? nextContainerId(current);
   const container: Container = {
     id,
+    ...(recessedFloorMm === undefined ? {} : { recessedFloorMm }),
     name: draft.name.trim(),
     internalDimensionsMm: { lengthMm, widthMm, heightMm },
     openingMm: { widthMm: openingWidthMm, heightMm: openingHeightMm },
@@ -325,7 +352,18 @@ export function saveContainer(
       : current.containers.map((existing, index) =>
           index === existingIndex ? container : existing,
         );
-  return validateCandidate(current, { ...current, containers });
+  const previous = current.containers.find((c) => c.id === id);
+  if (JSON.stringify(previous?.recessedFloorMm) !== JSON.stringify(recessedFloorMm)) {
+    for (const placement of current.placements.filter((p) => p.containerId === id)) {
+      const cargo = current.cargoes.find((c) => c.id === placement.cargoId);
+      if (cargo === undefined || previous === undefined) continue;
+      const bounds = placementBounds(cargo, placement);
+      if (floorHeightMm(previous, bounds) !== floorHeightMm(container, bounds)) {
+        return failure(current, { code: "floor.occupied-edit", path: `/cargoes/${current.cargoes.indexOf(cargo)}` });
+      }
+    }
+  }
+  return validateCandidate(current, { ...current, schemaVersion: recessedFloorMm === undefined ? current.schemaVersion : "0.2.0", containers });
 }
 
 export function addPlacement(

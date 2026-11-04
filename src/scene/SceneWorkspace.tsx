@@ -774,7 +774,9 @@ export function SceneWorkspace({
         )
         .join("、");
       const baseMessage =
-        resolved?.disposition === "single-support"
+        resolved?.disposition === "invalid-floor"
+          ? "段差をまたいでいます。配置は確定できません。"
+          : resolved?.disposition === "single-support"
           ? `${supporterNames}の上面に単独支持としてスナップ中です。上面内で移動できます。`
           : resolved?.disposition === "support-conditions-unverified"
             ? `${supporterNames}の上面に仮スナップ中です。張り出し・複数支持等の支持条件は未確認です。`
@@ -811,7 +813,7 @@ export function SceneWorkspace({
           positionMm,
         ),
         state:
-          resolved?.disposition === "invalid-overlap"
+          (resolved?.disposition === "invalid-overlap" || resolved?.disposition === "invalid-floor")
             ? "invalid"
             : (resolved?.disposition ?? "outside"),
         supporterIds: resolved?.supporterIds ?? [],
@@ -957,6 +959,7 @@ export function SceneWorkspace({
           message: "別のCLP操作または保存処理中のため、積荷の移動を保存しませんでした。",
         };
       }
+      if (preview.state === "invalid" && project.containers.find((item) => item.id === effectiveContainerId)?.recessedFloorMm !== undefined) return { ok: false, message: "段差をまたいでいるか、積荷が重なっているため、配置を確定せず元に戻しました。" };
       const projectedCargo = projection?.cargoes.find(
         (candidate) => candidate.cargoId === cargoId,
       );
@@ -1371,7 +1374,7 @@ export function SceneWorkspace({
                   <option value="">操作する積荷を選択</option>
                   {selectableCargoes.map((cargo) => (
                     <option key={cargo.id} value={cargo.id}>
-                      {cargo.name} — {cargo.dimensionsMm.lengthMm}×{cargo.dimensionsMm.widthMm}×{cargo.dimensionsMm.heightMm} mm／{gramsToKilograms(cargo.massGrams)} kg
+                      {cargo.cargoNo === undefined ? "" : `No.${cargo.cargoNo} `}{cargo.name} — {cargo.dimensionsMm.lengthMm}×{cargo.dimensionsMm.widthMm}×{cargo.dimensionsMm.heightMm} mm／{gramsToKilograms(cargo.massGrams)} kg
                     </option>
                   ))}
                 </select>
@@ -1415,7 +1418,7 @@ export function SceneWorkspace({
                 ) : (
                   <>
                     <div className="viewport-context-actions__summary">
-                      <strong>{selectedCargo.name}</strong>
+                      <strong>{selectedCargo.cargoNo === undefined ? "" : `No.${selectedCargo.cargoNo} `}{selectedCargo.name}</strong>
                       <span>
                         {selectedAnyPlacement === undefined
                           ? "荷室外（未配置）"
@@ -1551,9 +1554,11 @@ export function SceneWorkspace({
             )}
             validationControl={(
               <>
+                {effectiveContainer?.recessedFloorMm === undefined ? null : <span role="status">段落ちの帳票・荷室中心表示は対応準備中です。</span>}
                 <LoadingReportButton
                   disabled={
                     effectiveContainerId === undefined ||
+                    effectiveContainer?.recessedFloorMm !== undefined ||
                     externalInteractionActive ||
                     interactionActive
                   }

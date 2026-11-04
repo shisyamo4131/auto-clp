@@ -13,7 +13,7 @@ import type {
 } from "../application/project-persistence";
 import packageMetadata from "../../package.json";
 import { CARGO_CREATION_LIMIT } from "../domain/input";
-import { PROJECT_SCHEMA_VERSION, type Project } from "../domain/model";
+import { type Project } from "../domain/model";
 import type { ContainerEditorIntent } from "./ContainerEditorDialog";
 import {
   isProjectFileExportAvailable,
@@ -831,7 +831,7 @@ export function ProjectPersistencePanel({
 
           <footer className="project-persistence__version-info" aria-label="バージョン情報">
             <span>Auto CLP v{packageMetadata.version}</span>
-            <span>CLPデータ形式 v{PROJECT_SCHEMA_VERSION}</span>
+            <span>CLPデータ形式 v{project.schemaVersion}</span>
           </footer>
         </aside>
       </div>

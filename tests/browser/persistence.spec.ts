@@ -181,7 +181,7 @@ async function readDeviceSavedJson(page: Page) {
       open.onsuccess = () => {
         const database = open.result;
         const transaction = database.transaction("projects", "readonly");
-        const request = transaction.objectStore("projects").get("current-project");
+        const request = transaction.objectStore("projects").get("current-project-v2");
         request.onerror = () => reject(new Error("failed to read the synthetic device slot"));
         request.onsuccess = () => {
           database.close();

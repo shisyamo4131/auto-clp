@@ -1,4 +1,5 @@
-export const PROJECT_STORE_KEY = "current-project";
+export const PROJECT_STORE_KEY = "current-project-v2";
+const LEGACY_PROJECT_STORE_KEY = "current-project";
 
 const DATABASE_NAME = "auto-clp";
 const DATABASE_VERSION = 1;
@@ -152,9 +153,13 @@ export async function loadProjectJsonFromDevice(): Promise<
 
     request.onsuccess = () => {
       value = request.result;
+      if (value === undefined) {
+        const legacy = transaction.objectStore(OBJECT_STORE_NAME).get(LEGACY_PROJECT_STORE_KEY);
+        legacy.onsuccess = () => { value = legacy.result; };
+      }
     };
     transaction.oncomplete = () => {
-      if (value === undefined) {
+      if (value === undefined || value === null) {
         finish({ ok: false, code: "project-store.not-found" });
       } else if (typeof value !== "string") {
         finish({ ok: false, code: "project-store.data-invalid" });
@@ -197,7 +202,7 @@ export async function deleteProjectJsonFromDevice(): Promise<
     let transaction: IDBTransaction;
     try {
       transaction = database.transaction(OBJECT_STORE_NAME, "readwrite");
-      transaction.objectStore(OBJECT_STORE_NAME).delete(PROJECT_STORE_KEY);
+      transaction.objectStore(OBJECT_STORE_NAME).put(null, PROJECT_STORE_KEY);
     } catch {
       finish({ ok: false, code: "project-store.delete-failed" });
       return;

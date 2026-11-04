@@ -61,6 +61,8 @@ function cargoDraftFrom(cargo: Cargo): CargoDraft {
 
 function issueMessage(issue: ValidationIssue): string {
   const messages: Record<string, string> = {
+    "floor.crossing": "段差をまたいでいます。配置は確定できません。",
+    "floor.penetration": "床より下に積荷が入っています。",
     "input.mm-format": "mmは半角数字だけの整数で入力してください。",
     "input.mm-length": "mmの入力桁数が上限を超えています。",
     "input.mm-range": "mmの値が入力可能な範囲外です。",

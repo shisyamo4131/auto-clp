@@ -28,11 +28,13 @@ function installFakeIndexedDb({
   transaction = "complete",
   initialValue,
   upgrade = true,
+  legacyValue,
 }: {
   readonly open?: OpenOutcome;
   readonly transaction?: TransactionOutcome;
   readonly initialValue?: unknown;
   readonly upgrade?: boolean;
+  readonly legacyValue?: unknown;
 } = {}): FakeStoreControl {
   let stored = initialValue;
   let pendingTransaction: {
@@ -71,15 +73,15 @@ function installFakeIndexedDb({
             queueMicrotask(() => finishTransaction(current));
           },
           get: (key: string) => {
-            expect(key).toBe(PROJECT_STORE_KEY);
+            expect([PROJECT_STORE_KEY, "current-project"]).toContain(key);
             const request = {
               result: undefined as unknown,
               onsuccess: null as (() => void) | null,
             };
             queueMicrotask(() => {
-              request.result = stored;
+              request.result = key === PROJECT_STORE_KEY ? stored : legacyValue;
               request.onsuccess?.();
-              finishTransaction(current);
+              queueMicrotask(() => finishTransaction(current));
             });
             return request;
           },
@@ -286,6 +288,17 @@ describe("project IndexedDB store", () => {
       ok: true,
       value: undefined,
     });
-    expect(control.getStored()).toBeUndefined();
+    expect(control.getStored()).toBeNull();
   });
 });
+
+ it("falls back only when the new slot is absent and keeps a deletion tombstone", async () => {
+   installFakeIndexedDb({ legacyValue: "legacy" });
+   expect(await loadProjectJsonFromDevice()).toEqual({ ok: true, value: "legacy" });
+   expect((await deleteProjectJsonFromDevice()).ok).toBe(true);
+   expect(await loadProjectJsonFromDevice()).toEqual({ ok: false, code: "project-store.not-found" });
+ });
+ it("does not silently replace a malformed new slot with legacy data", async () => {
+   installFakeIndexedDb({ initialValue: 42, legacyValue: "legacy" });
+   expect(await loadProjectJsonFromDevice()).toEqual({ ok: false, code: "project-store.data-invalid" });
+ });

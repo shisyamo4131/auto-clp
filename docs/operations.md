@@ -1,5 +1,13 @@
 # Operations
 
+## 段落ちの操作と保存
+
+コンテナ編集の「床の一部を低くする」をONにし、入口からの位置・右壁からの位置・長さ・幅・深さをmmで入力する。オレンジ色の輪郭と低い床を3Dで確認する。積荷を段落ち内へ移すと底面が低い床へ合う。座標入力では通常床を0、低い床を深さの負数とする。段差跨ぎは確定できない。床編集で既存荷の足元が変わる場合は先に荷を移動・取り外す。
+
+段落ち追加後は保存形式0.2.0、JSON名auto-clp-project-0.2.0.jsonとなる。端末保存はcurrent-project-v2を使用し、旧current-projectは保持する。新枠がなければ旧枠から読込可能。削除操作は新枠へ削除印nullを残すため旧枠を再表示しないが、旧データの完全消去ではない。完全消去はブラウザのサイトデータ削除で行い、必要なJSONは先に退避する。旧アプリへ戻す時は旧0.1.0 JSONまたは旧保存を使用する。新形式を旧版へ渡さない。
+
+段落ちのPDF・積込順・中心と重心の表示は未対応として停止中。上面図は後続実装。実車を使った受入と提供環境の決定は未完了。
+
 ## Current Availability
 
 - Implemented scene workspace 1.13.1: Application Bar右端menu、3D欄外上部の一行scroll tab、cargo-global side-relative荷室外anchor、コンテナ間共有camera、`整数 mm` だけをcompactな外向き矢印で示す選択積荷の3軸寸法annotation、重量付きselectorと4状態dot、selector直下の固定context action rowと `現在の座標` copy、上下左右中央へ揃えたtoolbar icon、`information-variant` 相当のicon-only判定lampとdialog、Drawerから開く独立 `操作方法` dialog、版付き「使用上の重要事項」を実装した。コンテナ0件ではviewport中央の案内から既存のコンテナ追加dialogを開き、テンプレートインポートだけを理由付きで無効にする。操作方法dialogはCLP・履歴・保存・camera・判定を変更せず、左drag回転、Shift付き左drag・右drag・Ctrl付き左drag平行移動、wheel zoom、荷室外積荷の寄せ、視点基準の1 mm矢印調整を案内する。dragの支持・fit・衝突判定は移動グループの旧位置を除外し、同じ最小Zの固定積荷側面とコンテナ内壁4面へ50 mm以内でfitする。Material Design Icons `adjust` 相当buttonは既定ONでX/Y fitだけをsession内で切り替え、床・支持上面へのZ snapと支持面内clampは常時有効とする。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
@@ -249,3 +257,33 @@ comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`b
 ## Sensitive Information
 
 秘密情報、資格情報、セッションデータ、個人情報、実在顧客の貨物・価格・搬送記録をリポジトリ、テスト、ログ、プロンプトへ保存しない。公開可能な匿名合成データだけを利用する。アプリ利用者向けの入力データ注意と重心可視化の仮定・非保証範囲は内容版1.2.0の「使用上の重要事項」で示し、主ページには重複表示しない。
+
+## 段落ち実装の検証記録 2026-11-04
+
+対象は主作業ディレクトリの未コミット作業差分。分類はUI・アプリロジック・保存契約と文書の和集合。comprehensive gateを選択し、rendererはgovernance-check、project-governance-regressionはproject-checkへ包含する。外部通信、公開、依存取得は行わない。Corepackはpnpmキャッシュ不足で取得を試みENOTFOUNDとなったため、package.jsonと一致する既存node_modulesの実行ファイルを直接使用した。
+
+| gate / コマンド | 結果 | 終了コード |
+| --- | --- | --- |
+| `node node_modules/typescript/bin/tsc -b --pretty false` | 合格 | 0 |
+| `node node_modules/eslint/bin/eslint.js . --max-warnings 0` | 合格 | 0 |
+| `node node_modules/vitest/vitest.mjs run` | 38ファイル1,091件合格 | 0 |
+| `node scripts/run-browser-tests.mjs` | 最終差分で125件合格 | 0 |
+| `node node_modules/vite/bin/vite.js build` | 合格。500 kB超のbundle警告あり | 0 |
+| `& .\scripts\check-data-contract.ps1 -ProjectPath $PWD.Path` | 新旧Schema検査合格 | 0 |
+| `& .\scripts\check-governance.ps1 -ProjectPath $PWD.Path` | renderer包含、合格 | 0 |
+| `& .\scripts\check-project.ps1 -ProjectPath $PWD.Path` | 合格（文書最終更新後も再検査） | 0 |
+| `git diff --check` | 合格（文書最終更新後も再検査） | 0 |
+
+単体試験の初回sandbox実行は一時ファイル権限EPERMで失敗し、許可されたローカル実行で再試験した。最初の全ブラウザ試験は旧保存枠を直接読んでいた1件が失敗（124件合格）、試験を新枠へ修正。修正後の該当試験と段落ち実pointerは合格。最終全体試験125件に合格した。画面画像はローカルoutput/recessed-floor-g1.pngで確認し、3Dに低床と高さ2,600 mmの積荷、Z=-300 mm、No.1が表示されることを確認した。
+
+### 変更対象と未反映範囲
+
+- domain: `src/domain/model.ts`、`geometry.ts`、`validation.ts`、新規`recessed-floor.ts`。
+- application: `src/application/project-command.ts`、`project-history.ts`、`cargo-csv-import.ts`、新規`recessed-floor.test.ts`。
+- persistence: `src/persistence/project-file.ts`、`project-json-schema.ts`、`project-json.ts`、`project-store.ts`、`project-store.test.ts`、新規`schemas/project-0.2.0.schema.json`。
+- UI/3D: `src/scene/SceneWorkspace.tsx`、`ThreeViewport.tsx`、`project-scene.ts`、`src/ui/ContainerEditorDialog.tsx`、`CargoEditorDialog.tsx`、`PlacementEditorDialog.tsx`、`ProjectPersistencePanel.tsx`。
+- browser: `tests/browser/persistence.spec.ts`、新規`tests/browser/recessed-floor.spec.ts`。
+- 文書: `README.md`、`CHANGELOG.md`、`docs/README.md`、`specification.md`、`data-model.md`、`acceptance.md`、`operations.md`、`roadmaps/auto-clp.md`、`designs/recessed-floor-openings-clearance.md`、`decisions/README.md`、新規ADR 0046。
+- 設定・検査: `eslint.config.js`に既存の一時成果物tmpを除外追加、`scripts/check-data-contract.ps1`へ0.2.0検査追加。管理対象AGENTS、権限、依存、配信設定は変更なし。
+
+事前から存在したヒアリング・デモ文書と文書差分を保持し、今回の変更と一緒に自動commitしない。後続PDF・複数開口・実間隔・既定値変更・提供環境・実務受入は未完了。従来試作の99%へ今回の拡張を加点せず、P4/P5の完了を表明しない。旧ADRは歴史を保持し、新ADR 0046で段落ち対象の差分だけを規定する。

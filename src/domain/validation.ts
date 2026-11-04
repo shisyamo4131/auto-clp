@@ -1,4 +1,5 @@
-import { ORIENTATIONS, type Project } from "./model";
+import { floorHeightMm, floorRegion, validRecessedFloor } from "./recessed-floor";
+import { ORIENTATIONS, type Project, type Container } from "./model";
 import {
   assessGeometricSupport,
   fittingOpeningOrientations,
@@ -157,6 +158,7 @@ export function validateProjectReferences(project: Project): readonly Validation
   });
 
   project.containers.forEach((container, index) => {
+    if (!validRecessedFloor(container)) issues.push({ code: "floor.invalid", path: `/containers/${index}/recessedFloorMm` });
     if (containersById.has(container.id)) {
       issues.push({ code: "semantic.duplicate-container-id", path: `/containers/${index}/id` });
       duplicateContainerIds.add(container.id);
@@ -178,6 +180,12 @@ export function validateProjectReferences(project: Project): readonly Validation
     }
   });
 
+  if (project.schemaVersion === "0.2.0") {
+    const numbers = project.cargoes.map((c) => c.cargoNo);
+    if (new Set(numbers).size !== numbers.length || numbers.some((n) => n === undefined || n >= (project.nextCargoNo ?? 0))) {
+      issues.push({ code: "semantic.cargo-number-invalid", path: "/nextCargoNo" });
+    }
+  }
   const placedCargoIds = new Set<string>();
   project.placements.forEach((placement, index) => {
     const cargo = cargoesById.get(placement.cargoId);
@@ -340,11 +348,12 @@ function sortedUniqueCargoIds(ids: readonly string[]): readonly string[] {
 function computeSupportAssessments(
   selectedPlacements: readonly SelectedPlacementEvaluation[],
   normalizeFloorPenetratingCandidates = false,
+  container?: Container,
 ): ReadonlyMap<string, SupportAssessment> {
   const assessments = new Map<string, SupportAssessment>();
 
   for (const target of selectedPlacements) {
-    if (target.bounds.min.zMm <= 0) {
+    if (target.bounds.min.zMm <= (container === undefined ? 0 : floorHeightMm(container, target.bounds))) {
       continue;
     }
 
@@ -375,7 +384,7 @@ function computeSupportAssessments(
 
     assessments.set(
       target.cargo.id,
-      assessGeometricSupport(target.bounds, geometryCandidates),
+      assessGeometricSupport(target.bounds, geometryCandidates, container === undefined ? 0 : floorHeightMm(container, target.bounds)),
     );
   }
 
@@ -503,11 +512,12 @@ export function validatePlacementSet(
       rawInside: isPlacementWithinContainer(
         bounds,
         container.internalDimensionsMm,
-      ),
+        floorHeightMm(container, bounds),
+      ) && floorRegion(container, bounds) !== "crossing",
     } satisfies SelectedPlacementEvaluation;
   });
-  const supportAssessments = computeSupportAssessments(selectedPlacements);
-  const floorNormalizedSupportAssessments = selectedPlacements.some(
+  const supportAssessments = computeSupportAssessments(selectedPlacements, false, container);
+  const floorNormalizedSupportAssessments = container.recessedFloorMm === undefined && selectedPlacements.some(
     (selected) => selected.bounds.min.zMm < 0,
   )
     ? computeSupportAssessments(selectedPlacements, true)
@@ -520,7 +530,7 @@ export function validatePlacementSet(
 
   for (const selected of selectedPlacements) {
     const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
-    if (selected.bounds.min.zMm < 0) {
+    if (selected.bounds.min.zMm < floorHeightMm(container, selected.bounds)) {
       appendReason({
         status: "invalid",
         code: "floor-penetration",
@@ -539,6 +549,7 @@ export function validatePlacementSet(
         selected.bounds,
         container.internalDimensionsMm,
         project.clearancesMm,
+        floorHeightMm(container, selected.bounds),
       )
     ) {
       appendReason({
@@ -607,7 +618,7 @@ export function validatePlacementSet(
       container.openingMm,
       project.clearancesMm,
     );
-    if (fittingOrientations.length === 0) {
+    if (fittingOrientations.length === 0 && project.schemaVersion === "0.1.0") {
       appendReason({
         status: "invalid",
         code: "opening-no-fitting-orientation",
@@ -618,7 +629,7 @@ export function validatePlacementSet(
   }
 
   for (const selected of selectedPlacements) {
-    if (selected.bounds.min.zMm <= 0) {
+    if (selected.bounds.min.zMm <= floorHeightMm(container, selected.bounds)) {
       continue;
     }
 

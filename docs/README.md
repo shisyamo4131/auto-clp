@@ -37,6 +37,14 @@
 
 ## Document Authority
 
+段落ちを最優先する実装順序・旧保存互換・検証ケース: [実装計画](designs/recessed-floor-openings-clearance.md#段落ちを先行する実装計画)。計画と実装済み状態を区別する。
+
+次期改良の具体案: [段落ち・複数開口・間隔表示](designs/recessed-floor-openings-clearance.md)。2026-11-04の確認済み要望と未承認の設計を分離。要望の正本は仕様のOpen Decisions、順序はロードマップを参照する。
+
+次の改良に向けた確認: [業務・Excel版利用実態ヒアリング](business-workflow-interview.md)。業務フローから新版の有用性までの質問・記録様式。進め方は[ロードマップ](roadmaps/auto-clp.md#next-work)を正とする。
+
+プレゼン用の匿名合成データと進行案: [2026年10月28日のデモ](demos/2026-10-28/README.md)。正式な実務受入・販売条件とは区別する。
+
 | Document | Authoritative content |
 | --- | --- |
 | `../governance/common-governance.md` | 管理されたプロジェクト横断ガバナンス。直接編集禁止 |
@@ -65,3 +73,5 @@
 - 相対リンク、索引網羅性、ロードマップ計算、エージェントTOMLが `../scripts/check-project.ps1` に合格する。
 - 変更を検証policyのclassへ分類し、mixed changeはstage別gateの和集合、unknown impactはcomprehensive fallbackを使う。包含gateを重複実行せず、省略理由と後続変更によるevidence失効を記録する。
 - 必須検証は個別のコマンド、結果、終了コードを残す。まとめる場合は失敗を非ゼロで返す検証済みランナーだけを使い、診断バッチや状態を隠すコマンド連結を完了証拠にしない。
+
+段落ち先行実装の契約: [ADR 0046](decisions/0046-recessed-floor-and-save-compatibility.md)。操作は[運用](operations.md#段落ちの操作と保存)、検証は[受入](acceptance.md#g1-段落ち先行の合成ケース)。

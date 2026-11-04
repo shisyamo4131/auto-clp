@@ -43,6 +43,7 @@ function gramsToKilograms(grams: number): string {
 
 function containerDraftFrom(container: Container): ContainerDraft {
   return {
+    ...(container.recessedFloorMm === undefined ? {} : { recessedFloor: Object.fromEntries(Object.entries(container.recessedFloorMm).map(([k, v]) => [k, String(v)])) as NonNullable<ContainerDraft["recessedFloor"]> }),
     name: container.name,
     internalLengthMm: String(container.internalDimensionsMm.lengthMm),
     internalWidthMm: String(container.internalDimensionsMm.widthMm),
@@ -55,6 +56,9 @@ function containerDraftFrom(container: Container): ContainerDraft {
 
 function issueMessage(issue: ValidationIssue): string {
   const messages: Record<string, string> = {
+    "floor.crossing": "段差をまたぐ積荷があるため確定できません。先に積荷を移動してください。",
+    "floor.occupied-edit": "床の高さが変わる位置に積荷があります。先に積荷を移動してください。",
+    "floor.invalid": "段落ちの位置・寸法を確認してください。段落ちは荷室内に収めてください。",
     "input.mm-format": "mmは半角数字だけの整数で入力してください。",
     "input.mm-length": "mmの入力桁数が上限を超えています。",
     "input.mm-range": "mmの値が入力可能な範囲外です。",
@@ -162,7 +166,12 @@ export function ContainerEditorDialog({
     const result = saveContainer(project, draft, target?.id);
     if (!result.ok) {
       setIssues(result.issues);
-      setStatus("");
+      setStatus(result.issues.map((issue) => {
+        const match = /^\/(cargoes|placements)\/(\d+)$/.exec(issue.path);
+        if (match === null) return "";
+        const cargo = match[1] === "cargoes" ? project.cargoes[Number(match[2])] : project.cargoes.find((c) => c.id === project.placements[Number(match[2])]?.cargoId);
+        return cargo === undefined ? "" : `対象: ${cargo.cargoNo === undefined ? cargo.id : `No.${cargo.cargoNo}`} ${cargo.name}`;
+      }).filter(Boolean).join("、"));
       queueMicrotask(() => {
         formRef.current?.querySelector<HTMLElement>("[aria-invalid='true']")?.focus({ preventScroll: true });
       });
@@ -269,6 +278,14 @@ export function ContainerEditorDialog({
             <Field id="container-internalDimensionsMm/widthMm" label="内部幅" unit="mm" maxLength={6} value={draft.internalWidthMm} issues={issues} onChange={(internalWidthMm) => setDraft({ ...draft, internalWidthMm })} />
             <Field id="container-internalDimensionsMm/heightMm" label="内部高さ" unit="mm" maxLength={6} value={draft.internalHeightMm} issues={issues} onChange={(internalHeightMm) => setDraft({ ...draft, internalHeightMm })} />
           </div>
+        </fieldset>
+        <fieldset>
+          <legend>段落ち</legend>
+          <label><input type="checkbox" checked={draft.recessedFloor !== undefined} onChange={(event) => setDraft({ ...draft, recessedFloor: event.target.checked ? { xMm: "0", yMm: "0", lengthMm: "1000", widthMm: "1000", depthMm: "300" } : undefined })} />床の一部を低くする</label>
+          {draft.recessedFloor === undefined ? null : <>
+            <p>通常床を0 mmとし、段落ちの床は指定した深さだけ下がります。内部高さは通常床から天井までです。</p>
+            <div className="dimension-grid">{([ ["xMm", "入口からの位置"], ["yMm", "右壁からの位置"], ["lengthMm", "段落ちの長さ"], ["widthMm", "段落ちの幅"], ["depthMm", "段落ちの深さ"] ] as const).map(([key, label]) => <Field key={key} id={`container-recessedFloorMm/${key}`} label={label} unit="mm" maxLength={6} value={draft.recessedFloor![key]} issues={issues} onChange={(value) => setDraft({ ...draft, recessedFloor: { ...draft.recessedFloor!, [key]: value } })} />)}</div>
+          </>}
         </fieldset>
         <fieldset>
           <legend>負X側の矩形開口</legend>

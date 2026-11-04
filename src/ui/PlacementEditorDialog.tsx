@@ -57,6 +57,8 @@ function draftFromPlacement(placement: Placement): PlacementDraft {
 
 function issueMessage(issue: ValidationIssue): string {
   const messages: Record<string, string> = {
+    "floor.crossing": "段差をまたいでいます。配置は確定できません。",
+    "floor.penetration": "床より下に積荷が入っています。",
     "input.mm-format": "座標は半角整数で入力してください。",
     "input.mm-length": "座標の入力桁数が上限を超えています。",
     "input.mm-range": "座標は-1,000,000〜1,000,000 mmで入力してください。",

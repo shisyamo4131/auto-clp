@@ -57,4 +57,6 @@
 | [0044](0044-limited-loading-sequence-and-pdf-report.md) | 限定モデルによる積込順提案とPDF帳票 | Accepted | 2026-09-17 |
 | [0045](0045-prohibited-contact-precedence-in-multiple-support.md) | 複数支持における上乗せ禁止接触の不適合優先 | Accepted | 2026-09-17 |
 
+| [0046](0046-recessed-floor-and-save-compatibility.md) | 段落ち床と保存互換性 | Accepted | 2026-11-04 |
+
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

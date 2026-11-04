@@ -365,7 +365,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.14.1' 'Approved specification version'
+Assert-Equal $specificationVersion '1.15.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -732,7 +732,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.14.1`',
+    '仕様版 `1.15.0`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -1415,3 +1415,10 @@ foreach ($requiredText in @(
     cargo_csv_implemented = $true
     cargo_csv_regression_contract_present = $true
 }
+
+$newFloorSchema = Get-Content -LiteralPath (Join-Path $resolvedProject 'schemas/project-0.2.0.schema.json') -Raw | ConvertFrom-Json
+Assert-Equal $newFloorSchema.properties.schemaVersion.const '0.2.0' 'Recessed floor schema version'
+Assert-Equal ($newFloorSchema.required -contains 'nextCargoNo') $true 'Persistent number high water'
+Assert-Equal ($newFloorSchema.'$defs'.cargo.required -contains 'cargoNo') $true 'Persistent cargo number'
+Assert-Equal $newFloorSchema.'$defs'.container.properties.recessedFloorMm.properties.depthMm.minimum 1 'Positive recess depth'
+Write-Output 'recessed_floor_schema_checked: True'

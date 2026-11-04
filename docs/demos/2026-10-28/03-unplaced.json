@@ -1,0 +1,193 @@
+{
+  "schemaVersion": "0.1.0",
+  "projectId": "demo-20261028-empty",
+  "name": "架空木枠10個・2コンテナ／全て未配置",
+  "clearancesMm": {
+    "xMm": 50,
+    "yMm": 50,
+    "zMm": 50
+  },
+  "cargoes": [
+    {
+      "id": "cargo-01",
+      "name": "01 精密測定装置（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1600,
+        "widthMm": 950,
+        "heightMm": 1600
+      },
+      "massGrams": 1200000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    },
+    {
+      "id": "cargo-02",
+      "name": "02 光学検査装置（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1500,
+        "widthMm": 900,
+        "heightMm": 1400
+      },
+      "massGrams": 850000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    },
+    {
+      "id": "cargo-03",
+      "name": "03 制御盤ユニット（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1400,
+        "widthMm": 950,
+        "heightMm": 1300
+      },
+      "massGrams": 650000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    },
+    {
+      "id": "cargo-04",
+      "name": "04 温調ユニット（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1200,
+        "widthMm": 900,
+        "heightMm": 1100
+      },
+      "massGrams": 450000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    },
+    {
+      "id": "cargo-05",
+      "name": "05 計測付属品（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1200,
+        "widthMm": 800,
+        "heightMm": 1000
+      },
+      "massGrams": 300000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    },
+    {
+      "id": "cargo-06",
+      "name": "06 精密加工装置（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1800,
+        "widthMm": 1000,
+        "heightMm": 1700
+      },
+      "massGrams": 1400000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    },
+    {
+      "id": "cargo-07",
+      "name": "07 検査ステージ（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1600,
+        "widthMm": 900,
+        "heightMm": 1500
+      },
+      "massGrams": 1000000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    },
+    {
+      "id": "cargo-08",
+      "name": "08 電源ユニット（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1400,
+        "widthMm": 1000,
+        "heightMm": 1200
+      },
+      "massGrams": 600000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    },
+    {
+      "id": "cargo-09",
+      "name": "09 冷却ユニット（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1200,
+        "widthMm": 900,
+        "heightMm": 1100
+      },
+      "massGrams": 400000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    },
+    {
+      "id": "cargo-10",
+      "name": "10 治具・工具箱（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1000,
+        "widthMm": 800,
+        "heightMm": 900
+      },
+      "massGrams": 250000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ]
+    }
+  ],
+  "containers": [
+    {
+      "id": "container-A",
+      "name": "合成コンテナA",
+      "internalDimensionsMm": {
+        "lengthMm": 6000,
+        "widthMm": 2400,
+        "heightMm": 2400
+      },
+      "openingMm": {
+        "widthMm": 2200,
+        "heightMm": 2200
+      },
+      "payloadCapacityGrams": 4000000
+    },
+    {
+      "id": "container-B",
+      "name": "合成コンテナB",
+      "internalDimensionsMm": {
+        "lengthMm": 6000,
+        "widthMm": 2400,
+        "heightMm": 2400
+      },
+      "openingMm": {
+        "widthMm": 2200,
+        "heightMm": 2200
+      },
+      "payloadCapacityGrams": 4000000
+    }
+  ],
+  "placements": []
+}

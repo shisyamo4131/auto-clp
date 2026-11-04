@@ -1,3 +1,4 @@
+import { floorHeightMm, floorRegion } from "../domain/recessed-floor";
 import {
   assessGeometricSupport,
   hasPositiveAreaOverlap,
@@ -71,6 +72,7 @@ export interface SceneOpeningFrame {
 }
 
 export interface SceneContainerProjection {
+  readonly recessedFloor?: { readonly center: SceneVector3; readonly dimensions: SceneVector3 };
   readonly id: string;
   readonly name: string;
   readonly center: SceneVector3;
@@ -386,14 +388,14 @@ function sceneBoxBounds(
 export function sceneContainerBounds(
   projection: ProjectSceneProjection,
 ): SceneProjectionBounds {
-  return sceneBoxBounds([projection.container]);
+  return sceneBoxBounds([projection.container, ...(projection.container.recessedFloor === undefined ? [] : [projection.container.recessedFloor])]);
 }
 
 /** Returns the union used by callers that need every projected object. */
 export function sceneProjectionBounds(
   projection: ProjectSceneProjection,
 ): SceneProjectionBounds {
-  return sceneBoxBounds([projection.container, ...projection.cargoes]);
+  return sceneBoxBounds([projection.container, ...(projection.container.recessedFloor === undefined ? [] : [projection.container.recessedFloor]), ...projection.cargoes]);
 }
 
 export function domainPointToScene(point: PositionMm): SceneVector3 {
@@ -493,6 +495,7 @@ export function domainPositionDeltaToScene(
 export type SupportSnapDisposition =
   | "outside"
   | "floor"
+  | "invalid-floor"
   | "single-support"
   | "support-conditions-unverified"
   | "invalid-overlap";
@@ -896,7 +899,7 @@ export function resolveSupportSnapPosition(
   const automaticallyEligible = placedCandidates.filter(
     (candidate) =>
       candidate.cargo.canSupportCargo &&
-      candidate.bounds.min.zMm >= 0 &&
+      candidate.bounds.min.zMm >= floorHeightMm(container, candidate.bounds) &&
       positiveOverlapAreaMm2(candidate.bounds, rawBounds) > 0,
   );
   const startingPlacement = project.placements.find(
@@ -930,7 +933,7 @@ export function resolveSupportSnapPosition(
 
   let snappedPositionMm: PositionMm;
   if (overlappingEligible.length === 0) {
-    snappedPositionMm = { ...rawPositionMm, zMm: 0 };
+    snappedPositionMm = { ...rawPositionMm, zMm: floorHeightMm(container, rawBounds) };
   } else {
     const highestTop = Math.max(
       ...overlappingEligible.map((candidate) => candidate.bounds.max.zMm),
@@ -986,6 +989,7 @@ export function resolveSupportSnapPosition(
       )
     : { faceSnaps: [], positionMm: snappedPositionMm };
   snappedPositionMm = faceSnap.positionMm;
+  if (overlappingEligible.length === 0) snappedPositionMm = { ...snappedPositionMm, zMm: floorHeightMm(container, placementBounds(cargo, { orientation, positionMm: snappedPositionMm })) };
   const snappedBounds = placementBounds(cargo, {
     orientation,
     positionMm: snappedPositionMm,
@@ -1008,7 +1012,8 @@ export function resolveSupportSnapPosition(
       supporterIds: [],
     };
   }
-  if (snappedPositionMm.zMm === 0) {
+  if (floorRegion(container, snappedBounds) === "crossing") return { disposition: "invalid-floor", faceSnaps: [], positionMm: snappedPositionMm, supporterIds: [] };
+  if (snappedPositionMm.zMm === floorHeightMm(container, snappedBounds)) {
     return {
       disposition: "floor",
       faceSnaps: faceSnap.faceSnaps,
@@ -1024,6 +1029,7 @@ export function resolveSupportSnapPosition(
       bounds: candidate.bounds,
       canSupportCargo: candidate.cargo.canSupportCargo,
     })),
+    floorHeightMm(container, snappedBounds),
   );
   const retainsRequestedSurface =
     requestedSupportCargoId !== undefined &&
@@ -1079,6 +1085,9 @@ export function resolveKeyboardNudgePosition(
     yMm: placement.positionMm.yMm + deltaMm.yMm,
     zMm: placement.positionMm.zMm,
   };
+  const container = project.containers.find((c) => c.id === containerId);
+  const moved = placementBounds(cargo, { orientation: placement.orientation, positionMm });
+  if (container !== undefined && (floorRegion(container, moved) === "crossing" || moved.min.zMm < floorHeightMm(container, moved))) return { disposition: "blocked", positionMm };
   return {
     disposition: groupOverlapsFixedCargo(
       project,
@@ -1372,6 +1381,10 @@ export function projectContainerToScene(
 
   const projection: ProjectSceneProjection = {
     container: {
+      ...(container.recessedFloorMm === undefined ? {} : { recessedFloor: {
+        center: domainPointToScene({ xMm: container.recessedFloorMm.xMm + container.recessedFloorMm.lengthMm / 2, yMm: container.recessedFloorMm.yMm + container.recessedFloorMm.widthMm / 2, zMm: -container.recessedFloorMm.depthMm / 2 }),
+        dimensions: domainDimensionsToScene({ xMm: container.recessedFloorMm.lengthMm, yMm: container.recessedFloorMm.widthMm, zMm: container.recessedFloorMm.depthMm }),
+      } }),
       id: container.id,
       name: container.name,
       center: centerFromBounds(
@@ -1390,7 +1403,7 @@ export function projectContainerToScene(
       },
     },
     cargoes,
-    weightBalance: projectWeightBalanceToScene(project, containerId),
+    weightBalance: container.recessedFloorMm === undefined ? projectWeightBalanceToScene(project, containerId) : { kind: "no-container" },
   };
 
   if (missingCargoId !== undefined) {

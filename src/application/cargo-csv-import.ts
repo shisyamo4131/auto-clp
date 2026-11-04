@@ -52,6 +52,7 @@ export function prepareCargoCsvReplacement(
     clearedPlacementCount: current.placements.length,
   };
   const unchanged =
+    current.schemaVersion === "0.1.0" &&
     current.placements.length === 0 &&
     current.cargoes.length === cargoes.length &&
     current.cargoes.every((cargo, index) =>
@@ -74,8 +75,10 @@ export function prepareCargoCsvReplacement(
 
   const candidate: Project = {
     ...current,
-    cargoes: cargoes.map((cargo) => ({
+    ...(current.schemaVersion === "0.2.0" ? { nextCargoNo: current.nextCargoNo! + cargoes.length } : {}),
+    cargoes: cargoes.map((cargo, index) => ({
       ...cargo,
+      ...(current.schemaVersion === "0.2.0" ? { cargoNo: current.nextCargoNo! + index } : {}),
       dimensionsMm: { ...cargo.dimensionsMm },
       allowedOrientations: [...cargo.allowedOrientations],
     })),

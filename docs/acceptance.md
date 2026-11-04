@@ -323,3 +323,9 @@
 - 空入力: domain、Worker、session/viewの単体試験で `no-cargo` と `no-candidates`、attempt 0相当、Project・履歴の非変更を維持する。
 
 AP-04の上限試験は、`1..N` の順序付きattempt記述子を生成して指定ordinalだけを成功させられる純粋なtest infrastructureを使う。これはProjectの設定や利用者入力へ公開しない。AP-08の記録にはcommit SHA、algorithm・Schema版、browser/Playwright/OS、CPU、logical processor数、RAM、電源状態、cold/warmと反復番号、viewport、WebGL状態、積荷・候補数、選択候補、候補別・要求attempt数、結果・cutoff源、配置・不適合・未確認件数、結果hash、開始・完了・経過、取消・Worker終了・取消遅延、timer/rAF回数と最大遅延、console warning/error、合否、備考を含める。記録環境以外の性能、headed実行、最低GPU、実務受入は未検証である。
+
+## G1 段落ち先行の合成ケース
+
+荷室6,000×2,400×2,400 mm、段落ち開始X=2,000/Y=400、長さ2,000/幅1,600/深さ300 mm、積荷1,000×1,000×2,600 mm、隙間0を使う。位置X=2,500/Y=700/Z=-300で有効。X=1,999は跨ぎエラーで確定せず元配置を保持する。天井は2,400のまま、低床からの有効高さ2,700 mmとなる。
+
+自動検証対象は入力・負Z配置・座標跨ぎ拒否・実pointerの跨ぎプレビューとdrop復帰・JSONの形状とNo・端末保存後reload復元。境界±1 mm、床編集、旧移行、Undo採番、保存fallbackは単体試験も実施する。試験ファイルは `src/application/recessed-floor.test.ts`、`src/persistence/project-store.test.ts`、`tests/browser/recessed-floor.spec.ts`。先方の実務受入は未実施。

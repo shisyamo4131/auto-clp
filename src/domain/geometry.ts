@@ -1,3 +1,4 @@
+import { floorHeightMm } from "./recessed-floor";
 import type {
   Cargo,
   ClearancesMm,
@@ -318,15 +319,16 @@ function rectangleContains(
 export function assessGeometricSupport(
   target: PlacementBoundsMm,
   candidates: readonly IdentifiedGeometricSupportCandidateMm[],
+  floorZmm = 0,
 ): GeometricSupportAssessment {
   const empty = {
     contactIds: [] as readonly string[],
     eligibleContactIds: [] as readonly string[],
   };
-  if (!hasValidPlacementBounds(target) || target.min.zMm < 0) {
+  if (!hasValidPlacementBounds(target) || target.min.zMm < floorZmm) {
     return { kind: "invalid", ...empty };
   }
-  if (target.min.zMm === 0) {
+  if (target.min.zMm === floorZmm) {
     return { kind: "floor", ...empty };
   }
   if (candidates.some((candidate) => !hasValidPlacementBounds(candidate.bounds))) {
@@ -379,12 +381,13 @@ export function assessGeometricSupport(
 export function isPlacementWithinContainer(
   bounds: PlacementBoundsMm,
   internalDimensionsMm: DimensionsMm,
+  floorZmm = 0,
 ): boolean {
   return (
     hasPositiveAxisLengths(bounds) &&
     bounds.min.xMm >= 0 &&
     bounds.min.yMm >= 0 &&
-    bounds.min.zMm >= 0 &&
+    bounds.min.zMm >= floorZmm &&
     bounds.max.xMm <= internalDimensionsMm.lengthMm &&
     bounds.max.yMm <= internalDimensionsMm.widthMm &&
     bounds.max.zMm <= internalDimensionsMm.heightMm
@@ -411,14 +414,15 @@ export function isPlacementWithinContainerWithClearance(
   bounds: PlacementBoundsMm,
   internalDimensionsMm: DimensionsMm,
   clearancesMm: ClearancesMm,
+  floorZmm = 0,
 ): boolean {
   return (
-    isPlacementWithinContainer(bounds, internalDimensionsMm) &&
+    isPlacementWithinContainer(bounds, internalDimensionsMm, floorZmm) &&
     bounds.min.xMm >= clearancesMm.xMm &&
     bounds.max.xMm <= internalDimensionsMm.lengthMm - clearancesMm.xMm &&
     bounds.min.yMm >= clearancesMm.yMm &&
     bounds.max.yMm <= internalDimensionsMm.widthMm - clearancesMm.yMm &&
-    bounds.min.zMm >= 0 &&
+    bounds.min.zMm >= floorZmm &&
     bounds.max.zMm <= internalDimensionsMm.heightMm - clearancesMm.zMm
   );
 }
@@ -565,9 +569,11 @@ export function singleSupportDescendantCargoIds(
     });
   if (!placed.some(({ cargo }) => cargo.id === rootCargoId)) return [];
 
+  const container = project.containers.find((c) => c.id === containerId);
   const childrenBySupporter = new Map<string, string[]>();
   for (const target of placed) {
-    if (target.bounds.min.zMm <= 0) continue;
+    const floorZ = container === undefined ? 0 : floorHeightMm(container, target.bounds);
+    if (target.bounds.min.zMm <= floorZ) continue;
     const candidates = placed
       .filter(({ cargo }) => cargo.id !== target.cargo.id)
       .map(({ cargo, bounds }) => ({
@@ -575,7 +581,7 @@ export function singleSupportDescendantCargoIds(
         bounds,
         canSupportCargo: cargo.canSupportCargo,
       }));
-    const assessment = assessGeometricSupport(target.bounds, candidates);
+    const assessment = assessGeometricSupport(target.bounds, candidates, floorZ);
     if (assessment.kind !== "single") continue;
     const supporterId = assessment.eligibleContactIds[0];
     if (supporterId === undefined) continue;

@@ -330,6 +330,24 @@ function addProjection(
   geometries.push(containerBox, containerEdges);
   materials.push(containerMaterial);
 
+  const recessed = projection.container.recessedFloor;
+  if (recessed !== undefined) {
+    const box = new THREE.BoxGeometry(recessed.dimensions.x, recessed.dimensions.y, recessed.dimensions.z);
+    const edges = new THREE.EdgesGeometry(box);
+    const material = new THREE.LineBasicMaterial({ color: 0xffb74d });
+    const lines = new THREE.LineSegments(edges, material);
+    setVector(lines.position, recessed.center);
+    scene.add(lines);
+    const bottomGeometry = new THREE.PlaneGeometry(recessed.dimensions.x, recessed.dimensions.z);
+    const bottomMaterial = new THREE.MeshBasicMaterial({ color: 0x94642d, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+    const bottom = new THREE.Mesh(bottomGeometry, bottomMaterial);
+    bottom.rotation.x = -Math.PI / 2;
+    bottom.position.set(recessed.center.x, recessed.center.y - recessed.dimensions.y / 2, recessed.center.z);
+    scene.add(bottom);
+    geometries.push(box, edges, bottomGeometry);
+    materials.push(material, bottomMaterial);
+  }
+
   const halfLength = projection.container.dimensions.x / 2;
   const containerHalfHeight = projection.container.dimensions.y / 2;
   const halfDepth = projection.container.dimensions.z / 2;
@@ -1738,7 +1756,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
         )}
         <div className="viewport__weight-balance-legend" aria-live="polite">
           {weightBalanceKind === "no-container" ? (
-            <span>コンテナ未選択またはコンテナなし</span>
+            <span>{projection?.container.recessedFloor === undefined ? "コンテナ未選択またはコンテナなし" : "段落ち荷室の中心・重心表示は対応準備中"}</span>
           ) : (
             <>
               <span className="viewport__weight-balance-key">

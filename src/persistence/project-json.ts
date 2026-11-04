@@ -1,3 +1,4 @@
+import { recessedPlacementIssues } from "../domain/recessed-floor";
 import {
   PROJECT_SCHEMA_VERSION,
   type Cargo,
@@ -77,7 +78,7 @@ export async function readProjectJson(source: ProjectJsonSource): Promise<Projec
     return failure("syntax", "syntax.invalid");
   }
 
-  if (!isRecord(value) || value.schemaVersion !== PROJECT_SCHEMA_VERSION) {
+  if (!isRecord(value) || (value.schemaVersion !== PROJECT_SCHEMA_VERSION && value.schemaVersion !== "0.2.0")) {
     return failure("version", "version.unsupported", "/schemaVersion");
   }
 
@@ -86,7 +87,7 @@ export async function readProjectJson(source: ProjectJsonSource): Promise<Projec
     return { ok: false, stage: "schema", issues: schemaResult.issues };
   }
 
-  const semanticIssues = validateProjectReferences(schemaResult.project);
+  const semanticIssues = [...validateProjectReferences(schemaResult.project), ...recessedPlacementIssues(schemaResult.project)];
   if (semanticIssues.length > 0) {
     return { ok: false, stage: "semantic", issues: semanticIssues };
   }
@@ -97,6 +98,7 @@ export async function readProjectJson(source: ProjectJsonSource): Promise<Projec
 function projectCargo(cargo: Cargo): Cargo {
   return {
     id: cargo.id,
+    ...(cargo.cargoNo === undefined ? {} : { cargoNo: cargo.cargoNo }),
     name: cargo.name,
     dimensionsMm: {
       lengthMm: cargo.dimensionsMm.lengthMm,
@@ -111,6 +113,7 @@ function projectCargo(cargo: Cargo): Cargo {
 
 function projectContainer(container: Container): Container {
   return {
+    ...(container.recessedFloorMm === undefined ? {} : { recessedFloorMm: { ...container.recessedFloorMm } }),
     id: container.id,
     name: container.name,
     internalDimensionsMm: {
@@ -142,6 +145,7 @@ function projectPlacement(placement: Placement): Placement {
 function persistedProject(project: Project): Project {
   return {
     schemaVersion: project.schemaVersion,
+    ...(project.nextCargoNo === undefined ? {} : { nextCargoNo: project.nextCargoNo }),
     projectId: project.projectId,
     name: project.name,
     clearancesMm: {
@@ -167,7 +171,7 @@ export function serializeProjectJson(project: Project): ProjectJsonSerialization
     };
   }
 
-  if (persisted.schemaVersion !== PROJECT_SCHEMA_VERSION) {
+  if (persisted.schemaVersion !== PROJECT_SCHEMA_VERSION && persisted.schemaVersion !== "0.2.0") {
     return {
       ok: false,
       stage: "version",
@@ -180,7 +184,7 @@ export function serializeProjectJson(project: Project): ProjectJsonSerialization
     return { ok: false, stage: "schema", issues: schemaResult.issues };
   }
 
-  const semanticIssues = validateProjectReferences(schemaResult.project);
+  const semanticIssues = [...validateProjectReferences(schemaResult.project), ...recessedPlacementIssues(schemaResult.project)];
   if (semanticIssues.length > 0) {
     return { ok: false, stage: "semantic", issues: semanticIssues };
   }

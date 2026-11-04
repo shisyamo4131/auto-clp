@@ -95,6 +95,15 @@ export function commitProjectHistory(
   };
 }
 
+function restoreFrame(project: Project, present: Project): Project {
+  if (present.schemaVersion !== "0.2.0") return project;
+  const cargoes = project.cargoes.map((cargo, index) => ({
+    ...cargo, cargoNo: cargo.cargoNo ?? index + 1,
+  }));
+  return { ...project, schemaVersion: "0.2.0", cargoes,
+    nextCargoNo: Math.max(project.nextCargoNo ?? cargoes.length + 1, present.nextCargoNo ?? 1) };
+}
+
 export function undoProjectHistory(
   state: ProjectHistoryState,
 ): ProjectHistoryTransition {
@@ -108,7 +117,7 @@ export function undoProjectHistory(
     action: frame.action,
     state: {
       past: state.past.slice(0, -1),
-      present: frame.project,
+      present: restoreFrame(frame.project, state.present),
       future: [
         ...state.future,
         { project: state.present, action: frame.action },
@@ -133,7 +142,7 @@ export function redoProjectHistory(
         project: state.present,
         action: frame.action,
       }),
-      present: frame.project,
+      present: restoreFrame(frame.project, state.present),
       future: state.future.slice(0, -1),
     },
   };

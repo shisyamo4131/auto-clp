@@ -80,7 +80,7 @@ export function downloadProjectJson(
     );
     anchor = document.createElement("a");
     anchor.href = objectUrl;
-    anchor.download = filename;
+    anchor.download = filename === PROJECT_EXPORT_FILENAME && JSON.parse(json).schemaVersion === "0.2.0" ? "auto-clp-project-0.2.0.json" : filename;
     anchor.hidden = true;
     document.body.append(anchor);
     anchor.click();
