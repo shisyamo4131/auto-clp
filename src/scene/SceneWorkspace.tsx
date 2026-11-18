@@ -1583,7 +1583,6 @@ export function SceneWorkspace({
             )}
             validationControl={(
               <>
-                {effectiveContainer?.recessedFloorMm === undefined ? null : <span role="status">段落ちの荷室中心表示は対応準備中です。</span>}
                 <LoadingReportButton
                   disabled={
                     effectiveContainerId === undefined ||

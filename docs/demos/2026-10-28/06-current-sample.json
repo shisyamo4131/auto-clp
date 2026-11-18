@@ -1,0 +1,314 @@
+{
+  "schemaVersion": "0.3.0",
+  "projectId": "sample-recessed-floor-20261118",
+  "name": "サンプル／架空木枠10個・2種類の段落ち",
+  "cargoes": [
+    {
+      "id": "cargo-01",
+      "name": "精密測定装置（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1600,
+        "widthMm": 950,
+        "heightMm": 1600
+      },
+      "massGrams": 1200000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 1
+    },
+    {
+      "id": "cargo-02",
+      "name": "光学検査装置（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1500,
+        "widthMm": 900,
+        "heightMm": 1400
+      },
+      "massGrams": 850000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 2
+    },
+    {
+      "id": "cargo-03",
+      "name": "背高制御盤（段落ち検証・架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1400,
+        "widthMm": 950,
+        "heightMm": 2700
+      },
+      "massGrams": 650000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 3
+    },
+    {
+      "id": "cargo-04",
+      "name": "温調ユニット（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1200,
+        "widthMm": 900,
+        "heightMm": 1100
+      },
+      "massGrams": 450000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 4
+    },
+    {
+      "id": "cargo-05",
+      "name": "計測付属品（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1200,
+        "widthMm": 800,
+        "heightMm": 1000
+      },
+      "massGrams": 300000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 5
+    },
+    {
+      "id": "cargo-06",
+      "name": "背高精密加工装置（段落ち検証・架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1800,
+        "widthMm": 1000,
+        "heightMm": 2600
+      },
+      "massGrams": 1400000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 6
+    },
+    {
+      "id": "cargo-07",
+      "name": "検査ステージ（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1600,
+        "widthMm": 900,
+        "heightMm": 1500
+      },
+      "massGrams": 1000000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 7
+    },
+    {
+      "id": "cargo-08",
+      "name": "電源ユニット（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1400,
+        "widthMm": 1000,
+        "heightMm": 1200
+      },
+      "massGrams": 600000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 8
+    },
+    {
+      "id": "cargo-09",
+      "name": "冷却ユニット（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1200,
+        "widthMm": 900,
+        "heightMm": 1100
+      },
+      "massGrams": 400000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 9
+    },
+    {
+      "id": "cargo-10",
+      "name": "治具・工具箱（架空木枠）",
+      "dimensionsMm": {
+        "lengthMm": 1000,
+        "widthMm": 800,
+        "heightMm": 900
+      },
+      "massGrams": 250000,
+      "canSupportCargo": false,
+      "allowedOrientations": [
+        "LWH",
+        "WLH"
+      ],
+      "cargoNo": 10
+    }
+  ],
+  "containers": [
+    {
+      "id": "container-A",
+      "name": "A 中央全幅・段落ち400 mm",
+      "internalDimensionsMm": {
+        "lengthMm": 6000,
+        "widthMm": 2400,
+        "heightMm": 2400
+      },
+      "openingMm": {
+        "widthMm": 2200,
+        "heightMm": 2200
+      },
+      "payloadCapacityGrams": 4000000,
+      "recessedFloorMm": {
+        "xMm": 2000,
+        "yMm": 0,
+        "lengthMm": 1800,
+        "widthMm": 2400,
+        "depthMm": 400
+      }
+    },
+    {
+      "id": "container-B",
+      "name": "B 奥の片側・段落ち300 mm",
+      "internalDimensionsMm": {
+        "lengthMm": 6000,
+        "widthMm": 2400,
+        "heightMm": 2400
+      },
+      "openingMm": {
+        "widthMm": 2200,
+        "heightMm": 2200
+      },
+      "payloadCapacityGrams": 4000000,
+      "recessedFloorMm": {
+        "xMm": 3700,
+        "yMm": 50,
+        "lengthMm": 2200,
+        "widthMm": 1150,
+        "depthMm": 300
+      }
+    }
+  ],
+  "placements": [
+    {
+      "cargoId": "cargo-01",
+      "containerId": "container-A",
+      "positionMm": {
+        "xMm": 4100,
+        "yMm": 150,
+        "zMm": 0
+      },
+      "orientation": "LWH"
+    },
+    {
+      "cargoId": "cargo-02",
+      "containerId": "container-A",
+      "positionMm": {
+        "xMm": 4100,
+        "yMm": 1300,
+        "zMm": 0
+      },
+      "orientation": "LWH"
+    },
+    {
+      "cargoId": "cargo-03",
+      "containerId": "container-A",
+      "positionMm": {
+        "xMm": 2200,
+        "yMm": 150,
+        "zMm": -400
+      },
+      "orientation": "LWH"
+    },
+    {
+      "cargoId": "cargo-04",
+      "containerId": "container-A",
+      "positionMm": {
+        "xMm": 2200,
+        "yMm": 1300,
+        "zMm": -400
+      },
+      "orientation": "LWH"
+    },
+    {
+      "cargoId": "cargo-05",
+      "containerId": "container-A",
+      "positionMm": {
+        "xMm": 400,
+        "yMm": 700,
+        "zMm": 0
+      },
+      "orientation": "LWH"
+    },
+    {
+      "cargoId": "cargo-06",
+      "containerId": "container-B",
+      "positionMm": {
+        "xMm": 3900,
+        "yMm": 150,
+        "zMm": -300
+      },
+      "orientation": "LWH"
+    },
+    {
+      "cargoId": "cargo-07",
+      "containerId": "container-B",
+      "positionMm": {
+        "xMm": 3900,
+        "yMm": 1350,
+        "zMm": 0
+      },
+      "orientation": "LWH"
+    },
+    {
+      "cargoId": "cargo-08",
+      "containerId": "container-B",
+      "positionMm": {
+        "xMm": 2100,
+        "yMm": 150,
+        "zMm": 0
+      },
+      "orientation": "LWH"
+    },
+    {
+      "cargoId": "cargo-09",
+      "containerId": "container-B",
+      "positionMm": {
+        "xMm": 2100,
+        "yMm": 1350,
+        "zMm": 0
+      },
+      "orientation": "LWH"
+    },
+    {
+      "cargoId": "cargo-10",
+      "containerId": "container-B",
+      "positionMm": {
+        "xMm": 400,
+        "yMm": 700,
+        "zMm": 0
+      },
+      "orientation": "LWH"
+    }
+  ],
+  "nextCargoNo": 11
+}

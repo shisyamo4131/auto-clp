@@ -1738,7 +1738,6 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
         >
           <button type="button" aria-pressed={viewMode === "3d"} style={viewMode === "3d" ? { background: "#20504e", borderWidth: "2px" } : undefined} disabled={viewSwitchDisabled} onClick={() => onViewModeChange("3d")}>3D</button>
           <button type="button" aria-pressed={viewMode === "2d"} style={viewMode === "2d" ? { background: "#20504e", borderWidth: "2px" } : undefined} disabled={viewSwitchDisabled} onClick={() => onViewModeChange("2d")}>2D</button>
-          {viewMode === "2d" ? <span style={{ fontSize: "0.75rem" }}>上面・単位：mm</span> : null}
           {historyControls}
           {validationControl}
           <div className="viewport__rotation-controls" role="group" aria-label="選択した積荷の回転">

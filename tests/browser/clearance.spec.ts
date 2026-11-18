@@ -55,10 +55,12 @@ test("explicit migration cancellation, raw backup, measurements and new JSON", a
 });
 
 test("recessed configuration exports same-page top view and fixed cargo numbers", async ({ page }) => {
+  await page.removeLocatorHandler(page.getByRole("button", { name: "変換して開く", exact: true }));
   await mkdir(output, { recursive: true });
   await page.goto("/"); await openPersistenceDrawer(page);
-  await page.locator("#project-json-file-input").setInputFiles(demo);
+  await page.locator("#project-json-file-input").setInputFiles(fileURLToPath(new URL("../../docs/demos/2026-10-28/06-current-sample.json", import.meta.url)));
   await expect(page.locator("#current-project-settings-button")).toContainText("段落ち");
+  await expect(page.getByRole("dialog", { name: "旧データの変換" })).toHaveCount(0);
   await page.getByRole("button", { name: "CLPデータを閉じる" }).click();
   for (const index of [0, 1]) {
     await page.locator(`#scene-container-tab-${index}`).click();

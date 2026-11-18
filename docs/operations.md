@@ -108,6 +108,26 @@ corepack pnpm run dev:ui-trial
 
 ### GitHub Pages Technical Preview
 
+#### 2026-11-18 表示整理と変換不要サンプルの公開前検証
+
+利用者の公開指示に基づき、2D切替横の「上面・単位：mm」とアイコン列内の段落ち中心準備中メッセージだけを削除する。別の重心凡例、PDF単位、計算、保存契約は維持。現行形式の[架空サンプル](demos/2026-10-28/06-current-sample.json)は10荷・2コンテナ・総重量7,100 kg。05の積荷・配置・コンテナ・採番上限が同一で、Schema 0.3.0に合格することをNode/Ajvの直接検証で確認（終了0）。旧原本は保持する。
+
+対象ファイル: src/scene/ThreeViewport.tsx、src/scene/SceneWorkspace.tsx、tests/browser/clearance.spec.ts、docs/demos/2026-10-28/06-current-sample.json、同README.md、docs/specification.md、CHANGELOG.md、本運用文書。UI、documentation、build-release-deployの和集合で総合9ゲートを実行。サンプルは既存契約のインスタンスで、Schema変更・移行追加はない。ADR・データ契約・ロードマップ配点・管理ガバナンス・依存は変更不要。サンプルを既存デモ索引からリンクした。復旧は表示2行を戻せばよく、保存データに影響しない。
+
+| コマンド | 結果 | 終了コード |
+| --- | --- | ---: |
+| `corepack pnpm run typecheck` | 合格 | 0 |
+| `corepack pnpm run lint` | 合格 | 0 |
+| `corepack pnpm run test:unit` | 1,114件合格 | 0 |
+| `corepack pnpm run test:browser` | 133件合格。新サンプルの変換不要読込と両コンテナPDF出力を含む | 0 |
+| `$env:AUTO_CLP_BASE_PATH='/auto-clp/'; corepack pnpm run build` | 合格。HTMLのasset参照を確認。既存chunkサイズ警告あり | 0 |
+| `& ./scripts/check-data-contract.ps1 -ProjectPath $PWD.Path` | 合格 | 0 |
+| `& ./scripts/check-governance.ps1 -ProjectPath $PWD.Path` | 合格。rendererを包含 | 0 |
+| `& ./scripts/check-project.ps1 -ProjectPath $PWD.Path` | 合格。回帰12件を包含 | 0 |
+| `git diff --check` | 合格 | 0 |
+
+文書追記後はproject・governance・diff検査を再実行。通常base buildと包含gateの重複は省略し、公開対象base buildでbuildゲートを満たす。対象commitのActions結果と実公開版での表示削除・変換不要読込・上面図PDF出力は公開完了報告へ残す。
+
 #### 2026-11-18 上面図PDF・2D・実間隔の公開前検証
 
 利用者の明示指示により仕様1.16.0のローカル改修一式を既存GitHub Pages技術試用版へ反映する。対象は上面図PDF、固定積荷No、段落ちと実間隔の図内表示、2D切替、全積荷の実間隔常時表示、矢印キー成功通知の撤去、Schema 0.3.0と旧原本を保護する明示変換。実務機密データの利用、社内LANへの移行、認証やクラウド保存は含めない。試用は架空データを使う。
