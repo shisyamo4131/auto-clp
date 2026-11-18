@@ -2,6 +2,7 @@
 
 - Date: 2026-08-27
 - Status: Accepted
+- Current-scope override: [ADR 0047](0047-measured-clearance-and-migration.md) supersedes the normal 0.3.0 application behavior; the legacy data validation contract remains applicable.
 - Refinement: ADR 0019 applies the support-contact clearance exception to single-support and support-conditions-unverified positive-area contacts.
 - Related specification: Placement and Validation; Data and State
 - Supersedes: None

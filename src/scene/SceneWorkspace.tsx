@@ -1,3 +1,6 @@
+import { canEditInTopView } from "./top-view";
+import { appendClearancePlan } from "./clearance-plan-image";
+import { measureClearances } from "../domain/measured-clearance";
 import {
   useCallback,
   useEffect,
@@ -350,6 +353,8 @@ export function SceneWorkspace({
     Record<string, SceneStagingOverride>
   >({});
   const placementPanelRef = useRef<PlacementEditorDialogHandle>(null);
+  const [viewMode, setViewMode] = useState<"3d" | "2d">("3d");
+  const cargoNumbers = useMemo(() => new Map(project.cargoes.map((cargo, index) => [cargo.id, cargo.cargoNo ?? index + 1])), [project.cargoes]);
   const threeViewportRef = useRef<ThreeViewportHandle>(null);
   const selectedContainer = project.containers.find(
     (container) => container.id === selectedContainerId,
@@ -571,8 +576,14 @@ export function SceneWorkspace({
     selectedOrientation === undefined
       ? undefined
       : xAxisQuarterTurnOrientation(selectedOrientation);
-  const zRotationAllowed = nextZOrientation !== undefined && selectedCargo !== undefined;
-  const xRotationAllowed =
+  const canMoveCargo = useCallback((cargoId: string) => {
+    const allowed = viewMode === "3d" || (effectiveContainerId !== undefined && canEditInTopView(project, effectiveContainerId, cargoId));
+    if (!allowed) setCanvasStatus("段積み・床から浮いた積荷の編集は3Dへ切り替えてください。");
+    return allowed;
+  }, [viewMode, effectiveContainerId, project]);
+  const topSelectionLocked = viewMode === "2d" && selectedCargoId !== undefined && effectiveContainerId !== undefined && !canEditInTopView(project, effectiveContainerId, selectedCargoId);
+  const zRotationAllowed = !topSelectionLocked && nextZOrientation !== undefined && selectedCargo !== undefined;
+  const xRotationAllowed = viewMode !== "2d" &&
     nextXOrientation !== undefined &&
     selectedCargo !== undefined &&
     !isUprightOnlyOrientationPolicy(selectedCargo.allowedOrientations);
@@ -581,12 +592,12 @@ export function SceneWorkspace({
     canvasDragActive ||
     physicalDialogOpen ||
     loadingReportDialogOpen;
-  const coordinateActionDisabled =
+  const coordinateActionDisabled = viewMode === "2d" ||
     externalInteractionActive ||
     interactionActive ||
     effectiveContainerId === undefined ||
     selectedOtherContainer !== undefined;
-  const coordinateActionReason = canvasDragActive
+  const coordinateActionReason = viewMode === "2d" ? "高さを含む座標入力は3Dへ切り替えてください。2Dではドラッグと矢印キーで移動できます。" : canvasDragActive
     ? "3D移動を完了すると座標入力を開けます。"
     : placementInteractionActive
       ? "開いている配置操作を完了すると座標入力を開けます。"
@@ -702,6 +713,16 @@ export function SceneWorkspace({
     setCanvasStatus(message);
   }, []);
 
+  const measureCargo = useCallback((cargoId: string, preview?: CargoDragPreviewResult | CargoNudgePreviewResult, movingCargoId = cargoId) => {
+    const containerId = effectiveContainerId ?? "";
+    const projected = projection?.cargoes.find(c => c.cargoId === movingCargoId);
+    if (!preview || !projected) return measureClearances(project, containerId, cargoId);
+    const delta = { xMm: preview.positionMm.xMm - projected.positionMm.xMm, yMm: preview.positionMm.yMm - projected.positionMm.yMm, zMm: preview.positionMm.zMm - projected.positionMm.zMm };
+    const placements = project.placements.filter(p => p.cargoId !== movingCargoId).map(p => preview.followerCargoIds.includes(p.cargoId) ? { ...p, positionMm: { xMm: p.positionMm.xMm + delta.xMm, yMm: p.positionMm.yMm + delta.yMm, zMm: p.positionMm.zMm + delta.zMm } } : p);
+    placements.push({ cargoId: movingCargoId, containerId, orientation: projected.orientation, positionMm: preview.positionMm });
+    return measureClearances(project, containerId, cargoId, placements);
+  }, [effectiveContainerId, project, projection]);
+
   const handleCargoDragPreview = useCallback(
     (
       cargoId: string,
@@ -763,7 +784,7 @@ export function SceneWorkspace({
         rawPositionMm,
         [cargoId, ...followerCargoIds],
         faceSnapEnabled,
-        intent,
+        viewMode === "2d" ? { ...intent, surfaceTarget: { kind: "floor" }, retainedSupportCargoId: undefined } : intent,
       );
       const positionMm = resolved?.positionMm ?? rawPositionMm;
       const supporterNames = (resolved?.supporterIds ?? [])
@@ -821,7 +842,7 @@ export function SceneWorkspace({
         followerCargoIds,
       };
     },
-    [effectiveContainerId, faceSnapEnabled, project, projection],
+    [viewMode, effectiveContainerId, faceSnapEnabled, project, projection],
   );
 
   const handleCargoNudgeStateChange = useCallback((active: boolean) => {
@@ -837,10 +858,10 @@ export function SceneWorkspace({
         (candidate) => candidate.cargoId === cargoId,
       );
       if (
-        projectedCargo?.kind !== "placed" ||
+        !canMoveCargo(cargoId) || projectedCargo?.kind !== "placed" ||
         effectiveContainerId === undefined
       ) {
-        setCanvasStatus("配置済みの積荷を選択すると矢印キーで調整できます。");
+        if (viewMode !== "2d" || projectedCargo?.kind !== "placed") setCanvasStatus("配置済みの積荷を選択すると矢印キーで調整できます。");
         return {
           accepted: false,
           followerCargoIds: [],
@@ -853,7 +874,13 @@ export function SceneWorkspace({
         effectiveContainerId,
         cargoId,
       );
-      const resolved = resolveKeyboardNudgePosition(
+      const topResolved = viewMode === "2d" ? resolveSupportSnapPosition(project, effectiveContainerId, cargoId, projectedCargo.orientation,
+        { xMm: projectedCargo.positionMm.xMm + deltaMm.xMm, yMm: projectedCargo.positionMm.yMm + deltaMm.yMm, zMm: projectedCargo.positionMm.zMm },
+        [cargoId], false, { surfaceTarget: { kind: "floor" } }) : undefined;
+      const resolved = viewMode === "2d" ? (topResolved === undefined ? undefined : {
+        positionMm: topResolved.positionMm,
+        disposition: topResolved.disposition === "invalid-floor" || topResolved.disposition === "invalid-overlap" ? "blocked" : "update",
+      }) : resolveKeyboardNudgePosition(
         project,
         effectiveContainerId,
         cargoId,
@@ -885,7 +912,7 @@ export function SceneWorkspace({
         ),
       };
     },
-    [effectiveContainerId, project, projection],
+    [viewMode, canMoveCargo, effectiveContainerId, project, projection],
   );
 
   const handleCargoNudgeCommit = useCallback(
@@ -936,13 +963,8 @@ export function SceneWorkspace({
           message: "CLPが更新されたため矢印調整を保存できませんでした。配置を確認してください。",
         };
       }
-      if (!transition.changed) {
-        setCanvasStatus("配置位置は変わりませんでした。");
-        return { ok: true, message: "" };
-      }
-      setCanvasStatus(
-        `配置をX ${preview.positionMm.xMm}・Y ${preview.positionMm.yMm}・Z ${preview.positionMm.zMm} mmへ矢印キーで調整しました。物理判定を再計算しています。`,
-      );
+      // A successful key gesture needs no persistent toast. Clear its preview too.
+      setCanvasStatus("");
       return { ok: true, message: "" };
     },
     [effectiveContainerId, externalInteractionActive, onProjectCommit, project],
@@ -1190,6 +1212,7 @@ export function SceneWorkspace({
   );
 
   const handleCargoRotation = useCallback((axis: "X" | "Z") => {
+    if (viewMode === "2d" && (axis === "X" || selectedCargoId === undefined || !canMoveCargo(selectedCargoId))) return;
     if (externalInteractionActive) {
       setCanvasStatus("別のCLP操作または保存処理の完了後に回転できます。");
       return;
@@ -1299,7 +1322,7 @@ export function SceneWorkspace({
     setCanvasStatus(
       `${cargo.name}を${axis}軸中心に90°回転しました。最小角X ${placement.positionMm.xMm}・Y ${placement.positionMm.yMm}・Z ${placement.positionMm.zMm} mmは保持しています。物理判定の再計算を開始しました。`,
     );
-  }, [effectiveContainerId, externalInteractionActive, onProjectCommit, project, projection, selectedCargoId]);
+  }, [viewMode, canMoveCargo, effectiveContainerId, externalInteractionActive, onProjectCommit, project, projection, selectedCargoId]);
 
   return (
     <section className="scene-workspace" aria-labelledby="scene-workspace-title">
@@ -1317,6 +1340,12 @@ export function SceneWorkspace({
           </div>
           <ThreeViewport
             ref={threeViewportRef}
+            measureCargo={measureCargo}
+            viewMode={viewMode}
+            viewSwitchDisabled={interactionActive || externalInteractionActive || projectionReadOnly}
+            onViewModeChange={setViewMode}
+            canMoveCargo={canMoveCargo}
+            cargoNumbers={cargoNumbers}
             centerOverlay={
               project.containers.length === 0 ? (
                 <div className="viewport-empty-container">
@@ -1554,11 +1583,10 @@ export function SceneWorkspace({
             )}
             validationControl={(
               <>
-                {effectiveContainer?.recessedFloorMm === undefined ? null : <span role="status">段落ちの帳票・荷室中心表示は対応準備中です。</span>}
+                {effectiveContainer?.recessedFloorMm === undefined ? null : <span role="status">段落ちの荷室中心表示は対応準備中です。</span>}
                 <LoadingReportButton
                   disabled={
                     effectiveContainerId === undefined ||
-                    effectiveContainer?.recessedFloorMm !== undefined ||
                     externalInteractionActive ||
                     interactionActive
                   }
@@ -1611,7 +1639,7 @@ export function SceneWorkspace({
               !xRotationAllowed
             }
             xRotationExplanation={
-              externalInteractionActive
+              viewMode === "2d" ? "2Dでは床面上の90°回転だけを利用できます。" : externalInteractionActive
                 ? "別のCLP操作または保存処理の完了後にX軸回転できます。"
                 : projectionReadOnly
                 ? "3D表示のエラーを解消するとX軸回転できます。"
@@ -1633,7 +1661,7 @@ export function SceneWorkspace({
               !zRotationAllowed
             }
             zRotationExplanation={
-              externalInteractionActive
+              topSelectionLocked ? "段積み・床から浮いた積荷の回転は3Dへ切り替えてください。" : externalInteractionActive
                 ? "別のCLP操作または保存処理の完了後にZ軸回転できます。"
                 : projectionReadOnly
                 ? "3D表示のエラーを解消するとZ軸回転できます。"
@@ -1700,10 +1728,10 @@ export function SceneWorkspace({
           containerId={effectiveContainerId}
           onClose={() => setLoadingReportDialogOpen(false)}
           onGenerateImages={(labels) =>
-            threeViewportRef.current?.captureLoadingReportImages(labels) ?? {
+            appendClearancePlan(threeViewportRef.current?.captureLoadingReportImages(labels) ?? {
               code: "report-image.renderer-unavailable",
               ok: false,
-            }
+            }, project, effectiveContainerId ?? "")
           }
           open={loadingReportDialogOpen}
           project={project}

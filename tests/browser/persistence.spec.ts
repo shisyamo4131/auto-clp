@@ -8,7 +8,7 @@ import {
   saveProjectName,
 } from "./ui-helpers";
 
-const exportFilename = "auto-clp-project-0.1.0.json";
+const exportFilename = "auto-clp-project-0.3.0.json";
 const runtimeBaseUrlEnvironmentVariable = "AUTO_CLP_BROWSER_BASE_URL";
 const runtimeBaseUrl = process.env[runtimeBaseUrlEnvironmentVariable];
 if (runtimeBaseUrl === undefined || runtimeBaseUrl.length === 0) {
@@ -181,7 +181,7 @@ async function readDeviceSavedJson(page: Page) {
       open.onsuccess = () => {
         const database = open.result;
         const transaction = database.transaction("projects", "readonly");
-        const request = transaction.objectStore("projects").get("current-project-v2");
+        const request = transaction.objectStore("projects").get("current-project-v3");
         request.onerror = () => reject(new Error("failed to read the synthetic device slot"));
         request.onsuccess = () => {
           database.close();
@@ -346,7 +346,7 @@ test("keeps the navigation drawer initially closed and restores focus while safe
   await openPersistenceDrawer(page);
   await expect(drawer).toBeVisible();
   await expect(drawer.getByLabel("バージョン情報")).toHaveText(
-    "Auto CLP v0.1.0CLPデータ形式 v0.1.0",
+    "Auto CLP v0.1.0CLPデータ形式 v0.3.0",
   );
   await expectModalFocusCycle(page);
   await expect(undo).toBeDisabled();
@@ -953,9 +953,9 @@ test("downloads the fixed JSON contract and reimports it without history or deri
   const exported = JSON.parse(text) as Record<string, unknown>;
   expect(Object.keys(exported).sort()).toEqual([
     "cargoes",
-    "clearancesMm",
     "containers",
     "name",
+    "nextCargoNo",
     "placements",
     "projectId",
     "schemaVersion",

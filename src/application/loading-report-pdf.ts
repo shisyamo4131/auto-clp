@@ -36,7 +36,7 @@ const PRECEDENCE_REASON_COPY = {
 } satisfies Record<LoadingSequencePrecedenceReason, string>;
 
 const LIMITATION_COPY =
-  "本帳票は現在配置を基にした限定モデルによる一提案です。搬送機器、作業空間、扉厚、斜路、旋回、吊り上げ、固縛、荷崩れ、荷下ろし順、目的地順、法令適合性、実作業の安全性は評価・保証しません。";
+  "本帳票は現在配置のイメージです。搬送機器、作業空間、扉厚、斜路、旋回、吊り上げ、固縛、荷崩れ、荷下ろし順、目的地順、法令適合性、実作業の安全性は評価・保証しません。";
 
 type AvailableLoadingReportSnapshot = Extract<
   LoadingReportSnapshot,
@@ -102,10 +102,10 @@ function imageMap(
   images: readonly LoadingReportImage[],
   expectedLabels: number,
 ): ReadonlyMap<LoadingReportViewKind, LoadingReportImage> | undefined {
-  if (images.length !== EXPECTED_IMAGE_KINDS.length) return undefined;
+  if (images.length !== EXPECTED_IMAGE_KINDS.length && images.length !== EXPECTED_IMAGE_KINDS.length + 1) return undefined;
   const byKind = new Map(images.map((image) => [image.kind, image]));
   if (
-    byKind.size !== EXPECTED_IMAGE_KINDS.length ||
+    byKind.size !== images.length || (images.length === 6 && (byKind.get("top")?.labelCount !== expectedLabels)) ||
     EXPECTED_IMAGE_KINDS.some((kind) => {
       const image = byKind.get(kind);
       return (
@@ -132,6 +132,7 @@ function dependencyText(
   snapshot: AvailableLoadingReportSnapshot,
   cargoId: string,
 ): string {
+  if (snapshot.placementProject) return "固定の積荷No（積込順ではありません）";
   const cargo = snapshot.cargoes.find((candidate) => candidate.cargoId === cargoId)!;
   if (cargo.dependencies.length === 0) return "先行条件: なし";
   const sequenceByCargoId = sequenceReferences(snapshot);
@@ -161,14 +162,14 @@ function warningText(
 function allReportText(input: LoadingReportPdfInput): readonly string[] {
   const { snapshot } = input;
   return [
-    "Container Loading Plan - 積込順帳票",
+    "Container Loading Plan - 配置イメージ",
     "CLP",
     snapshot.projectName,
     "コンテナ",
     snapshot.containerName ?? "不明なコンテナ",
     "生成日時（UTC）",
     input.generatedAtIso,
-    "積込順一覧",
+    "積荷一覧",
     "現在配置の物理判定",
     input.physical.statusLabel,
     input.physical.summary,
@@ -307,7 +308,7 @@ class PortraitFlow {
     this.pages.push(this.page);
     this.y = PORTRAIT_SIZE[1] - PAGE_MARGIN;
     if (this.pages.length > 1) {
-      this.write("Container Loading Plan - 積込順帳票", {
+      this.write("Container Loading Plan - 配置イメージ", {
         color: rgb(0.08, 0.36, 0.4),
         lineHeight: 15,
         size: 10,
@@ -434,7 +435,7 @@ async function addImagePages(
   const pages: PDFPage[] = [];
   const embedded = new Map<LoadingReportViewKind, Awaited<ReturnType<PDFDocument["embedPng"]>>>();
   try {
-    for (const kind of EXPECTED_IMAGE_KINDS) {
+    for (const kind of images.keys()) {
       embedded.set(kind, await document.embedPng(pngBytes(images.get(kind)!.dataUrl)));
     }
   } catch (error) {
@@ -442,6 +443,11 @@ async function addImagePages(
     throw new PdfGenerationError("report-pdf.image-invalid");
   }
 
+  if (embedded.has("top")) {
+    const topPage = document.addPage(LANDSCAPE_SIZE);
+    topPage.drawImage(embedded.get("top")!, { x: 0, y: 0, width: LANDSCAPE_SIZE[0], height: LANDSCAPE_SIZE[1] });
+    pages.push(topPage);
+  }
   const currentPage = document.addPage(LANDSCAPE_SIZE);
   pages.push(currentPage);
   drawCenteredText(
@@ -522,6 +528,7 @@ export async function createLoadingReportPdf(
     input.snapshot.status !== "available" ||
     input.snapshot.cargoes.length === 0 ||
     images === undefined ||
+    (input.snapshot.placementProject !== undefined && !images.has("top")) ||
     !Number.isFinite(generatedAt.getTime())
   ) {
     return { code: "report-pdf.input-invalid", ok: false };
@@ -531,15 +538,15 @@ export async function createLoadingReportPdf(
     const document = await PDFDocument.create();
     document.registerFontkit(fontkit);
     const fonts = await embedRequiredFonts(document, allReportText(input));
-    document.setTitle("Container Loading Plan - 積込順帳票");
-    document.setSubject("限定モデルによる積込順提案");
+    document.setTitle("Container Loading Plan - 配置イメージ");
+    document.setSubject("積荷No付き配置イメージ");
     document.setCreator("Auto CLP");
     document.setProducer("Auto CLP / pdf-lib");
     document.setCreationDate(generatedAt);
     document.setModificationDate(generatedAt);
 
     const flow = new PortraitFlow(document, fonts);
-    flow.write("Container Loading Plan - 積込順帳票", {
+    flow.write("Container Loading Plan - 配置イメージ", {
       color: rgb(0.03, 0.3, 0.34),
       lineHeight: 27,
       size: 20,
@@ -567,7 +574,7 @@ export async function createLoadingReportPdf(
     flow.heading("利用上の注意");
     flow.write(LIMITATION_COPY, { lineHeight: 14, size: 9 });
     flow.gap(12);
-    flow.heading("積込順一覧");
+    flow.heading("積荷一覧");
 
     for (const cargo of input.snapshot.cargoes) {
       flow.cargoCard([
@@ -589,6 +596,7 @@ export async function createLoadingReportPdf(
     }
 
     const imagePages = await addImagePages(document, fonts, images);
+    for (const page of imagePages) drawCenteredText(page, `生成日時（UTC）: ${input.generatedAtIso}`, fonts, LANDSCAPE_SIZE[0] / 2, LANDSCAPE_SIZE[1] - 16, { lineHeight: 10, size: 7 });
     const pages = [...flow.pages, ...imagePages];
     addFooters(pages, fonts);
     const bytes = await document.save();

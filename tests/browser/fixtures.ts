@@ -13,6 +13,8 @@ export const test = base.extend({
       ({ key, version }) => globalThis.localStorage.setItem(key, version),
       { key: usageRequirementsStorageKey, version: usageRequirementsVersion },
     );
+    // Routine regressions accept the explicitly presented migration. Dedicated tests remove this handler.
+    await page.addLocatorHandler(page.getByRole("button", { name: "変換して開く", exact: true }), async button => { await button.click(); });
     await provide(page);
   },
 });

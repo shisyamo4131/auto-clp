@@ -30,6 +30,7 @@ export interface LoadingReportWarningSnapshot {
 }
 
 interface LoadingReportSnapshotBase {
+  readonly placementProject?: Project;
   readonly containerId: string;
   readonly containerName?: string;
   readonly physicalValidation: PlacementSetValidationResult;
@@ -65,6 +66,15 @@ export function createLoadingReportSnapshot(
     physicalValidation: validatePlacementSet(project, containerId),
     projectName: project.name,
   };
+  if (project.schemaVersion === "0.3.0" && container) {
+    const placed = project.placements.filter(p => p.containerId === containerId);
+    if (!placed.length) return { ...base, status: "empty" };
+    const cargoes = placed.map(p => {
+      const cargo = project.cargoes.find(c => c.id === p.cargoId)!;
+      return { cargoId: cargo.id, dependencies: [], massGrams: cargo.massGrams, name: cargo.name, orientedDimensionsMm: orientedDimensions(cargo, p.orientation), sequenceNumber: cargo.cargoNo! };
+    }).sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+    return { ...base, placementProject: structuredClone(project), cargoes, status: "available", warnings: [] };
+  }
   const sequence = proposeLoadingSequence(project, containerId);
 
   if (sequence.status === "empty") {

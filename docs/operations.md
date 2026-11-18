@@ -1,6 +1,18 @@
 # Operations
 
-## 段落ちの操作と保存
+## 実間隔・配置図と旧データ移行（仕様1.16.0）
+
+新規と変換後はSchema 0.3.0。上部「実間隔」で表示を切り替え、積荷選択後に前後左右の代表値と「対向相手・壁までの距離」を確認する。壁までの値は途中の積荷を含む幾何距離であり、空いている通路幅とは限らない。天井距離と必要最小隙間の入力・合否はない。操作方法ダイアログにも案内を掲載する。
+
+「配置イメージとPDF帳票を確認」→「配置画像を生成」→「PDFを出力」。選択中コンテナの固定配置を出力する。上面図はA4横の専用ページで、図内に実間隔を示す。別コンテナはタブを切り替えて出力する。上面図に寸法を収容できない場合は通知し、PDF出力を止める。密集例と実際の印刷での判読性はユーザー確認を残す。
+
+旧0.1.0/0.2.0は検証成功後に「旧データの変換」を表示する。必要なら「変換前の原本を保存」でauto-clp-before-migration.jsonを退避し、「変換して開く」を選ぶ。取消で現在CLPを保持する。読込は端末へ自動保存しない。新JSON名はauto-clp-project-0.3.0.json。新形式を旧版へ戻す書出しは提供しない。
+
+端末保存はcurrent-project-v3。旧current-project-v2/current-projectを保持し、新枠が不在の場合だけ順に読む。null（削除済み）や破損では旧枠へ戻らない。保存削除はv3にnullを置くもので旧枠の完全消去ではない。必要なJSON退避後、完全消去はブラウザのサイトデータ削除で行う。旧版への復旧は原本JSONまたは旧端末枠を使い、新版での編集は含まれないことに注意する。
+
+以下の旧版の保存先・PDF停止・隙間判定に関する記述には本節を優先する。段落ちの中心表示は引き続き未対応。外部公開・先方の実環境での受入は未実施。
+
+## 段落ちの操作と保存（1.15.0の履歴）
 
 コンテナ編集の「床の一部を低くする」をONにし、入口からの位置・右壁からの位置・長さ・幅・深さをmmで入力する。オレンジ色の輪郭と低い床を3Dで確認する。積荷を段落ち内へ移すと底面が低い床へ合う。座標入力では通常床を0、低い床を深さの負数とする。段差跨ぎは確定できない。床編集で既存荷の足元が変わる場合は先に荷を移動・取り外す。
 
@@ -10,7 +22,7 @@
 
 ## Current Availability
 
-- Implemented scene workspace 1.13.1: Application Bar右端menu、3D欄外上部の一行scroll tab、cargo-global side-relative荷室外anchor、コンテナ間共有camera、`整数 mm` だけをcompactな外向き矢印で示す選択積荷の3軸寸法annotation、重量付きselectorと4状態dot、selector直下の固定context action rowと `現在の座標` copy、上下左右中央へ揃えたtoolbar icon、`information-variant` 相当のicon-only判定lampとdialog、Drawerから開く独立 `操作方法` dialog、版付き「使用上の重要事項」を実装した。コンテナ0件ではviewport中央の案内から既存のコンテナ追加dialogを開き、テンプレートインポートだけを理由付きで無効にする。操作方法dialogはCLP・履歴・保存・camera・判定を変更せず、左drag回転、Shift付き左drag・右drag・Ctrl付き左drag平行移動、wheel zoom、荷室外積荷の寄せ、視点基準の1 mm矢印調整を案内する。dragの支持・fit・衝突判定は移動グループの旧位置を除外し、同じ最小Zの固定積荷側面とコンテナ内壁4面へ50 mm以内でfitする。Material Design Icons `adjust` 相当buttonは既定ONでX/Y fitだけをsession内で切り替え、床・支持上面へのZ snapと支持面内clampは常時有効とする。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
+- Implemented scene workspace 1.13.1: Application Bar右端menu、3D欄外上部の一行scroll tab、cargo-global side-relative荷室外anchor、コンテナ間共有camera、単位なしの整数だけをcompactな外向き矢印で示す選択積荷の3軸寸法annotation、重量付きselectorと4状態dot、selector直下の固定context action rowと `現在の座標` copy、上下左右中央へ揃えたtoolbar icon、`information-variant` 相当のicon-only判定lampとdialog、Drawerから開く独立 `操作方法` dialog、版付き「使用上の重要事項」を実装した。コンテナ0件ではviewport中央の案内から既存のコンテナ追加dialogを開き、テンプレートインポートだけを理由付きで無効にする。操作方法dialogはCLP・履歴・保存・camera・判定を変更せず、左drag回転、Shift付き左drag・右drag・Ctrl付き左drag平行移動、wheel zoom、荷室外積荷の寄せ、視点基準の1 mm矢印調整を案内する。dragの支持・fit・衝突判定は移動グループの旧位置を除外し、同じ最小Zの固定積荷側面とコンテナ内壁4面へ50 mm以内でfitする。Material Design Icons `adjust` 相当buttonは既定ONでX/Y fitだけをsession内で切り替え、床・支持上面へのZ snapと支持面内clampは常時有効とする。下段固定UIは実測safe areaでcanvas/pointer領域と分離する。単独支持共通の積荷別未確認理由は生成せず、複数支持・隙間・張り出し等の配置固有未確認を維持する。
 
 - Implemented viewer-first shell: Application Barにmenu、現在CLP名、小さな3D能力Chipを置き、CLP作成・設定、積荷追加・制約一括編集・一括登録、コンテナ管理、保存、読込、ヘルプを単一Navigation Drawerへ集約する。積荷cardとコンテナcardは通常画面に置かず、既存editor、履歴、busy/dirty gate、件数上限、非cascade削除を再利用する。Drawer外の背景相当領域、全幅close button、EscapeはDrawerだけを閉じ、背面操作を発火させずpage scrollを維持してmenuへfocusを戻す。CLP設定はdialog、コンテナtablistは3D viewport欄外上部、全CLP積荷の名前/ID検索・状態付きselectorはviewport下部overlayとし、3Dの寸法と位置を動かさない。未保存変更付きの新規CLPは破棄確認後、UUID付きの新 `projectId` と空履歴を作るbarrierとし、CLP設定dialogを開く。
 
@@ -41,7 +53,7 @@ CLP全体で未配置の積荷だけを初回は先頭許可向き・Z=0の決�
 
 Z軸回転は高さ軸を保つ相手を使い、積荷選択中かつbusyでなければ常に有効とする。X軸回転はY/Z割当を交換し、天地無用OFFだけ有効とする。積荷editorは天地無用だけを表示し、ONを `LWH` / `WLH`、OFFを全6向きへ写像する。旧保存の部分集合は読込preflight後に同じ2状態へ正規化する。面の表裏は識別しない。配置済み回転は最小X/Y/Z角を保持した一回の配置更新、荷室外回転は回転後も荷室床面との正面積重なりが0の場合だけsession変更とする。重なる回転は直前poseを保持して拒否し、積荷編集で既存poseが重なる場合は新寸法の決定的外側gridへ戻す。cameraのfarと最大移動距離は全投影範囲への到達余地を保ち、同一候補のProject更新では現在cameraと注視点を復元する。touch/coarse pointerは積荷選択だけを行い、正確な配置・移動・向きにはキーボード操作可能なフォームを使う。canvas上のZ移動は未実装である。
 
-CLP全体のUndo/Redoはviewport内で `＋` / `－` と同じ外観の単一操作UIとし、buttonと既存shortcutを同じ履歴handlerへ接続する。実行前後のpage scroll位置を復元する。WebGL 2非対応または描画障害時は履歴を含むCLP操作を停止する。選択積荷はscene上の`整数 mm`だけの3軸寸法annotationとselector直下の固定context action rowで示し、軸の非視覚同値を下段に維持する。積荷selectは全Project積荷を検索し、現在候補、未配置、他候補を示す。他候補の配置を扱う前に所有候補へ明示切替する。積荷定義と配置は別modal editorで編集し、focus trap、背景inert、dirty破棄確認、内部scroll、狭幅、preventScroll focus復帰を維持する。dialog中は履歴、3D操作、候補切替、永続化をbusyとして拒否する。配置取り外しと積荷削除は別確認・別履歴でcascadeしない。物理理由はicon-only lampから開くdialogへ表示し、状態名と件数はaccessible nameとtitleに保持する。
+CLP全体のUndo/Redoはviewport内で `＋` / `－` と同じ外観の単一操作UIとし、buttonと既存shortcutを同じ履歴handlerへ接続する。実行前後のpage scroll位置を復元する。WebGL 2非対応または描画障害時は履歴を含むCLP操作を停止する。選択積荷はscene上の単位なしの整数だけの3軸寸法annotationとselector直下の固定context action rowで示し、軸の非視覚同値を下段に維持する。積荷selectは全Project積荷を検索し、現在候補、未配置、他候補を示す。他候補の配置を扱う前に所有候補へ明示切替する。積荷定義と配置は別modal editorで編集し、focus trap、背景inert、dirty破棄確認、内部scroll、狭幅、preventScroll focus復帰を維持する。dialog中は履歴、3D操作、候補切替、永続化をbusyとして拒否する。配置取り外しと積荷削除は別確認・別履歴でcascadeしない。物理理由はicon-only lampから開くdialogへ表示し、状態名と件数はaccessible nameとtitleに保持する。
 
 CLP履歴は、CLP設定、積荷、候補、配置の成功した追加・更新・削除と、1回のcanvas dragを一つの操作として最大100件保持する。「元に戻す」「やり直す」ボタンに加え、Windows/Linuxでは `Ctrl+Z` / `Ctrl+Shift+Z` / `Ctrl+Y`、macOSでは `Command+Z` / `Command+Shift+Z` を利用できる。未保存入力、削除確認、drag中は履歴操作を無効にし、入力欄、選択欄、編集可能領域、独自入力コンポーネントのローカル履歴を優先する。失敗とno-opは履歴を変えず、undo後の新しい確定操作はredoを破棄する。履歴はメモリ内だけで、再読込、JSON書出し、端末保存には含めない。
 
@@ -95,6 +107,30 @@ corepack pnpm run dev:ui-trial
 このscriptは `http://127.0.0.1:4174/` を `strictPort` で使用する。port使用中なら別serverへ接続または別portへ迂回せず、起動を失敗させる。
 
 ### GitHub Pages Technical Preview
+
+#### 2026-11-18 上面図PDF・2D・実間隔の公開前検証
+
+利用者の明示指示により仕様1.16.0のローカル改修一式を既存GitHub Pages技術試用版へ反映する。対象は上面図PDF、固定積荷No、段落ちと実間隔の図内表示、2D切替、全積荷の実間隔常時表示、矢印キー成功通知の撤去、Schema 0.3.0と旧原本を保護する明示変換。実務機密データの利用、社内LANへの移行、認証やクラウド保存は含めない。試用は架空データを使う。
+
+基点は `93f7b3f5604fe892ba99dad2633e8b3bad59b991`。2026-11-18にorigin/mainの実先端が一致することを照会した。対象ファイル一覧は公開改修commitのGit差分を正とする。仕様・データ契約・ADR 0047/0048・受入・ロードマップ・索引・変更履歴を改修とともに反映し、READMEの上面図未実装という古い案内を修正した。管理対象ガバナンス、依存関係、配信workflowは変更しない。
+
+変更分類はUI、application、data-contract、documentation、build-release-deployの和集合で総合9ゲートを選択。以下は最終アプリコードに対し完了した検証。文書追記後は文書・ガバナンス・diff検査を再実行してからcommitする。
+
+| コマンド | 結果 | 終了コード |
+| --- | --- | ---: |
+| `corepack pnpm run typecheck` | 合格 | 0 |
+| `corepack pnpm run lint` | 合格 | 0 |
+| `corepack pnpm run test:unit` | 40ファイル・1,114件合格 | 0 |
+| `corepack pnpm run test:browser` | 133件合格 | 0 |
+| `$env:AUTO_CLP_BASE_PATH='/auto-clp/'; corepack pnpm run build` | 合格。生成HTMLのJS/CSS参照は `/auto-clp/assets/`。既存500 kB超chunk警告あり | 0 |
+| `& ./scripts/check-data-contract.ps1 -ProjectPath $PWD.Path` | 合格 | 0 |
+| `& ./scripts/check-governance.ps1 -ProjectPath $PWD.Path` | 合格。rendererを包含 | 0 |
+| `& ./scripts/check-project.ps1 -ProjectPath $PWD.Path` | 合格。ガバナンス回帰12件を包含 | 0 |
+| `git diff --check` | 合格 | 0 |
+
+buildゲートはPages用base指定buildで満たし、通常base buildは重複実行しない。包含されたrendererとガバナンス回帰も重複実行しない。公開後は対象commitのActions成功と実HTTPS上の上面図PDF、2D/3D、旧原本保存・変換、JSON往復、端末保存・再読込、CSVテンプレート取得・読込を確認し、run URL・対象SHA・結果を公開完了報告へ記録する。本節の公開前合格だけをデプロイ成功と扱わない。
+
+先方の操作は、対象コンテナを選択→「配置イメージとPDF帳票を確認」→「配置画像を生成」→「PDFを出力」。上面図は専用A4横ページ。旧形式の読込時は「変換前の原本を保存」してから「変換して開く」。新形式は旧版で開けないため、公開を戻す場合は新形式JSONも退避し、旧版には旧原本を使う。端末保存枠と原本は削除しない。公開停止手順は下記に従う。PDFの業務上の可読性と採用判断は先方の確認を残す。
 
 公開先は `https://shisyamo4131.github.io/auto-clp/` とする。`.github/workflows/deploy-pages.yml` は `main`へのpushまたは手動実行でNode.js 22、Corepack、lockfile固定のpnpmを使い、`AUTO_CLP_BASE_PATH=/<repository>/` を指定して `dist/` を生成・配信する。Actions sourceはGitHub repositoryのSettings > PagesでGitHub Actionsを選ぶ。
 
@@ -287,3 +323,213 @@ comprehensive gate IDは `diff-check`、`typecheck`、`lint`、`unit-tests`、`b
 - 設定・検査: `eslint.config.js`に既存の一時成果物tmpを除外追加、`scripts/check-data-contract.ps1`へ0.2.0検査追加。管理対象AGENTS、権限、依存、配信設定は変更なし。
 
 事前から存在したヒアリング・デモ文書と文書差分を保持し、今回の変更と一緒に自動commitしない。後続PDF・複数開口・実間隔・既定値変更・提供環境・実務受入は未完了。従来試作の99%へ今回の拡張を加点せず、P4/P5の完了を表明しない。旧ADRは歴史を保持し、新ADR 0046で段落ち対象の差分だけを規定する。
+
+## 実間隔改修の検証記録（2026-11-04）
+
+対象はmainの基点93f7b3f5604fe892ba99dad2633e8b3bad59b991からの未コミット作業差分。ui-css-layout、application-logic、data-contract-schema-migration、documentation-onlyの和集合を選択。公開・インストール・ネットワーク接続は実施していない。
+
+| コマンド | 結果 | 終了コード |
+| --- | --- | --- |
+| corepack pnpm run typecheck | 合格 | 0 |
+| corepack pnpm run lint | 合格 | 0 |
+| corepack pnpm run test:unit | 39ファイル・1,110件合格 | 0 |
+| corepack pnpm run build | 合格。chunkサイズ警告あり | 0 |
+| corepack pnpm run test:browser | 最終コードで127件合格（3.6分） | 0 |
+| git diff --check | 合格 | 0 |
+| scripts/check-data-contract.ps1 -ProjectPath $PWD.Path | 合格 | 0 |
+| scripts/check-governance.ps1 -ProjectPath $PWD.Path | 合格 | 0 |
+| scripts/check-project.ps1 -ProjectPath $PWD.Path | 合格 | 0 |
+
+途中の旧期待値不一致、取消後の表示復元不具合、PDFの寸法重なりは修正して対象回帰した。過去の失敗を合格証拠には流用しない。rendererはgovernance-checkに、project-governance-regressionはproject-checkに包含されるため重複実行しない。release-onlyのPages build・配信確認は公開作業ではないため省略する。ガバナンス・権限・依存関係・配信設定は変更していない。
+
+合成データの純粋計算をVite SSRで読み込み、20回の予熱後に100回計測した診断は終了コード0。選択1荷の平均計算時間は10荷0.026 ms、30荷0.032 ms、1,000荷0.264 ms（この開発端末、2026-11-04、概数）。描画を含むフレーム時間や先方端末の速度を示す値ではない。1,000荷のブラウザ読込・選択は回帰対象、先方端末での移動性能は未測定。
+
+生成物はoutput/pdf/clearance-A.pdf、clearance-B.pdf（各4ページ）、clearance-dense.pdf（30荷・7ページ）。上面図はそれぞれ2、2、5ページ。全ページを画像化し、段落ち・No・寸法線・文字の切れを開発確認済み。密集時の引出線の多さと4分割視点の小さな文字はユーザー試用で評価する。ユーザーの印刷可読性受入は未完了。旧形式の原本と旧端末枠からの復旧手順は本書冒頭を参照する。
+
+帳票描画の最終調整後、corepack pnpm run test:browser tests/browser/clearance.spec.ts tests/browser/loading-report.spec.ts は16件合格・終了コード0。その後、最終コードの全127件も合格・終了コード0で確定した。
+
+今回の対象ファイル（既存の計画差分を含む、未コミット）:
+
+```text
+CHANGELOG.md
+README.md
+docs/README.md
+docs/acceptance.md
+docs/data-model.md
+docs/decisions/0011-axis-clearance-semantics.md
+docs/decisions/0044-limited-loading-sequence-and-pdf-report.md
+docs/decisions/0046-recessed-floor-and-save-compatibility.md
+docs/decisions/0047-measured-clearance-and-migration.md
+docs/decisions/README.md
+docs/designs/recessed-floor-openings-clearance.md
+docs/operations.md
+docs/roadmaps/auto-clp.md
+docs/specification.md
+schemas/project-0.3.0.schema.json
+scripts/check-data-contract.ps1
+src/App.tsx
+src/application/cargo-csv-import.ts
+src/application/clearance-feature.test.ts
+src/application/clearance-plan.ts
+src/application/loading-report-pdf.ts
+src/application/loading-report.ts
+src/application/project-command.test.ts
+src/application/project-command.ts
+src/application/project-factory.ts
+src/application/project-history.ts
+src/application/project-migration.ts
+src/application/project-persistence.ts
+src/domain/automatic-proposal.ts
+src/domain/measured-clearance.ts
+src/domain/model.ts
+src/domain/validation.ts
+src/persistence/project-file.ts
+src/persistence/project-json-schema.ts
+src/persistence/project-json.ts
+src/persistence/project-store.test.ts
+src/persistence/project-store.ts
+src/scene/SceneWorkspace.tsx
+src/scene/ThreeViewport.tsx
+src/scene/clearance-plan-image.ts
+src/scene/loading-report-images.ts
+src/ui/LoadingReportDialog.tsx
+src/ui/OperationGuideDialog.tsx
+src/ui/ProjectSettingsDialog.tsx
+tests/browser/acceptance.spec.ts
+tests/browser/capability.spec.ts
+tests/browser/clearance.spec.ts
+tests/browser/fixtures.ts
+tests/browser/input.spec.ts
+tests/browser/loading-report.spec.ts
+tests/browser/persistence.spec.ts
+tests/browser/recessed-floor.spec.ts
+tests/browser/scene.spec.ts
+```
+
+検証用JSONはoutput/pdf/clearance-demo-0.3.0.json。既存の合成10荷・2コンテナJSONを旧Schemaで検証して移行し、新形式の書出し・再読込に成功（終了コード0）。旧原本は未変更。仕様・データ契約・ADR 0047・索引・受入・操作案内・変更履歴・ロードマップを更新した。ローカルの未コミット差分で、commit/push/deployは未実施。
+
+## 積荷オブジェクトの寸法単位省略
+
+利用者の指示により、3DオブジェクトのX/Y/Z寸法ラベルを数値だけに変更。実間隔、入力欄、非視覚説明、PDFの単位は維持する。表示のみの変更で保存互換性・移行・配信設定への影響なし。対象はsrc/scene/ThreeViewport.tsx、tests/browser/scene-workspace-v12.spec.ts、docs/specification.md、docs/operations.md、CHANGELOG.md。ui-css-layoutとdocumentation-onlyを選択し、完了gateは全て終了コード0: corepack pnpm run typecheck、corepack pnpm run lint、corepack pnpm run test:unit（1,110件）、corepack pnpm run test:browser（127件）、corepack pnpm run build、git diff --check、scripts/check-data-contract.ps1 -ProjectPath $PWD.Path、scripts/check-project.ps1 -ProjectPath $PWD.Path。ビルドの既存chunkサイズ警告あり。画面画像でも寸法の単位省略を確認。ADR・データ契約・ロードマップ配点・索引は変更対象外。governance-check/renderer-checkは規則・権限・設定に影響がないため省略、release-onlyは公開しないため省略。既存の未コミット差分を保持する。
+
+## 2D上面操作と周囲の実間隔（2026-11-05）
+
+基点main / 93f7b3f5604fe892ba99dad2633e8b3bad59b991の既存未コミット差分を保持し、2D切替を追加。上部2Dボタンで正投影に切替、選択荷の周囲の実間隔を確認する。床面のX/Y移動は段落ち高さに追従し、跨ぎは復帰する。段積みの編集と高さを含む座標入力は3Dへ戻して行う。3Dの視点は復元する。保存形式・移行・データ契約は変更不要。2Dからの現在視点画像も正投影を維持する。
+
+今回の対象（前タスクの変更とは区別）:
+
+- src/scene/SceneWorkspace.tsx
+- src/scene/ThreeViewport.tsx
+- src/scene/loading-report-images.ts
+- src/scene/top-view.ts
+- src/scene/top-view.test.ts
+- src/ui/OperationGuideDialog.tsx
+- tests/browser/top-view.spec.ts
+- tests/browser/scene-workspace-v12.spec.ts（ツールバーの個数契約）
+- docs/specification.md
+- docs/decisions/0048-top-view-clearance.md
+- docs/decisions/README.md
+- docs/README.md
+- docs/acceptance.md
+- docs/designs/recessed-floor-openings-clearance.md
+- docs/roadmaps/auto-clp.md
+- docs/operations.md
+- CHANGELOG.md
+
+ui-css-layout、application-logic、documentation-onlyを選択。governance-check/renderer-checkはガバナンス・権限・検証方針が未変更のため省略。依存関係・公開設定も未変更で、release-onlyの公開検証は対象外。データ形式の変更・追加移行はなく、前タスクのデータ契約差分を維持する。今回のADR・仕様・設計・受入・案内・索引・変更履歴・ロードマップを反映。99%は従来試作の指標のままであり、2Dの実務受入へ加点しない。ユーザーによる操作感・ラベル可読性確認は残る。
+
+ローカル http://127.0.0.1:4174/ の応答200とAuto CLPタイトルを確認。描画確認画像はoutput/pdf/top-view.png（合成データ）。元のサーバーを継続利用する。復旧は3Dボタン、実装を戻す場合も保存データの再変換不要。commit/push/deployは未実施。
+
+検証: 型・lint・単体1,113件（40ファイル）・buildは終了コード0。2D個別browser 5件は終了コード0。最終の全browser 132件は終了コード0（3.7分）。文書・データ契約・差分検査も終了コード0。buildの500 kB超chunk警告は残存。途中に検出したCtrl平行移動と空CLPの初期カメラ復元を修正し、修正前の全browser実行は中断（終了コード1）、完了証拠に使わず最終コードで再実行する。サンドボックス内のpnpm起動は名前解決失敗で終了コード1のため、既存pnpmが使える承認済み実行環境で各検証を実行した。
+
+
+最終検証コマンド（それぞれ独立して実行、終了コード0）:
+
+| コマンド | 結果 | 終了コード |
+| --- | --- | --- |
+| corepack pnpm run typecheck | 合格 | 0 |
+| corepack pnpm run lint | 合格 | 0 |
+| corepack pnpm run test:unit | 40ファイル・1,113件合格 | 0 |
+| corepack pnpm run test:browser | 132件合格 | 0 |
+| corepack pnpm run build | 合格。既存chunk警告あり | 0 |
+| scripts/check-data-contract.ps1 -ProjectPath $PWD.Path | 合格 | 0 |
+| scripts/check-project.ps1 -ProjectPath $PWD.Path | 合格。包含するガバナンス回帰12件も終了コード0 | 0 |
+| git diff --check | 合格 | 0 |
+
+2D個別5件、ツールバーを含む個別14件の修正後確認も終了コード0。途中の全体実行は旧ツールバー数の期待値9に対して11となり1件失敗・131件合格（終了コード1）だった。新しい文字ボタン2件と既存アイコン9件を分ける契約へ修正し、上表の全132件で再確認した。失敗時診断はC:/Users/seven/AppData/Local/Temp/auto-clp-browser-qc4BITに保持。最終コード確認後は文書記録だけを更新し、project-checkとdiff-checkを再実行する。型・lint・単体はテスト修正後の結果、buildはアプリコードが最後に変わった後の結果を採用する（browserテストと文書だけの更新ではbuild証拠は失効しない）。
+
+## 試用後の実間隔表示の簡略化（2026-11-05）
+
+ユーザー指示で、実間隔チェックボックス、3Dの間隔線・数値・固定欄・詳細欄を撤去。2Dで選択荷周囲へ常時表示し、3Dでは積荷寸法を移動中も表示する。PDFの実間隔、計算規則、保存形式・移行は未変更。2D／3D切替が表示の入口となる。復旧には表示コードを戻し、データ変換は不要。main / 93f7b3f5604fe892ba99dad2633e8b3bad59b991に対する既存未コミット差分を保持し、公開・Git操作は行わない。
+
+今回の変更ファイル: src/scene/ThreeViewport.tsx、src/ui/OperationGuideDialog.tsx、tests/browser/clearance.spec.ts、tests/browser/top-view.spec.ts、docs/specification.md、docs/decisions/0047-measured-clearance-and-migration.md、docs/decisions/0048-top-view-clearance.md、docs/roadmaps/auto-clp.md、docs/acceptance.md、docs/operations.md、CHANGELOG.md。既存ADR内の表示方針の更新で新規文書はなく索引は維持。データ契約・ガバナンス・依存関係・配信設定は変更対象外。ui-css-layout、application-logic、documentation-onlyを選択し、governance-check/renderer-checkは規則・権限が未変更のため省略。release-onlyは公開しないため省略。
+
+矢印調整の通知は調査・提案のみで未変更。SceneWorkspace.tsxのhandleCargoNudgeCommitがcanvasStatusへ成功文と「物理判定を再計算しています」を保存するが、判定完了・経過時間による消去と結び付いていない。選択変更、コンテナ切替、履歴操作等まで残り得る。常駐文は処理中の証拠ではない。通常成功通知は省き、移動阻止・確定失敗・復帰理由を残し、座標は選択欄、判定は既存アイコンへ集約する案を推奨。ユーザーが依頼した整理と実装指示を区別し、この通知方針は未採用・未実装。
+
+2D個別・旧JSON移行・PDFの対象browser 7件は終了コード0。型・lint・単体1,113件・build・データ契約・文書検査・diff-checkは終了コード0。全browser 132件は合格・終了コード0（3.6分）。画面画像でチェックボックス撤去と2D間隔表示を確認。buildの既存500 kB超chunk警告あり。未検証の利用者受入・印刷可読性は継続課題。
+
+
+表示簡略化の最終検証（各コマンドを独立実行）:
+
+| コマンド | 結果 | 終了コード |
+| --- | --- | --- |
+| corepack pnpm run typecheck | 合格 | 0 |
+| corepack pnpm run lint | 合格 | 0 |
+| corepack pnpm run test:unit | 40ファイル・1,113件合格 | 0 |
+| corepack pnpm run test:browser | 132件合格 | 0 |
+| corepack pnpm run build | 合格、既存chunk警告あり | 0 |
+| scripts/check-data-contract.ps1 -ProjectPath $PWD.Path | 合格 | 0 |
+| scripts/check-project.ps1 -ProjectPath $PWD.Path | 合格、包含回帰12件も終了コード0 | 0 |
+| git diff --check | 合格 | 0 |
+
+全browser終了後は検証記録だけを更新し、文書・差分検査を再実行。実装・測定・テスト構成は変更せず合格証拠を維持する。未コミット・未公開。利用者はローカル画面を再読み込みして2Dを選択する。通知文は今回の調査対象であり、撤去実装済みと誤認しないようにする。
+
+## 2D全積荷のクリアランス常時表示（2026-11-05）
+
+2Dの選択荷限定を撤廃し、表示中コンテナの各配置荷について四方向の代表距離を表示する。同じ積荷間の同一線分は双方の測定を維持したまま一つの表示にまとめ、壁・段差面までの各荷の測定は個別に残す。移動・取消は周辺荷も同じプレビュー配置へ更新する。測定結果は選択・カメラ操作だけでは再計算せず画面投影を更新する。線を先に描き、全数値をその上に描いて文字に線が重なるのを避ける。画面外は拡縮・panで確認する。重なり・対象外はNo付き理由を表示し、古い値を残さない。
+
+対象ファイル: src/scene/SceneWorkspace.tsx、src/scene/ThreeViewport.tsx、src/scene/top-view.ts、src/scene/top-view.test.ts、src/ui/OperationGuideDialog.tsx、tests/browser/top-view.spec.ts、tests/browser/clearance.spec.ts、docs/specification.md、docs/decisions/0048-top-view-clearance.md、docs/roadmaps/auto-clp.md、docs/acceptance.md、docs/designs/recessed-floor-openings-clearance.md、docs/operations.md、CHANGELOG.md。既存未コミット差分を保持。基点main / 93f7b3f5604fe892ba99dad2633e8b3bad59b991。commit/push/deployは未実施。
+
+ui-css-layout、application-logic、documentation-onlyを選択。3D非表示、PDF、Schema 0.3.0、旧データ移行、ガバナンス・依存・配信設定は変更しない。既存ADRの表示詳細更新で新規文書はなく索引は維持。data契約・移行追加は不要。governance-check/renderer-checkは規則・権限未変更、release-onlyは非公開作業のため省略する。復旧は選択荷表示へコードを戻すだけで保存データの変換不要。通知文の見直し案は今回も未実装。利用者による密集時の可読性確認は残る。
+
+対象browser 8件・単体1,114件・型・lint・build・文書・データ契約・diff-checkは終了コード0。全browser 133件は合格・終了コード0（3.7分）。output/pdf/top-view.pngの合成5配置荷画面で全荷の値と文字を確認。拡大時や先方端末の操作感・上限1,000荷での2D描画性能は未測定。buildの既存chunk警告あり。
+
+
+全積荷表示の最終検証（独立実行）:
+
+| コマンド | 結果 | 終了コード |
+| --- | --- | --- |
+| corepack pnpm run typecheck | 合格 | 0 |
+| corepack pnpm run lint | 合格 | 0 |
+| corepack pnpm run test:unit | 40ファイル・1,114件合格 | 0 |
+| corepack pnpm run test:browser | 133件合格 | 0 |
+| corepack pnpm run build | 合格、既存chunk警告あり | 0 |
+| scripts/check-data-contract.ps1 -ProjectPath $PWD.Path | 合格 | 0 |
+| scripts/check-project.ps1 -ProjectPath $PWD.Path | 合格、包含回帰12件も終了コード0 | 0 |
+| git diff --check | 合格 | 0 |
+
+全browser終了後は文書記録だけを更新し、project-checkとdiff-checkを再実行する。コード・テストは最終検証から未変更。未コミット・未公開のローカル変更として試用し、画面の再読み込み後に2Dを選ぶ。密集時の可読性と先方端末性能は利用者確認を残す。
+
+## 矢印キー調整後の成功通知を非表示（2026-11-05）
+
+①の通知非表示をユーザーが承認。矢印キー調整のcommit成功時はcanvasStatusを空にし、成功文・「物理判定を再計算しています」・移動中の一時案内を常駐させない。座標不変で成功した場合も同様。操作中の案内、移動阻止・確定失敗・取消の理由、ドラッグや回転の既存通知は維持する。配置・物理判定・履歴・保存形式は未変更。これにより前節までの①未実装という状態を更新する。
+
+変更ファイルはsrc/scene/SceneWorkspace.tsx、tests/browser/scene.spec.ts、tests/browser/top-view.spec.ts、docs/specification.md、docs/roadmaps/auto-clp.md、docs/operations.md、CHANGELOG.md。既存差分を保持し、Git操作・公開は実施しない。ui-css-layout、application-logic、documentation-onlyを選択。既存の必要なstatusだけを表示する方針の具体化であり、新規ADR・索引・データ契約・操作ガイドの変更は不要。ガバナンス・権限・依存・配信設定は変更しないためgovernance-check/renderer-checkと公開用gateを省略する。復旧時は通知箇所のみ戻せばよくデータ変換は不要。
+
+対象browser 3件は終了コード0。2D・3Dの正常調整後に可視・非視覚の成功通知が残らず、移動量・Undo/Redo・取消と段積み編集の阻止理由が維持されることを確認。型・lint・単体1,114件・build・データ契約検査は終了コード0。全browser 133件は合格・終了コード0（3.7分）。buildの既存chunk警告あり。文書・差分検査も合格・終了コード0。ローカル画面を再読み込みして試用する。未コミット・未公開。
+
+
+成功通知非表示の最終検証（各コマンドを独立実行）:
+
+| コマンド | 結果 | 終了コード |
+| --- | --- | --- |
+| corepack pnpm run typecheck | 合格 | 0 |
+| corepack pnpm run lint | 合格 | 0 |
+| corepack pnpm run test:unit | 1,114件合格 | 0 |
+| corepack pnpm run test:browser | 133件合格 | 0 |
+| corepack pnpm run build | 合格、既存chunk警告あり | 0 |
+| scripts/check-data-contract.ps1 -ProjectPath $PWD.Path | 合格 | 0 |
+| scripts/check-project.ps1 -ProjectPath $PWD.Path | 合格、包含回帰12件も終了コード0 | 0 |
+| git diff --check | 合格 | 0 |
+
+検証記録追記後に文書・差分検査を再実行。実装・テストの最終状態は維持する。依存・権限・保存契約・公開設定は未変更。未コミット・未デプロイ。利用者による実画面確認は再読み込み後に行う。

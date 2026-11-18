@@ -3,6 +3,7 @@ import type { ErrorObject } from "ajv";
 
 import projectSchema from "../../schemas/project-0.1.0.schema.json";
 import recessedSchema from "../../schemas/project-0.2.0.schema.json";
+import measuredSchema from "../../schemas/project-0.3.0.schema.json";
 import type { Project } from "../domain/model";
 import type { ValidationIssue } from "../domain/validation";
 
@@ -17,6 +18,7 @@ const ajv = new Ajv2020({
 });
 
 const validateLegacy = ajv.compile<Project>(projectSchema);
+const validateMeasured = ajv.compile<Project>(measuredSchema);
 const validateRecessed = ajv.compile<Project>(recessedSchema);
 
 export type ProjectSchemaValidationResult =
@@ -69,7 +71,7 @@ function schemaIssues(errors: readonly ErrorObject[]): readonly ValidationIssue[
 }
 
 export function validateProjectJsonSchema(value: unknown): ProjectSchemaValidationResult {
-  const validate = value !== null && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === "0.2.0" ? validateRecessed : validateLegacy;
+  const validate = value !== null && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === "0.3.0" ? validateMeasured : value !== null && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === "0.2.0" ? validateRecessed : validateLegacy;
   if (validate(value)) {
     return { valid: true, project: value };
   }

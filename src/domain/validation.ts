@@ -180,7 +180,7 @@ export function validateProjectReferences(project: Project): readonly Validation
     }
   });
 
-  if (project.schemaVersion === "0.2.0") {
+  if (project.schemaVersion !== "0.1.0") {
     const numbers = project.cargoes.map((c) => c.cargoNo);
     if (new Set(numbers).size !== numbers.length || numbers.some((n) => n === undefined || n >= (project.nextCargoNo ?? 0))) {
       issues.push({ code: "semantic.cargo-number-invalid", path: "/nextCargoNo" });
@@ -268,24 +268,24 @@ function hasCalculableGeometryInputs(
     !isPositiveSafeInteger(internalDimensionsMm.heightMm) ||
     !isPositiveSafeInteger(openingMm.widthMm) ||
     !isPositiveSafeInteger(openingMm.heightMm) ||
-    !isNonnegativeSafeInteger(clearancesMm.xMm) ||
+    (clearancesMm !== undefined && (!isNonnegativeSafeInteger(clearancesMm.xMm) ||
     !isNonnegativeSafeInteger(clearancesMm.yMm) ||
-    !isNonnegativeSafeInteger(clearancesMm.zMm)
+    !isNonnegativeSafeInteger(clearancesMm.zMm)))
   ) {
     return false;
   }
 
-  const doubledYClearance = clearancesMm.yMm * 2;
+  const doubledYClearance = (clearancesMm?.yMm ?? 0) * 2;
   if (
     !Number.isSafeInteger(doubledYClearance) ||
     !Number.isSafeInteger(
-      internalDimensionsMm.lengthMm - clearancesMm.xMm,
+      internalDimensionsMm.lengthMm - (clearancesMm?.xMm ?? 0),
     ) ||
     !Number.isSafeInteger(
-      internalDimensionsMm.widthMm - clearancesMm.yMm,
+      internalDimensionsMm.widthMm - (clearancesMm?.yMm ?? 0),
     ) ||
     !Number.isSafeInteger(
-      internalDimensionsMm.heightMm - clearancesMm.zMm,
+      internalDimensionsMm.heightMm - (clearancesMm?.zMm ?? 0),
     )
   ) {
     return false;
@@ -327,7 +327,7 @@ function hasCalculableGeometryInputs(
       const dimensions = orientedDimensions(cargo, orientation);
       if (
         !Number.isSafeInteger(dimensions.yMm + doubledYClearance) ||
-        !Number.isSafeInteger(dimensions.zMm + clearancesMm.zMm)
+        !Number.isSafeInteger(dimensions.zMm + (clearancesMm?.zMm ?? 0))
       ) {
         return false;
       }
@@ -469,7 +469,7 @@ export function validatePlacementSet(
     )
     .sort((first, second) => compareIds(first.cargo.id, second.cargo.id));
 
-  if (!hasCalculableGeometryInputs(container, project.clearancesMm, selectedInputs)) {
+  if (!hasCalculableGeometryInputs(container, project.schemaVersion === "0.3.0" ? undefined : project.clearancesMm, selectedInputs)) {
     return {
       kind: "unavailable",
       containerId,
@@ -545,6 +545,7 @@ export function validatePlacementSet(
         relatedCargoIds: [],
       });
     } else if (
+      project.schemaVersion !== "0.3.0" && project.clearancesMm !== undefined &&
       !isPlacementWithinContainerWithClearance(
         selected.bounds,
         container.internalDimensionsMm,
@@ -583,6 +584,7 @@ export function validatePlacementSet(
           relatedCargoIds,
         });
       } else if (
+        project.schemaVersion !== "0.3.0" && project.clearancesMm !== undefined &&
         !isSupportContactContributor(first, second, supportAssessments) &&
         !isSupportContactContributor(
           first,
@@ -613,6 +615,7 @@ export function validatePlacementSet(
 
   for (const selected of selectedPlacements) {
     const target: PhysicalTarget = { kind: "cargo", id: selected.cargo.id };
+    if (project.schemaVersion !== "0.1.0" || project.clearancesMm === undefined) continue;
     const fittingOrientations = fittingOpeningOrientations(
       selected.cargo,
       container.openingMm,

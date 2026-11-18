@@ -313,9 +313,9 @@ test("shows selected domain dimensions without pointer interception and exposes 
   const annotation = page.locator(".viewport__dimension-annotations");
   await expect(annotation).toBeVisible();
   await expect(annotation.locator("g")).toHaveCount(3);
-  await expect(annotation.locator('g[data-axis="X"] text')).toHaveText("500 mm");
-  await expect(annotation.locator('g[data-axis="Y"] text')).toHaveText("400 mm");
-  await expect(annotation.locator('g[data-axis="Z"] text')).toHaveText("300 mm");
+  await expect(annotation.locator('g[data-axis="X"] text')).toHaveText("500");
+  await expect(annotation.locator('g[data-axis="Y"] text')).toHaveText("400");
+  await expect(annotation.locator('g[data-axis="Z"] text')).toHaveText("300");
   await expect(annotation).not.toContainText("奥行");
   await expect(annotation).not.toContainText("横幅");
   await expect(annotation).not.toContainText("高さ");
@@ -411,7 +411,8 @@ test("keeps the physical controller fresh while its dialog is closed", async ({ 
 
 test("centers every viewport toolbar icon inside its button", async ({ page }) => {
   await page.goto("/");
-  const buttons = page.locator(".viewport__camera-controls button");
+  await expect(page.locator(".viewport__camera-controls button")).toHaveCount(11);
+  const buttons = page.locator(".viewport__camera-controls button:has(> svg, > span)");
   await expect(buttons).toHaveCount(9);
   const offsets = await buttons.evaluateAll((elements) =>
     elements.map((element) => {

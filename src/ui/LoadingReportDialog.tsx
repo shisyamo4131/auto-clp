@@ -44,25 +44,26 @@ type ReportPdfState =
   | { readonly phase: "error"; readonly message: string };
 
 const IMAGE_ERROR_COPY = {
+  "report-image.layout-crowded": "上面図の寸法が用紙内に収まりません。情報を省略せず生成を停止しました。配置と表示密度の調整が必要です。",
   "report-image.renderer-unavailable":
     "3D描画を利用できないため画像を生成できません。3D表示を確認して再試行してください。",
   "report-image.projection-unavailable":
     "選択中コンテナの3D表示を作成できないため画像を生成できません。",
   "report-image.label-mismatch":
-    "積込順と3D表示の積荷が一致しないため画像を生成しませんでした。帳票を閉じて配置を確認してください。",
+    "配置図と3D表示の積荷が一致しないため画像を生成しませんでした。帳票を閉じて配置を確認してください。",
   "report-image.capture-failed":
-    "5視点画像の生成に失敗しました。不完全な画像は使用せず、再試行してください。",
+    "配置画像の生成に失敗しました。不完全な画像は使用せず、再試行してください。",
 } satisfies Record<Exclude<LoadingReportImageCaptureResult, { readonly ok: true }>["code"], string>;
 
 const PDF_ERROR_COPY = {
   "report-pdf.input-invalid":
-    "積込順または5視点画像が揃っていないためPDFを生成できません。画像を再生成してください。",
+    "配置情報または画像が揃っていないためPDFを生成できません。画像を再生成してください。",
   "report-pdf.font-load-failed":
     "帳票用の日本語フォントを読み込めませんでした。ページを再読み込みして再試行してください。",
   "report-pdf.unsupported-character":
     "帳票用フォントで表示できない文字が含まれるためPDFを生成しませんでした。CLP名、コンテナ名、積荷名、IDを確認してください。",
   "report-pdf.image-invalid":
-    "5視点画像をPDFへ取り込めませんでした。画像を再生成して再試行してください。",
+    "配置画像をPDFへ取り込めませんでした。画像を再生成して再試行してください。",
   "report-pdf.generation-failed":
     "PDFの生成に失敗しました。不完全なファイルは使用せず、再試行してください。",
   "report-pdf.download-unavailable":
@@ -141,8 +142,8 @@ export function LoadingReportButton({
       type="button"
       aria-haspopup="dialog"
       aria-disabled={disabled ? true : undefined}
-      aria-label="積込順とPDF帳票を確認"
-      title="積込順とPDF帳票を確認"
+      aria-label="配置イメージとPDF帳票を確認"
+      title="配置イメージとPDF帳票を確認"
       onClick={() => {
         if (!disabled) onOpen();
       }}
@@ -278,12 +279,12 @@ export function LoadingReportDialog({
     <ModalShell
       fallbackFocusIds={["loading-report-button"]}
       onRequestClose={handleClose}
-      title="積込順・PDF帳票"
+      title="配置イメージ・PDF帳票"
     >
-      <section className="loading-report" aria-label="積込順提案とPDF帳票">
+      <section className="loading-report" aria-label="配置イメージとPDF帳票">
         {snapshot === undefined ? (
           <p className="loading-report__unavailable" role="alert">
-            選択中コンテナがないため、積込順を確認できません。
+            選択中コンテナがないため、配置図を確認できません。
           </p>
         ) : (
           <>
@@ -293,9 +294,9 @@ export function LoadingReportDialog({
             </dl>
 
             <div className="loading-report__notice">
-              <strong>限定モデルによる一提案です</strong>
+              <strong>{project.schemaVersion === "0.3.0" ? "現在配置のイメージです" : "限定モデルによる一提案です"}</strong>
               <p>
-                現在の向きを保ち、開口側から最終Y/Zへ直線搬入する前提で、支持物と奥側の積荷を優先します。
+                {project.schemaVersion === "0.3.0" ? "固定の積荷Noを表示します。積込順・開口部の通過可否を示す図ではありません。" : "現在の向きを保ち、開口側から最終Y/Zへ直線搬入する前提で、支持物と奥側の積荷を優先します。"}
               </p>
             </div>
 
@@ -318,12 +319,12 @@ export function LoadingReportDialog({
             ) : (
               <>
                 <section className="loading-report__sequence" aria-labelledby="loading-report-sequence-title">
-                  <h3 id="loading-report-sequence-title">提案する積込順</h3>
+                  <h3 id="loading-report-sequence-title">積荷一覧</h3>
                   <ol>
                     {snapshot.cargoes.map((cargo) => (
                       <li key={cargo.cargoId}>
                         <div className="loading-report__cargo-heading">
-                          <span aria-label={`積込順${cargo.sequenceNumber}`}>{cargo.sequenceNumber}</span>
+                          <span aria-label={`積荷No.${cargo.sequenceNumber}`}>{cargo.sequenceNumber}</span>
                           <strong>{cargo.name}</strong>
                         </div>
                         <dl>
@@ -334,13 +335,13 @@ export function LoadingReportDialog({
                           </div>
                           <div><dt>重量</dt><dd>{gramsToKilograms(cargo.massGrams)} kg</dd></div>
                         </dl>
-                        <p className="loading-report__dependencies">
+                        {project.schemaVersion === "0.3.0" ? null : <p className="loading-report__dependencies">
                           {cargo.dependencies.length === 0
                             ? "先行条件なし"
                             : `先に積み込む積荷: ${cargo.dependencies
                                 .map((dependency) => dependencyLabel(project, dependency))
                                 .join("、")}`}
-                        </p>
+                        </p>}
                       </li>
                     ))}
                   </ol>
@@ -381,8 +382,8 @@ export function LoadingReportDialog({
             <section className="loading-report__images" aria-labelledby="loading-report-images-title">
               <div className="loading-report__images-heading">
                 <div>
-                  <h3 id="loading-report-images-title">番号付き5視点画像</h3>
-                  <p>現在視点と、帳票用に固定した正面・背面・左面・右面を生成します。</p>
+                  <h3 id="loading-report-images-title">積荷No付き配置イメージ</h3>
+                  <p>上面図と現在視点・正面・背面・左面・右面を生成します。間隔は図内に掲載します。</p>
                 </div>
                 <button
                   type="button"
@@ -396,8 +397,8 @@ export function LoadingReportDialog({
                   {imageState.phase === "generating"
                     ? "画像を生成中…"
                     : imageState.phase === "ready"
-                      ? "5視点画像を再生成"
-                      : "5視点画像を生成"}
+                      ? "配置画像を再生成"
+                      : "配置画像を生成"}
                 </button>
               </div>
               {imageState.phase === "error" ? (
@@ -414,7 +415,7 @@ export function LoadingReportDialog({
                       data-view-kind={image.kind}
                     >
                       <img
-                        alt={`${image.title}の積込順番号付き配置画像`}
+                        alt={`${image.title}の積荷No付き配置画像`}
                         height={image.height}
                         src={image.dataUrl}
                         width={image.width}
@@ -459,8 +460,8 @@ export function LoadingReportDialog({
           ) : (
             <p>
               {imageState.phase === "ready"
-                ? "5視点画像を含む日本語PDFを端末へ出力できます。"
-                : "番号付き5視点画像を生成するとPDFを出力できます。"}
+                ? "配置画像を含む日本語PDFを端末へ出力できます。"
+                : "積荷No付き配置イメージを生成するとPDFを出力できます。"}
             </p>
           )}
         </div>

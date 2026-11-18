@@ -96,11 +96,11 @@ export function commitProjectHistory(
 }
 
 function restoreFrame(project: Project, present: Project): Project {
-  if (present.schemaVersion !== "0.2.0") return project;
+  if (present.schemaVersion === "0.1.0") return project;
   const cargoes = project.cargoes.map((cargo, index) => ({
     ...cargo, cargoNo: cargo.cargoNo ?? index + 1,
   }));
-  return { ...project, schemaVersion: "0.2.0", cargoes,
+  return { ...project, schemaVersion: present.schemaVersion, cargoes,
     nextCargoNo: Math.max(project.nextCargoNo ?? cargoes.length + 1, present.nextCargoNo ?? 1) };
 }
 

@@ -75,10 +75,10 @@ export function prepareCargoCsvReplacement(
 
   const candidate: Project = {
     ...current,
-    ...(current.schemaVersion === "0.2.0" ? { nextCargoNo: current.nextCargoNo! + cargoes.length } : {}),
+    ...(current.schemaVersion !== "0.1.0" ? { nextCargoNo: current.nextCargoNo! + cargoes.length } : {}),
     cargoes: cargoes.map((cargo, index) => ({
       ...cargo,
-      ...(current.schemaVersion === "0.2.0" ? { cargoNo: current.nextCargoNo! + index } : {}),
+      ...(current.schemaVersion !== "0.1.0" ? { cargoNo: current.nextCargoNo! + index } : {}),
       dimensionsMm: { ...cargo.dimensionsMm },
       allowedOrientations: [...cargo.allowedOrientations],
     })),

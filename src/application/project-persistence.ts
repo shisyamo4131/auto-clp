@@ -1,3 +1,5 @@
+import { migrateProject } from "./project-migration";
+import { readProjectJson } from "../persistence/project-json";
 import type { Project } from "../domain/model";
 import { normalizeProjectOrientationPolicies } from "../domain/orientation-policy";
 import type { ProjectImportPreflightClientResult } from "../persistence/project-import-preflight-client";
@@ -117,4 +119,30 @@ export async function prepareProjectImport(
     ok: true,
     project: normalizeProjectOrientationPolicies(result.nextState.project),
   };
+}
+
+/** Normal application import; legacy readers remain available for validation/rescue. */
+export async function prepareCurrentProjectImport(
+  currentProject: Project,
+  source: ProjectJsonSource,
+  preflight: (project: Project) => Promise<ProjectImportPreflightClientResult>,
+  confirm: (originalJson: string) => Promise<boolean>,
+): Promise<PreparedProjectPersistenceResult> {
+  let originalJson = "";
+  const parsed = await readProjectJson({ ...source, readText: async () => {
+    originalJson = await source.readText(); return originalJson;
+  } });
+  if (!parsed.ok) return { ok: false, code: importFailureCode(parsed.stage, parsed.issues[0]?.code) };
+  const migrated = migrateProject(parsed.project);
+  const serialized = serializeProjectForPersistence(migrated);
+  if (!serialized.ok) return serialized;
+  const prepared = await prepareProjectImport(currentProject, {
+    sizeBytes: textEncoder.encode(serialized.json).byteLength,
+    readText: async () => serialized.json,
+  }, preflight);
+  if (!prepared.ok) return prepared;
+  if (parsed.project.schemaVersion !== "0.3.0" && !(await confirm(originalJson))) {
+    return { ok: true, project: currentProject };
+  }
+  return prepared;
 }

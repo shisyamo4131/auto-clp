@@ -3,7 +3,6 @@ import {
   addCargoFromDrawer,
   addContainerFromDrawer,
   openPhysicalValidation,
-  openProjectSettings,
   type CargoInput,
   type ContainerInput,
 } from "./ui-helpers";
@@ -50,13 +49,6 @@ async function placeCargo(
   await page.getByRole("button", { name: "配置を保存" }).click();
 }
 
-async function setClearances(page: Page, valueMm: string) {
-  await openProjectSettings(page);
-  await page.getByLabel("X方向の隙間").fill(valueMm);
-  await page.getByLabel("Y方向の隙間").fill(valueMm);
-  await page.getByLabel("Z方向の隙間").fill(valueMm);
-  await page.getByRole("button", { name: "CLPを保存" }).click();
-}
 
 test("executes the AC-01 form subset for orientation, removal, and undo", async ({
   page,
@@ -66,7 +58,7 @@ test("executes the AC-01 form subset for orientation, removal, and undo", async 
     "data-capability-state",
     "supported",
   );
-  await setClearances(page, "100");
+  // Required-clearance thresholds have been removed; placement geometry remains unchanged.
   await addCargo(page, "合成積荷A", {
     lengthMm: "1200",
     widthMm: "800",
@@ -160,7 +152,7 @@ test("reports a 1 mm overhang as support-conditions-unverified and undo restores
   await expect(lamp).toHaveAttribute("data-status", "valid");
 });
 
-test("orders floor penetration before independent opening and payload failures", async ({
+test("orders floor penetration before payload failure without obsolete opening checks", async ({
   page,
 }) => {
   await page.goto("/");
@@ -187,17 +179,14 @@ test("orders floor penetration before independent opening and payload failures",
 
   await openPhysicalValidation(page);
   const validation = page.locator(".physical-validation");
-  await expect(validation.getByRole("heading", { name: "不適合理由（3件）" })).toBeVisible();
+  await expect(validation.getByRole("heading", { name: "不適合理由（2件）" })).toBeVisible();
   const invalidReasons = validation.locator(".physical-validation__reason--invalid");
-  await expect(invalidReasons).toHaveCount(3);
+  await expect(invalidReasons).toHaveCount(2);
   const copies = await invalidReasons.allTextContents();
   expect(copies[0]).toContain(
     "積荷が床より下へ貫通しています。Z座標を0以上に修正してください。",
   );
   expect(copies[1]).toContain(
-    "許可されたどの向きでも矩形開口の幅と高さに収まりません。",
-  );
-  expect(copies[2]).toContain(
     "配置した積荷の合計重量がコンテナの耐荷重を超えています。",
   );
   await expect(validation).not.toContainText(

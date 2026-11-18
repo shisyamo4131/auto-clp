@@ -509,14 +509,14 @@ function searchCandidate(
     const orientations = eligibleAutomaticProposalOrientations(
       cargo,
       container,
-      project.clearancesMm,
+      project.clearancesMm!,
     );
     for (const orientation of orientations) {
       const dimensions = orientedDimensions(cargo, orientation);
       const points = generateAutomaticProposalCandidatePoints(
         container,
         dimensions,
-        project.clearancesMm,
+        project.clearancesMm!,
         placed.map(({ bounds }) => bounds),
         AUTOMATIC_PROPOSAL_CANDIDATE_POINT_LIMIT,
       );

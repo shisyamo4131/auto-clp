@@ -2,6 +2,7 @@
 
 - Date: 2026-09-17
 - Status: Accepted
+- Current-scope override: [ADR 0047](0047-measured-clearance-and-migration.md) supersedes the normal 0.3.0 application behavior; the legacy data validation contract remains applicable.
 - Related specification: Loading Sequence Proposal and PDF Report
 - Refines: ADR 0006、0008、0010
 

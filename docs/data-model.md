@@ -1,10 +1,18 @@
 # Auto CLP Data Contract and Module Boundaries
 
 - Status: Active design contract
-- Project schema version: `0.1.0`（平床互換）、`0.2.0`（段落ち）
+- Project schema version: `0.3.0`（現行）、`0.1.0` / `0.2.0`（読込互換）
 - Related specification: [Auto CLP Specification](specification.md)
 - Machine-readable schema: [project-0.1.0.schema.json](../schemas/project-0.1.0.schema.json)
 - Decisions: [ADR 0009](decisions/0009-versioned-project-data-contract.md)、[ADR 0010](decisions/0010-container-coordinate-and-placement-anchor.md)、[ADR 0011](decisions/0011-axis-clearance-semantics.md)、[ADR 0012](decisions/0012-independent-physical-validation-diagnostics.md)、[ADR 0013](decisions/0013-manual-local-persistence-and-json-files.md)、[ADR 0014](decisions/0014-dedicated-floor-penetration-diagnostic.md)、[ADR 0017](decisions/0017-scene-workbench-rotation-and-compact-controls.md)、[ADR 0018](decisions/0018-scene-drag-classification-and-dialog-editors.md)、[ADR 0019](decisions/0019-support-surface-snap-and-conditional-support.md)、[ADR 0020](decisions/0020-actionable-opening-diagnostics-and-drag-focus.md)、[ADR 0021](decisions/0021-fixed-rotation-toolbar-and-axis-icons.md)、[ADR 0022](decisions/0022-upright-only-orientation-policy.md)、[ADR 0032](decisions/0032-cargo-center-of-gravity-visualization.md)、[ADR 0033](decisions/0033-equal-borderless-center-markers.md)、[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)、[ADR 0035](decisions/0035-recursive-single-support-group-movement.md)、[ADR 0036](decisions/0036-cargo-csv-destructive-confirmation-copy.md)、[ADR 0037](decisions/0037-cargo-constraint-list-and-prohibition-wording.md)
+
+## 現行形式 0.3.0
+
+[project-0.3.0.schema.json](../schemas/project-0.3.0.schema.json)は0.2.0の固定No・nextCargoNo・任意の段落ちを引き継ぎ、clearancesMmを持たない。未知項目として拒否する。測定距離、寸法線、表示切替、画像は保存しない。旧Schemaは不変で、旧データをそのSchema・意味規則で検証してから移行する。
+
+端末保存先はcurrent-project-v3。読込はv3がundefinedのときだけcurrent-project-v2、さらにundefinedのときだけcurrent-projectへ進む。nullは削除済み、文字列以外は破損として終了し、古い枠を復活させない。保存・削除はv3のみを取引完了後に成功とする。旧枠は変更しない。
+
+[ADR 0047](decisions/0047-measured-clearance-and-migration.md)が以下の旧形式の移行時期・隙間・保存先に関する記述より優先する。新規は0.3.0、旧読込は利用者の明示変換、取消時は現在状態を保持する。後方書出しは提供しない。
 
 ## 段落ち形式 0.2.0
 
@@ -24,7 +32,7 @@
 
 この文書は、Phase 1で端末内保存とJSON入出力に使うCLPデータ、およびデータを消費する計算モジュールの境界を定義する。完全なCLP型、純粋な向き・配置範囲計算、JSON Schema・意味検証、検証済み書出し、派生計算後だけ状態を置換する読込境界、対象コンテナの物理制約を独立理由付きで集約する純粋判定、その判定をローカルWorkerで実行して理由をページ表示するUI、CLP・隙間・積荷・コンテナの入力編集UI、コンテナ選択とProjectから3D sceneへの一方向投影、フォームによる配置編集、canvas上の積荷選択・床面方向drag・視点操作、CLP操作のundo/redo、単一手動枠の端末保存、JSONファイル入出力、全コンテナの置換前Worker判定、仕様1.5.1の積荷合成重心の純粋計算、コンテナ幾何中心との赤・黄ドット表示、凡例、仕様1.6.0のCSVテンプレート、30件新規作成上限、既定値統一、積荷・配置の一括置換、仕様1.7.0の単一支持グループ連動移動と支持不可専用理由、および仕様1.8.0の積荷制約一覧編集は実装済みである。Projectを変更しない自動提案探索、preview panel、再検証付き一括適用と一履歴操作のUndo/Redoは保持済みの将来技術資産で、Phase 1の通常画面には接続しない。操作履歴、UI状態、Three.jsオブジェクト、物理判定、自動提案、幾何中心・合成重心とその表示結果は本契約へ保存しない。
 
-仕様版 `1.15.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示・操作配置、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・Z=0へ正規化する荷室外anchor・表示annotation・操作方法dialog・未配置積荷の寄せ・既定ONの側面／内壁スナップ切替、コンテナ未登録時の案内とCSVインポート利用条件、保存しない重心・積載概要・積込順・帳票の派生表示、wheel zoom・Ctrl平行移動、派生する単一支持グループ移動・50 mm取得／75 mm保持の最大2面fit・カーソル配置面選択・視点基準矢印preview、積荷制約の一覧編集、GitHub Pagesによる静的配信、およびSchema上限内の一時CSV入力と新規作成上限の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
+仕様版 `1.16.0` とCLPスキーマ版 `0.1.0` は別に管理する。利用者向け用語、コンテナ専用の製品範囲、Application Shellのviewport高配分、Drawer入口・版表示・操作配置、使用上の重要事項、自動提案UIの公開状態、WebGL必須運用、session-onlyのコンテナtab・共有camera・Z=0へ正規化する荷室外anchor・表示annotation・操作方法dialog・未配置積荷の寄せ・既定ONの側面／内壁スナップ切替、コンテナ未登録時の案内とCSVインポート利用条件、保存しない重心・積載概要・積込順・帳票の派生表示、wheel zoom・Ctrl平行移動、派生する単一支持グループ移動・50 mm取得／75 mm保持の最大2面fit・カーソル配置面選択・視点基準矢印preview、積荷制約の一覧編集、GitHub Pagesによる静的配信、およびSchema上限内の一時CSV入力と新規作成上限の変更だけではCLPスキーマ版を上げず、保存データの意味または形が変わる場合にだけスキーマ版を更新する。
 
 ## Persisted Root
 

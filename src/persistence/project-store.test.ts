@@ -29,12 +29,14 @@ function installFakeIndexedDb({
   initialValue,
   upgrade = true,
   legacyValue,
+  previousValue,
 }: {
   readonly open?: OpenOutcome;
   readonly transaction?: TransactionOutcome;
   readonly initialValue?: unknown;
   readonly upgrade?: boolean;
   readonly legacyValue?: unknown;
+  readonly previousValue?: unknown;
 } = {}): FakeStoreControl {
   let stored = initialValue;
   let pendingTransaction: {
@@ -42,6 +44,7 @@ function installFakeIndexedDb({
     oncomplete: (() => void) | null;
     onerror: (() => void) | null;
   } | undefined;
+  let pendingReads = 0;
   const close = vi.fn();
   const createObjectStore = vi.fn();
 
@@ -73,15 +76,17 @@ function installFakeIndexedDb({
             queueMicrotask(() => finishTransaction(current));
           },
           get: (key: string) => {
-            expect([PROJECT_STORE_KEY, "current-project"]).toContain(key);
+            expect([PROJECT_STORE_KEY, "current-project-v2", "current-project"]).toContain(key);
+            pendingReads += 1;
             const request = {
               result: undefined as unknown,
               onsuccess: null as (() => void) | null,
             };
             queueMicrotask(() => {
-              request.result = key === PROJECT_STORE_KEY ? stored : legacyValue;
+              request.result = key === PROJECT_STORE_KEY ? stored : key === "current-project-v2" ? previousValue : legacyValue;
               request.onsuccess?.();
-              queueMicrotask(() => finishTransaction(current));
+              pendingReads -= 1;
+              queueMicrotask(() => { if (pendingReads === 0) finishTransaction(current); });
             });
             return request;
           },
@@ -301,4 +306,15 @@ describe("project IndexedDB store", () => {
  it("does not silently replace a malformed new slot with legacy data", async () => {
    installFakeIndexedDb({ initialValue: 42, legacyValue: "legacy" });
    expect(await loadProjectJsonFromDevice()).toEqual({ ok: false, code: "project-store.data-invalid" });
+ });
+
+ it("uses the previous slot before legacy, but stops at deletion or corruption", async () => {
+   installFakeIndexedDb({ previousValue: "previous", legacyValue: "legacy" });
+   expect(await loadProjectJsonFromDevice()).toEqual({ ok: true, value: "previous" });
+   installFakeIndexedDb({ previousValue: null, legacyValue: "legacy" });
+   expect(await loadProjectJsonFromDevice()).toEqual({ ok: false, code: "project-store.not-found" });
+   installFakeIndexedDb({ previousValue: 42, legacyValue: "legacy" });
+   expect(await loadProjectJsonFromDevice()).toEqual({ ok: false, code: "project-store.data-invalid" });
+   installFakeIndexedDb({ initialValue: "current", previousValue: "previous" });
+   expect(await loadProjectJsonFromDevice()).toEqual({ ok: true, value: "current" });
  });

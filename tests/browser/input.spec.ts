@@ -41,11 +41,12 @@ test("edits project settings transactionally and focuses invalid input", async (
   await page.goto("/");
   await openProjectSettings(page);
   await page.getByLabel("CLP名").fill("更新CLP");
-  await page.getByLabel("X方向の隙間").fill("1.5");
+  await expect(page.getByLabel("X方向の隙間")).toHaveCount(0);
+  await page.getByLabel("CLP名").fill("");
   await page.getByRole("button", { name: "CLPを保存" }).click();
-  await expect(page.getByLabel("X方向の隙間")).toBeFocused();
-  await expect(page.getByLabel("X方向の隙間")).toHaveAttribute("aria-invalid", "true");
-  await page.getByLabel("X方向の隙間").fill("10");
+  await expect(page.getByLabel("CLP名")).toBeFocused();
+  await expect(page.getByLabel("CLP名")).toHaveAttribute("aria-invalid", "true");
+  await page.getByLabel("CLP名").fill("更新CLP");
   await page.getByRole("button", { name: "CLPを保存" }).click();
   await expect(page.getByTestId("canonical-project-settings")).toContainText("更新CLP");
 });

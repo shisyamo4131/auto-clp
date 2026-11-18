@@ -1,4 +1,5 @@
-export const PROJECT_STORE_KEY = "current-project-v2";
+export const PROJECT_STORE_KEY = "current-project-v3";
+const PREVIOUS_PROJECT_STORE_KEY = "current-project-v2";
 const LEGACY_PROJECT_STORE_KEY = "current-project";
 
 const DATABASE_NAME = "auto-clp";
@@ -154,8 +155,14 @@ export async function loadProjectJsonFromDevice(): Promise<
     request.onsuccess = () => {
       value = request.result;
       if (value === undefined) {
-        const legacy = transaction.objectStore(OBJECT_STORE_NAME).get(LEGACY_PROJECT_STORE_KEY);
-        legacy.onsuccess = () => { value = legacy.result; };
+        const previous = transaction.objectStore(OBJECT_STORE_NAME).get(PREVIOUS_PROJECT_STORE_KEY);
+        previous.onsuccess = () => {
+          value = previous.result;
+          if (value === undefined) {
+            const legacy = transaction.objectStore(OBJECT_STORE_NAME).get(LEGACY_PROJECT_STORE_KEY);
+            legacy.onsuccess = () => { value = legacy.result; };
+          }
+        };
       }
     };
     transaction.oncomplete = () => {

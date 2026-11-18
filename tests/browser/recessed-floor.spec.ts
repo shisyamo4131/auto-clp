@@ -6,7 +6,7 @@ import { addCargoFromDrawer, openContainerAddEditor, openPersistenceDrawer, open
 test("recessed floor input, tall cargo, atomic rejection, and device/JSON round trip", async ({ page }) => {
   await page.goto("/");
   await openProjectSettings(page);
-  for (const axis of ["X", "Y", "Z"]) await page.getByLabel(`${axis}方向の隙間`).fill("0");
+  await expect(page.getByLabel("X方向の隙間")).toHaveCount(0);
   await page.getByRole("button", { name: "CLPを保存" }).click();
   await openContainerAddEditor(page);
   for (const [label, value] of [["コンテナ名", "段落ち合成荷室"], ["内部長さ", "6000"], ["内部幅", "2400"], ["内部高さ", "2400"], ["開口幅", "2400"], ["開口高さ", "2400"], ["総耐荷重", "1000"]]) await page.getByLabel(label!, { exact: true }).fill(value!);
@@ -40,7 +40,7 @@ test("recessed floor input, tall cargo, atomic rejection, and device/JSON round 
   const chunks: Buffer[] = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   const exported = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  expect(exported.schemaVersion).toBe("0.2.0");
+  expect(exported.schemaVersion).toBe("0.3.0");
   expect(exported.containers[0].recessedFloorMm.depthMm).toBe(300);
   expect(exported.cargoes[0].cargoNo).toBe(1);
   await page.reload();

@@ -3,6 +3,10 @@ import {
   type Project,
 } from "../domain/model";
 
+import { migrateProject } from "./project-migration";
+
+export function createCurrentProject(projectId?: string): Project { return migrateProject(createInitialProject(projectId)); }
+
 export const INITIAL_PROJECT_ID = "project-1";
 
 export function createInitialProject(projectId = INITIAL_PROJECT_ID): Project {

@@ -1,3 +1,5 @@
+import { mergeCargoClearances, layoutTopGapLabels, type CargoClearance, type TopGapLine } from "./top-view";
+import { CLEARANCE_DIRECTION_NAMES, type ClearanceMeasurement } from "../domain/measured-clearance";
 import {
   forwardRef,
   useEffect,
@@ -11,6 +13,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import type { PositionMm } from "../domain/model";
 import {
+  domainPointToScene,
   sceneBoundsReachRadius,
   sceneContainerBounds,
   sceneProjectionBounds,
@@ -63,6 +66,12 @@ export interface CargoNudgePreviewResult {
 }
 
 interface ThreeViewportProps {
+  readonly viewSwitchDisabled: boolean;
+  readonly viewMode: "3d" | "2d";
+  readonly onViewModeChange: (mode: "3d" | "2d") => void;
+  readonly canMoveCargo: (cargoId: string) => boolean;
+  readonly cargoNumbers: ReadonlyMap<string, number>;
+  readonly measureCargo?: (cargoId: string, preview?: CargoDragPreviewResult | CargoNudgePreviewResult, movingCargoId?: string) => ClearanceMeasurement;
   readonly bottomOverlay?: ReactNode;
   readonly centerOverlay?: ReactNode;
   readonly forceInitialRenderError?: boolean;
@@ -231,9 +240,22 @@ function setVector(target: THREE.Vector3, source: SceneVector3): void {
 }
 
 function fitCamera(
-  camera: THREE.PerspectiveCamera,
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
   projection: ProjectSceneProjection | null,
 ): THREE.Vector3 {
+  if (camera instanceof THREE.OrthographicCamera) {
+    const bounds = projection ? sceneContainerBounds(projection) : { center: { x: 0, y: 0, z: 0 }, radius: 1 };
+    const target = new THREE.Vector3(bounds.center.x, 0, bounds.center.z);
+    const distance = Math.max(10, bounds.radius * 4);
+    camera.position.copy(target).add(new THREE.Vector3(0, distance, 0));
+    camera.up.set(0, 0, -1);
+    camera.near = 0.001;
+    camera.far = distance + bounds.radius * 20;
+    camera.zoom = 1;
+    camera.lookAt(target);
+    camera.updateProjectionMatrix();
+    return target;
+  }
   if (projection === null) {
     camera.near = 0.01;
     camera.far = 10;
@@ -268,9 +290,10 @@ function fitCamera(
 }
 
 function cameraFramingDistance(
-  camera: THREE.PerspectiveCamera,
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
   radius: number,
 ): number {
+  if (camera instanceof THREE.OrthographicCamera) return Math.max(radius * 4, 10);
   const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov / 2);
   const horizontalHalfFov = Math.atan(
     Math.tan(verticalHalfFov) * Math.max(camera.aspect, 0.01),
@@ -281,7 +304,7 @@ function cameraFramingDistance(
 
 function configureCameraDistanceLimits(
   controls: OrbitControls,
-  camera: THREE.PerspectiveCamera,
+  camera: THREE.PerspectiveCamera | THREE.OrthographicCamera,
   projection: ProjectSceneProjection | null,
 ): void {
   if (projection === null) {
@@ -531,6 +554,7 @@ function ResetViewIcon() {
 }
 
 export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>(function ThreeViewport({
+  measureCargo,
   bottomOverlay,
   centerOverlay,
   forceInitialRenderError = false,
@@ -558,7 +582,11 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
   zRotationExplanation,
   selectedCargoId,
   statusDescriptionId,
+  viewSwitchDisabled, viewMode, onViewModeChange, canMoveCargo, cargoNumbers,
 }: ThreeViewportProps, ref) {
+  const [measurements, setMeasurements] = useState<readonly CargoClearance[]>([]);
+  const [viewportSize, setViewportSize] = useState({ width: 800, height: 600 });
+  const [gapLines, setGapLines] = useState<readonly TopGapLine[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bottomOverlayRef = useRef<HTMLDivElement>(null);
@@ -569,6 +597,9 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
   >(() => ({ code: "report-image.renderer-unavailable", ok: false }));
   const selectedCargoIdRef = useRef(selectedCargoId);
   const updateSelectionRef = useRef<(cargoId?: string) => void>(() => undefined);
+  const topCameraViewRef = useRef<{ containerId: string; position: number[]; target: number[]; zoom: number } | undefined>(undefined);
+  const [topLabels, setTopLabels] = useState<readonly { x: number; y: number; text: string; dimensions?: string; cargoId?: string }[]>([]);
+  const [topRecess, setTopRecess] = useState<{ x: number; y: number; width: number; height: number; depth: number }>();
   const cameraViewRef = useRef<CameraViewState | undefined>(undefined);
   const [dimensionAnnotations, setDimensionAnnotations] = useState<
     readonly DimensionAnnotationLine[]
@@ -652,7 +683,19 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
     let disposed = false;
     let readyReported = false;
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    const camera = viewMode === "2d"
+      ? new THREE.OrthographicCamera(-1, 1, 1, -1, 0.001, 100)
+      : new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    const resizeCamera = (width: number, height: number) => {
+      if (camera instanceof THREE.PerspectiveCamera) camera.aspect = width / height;
+      else {
+        const size = projection?.container.dimensions;
+        const halfHeight = Math.max((size?.z ?? 2) * 0.85, (size?.x ?? 2) * 0.65 / (width / height));
+        camera.top = halfHeight; camera.bottom = -halfHeight;
+        camera.right = halfHeight * width / height; camera.left = -camera.right;
+      }
+      camera.updateProjectionMatrix();
+    };
     const raycaster = new THREE.Raycaster();
     const pointerNdc = new THREE.Vector2();
     const wallHighlights = new Map<ContainerWall, THREE.LineSegments>();
@@ -662,6 +705,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
         : addProjection(scene, projection, geometries, materials, wallHighlights);
     scene.add(new THREE.HemisphereLight(0xc8f8ff, 0x1d2b44, 2.2));
 
+    let measurementCache: { movingCargoId?: string; preview?: CargoDragPreviewResult | CargoNudgePreviewResult; values: readonly CargoClearance[] } | undefined;
     let reportRendererError: () => void = () => undefined;
     const renderScene = (): boolean => {
       if (disposed || renderer === undefined) return false;
@@ -733,6 +777,39 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
             ? current
             : nextWeightBalanceMarkers,
         );
+        const preview = gesture?.lastPreview ?? keyboardGesture?.lastPreview;
+        const movingCargoId = gesture?.cargoId ?? keyboardGesture?.cargoId;
+        if (!measurementCache || measurementCache.preview !== preview || measurementCache.movingCargoId !== movingCargoId) {
+          const values = viewMode !== "2d" ? [] : (projection?.cargoes ?? []).flatMap(cargo => {
+            if (cargo.kind !== "placed" && cargo.cargoId !== movingCargoId) return [];
+            const measurement = measureCargo?.(cargo.cargoId, preview, movingCargoId);
+            return measurement ? [{ cargoId: cargo.cargoId, measurement }] : [];
+          });
+          measurementCache = { preview, movingCargoId, values };
+          setMeasurements(values);
+        }
+        const nextGapLines = mergeCargoClearances(measurementCache.values).flatMap(({ key, gap, sources }) => {
+          const a = projectViewportPoint(domainPointToScene(gap.start));
+          const b = projectViewportPoint(domainPointToScene(gap.end));
+          return a?.inViewport && b?.inViewport ? [{ key, sources, x1: a.leftPx, y1: a.topPx, x2: b.leftPx, y2: b.topPx, direction: gap.direction, label: String(gap.distanceMm) }] : [];
+        });
+        setGapLines(nextGapLines);
+        setViewportSize(current => current.width === container.clientWidth && current.height === container.clientHeight ? current : { width: container.clientWidth, height: container.clientHeight });
+        if (viewMode === "2d") {
+          setTopLabels((projection?.cargoes ?? []).flatMap(cargo => {
+            const center = cargoVisuals.get(cargo.cargoId)?.mesh.position ?? cargo.center;
+            const point = projectViewportPoint(center);
+            return point?.inViewport ? [{ x: point.leftPx, y: point.topPx, cargoId: cargo.cargoId,
+              dimensions: cargo.cargoId === selectedCargoIdRef.current ? `${cargo.dimensionsMm.xMm} × ${cargo.dimensionsMm.yMm}` : undefined,
+              text: `No.${cargoNumbers.get(cargo.cargoId) ?? "—"}` }] : [];
+          }));
+          const recess = projection?.container.recessedFloor;
+          if (recess) {
+            const a = projectViewportPoint({ x: recess.center.x - recess.dimensions.x / 2, y: 0, z: recess.center.z - recess.dimensions.z / 2 });
+            const b = projectViewportPoint({ x: recess.center.x + recess.dimensions.x / 2, y: 0, z: recess.center.z + recess.dimensions.z / 2 });
+            setTopRecess(a && b ? { x: a.leftPx, y: a.topPx, width: b.leftPx - a.leftPx, height: b.topPx - a.topPx, depth: Math.round(recess.dimensions.y * 1000) } : undefined);
+          } else setTopRecess(undefined);
+        }
         const selected = projection?.cargoes.find(
           (cargo) => cargo.cargoId === selectedCargoIdRef.current,
         );
@@ -891,17 +968,17 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
               {
                 axis: "X" as const,
                 adjacent: adjacent[0]!,
-                label: `${selected.dimensionsMm.xMm} mm`,
+                label: `${selected.dimensionsMm.xMm}`,
               },
               {
                 axis: "Y" as const,
                 adjacent: adjacent[1]!,
-                label: `${selected.dimensionsMm.yMm} mm`,
+                label: `${selected.dimensionsMm.yMm}`,
               },
               {
                 axis: "Z" as const,
                 adjacent: adjacent[2]!,
-                label: `${selected.dimensionsMm.zMm} mm`,
+                label: `${selected.dimensionsMm.zMm}`,
               },
             ];
             const lineOffset = 18;
@@ -937,7 +1014,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
                 clampAxis(proposed[1], minY, maxY),
               ];
             };
-            return definitions.map(({ adjacent: edgeEnd, axis, label }) => {
+            return definitions.filter(d => viewMode !== "2d" || d.axis !== "Z").map(({ adjacent: edgeEnd, axis, label }) => {
               const edgeStart = baseCorner.screen;
               const edgeEndScreen = edgeEnd.screen;
               const midpoint: readonly [number, number] = [
@@ -993,7 +1070,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
               };
             });
           })();
-          setDimensionAnnotations(next);
+          setDimensionAnnotations(viewMode === "2d" ? [] : next);
         }
         return true;
       } catch {
@@ -1129,6 +1206,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
       }
       if (controls !== undefined) controls.enabled = true;
       if (wasActive) onCargoDragStateChange(false);
+      renderScene();
     };
 
     const restoreKeyboardGesturePreview = () => {
@@ -1145,6 +1223,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
       const completed = keyboardGesture;
       restoreKeyboardGesturePreview();
       keyboardGesture = undefined;
+      renderScene();
       onCargoNudgeStateChange(false);
       if (!commit || completed.lastPreview === undefined) return;
       const result = onCargoNudgeCommit(completed.cargoId, completed.lastPreview);
@@ -1230,6 +1309,11 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
 
     const handlePointerDown = (event: PointerEvent) => {
       if (gesture !== undefined || keyboardGesture !== undefined) return;
+      // OrbitControls swaps PAN/ROTATE for modifiers. Both paths must pan in 2D.
+      if (viewMode === "2d" && controls !== undefined) {
+        controls.mouseButtons.LEFT = event.ctrlKey || event.shiftKey || event.metaKey
+          ? THREE.MOUSE.ROTATE : THREE.MOUSE.PAN;
+      }
       canvas.focus({ preventScroll: true });
       const finePointer = pointerIsFine(event);
       if (event.button !== 0) {
@@ -1257,7 +1341,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
       event.preventDefault();
       event.stopImmediatePropagation();
       onCargoSelectionChange(cargoId);
-      if (interactionDisabledRef.current) return;
+      if (interactionDisabledRef.current || !canMoveCargo(cargoId)) return;
 
       const mesh = hit.object as THREE.Mesh;
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -mesh.position.y);
@@ -1288,7 +1372,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
         onCargoDragStateChange(true);
       }
       setPointerFromEvent(event);
-      const surfaceTarget = pointerSurfaceTarget();
+      const surfaceTarget = viewMode === "2d" ? { kind: "floor" as const } : pointerSurfaceTarget();
       const currentPoint = new THREE.Vector3();
       if (raycaster.ray.intersectPlane(gesture.plane, currentPoint) === null) return;
       const rawDelta = currentPoint.sub(gesture.startPlanePoint);
@@ -1483,6 +1567,10 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
 
       const rememberCameraView = () => {
         if (projection === null || controls === undefined) return;
+        if (camera instanceof THREE.OrthographicCamera) {
+          topCameraViewRef.current = { containerId: projection.container.id, position: camera.position.toArray(), target: controls.target.toArray(), zoom: camera.zoom };
+          return;
+        }
         const bounds = sceneContainerBounds(projection);
         const radius = Math.max(bounds.radius, 0.001);
         const offset = camera.position.clone().sub(controls.target);
@@ -1508,7 +1596,8 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
             projection,
             {
               far: camera.far,
-              fov: camera.fov,
+              fov: camera instanceof THREE.PerspectiveCamera ? camera.fov : 45,
+              ...(camera instanceof THREE.OrthographicCamera ? { orthographic: { halfHeight: camera.top / camera.zoom, halfWidth: camera.right / camera.zoom } } : {}),
               near: camera.near,
               position: [camera.position.x, camera.position.y, camera.position.z],
               quaternion: [
@@ -1520,6 +1609,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
               up: [camera.up.x, camera.up.y, camera.up.z],
             },
             labels,
+            labels.flatMap(label => measureCargo?.(label.cargoId).representatives ?? []),
           );
           renderScene();
           return result;
@@ -1532,7 +1622,7 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
           const width = Math.max(canvas.clientWidth, 1);
           const height = Math.max(canvas.clientHeight, 1);
           renderer.setSize(width, height, false);
-          camera.aspect = width / height;
+          resizeCamera(width, height);
           camera.updateProjectionMatrix();
           rememberCameraView();
           if (!renderScene()) return;
@@ -1548,10 +1638,10 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
       const width = Math.max(canvas.clientWidth, 1);
       const height = Math.max(canvas.clientHeight, 1);
       renderer.setSize(width, height, false);
-      camera.aspect = width / height;
+      resizeCamera(width, height);
       const initialTarget = fitCamera(camera, projection);
       controls = new OrbitControls(camera, canvas);
-      const savedView = cameraViewRef.current;
+      const savedView = viewMode === "3d" ? cameraViewRef.current : undefined;
       if (
         projection !== null &&
         savedView !== undefined &&
@@ -1571,9 +1661,16 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
       } else {
         controls.target.copy(initialTarget);
       }
+      if (camera instanceof THREE.OrthographicCamera) {
+        const top = topCameraViewRef.current;
+        if (top !== undefined && projection !== null && top.containerId === projection.container.id) {
+          camera.position.fromArray(top.position); controls.target.fromArray(top.target); camera.zoom = top.zoom;
+        }
+        controls.enableRotate = false; controls.minZoom = 0.1; controls.maxZoom = 20;
+      }
       configureCameraDistanceLimits(controls, camera, projection);
       controls.enableZoom = true;
-      controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+      controls.mouseButtons.LEFT = viewMode === "2d" ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
       controls.mouseButtons.MIDDLE = THREE.MOUSE.DOLLY;
       controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
       controls.screenSpacePanning = true;
@@ -1613,8 +1710,9 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
       dispose();
       setDimensionAnnotations([]);
     };
-  }, [forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragPreview, onCargoDragStateChange, onCargoNudgeCommit, onCargoNudgePreview, onCargoNudgeStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
+  }, [viewMode, canMoveCargo, cargoNumbers, measureCargo, forceInitialRenderError, onCargoDragCancel, onCargoDragCommit, onCargoDragPreview, onCargoDragStateChange, onCargoNudgeCommit, onCargoNudgePreview, onCargoNudgeStateChange, onCargoSelectionChange, onRendererError, onRendererReady, projection]);
 
+  const renderedGapLines = layoutTopGapLabels(gapLines, viewportSize.width, viewportSize.height);
   const weightBalanceKind = projection?.weightBalance.kind ?? "no-container";
   const currentWeightBalanceMarkers =
     weightBalanceMarkers.source === projection ? weightBalanceMarkers : undefined;
@@ -1631,13 +1729,16 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
     currentWeightBalanceMarkers?.cargoCenterOffscreen === true;
 
   return (
-    <div className="viewport" ref={containerRef}>
+    <div className="viewport" data-view-mode={viewMode} ref={containerRef}>
       <div className="viewport__top-controls">
         <div
           className="viewport__camera-controls"
           role="group"
           aria-label="3D作業の操作"
         >
+          <button type="button" aria-pressed={viewMode === "3d"} style={viewMode === "3d" ? { background: "#20504e", borderWidth: "2px" } : undefined} disabled={viewSwitchDisabled} onClick={() => onViewModeChange("3d")}>3D</button>
+          <button type="button" aria-pressed={viewMode === "2d"} style={viewMode === "2d" ? { background: "#20504e", borderWidth: "2px" } : undefined} disabled={viewSwitchDisabled} onClick={() => onViewModeChange("2d")}>2D</button>
+          {viewMode === "2d" ? <span style={{ fontSize: "0.75rem" }}>上面・単位：mm</span> : null}
           {historyControls}
           {validationControl}
           <div className="viewport__rotation-controls" role="group" aria-label="選択した積荷の回転">
@@ -1683,6 +1784,22 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
           {centerOverlay}
         </div>
       )}
+      {viewMode !== "2d" ? null : <svg className="viewport__clearance-annotations" aria-hidden="true" style={{ pointerEvents: "none", position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+        {renderedGapLines.map(line => <g key={line.key}>
+          <line x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="#ffcc66" strokeWidth="2" />
+          <circle cx={line.x1} cy={line.y1} r="3" fill="#ffcc66"/><circle cx={line.x2} cy={line.y2} r="3" fill="#ffcc66"/>
+          <line x1={(line.x1+line.x2)/2} y1={(line.y1+line.y2)/2} x2={line.labelX} y2={line.labelY} stroke="#ffcc66" strokeWidth="1"/>
+        </g>)}
+        {renderedGapLines.map(line => <g key={line.key} data-direction={line.direction} data-sources={line.sources?.join(" ")} data-x1={line.x1} data-x2={line.x2}>
+          <rect x={line.labelX-line.halfWidth} y={line.labelY-11} width={line.halfWidth*2} height="22" rx="4" fill="#12202a"/>
+          <text x={line.labelX} y={line.labelY} textAnchor="middle" dominantBaseline="central" fill="#ffdd88" fontSize="13">{line.label}</text>
+        </g>)}
+      </svg>}
+      {viewMode !== "2d" ? null : <svg className="viewport__top-labels" aria-hidden="true" style={{ pointerEvents: "none", position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+        {topRecess ? <g><rect x={topRecess.x} y={topRecess.y} width={topRecess.width} height={topRecess.height} fill="none" stroke="#b8a4ff" strokeWidth="2" strokeDasharray="7 5"/>
+        <text x={topRecess.x+8} y={topRecess.y-8} fill="#d4c8ff" fontSize="12">段落ち 深さ {topRecess.depth}</text></g> : null}
+        {topLabels.map(label => <text key={label.cargoId} data-cargo-id={label.cargoId} x={label.x} y={label.y} textAnchor="middle" dominantBaseline="central" fill="#fff" stroke="#12202a" strokeWidth="3" paintOrder="stroke" fontSize="13">{label.text}{label.dimensions ? <tspan x={label.x} dy="18" fontSize="11">{label.dimensions}</tspan> : null}</text>)}
+      </svg>}
       {dimensionAnnotations.length === 0 ? null : (
         <svg
           className="viewport__dimension-annotations"
@@ -1797,16 +1914,18 @@ export const ThreeViewport = forwardRef<ThreeViewportHandle, ThreeViewportProps>
           ref={bottomOverlayRef}
           className="viewport__overlay viewport__overlay--bottom"
         >
+          {viewMode === "2d" && measurements.some(item => item.measurement.status !== "available") ? <p className="top-clearance-status">{measurements.filter(item => item.measurement.status !== "available").map(item => `No.${cargoNumbers.get(item.cargoId) ?? "—"}：${item.measurement.status === "overlap" ? "重なり" : "間隔の測定対象外"}`).join("、")}</p> : null}
           {bottomOverlay}
         </div>
       )}
+      {viewMode === "2d" ? <p id="top-clearance-description" className="visually-hidden">実間隔（mm）：{measurements.map(item => `No.${cargoNumbers.get(item.cargoId) ?? "—"} ${item.measurement.representatives.map(g => `${CLEARANCE_DIRECTION_NAMES[g.direction]} ${g.distanceMm}`).join("、")}`).join("。")}</p> : null}
       <canvas
         id="scene-viewport-canvas"
         ref={canvasRef}
         className={ctrlPanActive ? "viewport__canvas--ctrl-pan" : undefined}
         role="img"
-        aria-label="積荷を選択・床面移動できる3Dプレビュー"
-        aria-describedby={statusDescriptionId}
+        aria-label={viewMode === "2d" ? "積荷を選択・床面移動できる2D上面プレビュー" : "積荷を選択・床面移動できる3Dプレビュー"}
+        aria-describedby={`${statusDescriptionId}${viewMode === "2d" ? " top-clearance-description" : ""}`}
         tabIndex={0}
       />
     </div>

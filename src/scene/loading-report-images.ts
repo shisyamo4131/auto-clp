@@ -1,3 +1,5 @@
+import type { MeasuredGap } from "../domain/measured-clearance";
+import { domainPointToScene } from "./project-scene";
 import * as THREE from "three";
 
 import type { ProjectSceneProjection, SceneVector3 } from "./project-scene";
@@ -6,6 +8,7 @@ export const LOADING_REPORT_IMAGE_WIDTH = 1200;
 export const LOADING_REPORT_IMAGE_HEIGHT = 800;
 
 export type LoadingReportViewKind =
+  | "top"
   | "current"
   | "front"
   | "rear"
@@ -36,6 +39,7 @@ export type LoadingReportImageCaptureResult =
         | "report-image.renderer-unavailable"
         | "report-image.projection-unavailable"
         | "report-image.label-mismatch"
+        | "report-image.layout-crowded"
         | "report-image.capture-failed";
       readonly ok: false;
     };
@@ -43,6 +47,7 @@ export type LoadingReportImageCaptureResult =
 export interface LoadingReportCurrentCameraSnapshot {
   readonly far: number;
   readonly fov: number;
+  readonly orthographic?: { readonly halfHeight: number; readonly halfWidth: number };
   readonly near: number;
   readonly position: readonly [number, number, number];
   readonly quaternion: readonly [number, number, number, number];
@@ -51,7 +56,7 @@ export interface LoadingReportCurrentCameraSnapshot {
 
 export interface LoadingReportFixedViewDefinition {
   readonly direction: readonly [number, number, number];
-  readonly kind: Exclude<LoadingReportViewKind, "current">;
+  readonly kind: Exclude<LoadingReportViewKind, "current" | "top">;
   readonly title: string;
   readonly up: readonly [number, number, number];
 }
@@ -141,6 +146,11 @@ function createReportScene(projection: ProjectSceneProjection): ReportSceneResou
     materials,
   );
 
+  const recessed = projection.container.recessedFloor;
+  if (recessed) {
+    const geometry = new THREE.BoxGeometry(recessed.dimensions.x, recessed.dimensions.y, recessed.dimensions.z);
+    geometries.push(geometry); addEdges(scene, geometry, recessed.center, 0xedb852, geometries, materials);
+  }
   const opening = projection.container.opening;
   const halfWidth = opening.width / 2;
   const halfHeight = opening.height / 2;
@@ -219,8 +229,10 @@ function reportBounds(projection: ProjectSceneProjection): ReportBounds {
 
 function currentCamera(
   snapshot: LoadingReportCurrentCameraSnapshot,
-): THREE.PerspectiveCamera {
-  const camera = new THREE.PerspectiveCamera(
+): THREE.PerspectiveCamera | THREE.OrthographicCamera {
+  const halfHeight = snapshot.orthographic === undefined ? 0 : Math.max(snapshot.orthographic.halfHeight, snapshot.orthographic.halfWidth / (LOADING_REPORT_IMAGE_WIDTH / LOADING_REPORT_IMAGE_HEIGHT));
+  const halfWidth = halfHeight * LOADING_REPORT_IMAGE_WIDTH / LOADING_REPORT_IMAGE_HEIGHT;
+  const camera = snapshot.orthographic ? new THREE.OrthographicCamera(-halfWidth, halfWidth, halfHeight, -halfHeight, snapshot.near, snapshot.far) : new THREE.PerspectiveCamera(
     snapshot.fov,
     LOADING_REPORT_IMAGE_WIDTH / LOADING_REPORT_IMAGE_HEIGHT,
     snapshot.near,
@@ -322,7 +334,7 @@ function projectedLabels(
 function drawLabels(
   context: CanvasRenderingContext2D,
   labels: readonly ProjectedLabel[],
-): void {
+): readonly { x: number; y: number }[] {
   const occupied: Array<{ readonly x: number; readonly y: number }> = [];
   const radius = 18;
   const margin = radius + 4;
@@ -374,6 +386,7 @@ function drawLabels(
     context.fillText(String(label.sequenceNumber), position.x, position.y + 1);
   }
   context.restore();
+  return occupied;
 }
 
 function renderImage(
@@ -385,6 +398,7 @@ function renderImage(
   labels: readonly LoadingReportImageLabel[],
   kind: LoadingReportViewKind,
   title: string,
+  gaps: readonly MeasuredGap[] = [],
 ): LoadingReportImage {
   renderer.setRenderTarget(target);
   renderer.clear(true, true, true);
@@ -419,7 +433,35 @@ function renderImage(
     0,
   );
   const visibleLabels = projectedLabels(projection, camera, labels);
-  drawLabels(context, visibleLabels);
+  const occupied: Array<{ x: number; y: number }> = drawLabels(context, visibleLabels).flatMap(p => [{ x: p.x, y: p.y - 20 }, { ...p }, { x: p.x, y: p.y + 20 }]);
+  context.save(); context.font = "14px sans-serif"; context.textAlign = "center";
+  const renderedGaps = new Set<string>();
+  for (const g of gaps) {
+    const key = [JSON.stringify(g.start), JSON.stringify(g.end)].sort().join("/");
+    if (renderedGaps.has(key)) continue;
+    renderedGaps.add(key);
+    const a = sceneVector(domainPointToScene(g.start)).project(camera), b = sceneVector(domainPointToScene(g.end)).project(camera);
+    const x1 = (a.x + 1) * canvas.width / 2, y1 = (1 - a.y) * canvas.height / 2;
+    const x2 = (b.x + 1) * canvas.width / 2, y2 = (1 - b.y) * canvas.height / 2;
+    if (a.z < -1 || a.z > 1 || b.z < -1 || b.z > 1 || Math.hypot(x2-x1,y2-y1) < 4) continue;
+    context.strokeStyle = "#ffdb88"; context.lineWidth = 1.5;
+    context.beginPath(); context.moveTo(x1,y1); context.lineTo(x2,y2); context.stroke();
+    const anchorX = Math.max(60, Math.min(canvas.width - 60, (x1 + x2) / 2));
+    const anchorY = Math.max(24, Math.min(canvas.height - 24, (y1 + y2) / 2 - 8));
+    const candidates: Array<{ x: number; y: number }> = [];
+    for (let row = 24; row <= canvas.height - 24; row += 24) {
+      for (let column = 60; column <= canvas.width - 60; column += 96) candidates.push({ x: column, y: row });
+    }
+    candidates.unshift({ x: anchorX, y: anchorY });
+    candidates.sort((a, b) => Math.hypot(a.x - anchorX, a.y - anchorY) - Math.hypot(b.x - anchorX, b.y - anchorY));
+    const position = candidates.find(p => occupied.every(other => Math.abs(other.x - p.x) >= 90 || Math.abs(other.y - p.y) >= 22));
+    if (!position) throw new Error("Clearance labels do not fit the image");
+    const { x, y } = position;
+    occupied.push({x,y}); context.beginPath(); context.moveTo((x1+x2)/2,(y1+y2)/2);context.lineTo(x,y);context.stroke();
+    const label = `${g.distanceMm} mm`; const width = context.measureText(label).width;
+    context.fillStyle = "#07111f";context.fillRect(x-width/2-3,y-15,width+6,18);context.fillStyle="#ffdb88";context.fillText(label,x,y);
+  }
+  context.restore();
   return {
     dataUrl: canvas.toDataURL("image/png"),
     height: LOADING_REPORT_IMAGE_HEIGHT,
@@ -435,6 +477,7 @@ export function captureLoadingReportImages(
   projection: ProjectSceneProjection | null,
   currentCameraSnapshot: LoadingReportCurrentCameraSnapshot | undefined,
   labels: readonly LoadingReportImageLabel[],
+  gaps: readonly MeasuredGap[] = [],
 ): LoadingReportImageCaptureResult {
   if (renderer === undefined || currentCameraSnapshot === undefined) {
     return { code: "report-image.renderer-unavailable", ok: false };
@@ -478,6 +521,7 @@ export function captureLoadingReportImages(
         labels,
         "current",
         "現在視点",
+        gaps,
       ),
     ];
     for (const definition of LOADING_REPORT_FIXED_VIEWS) {
@@ -491,6 +535,7 @@ export function captureLoadingReportImages(
           labels,
           definition.kind,
           definition.title,
+          gaps,
         ),
       );
     }

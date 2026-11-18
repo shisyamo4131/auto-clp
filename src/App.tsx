@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { createInitialProject } from "./application/project-factory";
+import { createCurrentProject as createInitialProject } from "./application/project-factory";
 import { prepareAutomaticProposalApply } from "./application/automatic-proposal-apply";
 import {
   commitProjectHistory,
@@ -11,7 +11,7 @@ import {
   type ProjectHistoryTransition,
 } from "./application/project-history";
 import {
-  prepareProjectImport,
+  prepareCurrentProjectImport,
   serializeProjectForPersistence,
   type ProjectPersistenceActionResult,
   type ProjectPersistenceFailureCode,
@@ -34,6 +34,7 @@ import {
 import type { WebGL2CapabilityCheck } from "./platform/webgl2";
 import { SceneWorkspace } from "./scene/SceneWorkspace";
 import { AutomaticProposalPanel } from "./ui/AutomaticProposalPanel";
+import { ModalShell } from "./ui/ModalShell";
 import { ApplicationBar } from "./ui/ApplicationBar";
 import type { AutomaticProposalApplyHandler } from "./ui/automatic-proposal-session";
 import {
@@ -128,6 +129,13 @@ const stateCopy: Record<AppState, { readonly title: string; readonly detail: str
 };
 
 export function App({ capabilityCheck, forceInitialRenderError = false }: AppProps) {
+  const [migration, setMigration] = useState<{ original: string; resolve: (accepted: boolean) => void }>();
+  const [migrationMessage, setMigrationMessage] = useState("");
+  const confirmMigration = useCallback((original: string) => new Promise<boolean>((resolve) => {
+    setMigrationMessage("");
+    setMigration({ original, resolve });
+  }), []);
+  const finishMigration = (accepted: boolean) => { migration?.resolve(accepted); setMigration(undefined); };
   const [state, setState] = useState<AppState>("checking");
   const stateRef = useRef<AppState>("checking");
   const operationalRef = useRef(false);
@@ -544,16 +552,17 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         if (!stored.ok) {
           return storeFailure(stored.code);
         }
-        const prepared = await prepareProjectImport(
+        const prepared = await prepareCurrentProjectImport(
           baseProject,
           sourceFromStoredJson(stored.value),
           preflightImportedProject,
+          confirmMigration,
         );
         return prepared.ok
-          ? { ok: true, replacement: prepared.project }
+          ? prepared.project === baseProject ? { ok: true } : { ok: true, replacement: prepared.project }
           : prepared;
       }),
-    [runPersistenceOperation],
+    [runPersistenceOperation, confirmMigration],
   );
 
   const handleDeleteDevice = useCallback(
@@ -692,16 +701,17 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         if (source === undefined) {
           return { ok: false, code: "persistence.file-import-unavailable" };
         }
-        const prepared = await prepareProjectImport(
+        const prepared = await prepareCurrentProjectImport(
           baseProject,
           source,
           preflightImportedProject,
+          confirmMigration,
         );
         return prepared.ok
-          ? { ok: true, replacement: prepared.project }
+          ? prepared.project === baseProject ? { ok: true } : { ok: true, replacement: prepared.project }
           : prepared;
       }),
-    [runPersistenceOperation],
+    [runPersistenceOperation, confirmMigration],
   );
 
   const handleRescueCurrent = useCallback(async (): Promise<RescueResult> => {
@@ -716,7 +726,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
     return downloaded.ok
       ? {
           ok: true,
-          message: `ダウンロードを開始しました。ファイル名: ${PROJECT_EXPORT_FILENAME}。ブラウザのダウンロード一覧またはダウンロードフォルダーを確認してください。`,
+          message: `ダウンロードを開始しました。ファイル名: auto-clp-project-${historyRef.current.present.schemaVersion}.json。ブラウザのダウンロード一覧またはダウンロードフォルダーを確認してください。`,
         }
       : {
           ok: false,
@@ -823,7 +833,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         </section>
         {state === "renderer-checking" ? (
           <div className="renderer-probe" aria-hidden="true" inert>
-            {sceneWorkspace}
+                  {sceneWorkspace}
           </div>
         ) : null}
       </main>
@@ -877,6 +887,14 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
         selectedContainerId={selectedContainerId}
       />
 
+      {migration === undefined ? null : <ModalShell title="旧データの変換" onRequestClose={() => finishMigration(false)} initialFocusId="migration-open" fallbackFocusIds={["app-navigation-button"]}>
+        <p>旧形式を新形式0.3.0へ変換します。最小隙間の設定・判定は廃止されます。配置・寸法・段落ちは維持し、旧版では新形式を開けません。</p>
+        <p>読込だけでは端末保存を更新しません。旧ファイルと旧保存枠は残ります。旧版へ戻す場合に備えて原本を保存できます。</p>
+        <button type="button" onClick={() => { const result = downloadProjectJson(migration.original, "auto-clp-before-migration.json"); setMigrationMessage(result.ok ? "原本のダウンロードを開始しました。保存先を確認してください。" : "原本をダウンロードできませんでした。"); }}>変換前の原本を保存</button>
+        <p role="status">{migrationMessage}</p>
+        <button id="migration-open" type="button" onClick={() => finishMigration(true)}>変換して開く</button>
+        <button type="button" onClick={() => finishMigration(false)}>キャンセル</button>
+      </ModalShell>}
       {sceneWorkspace}
 
       {automaticProposalAvailable ? (
@@ -890,7 +908,7 @@ export function App({ capabilityCheck, forceInitialRenderError = false }: AppPro
       ) : null}
 
       <p className="visually-hidden" data-testid="canonical-project-settings">
-        確定済み: {project.name} / 隙間 X {project.clearancesMm.xMm}・Y {project.clearancesMm.yMm}・Z {project.clearancesMm.zMm} mm
+        確定済み: {project.name}
       </p>
       {cargoEditorRequest === undefined ? null : (
         <CargoEditorDialog

@@ -365,7 +365,7 @@ if (-not $dataModelVersionMatch.Success) {
 
 $specificationVersion = $specificationVersionMatch.Groups[1].Value
 $dataModelVersion = $dataModelVersionMatch.Groups[1].Value
-Assert-Equal $specificationVersion '1.15.0' 'Approved specification version'
+Assert-Equal $specificationVersion '1.16.0' 'Approved specification version'
 Assert-Equal $dataModelVersion $specificationVersion 'Data model specification version'
 
 foreach ($staleText in @(
@@ -589,7 +589,7 @@ foreach ($requiredText in @(
     '積込順を提案できません',
     '限定モデルによる一提案です',
     'PDFを出力',
-    '5視点画像を含む日本語PDFを端末へ出力できます'
+    '配置画像を含む日本語PDFを端末へ出力できます'
 )) {
     if (-not $loadingReportDialog.Contains($requiredText)) {
         throw "Loading-report dialog does not contain the approved Phase 2 contract text: $requiredText"
@@ -603,7 +603,7 @@ foreach ($requiredText in @(
     'PDFDocument.create()',
     'document.embedFont(bytes, { subset: true })',
     'document.embedPng(',
-    'Container Loading Plan - 積込順帳票',
+    'Container Loading Plan - 配置イメージ',
     'report-pdf.unsupported-character',
     '実作業の安全性は評価・保証しません'
 )) {
@@ -732,7 +732,7 @@ foreach ($requiredText in @(
 }
 foreach ($requiredText in @(
     '[ADR 0034](decisions/0034-cargo-csv-template-and-replacement-import.md)',
-    '仕様版 `1.15.0`',
+    '仕様版 `1.16.0`',
     '積荷・配置の一括置換',
     '手動追加とCSV一括作成は共通の新規作成上限30件',
     '## Transient Cargo CSV Contract',
@@ -833,7 +833,7 @@ foreach ($requiredText in @(
     }
 }
 
-if (-not $dataModel.Contains('Project schema version: `0.1.0`') -or
+if (-not $dataModel.Contains('Project schema version: `0.3.0`') -or
     -not $dataModel.Contains('../schemas/project-0.1.0.schema.json') -or
     -not $dataModel.Contains('5 MiB（5,242,880 bytes）') -or
     -not $dataModel.Contains('decisions/0010-container-coordinate-and-placement-anchor.md') -or
@@ -1422,3 +1422,8 @@ Assert-Equal ($newFloorSchema.required -contains 'nextCargoNo') $true 'Persisten
 Assert-Equal ($newFloorSchema.'$defs'.cargo.required -contains 'cargoNo') $true 'Persistent cargo number'
 Assert-Equal $newFloorSchema.'$defs'.container.properties.recessedFloorMm.properties.depthMm.minimum 1 'Positive recess depth'
 Write-Output 'recessed_floor_schema_checked: True'
+
+$currentSchema = Get-Content -Raw (Join-Path $resolvedProject 'schemas/project-0.3.0.schema.json') | ConvertFrom-Json
+Assert-Equal $currentSchema.properties.schemaVersion.const '0.3.0' 'Current schema version'
+if ($currentSchema.properties.PSObject.Properties.Name -contains 'clearancesMm' -or $currentSchema.required -contains 'clearancesMm') { throw 'Current schema must not persist clearance thresholds' }
+if ($currentSchema.required -notcontains 'nextCargoNo') { throw 'Current schema requires allocation watermark' }

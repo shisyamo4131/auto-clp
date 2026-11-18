@@ -77,9 +77,9 @@ function Field({
 function projectSettingsDraftFrom(project: Project): ProjectSettingsDraft {
   return {
     name: project.name,
-    clearanceXmm: String(project.clearancesMm.xMm),
-    clearanceYmm: String(project.clearancesMm.yMm),
-    clearanceZmm: String(project.clearancesMm.zMm),
+    clearanceXmm: String(project.clearancesMm?.xMm ?? 0),
+    clearanceYmm: String(project.clearancesMm?.yMm ?? 0),
+    clearanceZmm: String(project.clearancesMm?.zMm ?? 0),
   };
 }
 
@@ -135,7 +135,7 @@ export function ProjectSettingsDialog({
       onRequestClose={requestClose}
       title="CLP設定"
     >
-      <p className="section-help">CLP名と固定隙間を編集します。保存するまでCLPデータへ反映しません。</p>
+      <p className="section-help">CLP名を編集します。保存するまでCLPデータへ反映しません。</p>
       <form ref={formRef} onSubmit={submit} noValidate>
         {issues.length === 0 ? null : (
           <div className="error-summary" role="alert">
@@ -147,14 +147,14 @@ export function ProjectSettingsDialog({
           <legend>基本情報</legend>
           <Field id="project-name" label="CLP名" value={draft.name} issues={issues} issueField="name" maxLength={120} onChange={(name) => setDraft({ ...draft, name })} />
         </fieldset>
-        <fieldset>
+        {project.schemaVersion === "0.3.0" ? null : <fieldset>
           <legend>軸別の固定隙間</legend>
           <div className="dimension-grid">
             <Field id="clearance-x" label="X方向の隙間" unit="mm" value={draft.clearanceXmm} issues={issues} issueField="xMm" maxLength={5} onChange={(clearanceXmm) => setDraft({ ...draft, clearanceXmm })} />
             <Field id="clearance-y" label="Y方向の隙間" unit="mm" value={draft.clearanceYmm} issues={issues} issueField="yMm" maxLength={5} onChange={(clearanceYmm) => setDraft({ ...draft, clearanceYmm })} />
             <Field id="clearance-z" label="Z方向の隙間" unit="mm" value={draft.clearanceZmm} issues={issues} issueField="zMm" maxLength={5} onChange={(clearanceZmm) => setDraft({ ...draft, clearanceZmm })} />
           </div>
-        </fieldset>
+        </fieldset>}
         <div className="button-row">
           <button id="project-save-button" className="primary-button" type="submit">CLPを保存</button>
           <button type="button" onClick={requestClose}>閉じる</button>

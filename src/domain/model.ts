@@ -2,7 +2,7 @@ export const ORIENTATIONS = ["LWH", "WLH", "LHW", "HLW", "WHL", "HWL"] as const;
 export const PROJECT_SCHEMA_VERSION = "0.1.0" as const;
 
 export type Orientation = (typeof ORIENTATIONS)[number];
-export type ProjectSchemaVersion = typeof PROJECT_SCHEMA_VERSION | "0.2.0";
+export type ProjectSchemaVersion = typeof PROJECT_SCHEMA_VERSION | "0.2.0" | "0.3.0";
 
 export interface DimensionsMm {
   readonly lengthMm: number;
@@ -66,7 +66,7 @@ export interface Project {
   readonly schemaVersion: ProjectSchemaVersion;
   readonly projectId: string;
   readonly name: string;
-  readonly clearancesMm: ClearancesMm;
+  readonly clearancesMm?: ClearancesMm;
   readonly cargoes: readonly Cargo[];
   readonly containers: readonly Container[];
   readonly placements: readonly Placement[];

@@ -78,7 +78,7 @@ export async function readProjectJson(source: ProjectJsonSource): Promise<Projec
     return failure("syntax", "syntax.invalid");
   }
 
-  if (!isRecord(value) || (value.schemaVersion !== PROJECT_SCHEMA_VERSION && value.schemaVersion !== "0.2.0")) {
+  if (!isRecord(value) || (value.schemaVersion !== PROJECT_SCHEMA_VERSION && value.schemaVersion !== "0.2.0" && value.schemaVersion !== "0.3.0")) {
     return failure("version", "version.unsupported", "/schemaVersion");
   }
 
@@ -148,11 +148,7 @@ function persistedProject(project: Project): Project {
     ...(project.nextCargoNo === undefined ? {} : { nextCargoNo: project.nextCargoNo }),
     projectId: project.projectId,
     name: project.name,
-    clearancesMm: {
-      xMm: project.clearancesMm.xMm,
-      yMm: project.clearancesMm.yMm,
-      zMm: project.clearancesMm.zMm,
-    },
+    ...(project.schemaVersion === "0.3.0" ? {} : { clearancesMm: project.clearancesMm }),
     cargoes: project.cargoes.map(projectCargo),
     containers: project.containers.map(projectContainer),
     placements: project.placements.map(projectPlacement),
@@ -171,7 +167,7 @@ export function serializeProjectJson(project: Project): ProjectJsonSerialization
     };
   }
 
-  if (persisted.schemaVersion !== PROJECT_SCHEMA_VERSION && persisted.schemaVersion !== "0.2.0") {
+  if (persisted.schemaVersion !== PROJECT_SCHEMA_VERSION && persisted.schemaVersion !== "0.2.0" && persisted.schemaVersion !== "0.3.0") {
     return {
       ok: false,
       stage: "version",

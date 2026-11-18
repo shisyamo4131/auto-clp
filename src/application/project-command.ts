@@ -79,7 +79,7 @@ function failure(
 }
 
 function validateCandidate(current: Project, candidate: Project): ProjectCommandResult {
-  if (candidate.schemaVersion === "0.2.0") {
+  if (candidate.schemaVersion !== "0.1.0") {
     let nextCargoNo = current.nextCargoNo ?? 1;
     const cargoes = candidate.cargoes.map((cargo) => {
       const cargoNo = cargo.cargoNo ?? current.cargoes.find((c) => c.id === cargo.id)?.cargoNo ?? nextCargoNo++;
@@ -179,6 +179,7 @@ export function updateProjectSettings(
   current: Project,
   draft: ProjectSettingsDraft,
 ): ProjectCommandResult {
+  if (current.schemaVersion === "0.3.0") return validateCandidate(current, { ...current, name: draft.name.trim() });
   const parsed = parsedValues(current, [
     parseClearanceMm(draft.clearanceXmm, "/clearancesMm/xMm"),
     parseClearanceMm(draft.clearanceYmm, "/clearancesMm/yMm"),
@@ -191,9 +192,9 @@ export function updateProjectSettings(
   const name = draft.name.trim();
   if (
     current.name === name &&
-    current.clearancesMm.xMm === xMm &&
-    current.clearancesMm.yMm === yMm &&
-    current.clearancesMm.zMm === zMm
+    current.clearancesMm!.xMm === xMm &&
+    current.clearancesMm!.yMm === yMm &&
+    current.clearancesMm!.zMm === zMm
   ) {
     return validateUnchangedProject(current);
   }
@@ -363,7 +364,7 @@ export function saveContainer(
       }
     }
   }
-  return validateCandidate(current, { ...current, schemaVersion: recessedFloorMm === undefined ? current.schemaVersion : "0.2.0", containers });
+  return validateCandidate(current, { ...current, schemaVersion: current.schemaVersion === "0.3.0" || recessedFloorMm === undefined ? current.schemaVersion : "0.2.0", containers });
 }
 
 export function addPlacement(

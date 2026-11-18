@@ -24,7 +24,7 @@ test("allows only read-only JSON rescue when WebGL 2 is unavailable", async ({ p
 
   await expect(page.getByRole("heading", { name: "現在の作業データ" })).toBeVisible();
   await expect(page.getByText("障害直前の内容を含みます。", { exact: false })).toBeVisible();
-  await expect(page.getByText("auto-clp-project-0.1.0.json", { exact: true })).toBeVisible();
+  await expect(page.getByText("auto-clp-project-0.3.0.json", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "端末に保存済みのデータ" }),
   ).toBeVisible();
@@ -36,13 +36,13 @@ test("allows only read-only JSON rescue when WebGL 2 is unavailable", async ({ p
   const currentDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "現在の作業データをダウンロード" }).click();
   expect((await currentDownload).suggestedFilename()).toBe(
-    "auto-clp-project-0.1.0.json",
+    "auto-clp-project-0.3.0.json",
   );
   await expect(page.locator('[data-rescue-outcome="success"]')).toContainText(
     "ダウンロードを開始しました。",
   );
   await expect(page.locator('[data-rescue-outcome="success"]')).toContainText(
-    "auto-clp-project-0.1.0.json",
+    "auto-clp-project-0.3.0.json",
   );
   await expect(page.locator('[data-rescue-outcome="success"]')).toContainText(
     "ダウンロード一覧またはダウンロードフォルダーを確認してください。",

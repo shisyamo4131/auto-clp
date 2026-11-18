@@ -37,6 +37,8 @@
 
 ## Document Authority
 
+クリアランスの旧データ移行・実間隔表示・図内寸法の実装順と検証ケース: [実装計画C0〜C5](designs/recessed-floor-openings-clearance.md#クリアランス機能の実装計画)。承認済みの製品方針と、未実装の移行・保存設計案を区別する。
+
 段落ちを最優先する実装順序・旧保存互換・検証ケース: [実装計画](designs/recessed-floor-openings-clearance.md#段落ちを先行する実装計画)。計画と実装済み状態を区別する。
 
 次期改良の具体案: [段落ち・複数開口・間隔表示](designs/recessed-floor-openings-clearance.md)。2026-11-04の確認済み要望と未承認の設計を分離。要望の正本は仕様のOpen Decisions、順序はロードマップを参照する。
@@ -75,3 +77,7 @@
 - 必須検証は個別のコマンド、結果、終了コードを残す。まとめる場合は失敗を非ゼロで返す検証済みランナーだけを使い、診断バッチや状態を隠すコマンド連結を完了証拠にしない。
 
 段落ち先行実装の契約: [ADR 0046](decisions/0046-recessed-floor-and-save-compatibility.md)。操作は[運用](operations.md#段落ちの操作と保存)、検証は[受入](acceptance.md#g1-段落ち先行の合成ケース)。
+
+現行の実間隔表示・配置図・旧データ移行は[ADR 0047](decisions/0047-measured-clearance-and-migration.md)と[データ契約](data-model.md)を参照。
+
+- [2D上面操作と積荷周囲の実間隔](decisions/0048-top-view-clearance.md): 保存形式を変えない2D切替と床面操作。

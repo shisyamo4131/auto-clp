@@ -386,7 +386,7 @@ test("shows cargo weight, four selection states, load totals, compact staging, a
   await expect(state).toHaveAttribute("aria-label", "積荷未選択");
   await expect(state).toHaveCSS("background-color", "rgb(129, 144, 157)");
   await expect(selector.locator('option[value="cargo-1"]')).toHaveText(
-    "状態積荷A — 500×400×300 mm／1 kg",
+    "No.1 状態積荷A — 500×400×300 mm／1 kg",
   );
 
   await selector.selectOption("cargo-1");
@@ -1028,6 +1028,8 @@ test("nudges a placed cargo by view-relative millimetres as one undoable key ges
   const after = await readPosition();
   expect(Math.abs(after.xMm - before.xMm) + Math.abs(after.yMm - before.yMm)).toBe(3);
   expect(after.zMm).toBe(before.zMm);
+  await expect(page.locator("#scene-workspace-action-status")).toBeEmpty();
+  await expect(page.locator(".scene-workspace__action-status")).toHaveCount(0);
   await expect(page.locator(".project-history__summary")).toContainText("矢印キーでの配置調整");
 
   await page.getByRole("button", { name: "元に戻す" }).click();

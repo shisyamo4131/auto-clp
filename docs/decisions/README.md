@@ -59,4 +59,8 @@
 
 | [0046](0046-recessed-floor-and-save-compatibility.md) | 段落ち床と保存互換性 | Accepted | 2026-11-04 |
 
+| [0047](0047-measured-clearance-and-migration.md) | 実間隔・配置図と明示的な旧データ移行 | Accepted | 2026-11-04 |
+
+| [0048](0048-top-view-clearance.md) | 2D上面操作と積荷周囲の実間隔 | Accepted | 2026-11-05 |
+
 Accepted ADRは削除せず、変更が必要な場合は新しいADRでSupersededにする。

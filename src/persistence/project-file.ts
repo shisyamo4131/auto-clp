@@ -1,6 +1,6 @@
 import type { ProjectJsonSource } from "./project-json";
 
-export const PROJECT_EXPORT_FILENAME = "auto-clp-project-0.1.0.json";
+export const PROJECT_EXPORT_FILENAME = "auto-clp-project-0.3.0.json";
 export const PROJECT_DEVICE_RESCUE_FILENAME =
   "auto-clp-device-rescue-0.1.0.json";
 
@@ -80,7 +80,7 @@ export function downloadProjectJson(
     );
     anchor = document.createElement("a");
     anchor.href = objectUrl;
-    anchor.download = filename === PROJECT_EXPORT_FILENAME && JSON.parse(json).schemaVersion === "0.2.0" ? "auto-clp-project-0.2.0.json" : filename;
+    anchor.download = filename === PROJECT_EXPORT_FILENAME && ["0.1.0", "0.2.0", "0.3.0"].includes(JSON.parse(json).schemaVersion) ? `auto-clp-project-${JSON.parse(json).schemaVersion}.json` : filename;
     anchor.hidden = true;
     document.body.append(anchor);
     anchor.click();

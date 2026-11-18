@@ -1046,9 +1046,9 @@ describe("history-aware no-op commands", () => {
 
     const result = updateProjectSettings(current, {
       name: `  ${current.name}  `,
-      clearanceXmm: String(current.clearancesMm.xMm),
-      clearanceYmm: String(current.clearancesMm.yMm),
-      clearanceZmm: String(current.clearancesMm.zMm),
+      clearanceXmm: String(current.clearancesMm!.xMm),
+      clearanceYmm: String(current.clearancesMm!.yMm),
+      clearanceZmm: String(current.clearancesMm!.zMm),
     });
 
     expect(result).toEqual({ ok: true, project: current });
@@ -1104,9 +1104,9 @@ describe("history-aware no-op commands", () => {
 
     const result = updateProjectSettings(current, {
       name: current.name,
-      clearanceXmm: String(current.clearancesMm.xMm),
-      clearanceYmm: String(current.clearancesMm.yMm),
-      clearanceZmm: String(current.clearancesMm.zMm),
+      clearanceXmm: String(current.clearancesMm!.xMm),
+      clearanceYmm: String(current.clearancesMm!.yMm),
+      clearanceZmm: String(current.clearancesMm!.zMm),
     });
 
     expect(result).toEqual({
